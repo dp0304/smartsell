@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { Activity, Archive, BarChart3, CalendarDays, Database, Globe, LayoutGrid, Link2, LogOut, Mail, Megaphone, Package, Pencil, RefreshCw, Search, Settings, Shield, Sparkles, Store, Users, UsersRound, Zap } from 'lucide-react';
+import { Activity, Archive, BarChart3, CalendarDays, CheckSquare, ChevronDown, ChevronRight, Code2, Database, Globe, KeyRound, LayoutGrid, Link2, LogOut, Mail, Megaphone, Package, Pencil, RefreshCw, Search, Settings, Shield, Sparkles, Store, Users, UsersRound, Zap } from 'lucide-react';
 import { ApiError, readSession, request, setupWorkspace, workspacePath, type Operation, type Session } from '@smartsell/sdk';
 import { Busy, EmptyState } from '@smartsell/ui';
 import { ApiContext, ProblemNotice, sessionKey, wsKey } from './api';
@@ -23,15 +23,19 @@ import { ModulePage as RecordsPage } from './workbench-views';
 import { Overview } from './overview-page';
 import { CommandFailure, CommandLanguage, WorkspaceTools } from './workspace-tools';
 import { compatibilityPath, sharedWorkspacePath } from './workspace-entry-paths';
+import { setDeveloperMode, useDeveloperMode, usePreference } from './preferences';
+import { PrimarySearch } from './primary-search';
 import './styles.css';
 
 const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 15000 } } });
 const icons = { workspace: Store, campaign: Megaphone, commerce: Package, content: Pencil, planning: CalendarDays, execution: Activity, inbox: Mail, analytics: BarChart3, asset: Archive, intel: Search, creator: UsersRound, traffic: Link2, ads: Zap, lifecycle: Globe, ingest: Database, agent: Sparkles, account: Shield, team: Users, ops: Settings };
+// Grouped by how often operators open them: daily work first, settings folded away.
 const groups = [
-  ['operations', ['workspace', 'campaign', 'commerce', 'content', 'planning', 'execution', 'inbox', 'analytics']],
-  ['growth', ['asset', 'intel', 'creator', 'traffic', 'ads', 'lifecycle']],
-  ['management', ['ingest', 'agent', 'account', 'team', 'ops']],
+  ['nav.daily', ['inbox', 'planning', 'content', 'asset', 'execution']],
+  ['nav.business', ['campaign', 'commerce', 'creator', 'ads', 'traffic', 'lifecycle']],
+  ['nav.insight', ['analytics', 'intel']],
 ] as const;
+const settingsModules = ['workspace', 'account', 'team', 'ingest', 'agent', 'ops'] as const;
 const base = (ws: string) => `/w/${encodeURIComponent(ws)}`;
 
 async function getSession(signal?: AbortSignal) {
@@ -49,6 +53,7 @@ function Language() {
 
 function Authentication({ setup }: { setup: boolean }) {
   const { t } = useCopy();
+  const developer = useDeveloperMode();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [pending, setPending] = useState(false);
@@ -90,8 +95,8 @@ function Authentication({ setup }: { setup: boolean }) {
         <button className="primary" type="submit">{t(pending ? 'saving' : challenge ? 'security.verify' : setup ? 'setup' : 'login')}</button>
         {challenge && <button type="button" onClick={() => { setChallenge(undefined); setError(undefined); }}>{t('security.restart')}</button>}
       </fieldset></form>{error !== undefined && <ProblemNotice error={error} />}
-      <Link to={{ pathname: setup ? '/login' : '/setup', search: params.toString() }}>{t(setup ? 'login' : 'setup')}</Link><br />
-      <a href={`/compat/workbench/${setup ? 'setup' : 'login'}`}>{t('compatibilityWorkbench')}</a>
+      <Link className="auth-switch" to={{ pathname: setup ? '/login' : '/setup', search: params.toString() }}>{t(setup ? 'login' : 'setupLink')}</Link>
+      {developer && <><br /><a href={`/compat/workbench/${setup ? 'setup' : 'login'}`}>{t('compatibilityWorkbench')}</a></>}
     </section></main></div>;
 }
 
@@ -137,6 +142,13 @@ function MemberInvitation() {
     </section></main></div>;
 }
 
+function DeveloperToggle() {
+  const { t } = useCopy();
+  const developer = useDeveloperMode();
+  return <button className={developer ? 'icon-button developer-on' : 'icon-button'} aria-pressed={developer} aria-label={t('developerMode')} title={t(developer ? 'developerModeOn' : 'developerMode')}
+    onClick={() => setDeveloperMode(!developer)}><Code2 size={16} /></button>;
+}
+
 function SignOut({ session }: { session: Session }) {
   const { t } = useCopy();
   const [pending, setPending] = useState(false);
@@ -158,6 +170,7 @@ function Workspace({ session, compatibility, administrative = false }: { session
   const { pathname, search, hash } = useLocation();
   const navigate = useNavigate();
   const { t } = useCopy();
+  const developer = useDeveloperMode();
   const workspace = session.workspaces.find(item => item.id === ws);
   const access = ['access', 'settings/access'].includes(section);
   const params = new URLSearchParams(search);
@@ -191,6 +204,9 @@ function Workspace({ session, compatibility, administrative = false }: { session
     return () => stream.close();
   }, [workspaceId]);
   const noCatalog = catalog.error instanceof ApiError && [404, 405].includes(catalog.error.status);
+  const settingsActive = access || section === 'settings/security' || settingsModules.some(key => key === active?.key);
+  const [settingsPreference, setSettingsPreference] = usePreference('nav.settings', 'closed');
+  const settingsOpen = settingsActive || settingsPreference === 'open';
   const securityAvailable = Boolean(security.data && session.csrf_token && session.user.id);
   const recoveryAvailable = Boolean(session.csrf_token && (workspace?.role === 'owner' || workspace?.role === 'admin'));
   if (!workspace) return <Navigate to={`${base(session.workspaces[0].id)}/home`} replace />;
@@ -203,13 +219,26 @@ function Workspace({ session, compatibility, administrative = false }: { session
   }
   return <div className="app-shell"><aside className="sidebar"><Brand />
     <label className="workspace-select"><span>{t('workspace')}</span><select value={ws} onChange={event => navigate(`${base(event.target.value)}/home`)}>{session.workspaces.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-    <nav className="nav" aria-label={t('allModules')}><Link className={dashboard ? 'active' : ''} to={`${base(ws)}/home`}><LayoutGrid size={17} />{t('home')}</Link>{groups.map(([group, keys]) => <section key={group}><h2>{t(group)}</h2>{keys.map(key => {
-      const module = modules.find(item => item.key === key)!;
-      const Icon = icons[key];
-      return <Link key={key} className={active?.key === key ? 'active' : ''} aria-current={active?.key === key ? 'page' : undefined} to={`${base(ws)}/${module.route}`}><Icon size={17} />{t(`module.${key}`)}</Link>;
-    })}</section>)}{(securityAvailable || recoveryAvailable) && <Link to={`${base(ws)}/settings/security`} aria-current={section === 'settings/security' ? 'page' : undefined}><Shield size={17} />{t('security.title')}</Link>}</nav>
-    <div className="sidebar-footer"><span className="avatar">{(session.user.name ?? session.user.email ?? 'S').slice(0, 1).toUpperCase()}</span><span title={session.user.email}>{session.user.name ?? session.user.email}</span><SignOut session={session} /></div>
-  </aside><div className="main-frame"><header className="topbar"><div className="breadcrumb"><span>{workspace.name}</span><span>/</span><strong>{active ? t(`module.${active.key}`) : t('home')}</strong></div><div className="toolbar"><BrandScope scope={brand} /><a className="button" href={alternateEntry}>{t(compatibility ? 'backToWorkspaceView' : 'compatibilityWorkbench')}</a>{compatibility && <a className="button" href={`${compatibilityPath}${base(ws)}/home`}>{t('commandRecords')}</a>}<CommandLanguage><WorkspaceTools key={ws} ws={ws} /></CommandLanguage><button disabled={refreshing} onClick={() => void refresh()}><RefreshCw size={15} className={refreshing ? 'rotating' : undefined} />{t('refresh')}</button><Language /></div></header>
+    <nav className="nav" aria-label={t('allModules')}><Link className={dashboard ? 'active' : ''} to={`${base(ws)}/home`}><LayoutGrid size={17} />{t('home')}</Link>
+      {groups.map(([group, keys]) => <section key={group}><h2>{t(group)}</h2>{keys.map(key => {
+        const module = modules.find(item => item.key === key)!;
+        const Icon = icons[key];
+        const current = active?.key === key && !(key === 'planning' && section === 'approvals');
+        return <Fragment key={key}><Link className={current ? 'active' : ''} aria-current={current ? 'page' : undefined} to={`${base(ws)}/${module.route}`}><Icon size={17} />{t(`module.${key}`)}</Link>
+          {key === 'planning' && <Link className={section === 'approvals' ? 'active nav-sub' : 'nav-sub'} aria-current={section === 'approvals' ? 'page' : undefined} to={`${base(ws)}/approvals`}><CheckSquare size={15} />{t('nav.approvals')}</Link>}</Fragment>;
+      })}</section>)}
+      <section className="nav-settings"><h2><button type="button" aria-expanded={settingsOpen} onClick={() => setSettingsPreference(settingsOpen && !settingsActive ? 'closed' : 'open')}>
+        {settingsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}{t('nav.settings')}</button></h2>
+        {settingsOpen && <>{settingsModules.map(key => {
+          const module = modules.find(item => item.key === key)!;
+          const Icon = icons[key];
+          return <Link key={key} className={active?.key === key ? 'active' : ''} aria-current={active?.key === key ? 'page' : undefined} to={`${base(ws)}/${module.route}`}><Icon size={17} />{t(`module.${key}`)}</Link>;
+        })}
+        <Link className={access ? 'active' : ''} aria-current={access ? 'page' : undefined} to={`${base(ws)}/access`}><KeyRound size={17} />{t('nav.access')}</Link>
+        {(securityAvailable || recoveryAvailable) && <Link className={section === 'settings/security' ? 'active' : ''} to={`${base(ws)}/settings/security`} aria-current={section === 'settings/security' ? 'page' : undefined}><Shield size={17} />{t('security.title')}</Link>}</>}
+      </section></nav>
+    <div className="sidebar-footer"><span className="avatar">{(session.user.name ?? session.user.email ?? 'S').slice(0, 1).toUpperCase()}</span><span title={session.user.email}>{session.user.name ?? session.user.email}</span><DeveloperToggle /><SignOut session={session} /></div>
+  </aside><div className="main-frame"><header className="topbar"><div className="breadcrumb"><span>{workspace.name}</span><span>/</span><strong>{active ? t(`module.${active.key}`) : t('home')}</strong></div><div className="toolbar"><BrandScope scope={brand} />{(developer || compatibility) && <a className="button" href={alternateEntry}>{t(compatibility ? 'backToWorkspaceView' : 'compatibilityWorkbench')}</a>}{compatibility && <a className="button" href={`${compatibilityPath}${base(ws)}/home`}>{t('commandRecords')}</a>}{catalog.data && <ApiContext.Provider value={{ ws, session, catalog: catalog.data, brandId: brand.brandId, compatibility }}><PrimarySearch /></ApiContext.Provider>}<CommandLanguage><WorkspaceTools key={ws} ws={ws} /></CommandLanguage><button className="icon-button" disabled={refreshing} aria-label={t('refresh')} title={t('refresh')} onClick={() => void refresh()}><RefreshCw size={15} className={refreshing ? 'rotating' : undefined} /></button><Language /></div></header>
     <main className="workspace-main">{section === 'settings/security' && (securityAvailable || recoveryAvailable || (security.isPending && security.fetchStatus !== 'idle')) ? <div className="account-security-page">
       {security.isPending && security.fetchStatus !== 'idle' && <Busy label={t('loading')} />}
       {securityAvailable && session.csrf_token && session.user.id && <AccountSecurity key={session.user.id} userId={session.user.id} csrf={session.csrf_token} />}

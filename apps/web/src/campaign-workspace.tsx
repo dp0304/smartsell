@@ -100,7 +100,9 @@ function Goals({ campaign, id }: { campaign: RecordData; id: string }) {
         const data = new FormData(form);
         const result = await attach.run('PUT', `${campaignPath}/markets`, [id], { markets: [
           ...attached.map(({ market_id, locales, starts_at, ends_at, owner_user_id, status }) => ({ market_id, locales, starts_at, ends_at, owner_user_id, status })),
-          { market_id: field(data, 'market_id') },
+          // A campaign market needs at least one locale; start from the market's own languages.
+          ((market: RecordData | undefined) => ({ market_id: field(data, 'market_id'),
+            locales: [...new Set([market?.primary_language, ...(Array.isArray(market?.languages) ? market.languages : [])].filter((value): value is string => typeof value === 'string' && Boolean(value)))] }))(remaining.find(row => idOf(row) === field(data, 'market_id'))),
         ] }, campaign);
         if (result) form.reset();
       }}>

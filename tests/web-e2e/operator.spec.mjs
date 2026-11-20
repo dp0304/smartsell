@@ -3,6 +3,10 @@ import { expect, test as base } from '@playwright/test';
 import { localDev } from './local-dev.mjs';
 
 const test = base.extend({ dev: localDev });
+// These tests drive the developer surfaces (Tools, the compatibility workbench and raw operations),
+// which operators only see with developer mode on.
+const developerMode = () => localStorage.setItem('smartsell.developer', '1');
+test.beforeEach(async ({ context }) => { await context.addInitScript(developerMode); });
 const operator = { email: 'operator@smartsell.test', name: 'Local operator', workspaceName: 'Local acceptance workspace' };
 const brandName = 'Local Launch Brand';
 const campaignName = 'Local Launch Campaign';
@@ -191,7 +195,7 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   await page.getByRole('link', { name: 'Compatibility workbench', ...exact }).click();
   await expect(page).toHaveURL(`${dev.origin}${compat}/login`);
   await page.getByRole('link', { name: 'Back to main workspace', ...exact }).click();
-  await page.getByRole('link', { name: 'First-time setup', ...exact }).click();
+  await page.getByRole('link', { name: 'First deployment? Create the first workspace', ...exact }).click();
   await page.getByLabel('Your name', exact).fill(operator.name);
   await page.getByLabel('Workspace name', exact).fill(operator.workspaceName);
   await page.getByLabel('Email', exact).fill(operator.email);
@@ -204,6 +208,9 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   const home = `${dev.origin}/w/${wid}/home`;
   await expect(page).toHaveURL(home);
 
+  // Settings modules live in a folded sidebar section.
+  const settings = page.getByRole('navigation').getByRole('button', { name: 'Settings', ...exact });
+  if (await settings.getAttribute('aria-expanded') === 'false') await settings.click();
   await page.getByRole('navigation').getByRole('link', { name: 'Brands & workspace', ...exact }).click();
   await page.getByRole('button', { name: 'Create brand', ...exact }).click();
   const dialog = page.getByRole('dialog', { name: 'Create brand', ...exact });
@@ -212,7 +219,7 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   await dialog.getByRole('button', { name: 'Save', ...exact }).click();
   const created = await checkResponse(await create, undefined, 'Default UI brand creation');
   expect(await created.request().headerValue('x-csrf-token')).toBeTruthy();
-  await expect(dialog.getByRole('status')).toContainText('Request accepted');
+  await expect(dialog.getByRole('status')).toContainText('Saved');
   await close(dialog);
   await expect(row(page, brandName)).toBeVisible();
 
@@ -268,6 +275,7 @@ test('strict UI | compatibility setup, fresh-browser sign-in and both languages'
   const password = dev.password();
   await test.step('Create the first owner and workspace in the setup form', () => setupInUi(page, dev, password));
   const fresh = await browser.newPage();
+  await fresh.addInitScript(developerMode);
   try {
     await test.step('Sign in through the ordinary entry using a fresh cookie jar', async () => {
       await enter(fresh, dev);
@@ -408,6 +416,7 @@ test('strict UI | owner self-review is denied and a different reviewer approves 
   const reviewer = { id: randomUUID(), email: 'reviewer@smartsell.test', name: 'Local reviewer', role: 'reviewer' };
   dev.switchIdentity(reviewer);
   const fresh = await browser.newPage();
+  await fresh.addInitScript(developerMode);
   try {
     await enter(fresh, dev);
     await english(fresh);

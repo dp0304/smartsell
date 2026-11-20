@@ -272,3 +272,52 @@ fieldset.account-recovery-flow { border: 0; padding: 0; min-width: 0; margin: 0;
   .drawer::backdrop { background: Canvas; opacity: .7; }
   :is(input, textarea, select):user-invalid, :is(input, textarea, select)[aria-invalid=true] { border-style: dashed; }
 }
+
+/* Navigation: approvals shortcut, folded settings section, developer toggle */
+.nav a.nav-sub { padding-left: 34px; min-height: 28px; font-size: 12.5px; }
+.nav-settings h2 { padding: 0; }
+.nav-settings h2 button {
+  width: 100%; justify-content: flex-start; gap: 6px; min-height: 28px; padding: 5px 9px; border: 0; background: transparent;
+  color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .07em;
+}
+.nav-settings h2 button:enabled:hover { color: var(--ink); background: var(--surface-hover); }
+.sidebar-footer .developer-on { color: var(--accent); border-color: var(--focus-ring); }
+.auth-switch { display: inline-block; margin-top: 4px; font-size: 13px; }
+
+/* Module tabs: overflow menu */
+.tab-more { position: relative; }
+.tabs .tab-more > button { border: 0; background: transparent; color: var(--muted); }
+.tab-menu {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 180px; display: grid; gap: 2px; padding: 6px;
+  background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-control); box-shadow: var(--shadow-glass);
+}
+.tabs .tab-menu button { justify-content: flex-start; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink); font-weight: 500; white-space: nowrap; }
+
+/* Forms: reference pickers, checklists, folded settings */
+.field-empty { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 5px; padding: 12px 14px; border: 1px dashed var(--line-control); border-radius: var(--radius-input); color: var(--muted); font-weight: 400; }
+.choice-list { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.choice-list legend { padding: 0; margin-bottom: 4px; }
+.choice-list .check { font-weight: 400; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.form-more { border-top: 1px solid var(--line); padding-top: 10px; }
+.form-more > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.form-more[open] > summary { margin-bottom: 10px; }
+.form-more > .field + .field { margin-top: 12px; }
+.result .action-row { margin-top: 10px; }
+
+/* Home: getting-started checklist */
+.setup-progress { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+.setup-progress meter { width: 160px; height: 8px; }
+.setup-steps { list-style: none; margin: 0; padding: 6px 14px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.setup-steps li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.setup-steps li.done { opacity: .62; }
+.setup-steps li > span { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.setup-steps li svg { flex: 0 0 auto; }
+.setup-steps .step-done { color: var(--status-good, #34d399); }
+.setup-steps .step-todo { color: var(--muted); }
+.setup-steps a { white-space: nowrap; font-size: 13px; }
+.next-step { margin: 10px 0; padding: 10px 12px; border-left: 3px solid var(--focus-ring); background: var(--surface-inset); border-radius: 0 var(--radius-control) var(--radius-control) 0; color: var(--ink); font-size: 13px; }
+.search-form { display: flex; gap: 8px; margin-bottom: 14px; }
+.search-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.search-results li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.search-results li small { flex: 0 0 auto; min-width: 64px; }
+.search-results li > :is(a, strong) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

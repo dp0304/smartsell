@@ -1,7 +1,7 @@
 import { ReportExports } from './ReportExports';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowDownRight, ArrowRight, Plus, Search } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ChevronDown, Plus, Search } from 'lucide-react';
 import { asRecord, operationPath, type RecordData } from '@smartsell/sdk';
 import { EmptyState, EntityTable, Panel, Pill } from '@smartsell/ui';
 import { entity, findOperation, ReadState, recordRows, rowTitle, stringValue, useApi, useRead } from './api';
@@ -40,6 +40,11 @@ import { AgentAssistant } from './agent-assistant';
 import type { Entity } from './workbench-api';
 import { ApprovalBatch, approvalBatchPath, approvalTargetId } from './approval-batch';
 import { brandScopedLists } from './workspace-brand-scope';
+import { useDeveloperMode } from './preferences';
+import { optionLabel } from './option-labels';
+
+// Tabs beyond this count move into a "more" menu so the row stays on one line.
+const visibleTabCount = 6;
 
 const workflowActions = { tasks: executionWorkspaceActions, targets: targetWorkspaceActions, conversations: conversationWorkspaceActions } as Record<string, Action[]>;
 const commerceImportTab: Resource = { key: 'store-imports', label: ['CSV 匯入', 'CSV imports'], path: '/imports' };
@@ -77,6 +82,7 @@ function Display({ name, value }: { name: string; value: unknown }) {
   if (typeof value === 'object') return <span title={JSON.stringify(value)}>{stringValue(asRecord(value).value) || stringValue(asRecord(value).availability) || '…'}</span>;
   const text = String(value);
   if (name.endsWith('_at') && !Number.isNaN(Date.parse(text))) return <time dateTime={text}>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(text))}</time>;
+  if (['provider', 'platform', 'format', 'content_format', 'kind', 'visibility', 'locale', 'executor'].includes(name)) return <span title={text}>{optionLabel(text, locale)}</span>;
   if (['status', 'display_status', 'sub_status', 'production_stage', 'availability'].includes(name)) {
     const tone = /unknown|pending|waiting|manual/.test(text) ? 'warning' : /failed|blocked|rejected/.test(text) ? 'critical' : /active|ready|approved|published|completed/.test(text) ? 'good' : 'neutral';
     return <Pill tone={tone}>{t(`state.${text}`, { defaultValue: text })}</Pill>;
@@ -104,26 +110,37 @@ function Actions({ group, record, open, ids = [rowId(record)], seed = {} }: { gr
 
 function DataBlock({ path, ids, title, onPick, pickLabel }: { path: string; ids: string[]; title: string; onPick?: (record: RecordData) => void; pickLabel?: (record: RecordData) => string }) {
   const { t } = useCopy();
+  const developer = useDeveloperMode();
   const read = useRead(path, ids);
   if (!read.op) return null;
   const rows = recordRows(read.data?.data);
   return <section className="detail-block"><h3>{title}</h3><ReadState read={read} />{read.data && (rows ? (rows.length ?
-    <EntityTable records={rows} rowKey={rowId} columns={[{ label: t('recordId'), cell: row => onPick ? <button className="text-button" onClick={() => onPick(row)}>{pickLabel?.(row) ?? rowTitle(row)}</button> : rowTitle(row) }, { label: t('data'), cell: row => <details><summary>{t('details')}</summary><Json value={row} /></details> }]} /> :
-    <EmptyState title={t('empty')} />) : <Json value={read.data.data} />)}</section>;
+    <EntityTable records={rows} rowKey={rowId} columns={[{ label: t('name'), cell: row => onPick ? <button className="text-button" onClick={() => onPick(row)}>{pickLabel?.(row) ?? rowTitle(row)}</button> : rowTitle(row) },
+      { label: t('status'), cell: row => <Display name="status" value={row.status ?? row.state} /> },
+      { label: t('updated_at'), cell: row => <Display name="updated_at" value={row.updated_at ?? row.created_at} /> },
+      ...(developer ? [{ label: t('data'), cell: (row: RecordData) => <details><summary>{t('details')}</summary><Json value={row} /></details> }] : [])]} /> :
+    <EmptyState title={t('empty')} />) : developer ? <Json value={read.data.data} /> : null)}</section>;
 }
 
 function LinkedDetails({ group, record, open, onRelated }: { group: string; record: RecordData; open: Open; onRelated: (kind: string, id: string) => void }) {
-  const { t, label } = useCopy();
+  const { t, label, locale } = useCopy();
   const id = rowId(record);
   if (group === 'content') {
     const variants = (recordRows(record.variants ?? record.content_variants) ?? []).map(row => entity(row.variant ?? row));
-    return <section className="detail-block"><h3>{t('linked')}</h3>{variants.map(variant => <button key={rowId(variant)} onClick={() => onRelated('variant', rowId(variant))}>{rowTitle(variant)} · {stringValue(variant.locale)}</button>)}</section>;
+    return <section className="detail-block"><h3>{label(['平台版本', 'Platform versions'])}</h3>
+      {variants.length ? <div className="action-row">{variants.map(variant => <button key={rowId(variant)} onClick={() => onRelated('variant', rowId(variant))}>
+        {[variant.platform, variant.locale, variant.format].map(stringValue).filter(Boolean).map(value => optionLabel(value, locale)).join(' · ') || rowTitle(variant)}</button>)}</div>
+        : <p className="next-step">{label(['下一步：按「新增內容變體」，為每個要發布的平台寫一個版本。', 'Next: choose Create variant to write a version for each platform.'])}</p>}</section>;
   }
-  if (group === 'variants') return <><ContentFactWorkbench key={id} record={record} /><DataBlock path="/content-variants/:id/revisions" ids={[id]} title={t('revisions')}
-    pickLabel={revision => `${label(['排期版本', 'Schedule revision'])} ${stringValue(revision.revision_no)}`}
+  if (group === 'variants') return <><ContentFactWorkbench key={id} record={record} />
+    <p className="next-step">{label(record.current_revision_id
+      ? ['文案確定後，在下方版本清單按「用第 N 版建立排期」。修改文案後要再「儲存修訂」才會產生新版本。', 'When the copy is final, choose Schedule revision below. Save a new revision after editing the copy.']
+      : ['下一步：確認文案後按「儲存修訂」。只有儲存過的版本才能排期，排期後內容不會再變動。', 'Next: save a revision once the copy is final. Only saved revisions can be scheduled, and they stay fixed.'])}</p>
+    <DataBlock path="/content-variants/:id/revisions" ids={[id]} title={t('revisions')}
+    pickLabel={revision => label([`用第 ${stringValue(revision.revision_no)} 版建立排期`, `Schedule revision ${stringValue(revision.revision_no)}`])}
     onPick={revision => {
       const action = createActions.targets;
-      open(action.path, action, [], {}, { brand_id: record.brand_id, campaign_id: record.campaign_id, content_item_id: record.content_item_id, content_variant_id: id, variant_revision_id: rowId(revision), content_format: record.format });
+      open(action.path, action, [], {}, { brand_id: record.brand_id, campaign_id: record.campaign_id, content_item_id: record.content_item_id, content_variant_id: id, variant_revision_id: rowId(revision), content_format: scheduleFormats[stringValue(record.format)] ?? record.format });
     }} /></>;
   if (group === 'products') return <DataBlock path="/products/:id/facts" ids={[id]} title={t('facts')} />;
   if (group === 'brands') return <DataBlock path="/brands/:id/markets" ids={[id]} title={t('markets')} />;
@@ -133,6 +150,9 @@ function LinkedDetails({ group, record, open, onRelated }: { group: string; reco
   })}</section></>;
   return null;
 }
+
+// Content stores production formats; schedules use the publishing format of the same name family.
+const scheduleFormats: Record<string, string> = { feed_image: 'image', note: 'image', long_video: 'video', live_teaser: 'video', short_video: 'short' };
 
 const productionStages = ['accepted', 'drafting', 'design', 'awaiting_assets', 'internal_review', 'ready', 'archived'];
 
@@ -196,8 +216,13 @@ function SourceBudget({ sourceId }: { sourceId: string }) {
 export function ModulePage({ module, initialTab, initialId, initialVersion, initialView }: { module: Module; initialTab?: string; initialId?: string; initialVersion?: string; initialView?: string }) {
   const api = useApi();
   const { t, label, locale } = useCopy();
+  const developer = useDeveloperMode();
   const [params, setParams] = useSearchParams();
   const tabs = module.key === 'commerce' ? [...module.resources, commerceImportTab] : module.resources;
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Names for filter options that refer to brands, accounts and campaigns.
+  const referenceReads = [useRead('/brands'), useRead('/social-accounts'), useRead('/campaigns')];
+  const referenceNames = Object.fromEntries(referenceReads.flatMap(read => recordRows(read.data?.data) ?? []).map(row => [rowId(row), rowTitle(row)]));
   const resource = tabs.find(item => item.key === (params.get('tab') ?? initialTab)) ?? module.resources[0];
   const [selection, setSelection] = useState<Selection>();
   const [relatedRecord, setRelatedRecord] = useState<RecordData>({});
@@ -256,7 +281,8 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
   const nested = entity(detail.conversation ?? detail.item ?? detail.variant ?? detail.report);
   const record: RecordData = { ...(relatedInfo ? relatedRecord : selectedRow), ...nested, ...detail, ...(details.data?.etag ? { etag: details.data.etag } : {}) };
   const recordReady = !details.op || Boolean(details.data);
-  const create = createActions[resource.key];
+  // Several modules have a "templates" tab; only the asset library's one creates copy templates.
+  const create = resource.key === 'templates' && module.key !== 'asset' ? undefined : createActions[resource.key];
   const availableCreate = isProducts ? findOperation(api, 'POST', '/products', 'commerce') : create && findOperation(api, create.method ?? 'POST', create.path);
   const [openedInitialForm, setOpenedInitialForm] = useState(false);
   useEffect(() => {
@@ -298,26 +324,40 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
     const id = stringValue(record.id ?? value[`${kind}_id`] ?? value.import_batch_id);
     if (!id) return;
     setSelection(undefined); setRelatedRecord(record);
-    if (kind === 'target' && module.key === 'planning') choose(id, 'targets');
+    if (kind === 'record') choose(id);
+    else if (kind === 'target' && module.key === 'planning') choose(id, 'targets');
     else if (kind === 'import' && module.key === 'commerce') importTab(id, stringValue(record.store_id));
     else onRelated(kind, id);
   }
+  // Explain where records come from: something the user creates here, or something the system fills in.
+  const emptyHint = isProducts ? t('importHint') : isInbox ? label(['連接社群帳號並開啟留言／私訊同步後，對話會出現在這裡。', 'Conversations appear here once a social account is connected and comment or message sync is on.'])
+    : availableCreate && create ? label([`按右上角「${create.label[0]}」新增第一筆。`, `Choose “${create.label[1]}” at the top right to add the first one.`])
+    : label(['目前還沒有資料。相關流程執行後會自動出現在這裡。', 'Nothing here yet. Records appear once the related workflow runs.']);
   const emptyRecords = <EmptyState title={t(filter || Object.values(dimensions).some(Boolean) ? 'noMatches' : 'empty')}
-    detail={!filter ? (isProducts ? t('importHint') : t('emptyDetail')) : undefined}
+    detail={!filter ? emptyHint : undefined}
     action={!filter && !availableCreate && isProducts && <button onClick={() => setParams({ tab: 'stores' })}>{t('resource.stores')} <ArrowRight size={15} /></button>} />;
   return <>
     <header className="page-heading"><div><h1>{t(`module.${module.key}`)}</h1><p>{t(`description.${module.key}`)}</p></div><div className="toolbar">
       {module.key === 'ingest' && findOperation(api, 'POST', generalImport.path) && <button onClick={() => open(generalImport.path, generalImport)}><Plus size={16} />{label(generalImport.label)}</button>}
-      {(module.key === 'commerce' || module.key === 'ingest') && findOperation(api, 'GET', '/imports/:id') && <form className="inline-form" onSubmit={event => { event.preventDefault(); const id = String(new FormData(event.currentTarget).get('batch') ?? '').trim(); if (id && !/[/\\]/.test(id) && id !== '.' && id !== '..') onRelated('import', id); }}><input name="batch" required aria-label={t('batchId')} placeholder={t('batchId')} /><button>{t('importOpen')}</button></form>}
-      {module.key === 'commerce' && !isStoreImport && findOperation(api, 'GET', '/imports') && <button onClick={() => chooseTab(commerceImportTab.key)}>{label(commerceImportTab.label)}</button>}
+      {developer && (module.key === 'commerce' || module.key === 'ingest') && findOperation(api, 'GET', '/imports/:id') && <form className="inline-form" onSubmit={event => { event.preventDefault(); const id = String(new FormData(event.currentTarget).get('batch') ?? '').trim(); if (id && !/[/\\]/.test(id) && id !== '.' && id !== '..') onRelated('import', id); }}><input name="batch" required aria-label={t('batchId')} placeholder={t('batchId')} /><button>{t('importOpen')}</button></form>}
       {module.key === 'creator' && resource.key === 'live' && <CreatorPlanButton open={open} />}
       {module.key === 'commerce' && resource.key === 'promotions' && <PromotionCreate onCreated={id => { setFilter(''); choose(id, 'promotions'); }} />}
-      {availableCreate && <button className="primary" onClick={() => isProducts ? setCreatingProduct(true) : create && open(create.path, create)}><Plus size={16} />{isProducts ? label(['新增商品', 'Create product']) : label(create.label)}</button>}
+      {availableCreate && <button className="primary" onClick={() => isProducts ? setCreatingProduct(true) : create && open(create.path, { ...create, follow: create.follow ?? 'record' })}><Plus size={16} />{isProducts ? label(['新增商品', 'Create product']) : create && label(create.label)}</button>}
     </div></header>
-    <div className="tabs" aria-label={t('allModules')}>{tabs.map(tab => <button key={tab.key} className={resource.key === tab.key && !advanced ? 'selected' : ''} onClick={() => chooseTab(tab.key)}>{label(tab.label)}</button>)}
-      <button className={advanced ? 'selected advanced-tab' : 'advanced-tab'} onClick={() => setAdvanced(value => !value)}>{t('advanced')} <ArrowDownRight size={14} /></button>
-    </div>
-    {advanced ? <Advanced module={module} onOpen={setSelection} /> : <>
+    {(() => {
+      const selectedIndex = tabs.findIndex(tab => tab.key === resource.key);
+      // Keep the selected tab visible even when it lives in the overflow menu.
+      const visible = tabs.length <= visibleTabCount + 1 ? tabs : selectedIndex >= visibleTabCount
+        ? [...tabs.slice(0, visibleTabCount - 1), tabs[selectedIndex]] : tabs.slice(0, visibleTabCount);
+      const overflow = tabs.filter(tab => !visible.includes(tab));
+      return <div className="tabs" aria-label={t('allModules')}>{visible.map(tab => <button key={tab.key} className={resource.key === tab.key && !advanced ? 'selected' : ''} aria-current={resource.key === tab.key && !advanced ? 'page' : undefined} onClick={() => chooseTab(tab.key)}>{label(tab.label)}</button>)}
+        {overflow.length > 0 && <div className="tab-more"><button aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)} onBlur={event => { if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) setMoreOpen(false); }}>{label(['更多', 'More'])} <ChevronDown size={14} /></button>
+          {moreOpen && <div className="tab-menu" role="menu">{overflow.map(tab => <button key={tab.key} role="menuitem" onBlur={event => { if (!event.currentTarget.parentElement?.parentElement?.contains(event.relatedTarget)) setMoreOpen(false); }} onClick={() => { setMoreOpen(false); chooseTab(tab.key); }}>{label(tab.label)}</button>)}</div>}
+        </div>}
+        {developer && <button className={advanced ? 'selected advanced-tab' : 'advanced-tab'} onClick={() => setAdvanced(value => !value)}>{t('advanced')} <ArrowDownRight size={14} /></button>}
+      </div>;
+    })()}
+    {advanced && developer ? <Advanced module={module} onOpen={setSelection} /> : <>
       {module.key === 'asset' && resource.key === 'assets' && <OperationMediaUpload />}
       {module.key === 'analytics' && (resource.key === 'cohorts' || resource.key === 'attribution' || resource.key === 'audience') && <AnalyticsWorkspace key={resource.key} resource={resource.key} />}
       {analyticsRead && <AnalyticsReadWorkspace key={analyticsRead} resource={analyticsRead} onPick={choose} />}
@@ -339,7 +379,7 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
           {!!page?.length && !isInbox && <CommandLanguage><RecordFilters key={resource.key}
             wid={api.ws} userId={api.session.user.id ?? ''} role={api.session.workspaces.find(workspace => workspace.id === api.ws)?.role ?? ''}
             resourceType={`${module.key}.${resource.key}`} storageKey={`smartsell.filters:${api.ws}:${api.session.user.id}:${module.key}:${resource.key}`}
-            rows={page.map(filterRecord)} filters={dimensions} change={setDimensions} /></CommandLanguage>}
+            rows={page.map(filterRecord)} filters={dimensions} change={setDimensions} names={referenceNames} /></CommandLanguage>}
           {!read.op && resource.listUnavailable ? <EmptyState title={t('noAccess')} detail={label(resource.listUnavailable === 'unmounted'
             ? ['此部署未在工作區目錄提供租戶管理端點。', 'This deployment does not expose the tenant administration endpoint in the workspace catalog.']
             : ['目前的 API 尚未提供此讀取端點。', 'This read endpoint is not yet available in the API.'])} /> : <ReadState read={read} />}
@@ -362,7 +402,7 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
             isProducts ? null : emptyRecords) : <Json value={read.data.data} />)}
           {(!isProducts || productQuery === filter.trim()) && (cursors.length > 0 || read.data?.next_cursor) && <div className="pagination">{cursors.length > 0 && <button onClick={() => setCursors(prev => prev.slice(0, -1))}>{t('previousPeriod')}</button>}{read.data?.next_cursor && <button onClick={() => setCursors(prev => [...prev, read.data!.next_cursor!])}>{t('next')}</button>}</div>}
         </Panel>}
-        {(selected || relatedInfo || isInbox) && <Panel className="record-detail"><div className="panel-head"><h2>{rowTitle(record) || t('details')}</h2>{(selected || relatedInfo) && <button className="icon-button" aria-label={t('close')} onClick={closeRecord}>×</button>}</div>
+        {(selected || relatedInfo || isInbox) && <Panel className="record-detail"><div className="panel-head"><h2>{recordHeading(record, locale) || t('details')}</h2>{(selected || relatedInfo) && <button className="icon-button" aria-label={t('close')} onClick={closeRecord}>×</button>}</div>
           {!(selected || relatedInfo) ? <EmptyState title={t('selectRecord')} /> : <>
             {details.op && <ReadState read={details} />}
             {recordReady && <div className="detail-body">
@@ -425,7 +465,7 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
                 role={api.session.workspaces.find(workspace => workspace.id === api.ws)?.role ?? ''}
                 row={{ id: rowId(record), kind: group === 'work' ? 'work_item' : 'content_item', data: record, version: Number(record.version) }} /></CommandLanguage>}
               <LinkedDetails group={group} record={{ ...record, id: rowId(record) || ids.at(-1) }} open={open} onRelated={onRelated} />
-              <details><summary>{t('data')}</summary><Json value={Object.keys(record).length ? record : { id: ids.at(-1) }} /></details>
+              {developer && <details><summary>{t('data')}</summary><Json value={Object.keys(record).length ? record : { id: ids.at(-1) }} /></details>}
             </div>}
           </>}
         </Panel>}
@@ -436,6 +476,13 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
     {batch && <ApprovalBatch requests={batch} close={() => { setBatch(undefined); setChecked([]); }} />}
     {selection && <OperationForm selection={selection} onClose={() => setSelection(undefined)} follow={follow} />}
   </>;
+}
+
+/** A readable heading: records without a name (such as platform versions) are described by their attributes instead of their ID. */
+function recordHeading(record: RecordData, locale: string) {
+  const title = rowTitle(record);
+  if (title && title !== stringValue(record.id)) return title;
+  return [record.platform ?? record.provider, record.locale, record.format].map(stringValue).filter(Boolean).map(value => optionLabel(value, locale)).join(' · ');
 }
 
 function ResourceTable({ rows, resource, compact, onPick }: { rows: RecordData[]; resource: Resource; compact: boolean; onPick: (row: RecordData) => void }) {

@@ -128,7 +128,7 @@ test('WS06 | A second administrator resumes and skips the shared step from the s
   await page.getByRole('link', { name: '首次設定', exact: true }).click();
   const history = page.getByRole('region', { name: '歷史資料同步' });
   await history.getByRole('button', { name: '檢查步驟' }).click();
-  await expect(history.getByText('受阻', { exact: true })).toBeVisible();
+  await expect(history.getByText('未完成', { exact: true })).toBeVisible();
   const email = 'editorial-admin@example.test';
   dev.switchIdentity({ email, name: 'Second administrator', role: 'admin' });
   const fresh = await browser.newContext();
@@ -139,7 +139,7 @@ test('WS06 | A second administrator resumes and skips the shared step from the s
     await second.goto(`${url}/setup`);
     await expect(second.getByRole('link', { name: '繼續設定' })).toHaveAttribute('href', '#setup-history_sync');
     const resumed = second.getByRole('region', { name: '歷史資料同步' });
-    await expect(resumed.getByText('受阻', { exact: true })).toBeVisible();
+    await expect(resumed.getByText('未完成', { exact: true })).toBeVisible();
     await resumed.getByRole('button', { name: '略過步驟' }).click();
     await resumed.getByRole('textbox', { name: '略過原因' }).fill('Legacy export is pending');
     await resumed.getByRole('button', { name: '確認略過' }).click();

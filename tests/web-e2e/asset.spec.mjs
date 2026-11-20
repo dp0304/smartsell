@@ -92,11 +92,12 @@ test('AS03 and AS04 through the running workbench', async ({ page, dev }) => {
   await page.getByRole('button', { name: 'Asset templates', exact: true }).click();
   await page.getByRole('button', { name: 'Create copy template', exact: true }).click();
   const form = page.getByRole('dialog', { name: 'Create copy template' });
-  await form.getByRole('combobox', { name: 'Brand', exact: true }).fill(mainBrand.id);
+  await form.getByRole('combobox', { name: 'Brand', exact: true }).selectOption(mainBrand.id);
   await form.getByRole('textbox', { name: 'Name', exact: true }).fill('Default entry template');
   await form.getByRole('textbox', { name: 'Template copy', exact: true }).fill('Default workspace copy');
   await form.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.getByText('Default entry template', { exact: true })).toBeVisible();
+  // The saved form also echoes the new template's name, so look for it in the list.
+  await expect(page.getByRole('button', { name: 'Default entry template', exact: true })).toBeVisible();
   const [mainTemplate] = await rest('GET', '/templates');
   const { item: mainItem } = await rest('POST', '/content-items', { brand_id: mainBrand.id, title: 'Default asset draft' });
   const { variant: mainVariant } = await rest('POST', `/content-items/${mainItem.id}/variants`, { platform: 'generic', format: 'text' });

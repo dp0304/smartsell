@@ -14,7 +14,7 @@
 }
 
 .dashboard-aurora > .dashboard-hero {
-  min-height: 240px;
+  min-height: 150px;
   margin: 0 calc(-1 * var(--dashboard-gutter));
   padding: 28px var(--dashboard-gutter);
   border-radius: var(--dashboard-radius) var(--dashboard-radius) 0 0;
@@ -65,7 +65,7 @@
 }
 
 .dashboard-aurora .dashboard-hero h1 {
-  font-size: clamp(var(--font-size-title), 7cqi, var(--font-size-display));
+  font-size: clamp(var(--font-size-title), 4cqi, 40px);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -.04em;
@@ -105,15 +105,15 @@
   position: relative;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 24px;
-  margin: 24px 0 0;
+  margin: 18px 0 0;
 }
 
 .dashboard-aurora .dashboard-stat {
   position: relative;
-  grid-column: span 4;
+  grid-column: span 3;
   align-items: center;
-  gap: 16px;
-  padding: 32px;
+  gap: 14px;
+  padding: 22px;
   border: 1px solid var(--line, rgba(255, 255, 255, .20));
   border-radius: var(--dashboard-radius);
   background: var(--color-glass, rgba(255, 255, 255, .10));
@@ -235,4 +235,10 @@
   .dashboard-aurora .dashboard-stat:hover > svg {
     transform: none;
   }
+}
+
+.dashboard-aurora .dashboard-stat strong.stat-text {
+  display: block;
+  font-size: 20px;
+  white-space: nowrap;
 }

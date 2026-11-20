@@ -158,7 +158,7 @@ export const modules: Module[] = [
     resource('modelRoutes', '模型用途路由', 'Model routes', '/model-routes'),
   ] },
   { key: 'account', route: 'settings/accounts', label: ['帳號與裝置', 'Accounts & devices'], description: ['查閱社群帳號、授權連接及本地裝置。', 'Inspect social accounts, integrations, and local devices.'], resources: [
-    resource('accounts', '社群帳號', 'Social accounts', '/social-accounts', '/social-accounts/:id', ['display_name', 'platform', 'status', 'handle']),
+    resource('accounts', '社群帳號', 'Social accounts', '/social-accounts', '/social-accounts/:id', ['display_name', 'provider', 'status', 'handle']),
     resource('connections', '授權連接', 'Connections', '/connections', '/connections/:id/accounts'),
     resource('devices', '本地裝置', 'Devices', '/devices'),
     noDetail(resource('blocks', '帳號阻塞', 'Account blocks', '/account-blocks')),

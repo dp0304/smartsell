@@ -2,6 +2,8 @@ import { expect, test as baseTest } from '@playwright/test';
 import { localDev } from '../../../tests/web-e2e/local-dev.mjs';
 
 const test = baseTest.extend({ dev: localDev });
+// Tools and the compatibility workbench are developer surfaces.
+test.beforeEach(async ({ context }) => { await context.addInitScript(() => localStorage.setItem('smartsell.developer', '1')); });
 
 test('default workspace shows provider status and runs permitted commands with recoverable errors', async ({ page, dev }) => {
   const email = 'default-tools@example.test';
@@ -47,7 +49,7 @@ test('default workspace shows provider status and runs permitted commands with r
   const response = await page.request.get(`${workspaceApi}/records/workspace/brand`);
   expect(response.ok()).toBe(true);
   expect((await response.json()).items.filter(row => row.data.slug === 'command-workshop')).toHaveLength(1);
-  await page.getByRole('button', { name: 'Search workspace' }).click();
+  await page.getByRole('button', { name: 'Search command records' }).click();
   const search = page.getByRole('dialog', { name: 'Search workspace' });
   await search.getByRole('searchbox').fill('Command Workshop');
   await search.getByRole('button', { name: 'Search', exact: true }).click();
@@ -56,7 +58,7 @@ test('default workspace shows provider status and runs permitted commands with r
   await expect(brand.getByText('command-workshop', { exact: true })).toBeVisible();
   await brand.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByText('Command API records')).toBeVisible();
-  await page.getByRole('link', { name: 'Access control' }).click();
+  await page.getByRole('navigation').getByRole('link', { name: 'Access control' }).click();
   const currentRole = page.getByRole('region', { name: 'Your current role', exact: true });
   await expect(currentRole.getByRole('heading', { name: 'Your current role', exact: true })).toBeVisible();
   await expect(currentRole.getByText('Owner', { exact: true })).toBeVisible();

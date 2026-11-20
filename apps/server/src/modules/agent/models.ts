@@ -203,7 +203,8 @@ export const modelOperations: Operation[] = [
   { method: 'POST', path: '/model-providers', name: 'model_providers_create', roles: ADMIN, summary: 'Register a customer-provided model endpoint', run(ctx, { body }) {
     const kind = choice(body.kind, 'kind', ['openai_compatible', 'anthropic_compatible', 'internal_gateway', 'anthropic']);
     const protocol = kind === 'openai_compatible' ? 'openai_chat' : kind === 'internal_gateway' ? choice(body.protocol, 'protocol', protocols) : 'anthropic_messages';
-    const url = URL.parse(kind === 'anthropic' ? 'https://api.anthropic.com' : text(body.endpoint, 'endpoint', 2048));
+    // The runtime appends /messages to this base, so the direct Anthropic base includes the API version segment.
+    const url = URL.parse(kind === 'anthropic' ? 'https://api.anthropic.com/v1' : text(body.endpoint, 'endpoint', 2048));
     if (!url || (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', '[::1]'].includes(url.hostname))) || url.username || url.password || url.search || url.hash) throw new Problem(400, 'INVALID_INPUT', 'An HTTPS base URL without credentials, query, or fragment is required');
     const secret = text(body.secret_id, 'secret_id');
     if (!runtime(ctx).ownsSecret(ctx, secret)) throw new Problem(404, 'AI_CREDENTIAL_UNAVAILABLE', 'Model credential not found');

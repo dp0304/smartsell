@@ -78,7 +78,9 @@ test('AN10 Reports compares audience sources and keeps a nonzero low sample on m
   await page.goto(reports);
   await expect(page.getByRole('heading', { name: 'Analytics & reports', exact: true })).toBeVisible({ timeout: 20_000 });
   const reading = page.waitForResponse(reply => new URL(reply.url()).pathname.endsWith('/audience-insights') && reply.request().method() === 'GET');
-  await page.getByRole('button', { name: 'Audience insights', exact: true }).click();
+  // Analytics has more tabs than fit on one row; the rest sit under "More".
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Audience insights', exact: true }).click();
   expect((await reading).status()).toBe(200);
   const table = page.getByRole('table', { name: 'Audience snapshots by source' });
   await expect(table.getByRole('columnheader')).toHaveText(['Platform data', 'Owned engagement', 'Third-party estimates']);

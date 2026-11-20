@@ -45,6 +45,8 @@ async function recoveryFixture(page, dev, request) {
   await expect(page.getByRole('heading', { name: '今日營運', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
   const securityPath = `/w/${workspace.id}/settings/security`;
+  // Account security sits in the folded settings section of the sidebar.
+  await page.getByRole('navigation', { name: '模組目錄' }).getByRole('button', { name: '設定與管理', exact: true }).click();
   const localizedSecurity = page.getByRole('navigation', { name: '模組目錄' }).getByRole('link', { name: '帳號安全', exact: true });
   await expect(localizedSecurity).toBeVisible();
   await expect(localizedSecurity).toHaveAttribute('href', securityPath);

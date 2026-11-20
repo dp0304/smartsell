@@ -1,10 +1,12 @@
-import { Activity, ArrowRight, Bell, CalendarDays, CheckCircle2, CircleAlert, ClipboardList, Layers3, Package, Pencil, Store } from 'lucide-react';
+import { Activity, ArrowRight, Bell, CalendarDays, CheckCircle2, Circle, CircleAlert, ClipboardList, Layers3, Mail, Package, Pencil, Store } from 'lucide-react';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { asRecord, type RecordData } from '@smartsell/sdk';
 import { EmptyState, EntityTable, Panel, Pill } from '@smartsell/ui';
-import { ReadState, findOperation, recordRows, stringValue, useApi, useRead } from './api';
+import { ReadState, callOperation, findOperation, recordRows, stringValue, useApi, useRead, wsKey } from './api';
 import { useCopy } from './i18n';
-import { setupLabel } from './workspace-onboarding';
+import { setupLabel, setupStepNames, setupStepRoutes } from './workspace-onboarding';
 import { TermsRenewal } from './workspace-terms-renewal';
 import './dashboard-aurora.css';
 
@@ -21,6 +23,43 @@ const steps = [
   ['planning', 'calendar', '/calendar', CalendarDays], ['execution', 'execution', '/execution-tasks', Activity],
   ['inbox', 'inbox', '/conversations', Bell], ['analytics', 'reports', '/reports', ClipboardList],
 ] as const;
+
+// Steps re-checked during this page session, so the checklist reflects work done elsewhere without repeated writes.
+const rechecked = new Set<string>();
+
+function SetupChecklist() {
+  const { label } = useCopy();
+  const api = useApi();
+  const client = useQueryClient();
+  const read = useRead('/onboarding/:flow', ['initial_setup_v1'], {}, 'workspace');
+  const rows = recordRows(read.data?.data) ?? [];
+  const check = findOperation(api, 'POST', '/onboarding/:flow/steps/:step/check', 'workspace');
+  const pending = rows.filter(row => row.status !== 'done' && row.status !== 'skipped').map(row => stringValue(row.step_key))
+    .filter(key => key && !rechecked.has(`${api.ws}:${key}`));
+  useEffect(() => {
+    if (!check || !pending.length) return;
+    for (const key of pending) rechecked.add(`${api.ws}:${key}`);
+    void (async () => {
+      for (const key of pending) await callOperation(api, check, ['initial_setup_v1', key], { body: { only_if_passed: true } }).catch(() => undefined);
+      await client.invalidateQueries({ queryKey: wsKey(api.ws) });
+    })();
+  }, [api, check, client, pending.join(',')]);
+  const finished = rows.filter(row => row.status === 'done' || row.status === 'skipped').length;
+  if (!read.data || !rows.length || finished === rows.length) return null;
+  const base = `/w/${encodeURIComponent(api.ws)}`;
+  return <Panel><div className="panel-head"><h2>{label(['開始使用 SmartSell', 'Get started with SmartSell'])}</h2>
+    <span className="setup-progress"><meter min={0} max={rows.length} value={finished} />{label([`已完成 ${finished} / ${rows.length}`, `${finished} of ${rows.length} done`])}
+      <Link to={`${base}/setup`}>{label(['查看全部', 'View all'])}</Link></span></div>
+    <ol className="setup-steps">{rows.map(row => {
+      const key = stringValue(row.step_key);
+      const done = row.status === 'done' || row.status === 'skipped';
+      const name = setupStepNames[key];
+      return <li key={key} className={done ? 'done' : undefined}>
+        <span>{done ? <CheckCircle2 size={17} className="step-done" aria-hidden="true" /> : <Circle size={17} className="step-todo" aria-hidden="true" />}{name ? label(name) : key}</span>
+        {!done && setupStepRoutes[key] && <Link to={`${base}/${setupStepRoutes[key]}`}>{label(['去完成', 'Do it'])} →</Link>}
+      </li>;
+    })}</ol></Panel>;
+}
 
 export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) {
   const { t, locale, label } = useCopy();
@@ -47,6 +86,7 @@ export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) 
   const formatNumber = (value: unknown) => typeof value === 'number' ? number.format(value) : '—';
   const efficiency = asRecord(data.execution_efficiency);
   const onTime = asRecord(efficiency.on_time_rate);
+  const countOf = (kinds: string[], types: string[]) => items.filter(item => kinds.includes(stringValue(item.kind)) || types.includes(stringValue(asRecord(item.resource).type))).length;
   const allowedSteps = steps.filter(([module, , path]) => findOperation(api, 'GET', path, module));
   const metrics = (recordRows(data.cards) ?? []).flatMap(card => {
     const report = asRecord(card.metrics);
@@ -87,9 +127,11 @@ export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) 
     </nav>
     {view === 'today' && !tab && read.data && <div className="dashboard-stats">
       {([
-        [ClipboardList, 'dashboardLoaded', items.length, 'needs'], [CircleAlert, 'dashboardUrgent', items.filter(item => ['blocker', 'high'].includes(String(item.severity))).length, 'needs&priority=high'],
-        [CheckCircle2, 'dashboardProviders', providers.length ? `${number.format(providers.length - unavailable.length)} / ${number.format(providers.length)}` : undefined, 'health'],
-      ] as const).map(([Icon, key, value, href]) => <Link key={key} className="panel dashboard-stat" to={`${base}/home?tab=${href}`}><Icon size={19} aria-hidden="true" /><div><span>{t(key)}</span><strong>{typeof value === 'string' ? value : formatNumber(value)}</strong></div></Link>)}
+        [ClipboardList, 'dashboardApprovals', countOf(['approval'], ['approval_request']), 'approvals'],
+        [CircleAlert, 'dashboardPublishing', countOf(['missed_publish', 'outcome_unknown'], ['execution_task']), 'execution'],
+        [Mail, 'dashboardReplies', countOf(['pending_reply', 'unassigned_conversation'], ['conversation']), 'inbox'],
+        [CheckCircle2, 'dashboardSources', unavailable.length ? label([`${unavailable.length} 個異常`, `${unavailable.length} need attention`]) : providers.length ? label(['全部正常', 'All healthy']) : '—', 'home?tab=health'],
+      ] as const).map(([Icon, key, value, href]) => <Link key={key} className="panel dashboard-stat" to={`${base}/${href}`}><Icon size={19} aria-hidden="true" /><div><span>{t(key)}</span><strong className={typeof value === 'string' ? 'stat-text' : undefined}>{typeof value === 'string' ? value : formatNumber(value)}</strong></div></Link>)}
     </div>}
   </>;
 
@@ -105,6 +147,7 @@ export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) 
         <button type="submit" disabled={read.isFetching}>{t('applyRange')}</button></div>
       {read.data && <small>{stringValue(data.from)} → {stringValue(data.to)} · {stringValue(data.timezone)}</small>}
     </form></Panel>}
+    {view === 'today' && !tab && findOperation(api, 'GET', '/onboarding/:flow', 'workspace') && <SetupChecklist />}
     <Panel>
       <div className="panel-head"><h2>{t(summary ? 'dashboardMetrics' : tab === 'health' ? 'workspaceStatus' : 'attention')}</h2><small>{read.isFetching ? t('loading') : formatDate(data.as_of)}</small></div>
       <ReadState read={read} />

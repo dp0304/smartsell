@@ -267,7 +267,9 @@ test('LP06 | workspace keeps check history and withholds a conclusion for low tr
   await checks.screenshot({ path: testInfo.outputPath('workspace-url-checks.png') });
 
   await page.getByRole('link', { name: 'Analytics & reports' }).click();
-  await page.getByRole('button', { name: 'Experiments', exact: true }).click();
+  // Analytics has more tabs than fit on one row; the rest sit under "More".
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Experiments', exact: true }).click();
   const loaded = page.waitForResponse(response => response.url().endsWith(reportPath));
   await page.getByRole('button', { name: hypothesis }).click();
   const response = await loaded;

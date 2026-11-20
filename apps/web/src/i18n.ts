@@ -4,6 +4,10 @@ import { modules, type Label } from './modules';
 
 const copy: Record<string, Label> = {
   operations: ['營運工作', 'Operations'], growth: ['渠道與成長', 'Channels & growth'], management: ['資料與管理', 'Data & settings'],
+  'nav.daily': ['每日工作', 'Daily work'], 'nav.business': ['生意與成長', 'Business & growth'], 'nav.insight': ['洞察', 'Insights'],
+  'nav.settings': ['設定與管理', 'Settings'], 'nav.access': ['成員權限', 'Access control'], 'nav.approvals': ['待我審批', 'My approvals'],
+  developerMode: ['開發者模式（顯示 API 與原始資料）', 'Developer mode (show API and raw data)'], developerModeOn: ['開發者模式已開啟，點擊關閉', 'Developer mode is on. Click to turn it off'],
+  setupLink: ['首次部署？建立第一個工作區', 'First deployment? Create the first workspace'],
   template_key: ['模板', 'Template'], display_status: ['顯示狀態', 'Display status'], draftPreview: ['工作稿文案', 'Working draft copy'],
   revisions: ['版本', 'Revisions'], facts: ['商品事實', 'Product facts'], markets: ['市場', 'Markets'],
   due_at: ['到期時間', 'Due at'], updated_at: ['更新時間', 'Updated at'], created_at: ['建立時間', 'Created at'],
@@ -29,6 +33,7 @@ const copy: Record<string, Label> = {
   dashboardHint: ['掌握待審批、發布異常與需要回覆的工作。', 'Track approvals, publishing exceptions, and conversations that need a reply.'],
   dashboardSummaryHint: ['依期間檢視發布成效、互動與導流覆蓋。', 'Review publishing, engagement, and traffic coverage for a selected period.'],
   dashboardPersonalHint: ['查看分派給你的工作、審批與提及。', 'View assigned work, approvals, and mentions.'],
+  dashboardApprovals: ['待審批', 'Awaiting approval'], dashboardPublishing: ['發布異常', 'Publishing issues'], dashboardReplies: ['待回覆對話', 'Conversations to answer'], dashboardSources: ['資料來源', 'Data sources'],
   dashboardLoaded: ['已載入待辦', 'Loaded work items'], dashboardUrgent: ['高優先或受阻', 'High priority or blocked'], dashboardProviders: ['可用資料來源', 'Available providers'],
   dashboardMetrics: ['指標與資料覆蓋', 'Metrics and coverage'], applyRange: ['套用期間', 'Apply dates'], exclusiveEndDate: ['結束日期（不含）', 'End date (exclusive)'],
   scheduledCount: ['計畫發布', 'Scheduled publications'], verifiedCount: ['已核實發布', 'Verified publications'], onTimeRate: ['準時率', 'On-time rate'], coverage: ['覆蓋率', 'Coverage'],
@@ -122,8 +127,9 @@ const copy: Record<string, Label> = {
   name: ['名稱', 'Name'], workspace_name: ['工作區名稱', 'Workspace name'], title: ['標題', 'Title'], status: ['狀態', 'Status'],
   operation: ['操作', 'Operation'], advanced: ['進階操作', 'Advanced operations'], close: ['關閉', 'Close'], cancel: ['取消', 'Cancel'], save: ['儲存', 'Save'],
   execute: ['執行操作', 'Run operation'], parameters: ['查詢參數（JSON）', 'Query parameters (JSON)'], payload: ['請求內容（JSON）', 'Request body (JSON)'],
+  missingField: ['請填妥標示 * 的必填欄位。', 'Complete the fields marked *.'],
   jsonError: ['請輸入有效的 JSON 物件，並填妥必填欄位。', 'Enter a valid JSON object and complete required fields.'],
-  version: ['資源版本（If-Match）', 'Resource version (If-Match)'], versionMissing: ['缺少資源版本，請重新載入詳情。', 'Resource version missing. Reload the record details.'],
+  version: ['目前版本號', 'Current version number'], versionMissing: ['找不到這筆紀錄的版本，請關閉表單後重新開啟紀錄。', 'The record version is missing. Close the form and reopen the record.'],
   reportQueued: ['報告已排入佇列。', 'Report generation is queued.'],
   cancelReportGeneration: ['取消產生報告', 'Cancel report generation'],
   reportGenerationCancelled: ['已取消產生報告。', 'Report generation cancelled.'],
@@ -154,7 +160,7 @@ const copy: Record<string, Label> = {
   'state.drafting': ['撰稿中', 'Drafting'], 'state.design': ['設計中', 'Design'], 'state.awaiting_assets': ['等待素材', 'Awaiting assets'],
   'state.internal_review': ['內部審閱', 'Internal review'], 'state.archived': ['已封存', 'Archived'],
   calendarZone: ['以瀏覽器時區顯示時間', 'Times shown in browser time zone'], calendarUnsupported: ['日曆服務未開放，可切到清單檢視發布目標。', 'The calendar service is unavailable. Switch to list view to inspect targets.'],
-  planningHint: ['先建立凍結修訂，再選帳號和時間建立排期。', 'Save a revision, then choose an account and time to schedule it.'],
+  planningHint: ['在內容工作台寫好內容並「儲存修訂」後，按「建立排期」選帳號和時間。', 'Write the content in Content studio and save a revision, then choose Create schedule to pick an account and time.'],
   manualBundle: ['人工發布指引與凍結內容', 'Manual instructions and frozen content'],
   unknownHint: ['結果待核實時請先核實，避免重複發布。', 'Reconcile unknown outcomes before attempting to publish again.'],
   fileTooLarge: ['CSV 檔案上限為 1 MB。', 'CSV files must be 1 MB or smaller.'],
@@ -166,8 +172,8 @@ const copy: Record<string, Label> = {
   confirmAction: ['我已核對本次操作的內容與影響', 'I have reviewed this operation and its effects'], linked: ['關聯紀錄', 'Related records'],
   startDate: ['起始日期', 'Start date'], endDate: ['結束日期', 'End date'], allModules: ['模組目錄', 'Module directory'],
   noActions: ['此紀錄目前沒有可用動作', 'No actions available for this record'], selectRecord: ['選取一筆紀錄以查看詳情', 'Select a record to inspect details'],
-  referenceLoadFailed: ['無法載入選項，可輸入已知的紀錄 ID。', 'Could not load suggestions. You can enter a known record ID.'],
-  versionHelp: ['使用目前讀取到的版本或 ETag。', 'Use the currently loaded version or ETag.'],
+  referenceLoadFailed: ['無法載入選項清單，請稍後重試，或貼上紀錄 ID。', 'Could not load the options. Try again later or paste a record ID.'],
+  versionHelp: ['通常會自動帶入。若看到此欄，請關閉表單、重新開啟紀錄再操作。', 'This is normally filled in for you. If you see it, close the form and reopen the record.'],
 };
 
 for (const module of modules) {

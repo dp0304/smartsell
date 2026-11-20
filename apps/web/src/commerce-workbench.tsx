@@ -305,6 +305,7 @@ function ListingPreflight({ product, variants }: { product: RecordData; variants
 
 export function ProductForm({ close, saved }: { close: () => void; saved: (result: RecordData) => void }) {
   const { t, label } = useCopy();
+  const api = useApi();
   const stores = useCommerceList('/stores', 'commerce');
   return <CommerceForm title={label(['新增商品', 'Create product'])} path="/products" close={close} saved={saved} body={fields => {
     const title = readText(fields, 'title');
@@ -313,9 +314,12 @@ export function ProductForm({ close, saved }: { close: () => void; saved: (resul
     return { title, store_id, status: readText(fields, 'status'),
       handle: readText(fields, 'handle') || null, product_type: readText(fields, 'product_type') || null, vendor: readText(fields, 'vendor') || null };
   }}>
-    <label className="field">{label(['店鋪', 'Store'])}<select name="store_id" required><option value="">{t('select')}</option>
+    {stores.data && !stores.data.some(store => store.status !== 'disabled') ? <div className="field">{label(['店鋪', 'Store'])}<div className="field-empty">
+      <span>{label(['商品要掛在店鋪下。請先新增店鋪（可選「檔案匯入」）。', 'Products belong to a store. Create a store first (File import works).'])}</span>
+      <Link to={`/w/${encodeURIComponent(api.ws)}/commerce/stores`} onClick={close}>{label(['前往新增店鋪', 'Create a store'])} →</Link></div></div> :
+    <label className="field">{label(['店鋪', 'Store'])}<select name="store_id" required defaultValue={stores.data?.filter(store => store.status !== 'disabled').length === 1 ? idOf(stores.data.find(store => store.status !== 'disabled')!) : ''}><option value="">{t('select')}</option>
       {stores.data?.filter(store => store.status !== 'disabled').map(store => <option key={idOf(store)} value={idOf(store)}>{rowTitle(store)}</option>)}
-    </select></label>
+    </select></label>}
     {!stores.op ? <EmptyState title={t('noAccess')} /> : stores.isPending ? <Busy label={t('loading')} /> : stores.isError ? <ProblemNotice error={stores.error} retry={() => void stores.refetch()} /> : null}
     <label className="field">{label(['標題', 'Title'])}<input name="title" required /></label>
     <label className="field">{label(['商品代稱', 'Product handle'])}<input name="handle" /></label>

@@ -3,6 +3,9 @@ import { anthropicBody, decodeAnthropic, decodeOpenAi, openAiBody, record, repor
 import type { AgentModelServices, ModelDestination, ModelRequest, ModelContext } from '../modules/agent/models.js';
 import { assertEmergencyNotStopped } from '../modules/ops/index.js';
 
+// Model calls can take tens of seconds; the old 5-second limit cut off ordinary completions.
+const modelTimeoutMs = Number(process.env.SMARTSELL_MODEL_TIMEOUT_MS ?? 120_000);
+
 interface Binding {
   tenantId: string;
   workspaceId: string;
@@ -45,7 +48,7 @@ export function agentModelRuntime(env: NodeJS.ProcessEnv = process.env, transpor
     const credential = env[binding.secretEnv]!;
     const headers: Record<string, string> = openAi ? { authorization: `Bearer ${credential}` } : { 'x-api-key': credential, 'anthropic-version': '2023-06-01' };
     const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers },
-      body: JSON.stringify(request.body), redirect: 'error', signal: AbortSignal.timeout(5000) });
+      body: JSON.stringify(request.body), redirect: 'error', signal: AbortSignal.timeout(modelTimeoutMs) });
     if (!response.ok || !response.body) {
       await response.body?.cancel();
       throw new Error('Model request failed');

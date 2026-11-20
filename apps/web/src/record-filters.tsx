@@ -37,8 +37,8 @@ function readFilters(value: unknown): Filters {
 type PresetFilters = { filters: Filters; change: (value: Filters) => void };
 type PresetScope = { wid: string; userId: string; role: string; resourceType: string };
 
-export function RecordFilters({ storageKey, wid, userId, role, resourceType, rows, filters, change }:
-  PresetFilters & PresetScope & { storageKey: string; rows: Entity[] }) {
+export function RecordFilters({ storageKey, wid, userId, role, resourceType, rows, filters, change, names = {} }:
+  PresetFilters & PresetScope & { storageKey: string; rows: Entity[]; names?: Record<string, string> }) {
   const { t, label } = useFormat();
   const options = dimensions.map(([key, fields, ref]) => ({ key, ref, values: [...new Set(rows.map(row => dimensionValue(row, fields)).filter(Boolean))].sort() }));
   const queries = useQueries({ queries: options.map(({ ref, values }) => ({ ...recordOptions(wid, ref?.[0] ?? '', ref?.[1] ?? ''), enabled: Boolean(ref && values.length) })) });
@@ -47,7 +47,7 @@ export function RecordFilters({ storageKey, wid, userId, role, resourceType, row
     {options.map(({ key, ref, values }, index) => (values.length > 0 || filters[key]) && <label key={key}>{label('field', key)}<select value={filters[key] ?? ''} onChange={event => set(key, event.target.value)}>
       <option value="">{t('ui.allValues')}</option>{[...new Set([...values, filters[key]].filter(Boolean))].map(value => {
         const row = queries[index].data?.find(record => record.id === value);
-        return <option key={value} value={value}>{row ? recordName(row) : ref ? value : label('state', value)}</option>;
+        return <option key={value} value={value}>{row ? recordName(row) : ref ? names[value] ?? value : label('state', value)}</option>;
       })}
     </select></label>)}
     <label>{t('ui.from')}<input type="date" value={filters.from ?? ''} onChange={event => set('from', event.target.value)} /></label>

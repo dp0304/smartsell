@@ -61,7 +61,7 @@ test('inbox exposes manual moderation, reversible customer links, internal notes
   await page.getByRole('button', { name: 'Triage conversation' }).click();
   const triage = page.getByRole('dialog');
   await triage.getByLabel('Status').selectOption('waiting_customer');
-  await triage.getByLabel('Assignee').fill(session.user.id);
+  await triage.getByLabel('Assignee').selectOption(session.user.id);
   const triageResponse = page.waitForResponse(response => response.url().endsWith(`/conversations/${conversation.id}`) && response.request().method() === 'PATCH');
   await triage.locator('button[type=submit]').click();
   const updated = await triageResponse;
@@ -149,7 +149,7 @@ test('inbox exposes manual moderation, reversible customer links, internal notes
   await expect(page.getByRole('button', { name: 'Assign manual follow-up' })).toBeVisible();
   await expect(page.getByRole('button', { name: /delete review/i })).toHaveCount(0);
   await page.getByRole('button', { name: 'Assign manual follow-up' }).click();
-  await page.getByLabel('Assignee').fill(session.user.id);
+  await page.getByLabel('Assignee').selectOption(session.user.id);
   await submit(`/reviews/${review.id}/handoff`);
   await page.getByRole('button', { name: 'Record observed platform reply' }).click();
   await page.getByLabel('Platform reply URL').fill(`${sourceUrl}#reply`);

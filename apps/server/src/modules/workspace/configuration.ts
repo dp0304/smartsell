@@ -10,7 +10,8 @@ async function hasSocialCapability(ctx: Context) {
   const entry = new URL('../account/index.ts', import.meta.url);
   try {
     const { operations } = await import(entry.href) as { operations?: Operation[] };
-    const capability = operations?.find(op => op.name === 'get_capabilities');
+    // Account operations are registered with the module prefix.
+    const capability = operations?.find(op => op.name === 'account_get_capabilities');
     if (!capability || !capability.roles.includes(ctx.role)) return false;
     for (const account of accounts) {
       const result = await capability.run(ctx, { params: { id: account.id }, query: {}, body: {} });
@@ -36,7 +37,7 @@ const steps = {
   } },
   product_source: { impact: 'Product-assisted work requires a connected store or active product data source', check: (ctx: Context) => ctx.list('store').some(row => row.status === 'active') || ctx.list('data_source').some(row => row.status === 'active' && (row.store_id != null || Array.isArray(row.resources) && row.resources.includes('products'))) },
   history_sync: { impact: 'Historical metrics and comparisons may be incomplete', check: (ctx: Context) => ctx.list('sync_run').some(row => ['backfill', 'history', 'initial'].includes(String(row.run_type)) && ['succeeded', 'completed'].includes(String(row.status))) },
-  test_draft: { impact: 'The team has yet to create a draft', check: (ctx: Context) => ctx.list('content_item').some(row => ['draft', 'idea', 'in_production'].includes(String(row.status ?? row.production_stage))) },
+  test_draft: { impact: 'The team has yet to create a draft', check: (ctx: Context) => ctx.list('content_item').some(row => !['archived', 'cancelled'].includes(String(row.production_stage ?? row.status))) },
   invite_team: { impact: 'Other members may lack access to continue setup', check: (ctx: Context) => ctx.list('workspace_invitation').some(row => ['pending', 'accepted'].includes(String(row.status))) },
 };
 const flowKey = 'initial_setup_v1';
@@ -56,6 +57,9 @@ export async function modifyStep(ctx: Context, { params, body }: Input, skip: bo
   const status = skip ? 'skipped' : passed ? 'done' : 'blocked';
   const identityMismatch = status === 'blocked' && step_key === 'connector_pairing' && ctx.list('account_execution_binding').some(binding =>
     binding.connector_channel === 'mobile' && ['connector', 'hybrid'].includes(String(binding.mode)) && sessionFor(ctx, binding)?.status === 'identity_mismatch');
+  // A background recheck (`only_if_passed`) records completed steps but leaves untouched steps as they were,
+  // so the resume link keeps pointing at the step an administrator actually checked.
+  if (!skip && !passed && body.only_if_passed === true) return previous ?? { flow_key, step_key, status: 'not_started' };
   const values = { flow_key, step_key, status, skip_reason: skip ? str(body.reason, 'reason', 1000) : null,
     check_result: { passed, impact: step.impact, ...(identityMismatch && { reason: 'app_identity_mismatch' }) }, checked_at: ctx.now, updated_by_id: ctx.actorId };
   const row = previous ? ctx.update('onboarding_progress', previous.id, values) : ctx.create('onboarding_progress', values);

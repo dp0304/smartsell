@@ -23,8 +23,12 @@ test('default workbench performs real versioned writes and renders all module en
   await expect(page.getByText('No items need attention')).toBeVisible();
 
   const directory = page.getByRole('navigation', { name: 'Module directory' });
-  const links = await directory.locator('a:not([href$="/security"])').evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute('href')));
-  expect(links).toHaveLength(20);
+  // Settings modules sit in a folded section; open it to list every module entry.
+  const settings = directory.getByRole('button', { name: 'Settings', exact: true });
+  if (await settings.getAttribute('aria-expanded') === 'false') await settings.click();
+  const links = await directory.locator('a:not([href$="/security"]):not([href$="/access"])').evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute('href')));
+  // Overview, 19 modules and the My approvals shortcut.
+  expect(links).toHaveLength(21);
   await directory.getByRole('link', { name: 'Brands & workspace' }).click();
   await page.getByRole('button', { name: 'Create brand', exact: true }).first().click();
   const form = page.getByRole('dialog');

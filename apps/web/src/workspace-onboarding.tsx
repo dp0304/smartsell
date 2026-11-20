@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { asRecord, type RecordData } from '@smartsell/sdk';
 import { Panel, Pill } from '@smartsell/ui';
 import { callOperation, findOperation, ProblemNotice, ReadState, recordRows, stringValue, useApi, useRead, wsKey } from './api';
@@ -17,8 +18,15 @@ const steps: Record<string, { name: readonly [string, string]; impact: readonly 
   test_draft: { name: ['測試草稿', 'Test draft'], impact: ['團隊尚未建立草稿', 'The team has yet to create a draft'] },
   invite_team: { name: ['邀請團隊', 'Invite team'], impact: ['其他成員可能無法接續設定', 'Other members may lack access to continue setup'] },
 };
+/** Where each setup step is completed in the workspace. */
+export const setupStepRoutes: Record<string, string> = {
+  brand: 'settings/brands', market: 'settings/brands', social_account: 'settings/accounts', connector_pairing: 'settings/devices',
+  product_source: 'commerce/stores', history_sync: 'data/sources', test_draft: 'content', invite_team: 'access',
+};
+export const setupStepNames = Object.fromEntries(Object.entries(steps).map(([key, step]) => [key, step.name]));
 const statuses: Record<string, readonly [string, string]> = {
-  not_started: ['尚未開始', 'Not started'], blocked: ['受阻', 'Blocked'],
+  // A failed check only means the prerequisite is missing, so it reads as unfinished rather than blocked.
+  not_started: ['尚未開始', 'Not started'], blocked: ['未完成', 'Not done yet'],
   done: ['已完成', 'Done'], skipped: ['已略過', 'Skipped'],
 };
 
@@ -54,6 +62,7 @@ function SetupStep({ row }: { row: RecordData }) {
     {typeof row.skip_reason === 'string' && <p>{row.skip_reason}</p>}
     {mutation.isError && <ProblemNotice error={mutation.error} />}
     <div className="action-row">
+      {setupStepRoutes[key] && status !== 'done' && <Link className="button primary" to={`/w/${encodeURIComponent(api.ws)}/${setupStepRoutes[key]}`}>{label(['前往處理', 'Go to step'])}</Link>}
       {check && <button disabled={mutation.isPending} onClick={() => mutation.mutate({})}>{label(['檢查步驟', 'Check step'])}</button>}
       {skip && status !== 'done' && status !== 'skipped' && !skipping && <button disabled={mutation.isPending} onClick={() => setSkipping(true)}>{label(['略過步驟', 'Skip step'])}</button>}
     </div>

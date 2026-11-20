@@ -38,8 +38,9 @@ async function setupWorkspace(page, dev) {
   const password = dev.password();
   await page.goto(`${dev.origin}/`);
   await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: '相容版工作台' })).toHaveAttribute('href', '/compat/workbench/login');
-  await page.getByRole('link', { name: '首次設定', exact: true }).click();
+  // Operators no longer see developer entry points such as the compatibility workbench.
+  await expect(page.getByRole('link', { name: '相容版工作台' })).toHaveCount(0);
+  await page.getByRole('link', { name: '首次部署？建立第一個工作區', exact: true }).click();
   await expect(page).toHaveURL(`${dev.origin}/setup`);
   // The router can update the URL before React replaces the sign-in form.
   await expect(page.getByRole('heading', { name: '首次設定', exact: true })).toBeVisible();

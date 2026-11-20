@@ -3,6 +3,8 @@ import { expect, test as base } from '@playwright/test';
 import { localDev } from './local-dev.mjs';
 
 const test = base.extend({ dev: localDev });
+// Raw record data is shown only in developer mode, which these checks inspect.
+test.beforeEach(async ({ context }) => { await context.addInitScript(() => localStorage.setItem('smartsell.developer', '1')); });
 
 async function workspace(page, dev) {
   const response = await page.request.post(`${dev.origin}/api/v1/setup`, {

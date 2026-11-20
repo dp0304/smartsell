@@ -52,15 +52,24 @@ async function mutation(page, method, path, submit) {
 }
 
 const button = (scope, name) => scope.getByRole('button', { name, ...exact });
-const fill = (scope, key, value) => scope.locator(`[name="${key}"]`).fill(value);
+// Reference and enum fields render as dropdowns; plain fields stay text inputs.
+const fill = async (scope, key, value) => {
+  const field = scope.locator(`[name="${key}"]`);
+  return await field.evaluate(node => node.tagName) === 'SELECT' ? field.selectOption(value) : field.fill(value);
+};
 const pick = (scope, key, value) => scope.locator(`select[name="${key}"]`).selectOption(value);
-const nav = (page, name) => page.getByRole('navigation').getByRole('link', { name, ...exact }).click();
+const nav = async (page, name) => {
+  // Settings modules live in a folded sidebar section; open it when the link is hidden there.
+  const settings = page.getByRole('navigation').getByRole('button', { name: 'Settings', ...exact });
+  if (!await page.getByRole('navigation').getByRole('link', { name, ...exact }).count() && await settings.getAttribute('aria-expanded') === 'false') await settings.click();
+  return page.getByRole('navigation').getByRole('link', { name, ...exact }).click();
+};
 const close = dialog => button(dialog, 'Close').click();
 
 async function chooseReference(scope, key, name) {
-  const option = scope.locator(`datalist[id="reference-${key}"] option`).filter({ hasText: name });
+  const option = scope.locator(`select[name="${key}"] option`).filter({ hasText: name });
   await expect(option).toHaveCount(1);
-  expect(await option.textContent()).toBe(name);
+  expect(await option.textContent()).toMatch(new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( · |$)`));
   await fill(scope, key, await option.getAttribute('value'));
 }
 
@@ -76,7 +85,7 @@ async function form(page, name, method, path, fillForm = async () => {}, options
   await fillForm(drawer);
   if (await drawer.getByRole('checkbox').count()) await drawer.getByRole('checkbox').check();
   const result = await mutation(page, method, path, () => button(drawer, 'Save').click());
-  await expect(drawer.getByRole('status')).toContainText('Request accepted');
+  await expect(drawer.getByRole('status')).toContainText('Saved');
   await (options.follow ? button(drawer, 'View').click() : close(drawer));
   return result;
 }
@@ -262,7 +271,7 @@ test('AI01 | after removing model settings, humans complete the launch', async (
     const target = await form(page, 'Create schedule', 'POST', '/publish-targets', async drawer => {
       await expect(drawer.locator('[name=variant_revision_id]')).toHaveValue(revision.id);
       await chooseReference(drawer, 'social_account_id', 'Synthetic launch account');
-      await fill(drawer, 'scheduled_at', scheduleAt);
+      await fill(drawer, 'local_scheduled_at', scheduleAt);
       await fill(drawer, 'schedule_tz', 'UTC');
     }, { follow: true, trigger: 'Schedule revision 1' });
     const submitted = await form(page, 'Submit schedule / approval', 'POST', `/publish-targets/${target.id}/submit`);

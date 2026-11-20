@@ -3,6 +3,8 @@ import { expect, test as baseTest } from '@playwright/test';
 import { localDev } from '../../../tests/web-e2e/local-dev.mjs';
 
 const test = baseTest.extend({ dev: localDev });
+// Tools and the compatibility workbench are developer surfaces.
+test.beforeEach(async ({ context }) => { await context.addInitScript(() => localStorage.setItem('smartsell.developer', '1')); });
 test.setTimeout(25_000);
 test.use({ launchOptions: { executablePath: process.env.SMARTSELL_TEST_CHROME } });
 

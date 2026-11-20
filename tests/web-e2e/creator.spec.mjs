@@ -150,7 +150,9 @@ test('creator workbench persists evaluation overrides, contacts and deadline cha
   });
   await page.getByRole('button', { name: 'Plan clip reuse' }).click();
   const clip = page.getByRole('dialog');
-  for (const [key, value] of Object.entries({ title: 'Unauthorized clip', asset_id: assetId, asset_version_id: versionId,
+  // The asset is chosen from a dropdown; the remaining fields are typed.
+  await clip.locator('select[name=asset_id]').selectOption(assetId);
+  for (const [key, value] of Object.entries({ title: 'Unauthorized clip', asset_version_id: versionId,
     market_id: market.id, platform: 'youtube', reuse_at: '2099-05-01T12:00' })) await clip.locator(`input[name=${key}]`).fill(value);
   const refused = await submitRest(`${livePath}/clip-reuse`, 'POST', 409);
   expect(refused).toBeUndefined();
@@ -180,7 +182,7 @@ test('creator workbench persists evaluation overrides, contacts and deadline cha
   expect(second.id).not.toBe(nativeCreator.id);
   expect(await rest(`/creators/${nativeCreator.id}/associations`)).toEqual([]);
   await page.getByRole('button', { name: 'Associate duplicate profiles' }).click();
-  await page.getByLabel('Other creator profile').fill(second.id);
+  await page.getByLabel('Other creator profile').selectOption(second.id);
   await page.getByLabel(/Evidence IDs/).fill(evidenceId);
   await page.getByRole('dialog').locator('textarea[name=reason]').fill('Creator confirmed both profiles');
   const association = await submitRest(`/creators/${nativeCreator.id}/associations`);
