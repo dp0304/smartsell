@@ -123,8 +123,13 @@ async function exerciseStore(store: Store, pg = false) {
       payload: { access: 'write', tools: ['items_create'] } });
     assert.equal(writeToken.statusCode, 201, writeToken.body);
     const writeBearer = { authorization: `Bearer ${writeToken.json().data.token}`, 'idempotency-key': 'same-key' };
+    // Idempotency keys belong to one credential: the token's "same-key" is its own write, never a replay of the session's stored response.
     const crossCredentialReplay = await app.inject({ method: 'POST', url: `${owner.url}/fixtures`, headers: writeBearer, payload: { one: 1, two: 2 } });
-    assert.equal(crossCredentialReplay.statusCode, 403, crossCredentialReplay.body);
+    assert.equal(crossCredentialReplay.statusCode, 200, crossCredentialReplay.body);
+    assert.notEqual(crossCredentialReplay.json().data.id, a.json().data.id);
+    assert.equal(crossCredentialReplay.json().data.created_via, 'agent');
+    const tokenReplay = await app.inject({ method: 'POST', url: `${owner.url}/fixtures`, headers: writeBearer, payload: { one: 1, two: 2 } });
+    assert.deepEqual(tokenReplay.json(), crossCredentialReplay.json());
     const formWrite = await app.inject({ method: 'POST', url: `${owner.url}/fixtures`,
       headers: { ...writeBearer, 'content-type': 'application/x-www-form-urlencoded' }, payload: 'one=1' });
     assert.equal(formWrite.statusCode, 415, formWrite.body);
@@ -192,7 +197,8 @@ test('file kernel: auth, isolation, version checks, atomic outbox, idempotency, 
       assert.equal(login.statusCode, 200, login.body);
       const { id } = login.json().data.workspaces[0];
       const restored = await reopened.inject({ url: `/api/v1/workspaces/${id}/fixtures`, headers: { cookie: String(login.headers['set-cookie']).split(';')[0] } });
-      assert.equal(restored.json().data.length, 2);
+      // Two from the session (one replayed) and one from the write token, whose idempotency key is its own.
+      assert.equal(restored.json().data.length, 3);
     } finally { await reopened.close(); }
   } finally { await fixture.dispose(); }
 });

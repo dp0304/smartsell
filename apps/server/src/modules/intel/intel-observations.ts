@@ -1,6 +1,7 @@
 import { Problem, type Context, type Data, type Row } from '@smartsell/contracts';
 import { checkUse as checkIngestUse } from '../ingest/source-policy.js';
 import { choice, conflict, flag, inPeriod, integer, invalid, money, number, object, optionalText, period, strings, text, time, url } from './input.js';
+import { fromAgent } from '../../agent-actor.js';
 
 export const modes = ['manual', 'import', 'vendor', 'official_api'] as const;
 export type Mode = typeof modes[number];
@@ -171,7 +172,7 @@ export function prepareObservation(ctx: Context, body: Data, mode: Mode = 'manua
     age_at_observation: publishedAt ? (Date.parse(observedAt) - Date.parse(publishedAt)) / 1000 : null,
     metrics: observedMetrics, attributes, note: minimal ? null : optionalText(body.note, 'note'), source,
     retention_until: days === undefined ? null : new Date(Date.parse(ctx.now) + Math.min(90, days) * day).toISOString(),
-    created_by_type: ctx.role === 'agent' ? 'agent' : 'user', created_by_id: ctx.actorId,
+    created_by_type: fromAgent(ctx) ? 'agent' : 'user', created_by_id: ctx.actorId,
   };
   const duplicate = () => ctx.list('observation').find(row => subjectKey(row) === subjectKey(values) && row.observed_at === observedAt && (row.source as Data)?.data_source_id === source.data_source_id);
   return Object.assign(() => {

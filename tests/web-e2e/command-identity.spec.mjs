@@ -74,7 +74,9 @@ test('Commands enrollment requires a fresh password and sign-in waits for a seco
     await login.getByRole('button', { name: 'Use a recovery code' }).click();
     await field(login, 'recoveryCode').fill(codes[0]);
     await submit(login, 'Verify and sign in', `${totpPath}/challenge`, 200);
+    // An explicit return path into the advanced workbench is honored after the second factor.
     await expect(login).toHaveURL(`${dev.origin}${homePath}`);
+    await expect(login.getByRole('heading', { name: 'Today’s operations', exact: true })).toBeVisible();
     expect((await login.request.get(`${dev.origin}${sessionPath}`)).status()).toBe(200);
   } finally {
     await fresh.close();
@@ -113,7 +115,10 @@ test('Commands invitation acceptance leaves the owner and invited reviewer in se
     expect((await reviewer.request.get(`${dev.origin}${sessionPath}`)).status()).toBe(401);
     await fillCredentials(reviewer, reviewerEmail, reviewerPassword);
     await submit(reviewer, 'Sign in', sessionPath, 200);
-    await expect(reviewer).toHaveURL(`${dev.origin}/w/${workspaceId}/home`);
+    // Without a return path, sign-in lands on the dashboard overview.
+    await expect(reviewer).toHaveURL(`${dev.origin}/app/${workspaceId}`);
+    await expect(reviewer.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+    await expect(reviewer.getByRole('navigation', { name: 'Dashboard navigation' })).toBeVisible();
     const { data } = await (await reviewer.request.get(`${dev.origin}${sessionPath}`)).json();
     expect(data.user.id).not.toBe(userId);
     expect(data.workspaces).toEqual([expect.objectContaining({ id: workspaceId, role: 'reviewer' })]);

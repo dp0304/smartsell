@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { makeThumbnail } from '../../../../../packages/media-store/src/index.js';
 import { ADMIN, APPROVE, Problem, READ, WRITE, type Context, type Data, type Operation, type Row } from '@smartsell/contracts';
+import { fromAgent } from '../../agent-actor.js';
 import { choose, hash, object, objects, pick, str, strings } from './values.js';
 import { activateGrant, checkUsage, createGrant, grantKind, reviseGrant, renewGrant, revokeGrant, rightsDetail, scanExpiry } from './rights.js';
 import { approveKnowledge, context, knowledgeDetail, proposeKnowledge, rejectKnowledge, retireKnowledge } from './knowledge.js';
@@ -30,7 +31,7 @@ const FOLDER = 'asset_folder';
 const kindNames = ['image', 'video', 'audio', 'subtitle', 'document', 'design_link'];
 const assetOrigins = ['upload', 'ugc', 'creator_delivery', 'design_tool', 'import', 'ai_generated', 'stock'];
 const renditionKinds = ['platform_resize', 'crop', 'subtitle_burned', 'cover', 'thumbnail', 'transcode', 'preview', 'waveform'];
-const by = (ctx: Context) => ({ created_by_type: ctx.role === 'agent' ? 'agent' : 'user', created_by_id: ctx.actorId });
+const by = (ctx: Context) => ({ created_by_type: fromAgent(ctx) ? 'agent' : 'user', created_by_id: ctx.actorId });
 const has = (body: Data, key: string) => Object.hasOwn(body, key);
 const optionalText = (value: unknown, name: string) => value == null ? null : str(value, name, 4096);
 const clean = (file: Row) => !file.deleted_at && ['clean', 'skipped'].includes(String(file.scan_status));
@@ -244,7 +245,7 @@ const write = (method: Operation['method'], path: string, name: string, summary:
   return {
     method, path, name, roles, summary, ...(versionKind ? { versionKind } : {}), ...(humanOnly ? { mcp: false } : {}),
     run(ctx, input) {
-      if (humanOnly && (ctx.role === 'agent' || (ctx as Context & { agentCredentialId?: string }).agentCredentialId)) {
+      if (humanOnly && fromAgent(ctx)) {
         throw new Problem(403, 'PERMISSION_DENIED', 'Only a person can perform this action');
       }
       return run(ctx, input);

@@ -36,12 +36,14 @@ export function localStore(path: string) {
     db.exec(`CREATE TABLE IF NOT EXISTS snapshot (id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL)`);
     const load = db.prepare('SELECT payload FROM snapshot WHERE id = 1');
     const save = db.prepare(`INSERT INTO snapshot VALUES (1, ?) ON CONFLICT (id) DO UPDATE SET payload = excluded.payload`);
+    const dataVersion = db.prepare('PRAGMA data_version');
     const persistence: SnapshotPersistence = {
       async transaction(write, run) {
         db.exec(write ? 'BEGIN IMMEDIATE' : 'BEGIN');
         try {
-          const row = load.get() as { payload: string } | undefined;
-          const result = await run(row?.payload, encoded => { save.run(encoded); });
+          // data_version only moves when another connection commits, so the decoded snapshot stays valid otherwise.
+          const { data_version: version } = dataVersion.get() as { data_version: number };
+          const result = await run(() => (load.get() as { payload: string } | undefined)?.payload, encoded => { save.run(encoded); }, version);
           db.exec('COMMIT');
           return result;
         } catch (error) {

@@ -3,6 +3,7 @@ import { channels, conflict, enumValue, invalid, object, optional, stringMap, te
 import { currentListing, listingView, prepareListing, writeListing } from './listings.js';
 import { addFactRevision, listFacts, listLocalizations, localizationDraft, markSourceChanges, newFact, retractFact, reviewFact, reviewLocalization } from './revisions.js';
 import { COMMERCE_WRITE } from './store-operations.js';
+import { fromAgent } from '../../agent-actor.js';
 
 function variants(ctx: Context, id: string): Row[] {
   return ctx.list('product_variant').filter(row => row.product_id === id);
@@ -45,7 +46,7 @@ function getProduct(ctx: Context, id: string): Data {
   const rows = variants(ctx, id);
   const ids = new Set(rows.map(row => row.id));
   const listings = ctx.list('listing_snapshot').filter(row => row.is_current === true && ids.has(String(row.variant_id))).map(row => listingView(ctx, row));
-  return { ...product, variants: rows, listings, facts: listFacts(ctx, id, true), localizations: ctx.role === 'agent' ? listLocalizations(ctx, id).filter(row => row.status === 'approved').map(({ revisions, ...row }) => ({ ...row, revisions: (revisions as Row[]).filter(item => item.id === row.approved_revision_id) })) : listLocalizations(ctx, id), usage: related(ctx, id) };
+  return { ...product, variants: rows, listings, facts: listFacts(ctx, id, true), localizations: listLocalizations(ctx, id).filter(row => !fromAgent(ctx) || row.status === 'approved'), usage: related(ctx, id) };
 }
 function search(ctx: Context, input: Input): Data[] {
   const filters = { ...input.body, ...input.query };
@@ -173,7 +174,7 @@ export const catalogOperations: Operation[] = [
     if (row.group_id !== params.id) invalid('memberId');
     return row.unlinked_at ? row : ctx.update('variant_group_member', row.id, { unlinked_at: ctx.now, unlinked_by: ctx.actorId, unlink_reason: optional(body.reason, 'reason') });
   } },
-  { path: '/products/:id/facts', method: 'GET', name: 'catalog_list_facts', roles: READ, summary: 'Read approved facts or review fact history', run: (ctx, { params, query, body }) => listFacts(ctx, params.id ?? text(body.product_id, 'product_id'), ctx.role === 'agent' || (query.approved_only !== 'false' && body.approved_only !== false), Array.isArray(body.category) ? body.category.map(String) : query.category?.split(',')) },
+  { path: '/products/:id/facts', method: 'GET', name: 'catalog_list_facts', roles: READ, summary: 'Read approved facts or review fact history', run: (ctx, { params, query, body }) => listFacts(ctx, params.id ?? text(body.product_id, 'product_id'), fromAgent(ctx) || (query.approved_only !== 'false' && body.approved_only !== false), Array.isArray(body.category) ? body.category.map(String) : query.category?.split(',')) },
   { path: '/products/:id/facts', method: 'POST', name: 'catalog_propose_fact', roles: WRITE, summary: 'Propose a draft product fact', run: (ctx, { params, body }) => newFact(ctx, params.id ?? text(body.product_id, 'product_id'), body) },
   { path: '/facts/:id/revisions', method: 'POST', name: 'commerce_fact_revise', roles: WRITE, versionKind: 'product_fact', summary: 'Add a draft revision to a fact', run: (ctx, { params, body }) => addFactRevision(ctx, ctx.get('product_fact', params.id!), body) },
   ...([['approve', true], ['reject', false]] as const).map(([action, approve]): Operation => ({ path: `/fact-revisions/:id/${action}`, method: 'POST', name: `commerce_fact_${action}`, roles: APPROVE, summary: `${action} the current fact draft`, run: (ctx, { params }) => reviewFact(ctx, params.id!, approve) })),

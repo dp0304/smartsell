@@ -1,6 +1,7 @@
 import { type Context, type Data, type Input, type Row } from '@smartsell/contracts';
 import { activeBrand, bool, brandScope, conflict, denied, id, inBrand, instant, invalid, isManager, limit, missing, nullable, obj, one, open, own, pick, resourcePair, stamp, str, strings, timestamp } from './shared.js';
 import { follow, notify } from './notifications.js';
+import { fromAgent } from '../../agent-actor.js';
 
 const types = ['todo', 'production_task', 'milestone', 'review_task', 'fix_task', 'followup'] as const;
 const statuses = ['open', 'in_progress', 'blocked', 'done', 'cancelled'] as const;
@@ -68,10 +69,11 @@ function assigned(ctx: Context, row: Row, previous?: Row) {
 }
 
 export function createTask(ctx: Context, { body }: Input) {
+  // A connection acts for its person, so the task stays assigned to that person; only the provenance names the Agent.
   const values = {
     type: 'todo', priority: 'normal', assignee_type: ctx.role === 'agent' ? 'agent_client' : 'user', assignee_id: ctx.actorId,
     ...pick(body, fields), title: str(body.title, 'title'), status: 'open', created_by_id: ctx.actorId,
-    source_type: ctx.role === 'agent' ? 'agent' : 'manual',
+    source_type: fromAgent(ctx) ? 'agent' : 'manual',
     ...(ctx.role === 'agent' ? { source_ref: { agent_job_id: id(obj(body.source_ref, 'source_ref').agent_job_id) } } : {}),
   };
   if (!isManager(ctx) && (values.assignee_id !== ctx.actorId || values.assignee_type !== (ctx.role === 'agent' ? 'agent_client' : 'user'))) denied();
@@ -104,7 +106,7 @@ function transition(previous: Row, values: Data, next: string, patch: Data, ctx:
     const pending = ctx.list('work_item_dependency').filter(row => row.work_item_id === previous.id && ctx.get('work_item', id(row.depends_on_id)).status !== 'done');
     if (pending.length) conflict('Work item has unfinished prerequisites');
   }
-  if (next === 'done') Object.assign(patch, { completed_at: ctx.now, completed_by_type: ctx.role === 'agent' ? 'agent_client' : 'user', completed_by_id: ctx.actorId });
+  if (next === 'done') Object.assign(patch, { completed_at: ctx.now, completed_by_type: fromAgent(ctx) ? 'agent_client' : 'user', completed_by_id: ctx.actorId });
   if (next === 'open') Object.assign(patch, { completed_at: null, completed_by_type: null, completed_by_id: null });
   patch.status = next;
 }

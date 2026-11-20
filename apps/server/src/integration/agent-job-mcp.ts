@@ -10,13 +10,31 @@ const routes: Record<string, string> = {
   operations_get: 'jobs_get', operations_cancel: 'jobs_cancel', jobs_claim: 'agent_jobs_claim',
   jobs_heartbeat: 'agent_jobs_heartbeat', jobs_submit_result: 'agent_jobs_submit_result',
   jobs_handoff: 'agent_jobs_handoff', jobs_confirm_cancel: 'agent_jobs_confirm_cancel',
+  jobs_list: 'agent_jobs_list', jobs_get: 'agent_jobs_get',
 };
 const enrich = workspaceServices([]);
 
+function domainError(error: unknown): never {
+  if (error instanceof Problem) throw new DomainError(error.code, error.message, error.status);
+  throw error;
+}
+
+/** Legacy job tools prefer the Operation jobs the web shows, and fall back to Commands jobs. */
 export function agentJobMcp(action: string, command: Command): Command {
   const op = operations.find(op => op.name === routes[action]);
   if (!op) return command;
   return { ...command, async run(context, body) {
+    if (action === 'jobs_list') {
+      const legacy = await command.run(context, body) as { items?: unknown[] };
+      if (!op.roles.includes(context.role)) return legacy;
+      const { records } = await operationRecords(context, true);
+      const ctx = enrich(makeContext(records, context, context.role), undefined, (context as AgentContext).agentClientId);
+      const query = Object.fromEntries(['status', 'kind', 'campaign_id'].flatMap(key => typeof body[key] === 'string' ? [[key, body[key]]] : []));
+      try {
+        const shared = await op.run(ctx, { params: {}, query, body: {} }) as unknown[];
+        return { items: [...shared, ...legacy.items ?? []] };
+      } catch (error) { return domainError(error); }
+    }
     const id = body.operation_id ?? body.agent_job_id;
     if (typeof id !== 'string') return command.run(context, body);
     const { records, flush } = await operationRecords(context, op.method === 'GET');
@@ -28,11 +46,8 @@ export function agentJobMcp(action: string, command: Command): Command {
     const ctx = enrich(makeContext(records, context, context.role), undefined, (context as AgentContext).agentClientId);
     try {
       const data = await op.run(ctx, { params: { id }, query: {}, body, expectedVersion: body.expected_version });
-      await flush();
+      if (op.method !== 'GET') await flush();
       return data;
-    } catch (error) {
-      if (error instanceof Problem) throw new DomainError(error.code, error.message, error.status);
-      throw error;
-    }
+    } catch (error) { return domainError(error); }
   } };
 }

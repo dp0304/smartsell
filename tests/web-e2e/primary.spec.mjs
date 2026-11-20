@@ -8,6 +8,8 @@ test.use({ viewport: { width: 1280, height: 800 }, trace: 'off', screenshot: 'of
 const email = 'owner@example.test';
 const workspaceName = 'Primary acceptance';
 const language = page => page.getByRole('combobox', { name: /^(介面語言|Interface language)$/ });
+// The dashboard shell has its own compact language picker in the top bar.
+const dashboardLanguage = page => page.getByRole('combobox', { name: /^(語言|Language)$/ });
 
 function responseFor(page, method, path) {
   const pending = page.waitForResponse(response =>
@@ -53,6 +55,9 @@ async function setupWorkspace(page, dev) {
   const setup = responseFor(page, 'POST', '/api/v1/setup');
   await page.getByRole('button', { name: '首次設定', exact: true }).click();
   expect((await setup).status(), 'POST /api/v1/setup').toBe(201);
+  // A signed-in operator lands on the dashboard, not the advanced workbench.
+  await expect(page).toHaveURL(/\/app\/[^/]+$/);
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   return password;
 }
 
@@ -104,15 +109,26 @@ test('primary root supports first-time setup and fresh-session sign-in in both l
     const login = responseFor(loginPage, 'POST', '/api/v1/session');
     await loginPage.getByRole('button', { name: 'Sign in', exact: true }).click();
     expect((await login).status(), 'POST /api/v1/session').toBe(200);
-    await expect(loginPage).toHaveURL(/\/w\/[^/]+\/home$/);
-    await reloadFor(loginPage, `${workspaceApi(loginPage)}/catalog`);
-    await expect(loginPage.getByRole('heading', { name: 'Today’s operations' })).toBeVisible();
-    await expect(loginPage.getByRole('navigation', { name: 'Module directory' })).toBeVisible();
+    // Sign-in lands on the dashboard overview; the language chosen on the sign-in page carries over.
+    await expect(loginPage).toHaveURL(/\/app\/[^/]+$/);
+    await reloadFor(loginPage, `${workspaceApi(loginPage)}/views/home`);
+    await expect(loginPage.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+    const dashboardNav = loginPage.getByRole('navigation', { name: 'Dashboard navigation' });
+    await expect(dashboardNav).toBeVisible();
     await expectNoHorizontalOverflow(loginPage);
-    await language(loginPage).selectOption('zh-Hant');
+    await dashboardLanguage(loginPage).selectOption('zh-Hant');
+    await expect(loginPage.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+    await expect(loginPage.getByRole('navigation', { name: '看板導覽' })).toBeVisible();
+    await expectNoHorizontalOverflow(loginPage);
+    // The previous workbench stays reachable as the advanced workbench.
+    await loginPage.getByRole('link', { name: '進階工作台', exact: true }).click();
+    await expect(loginPage).toHaveURL(/\/w\/[^/]+\/home$/);
     await expect(loginPage.getByRole('heading', { name: '今日營運' })).toBeVisible();
     await expect(loginPage.getByRole('navigation', { name: '模組目錄' })).toBeVisible();
     await expectNoHorizontalOverflow(loginPage);
+    await language(loginPage).selectOption('en');
+    await expect(loginPage.getByRole('heading', { name: 'Today’s operations' })).toBeVisible();
+    await expect(loginPage.getByRole('navigation', { name: 'Module directory' })).toBeVisible();
   } finally {
     await fresh.close();
   }

@@ -16,9 +16,13 @@ test('default workspace shows provider status and runs permitted commands with r
   await page.getByLabel('Workspace name').fill('Tools QA');
   await page.locator('[name=setupToken]').fill(dev.setupToken);
   await page.getByRole('button', { name: 'First-time setup' }).click();
+  // Setup lands on the dashboard; the command tools live in the advanced workbench.
+  await expect(page).toHaveURL(/\/app\/[^/]+$/);
+  const workspaceId = new URL(page.url()).pathname.split('/')[2];
+  const workspacePath = `/w/${workspaceId}`;
+  const workspaceApi = `${dev.origin}/api/v1/workspaces/${workspaceId}`;
+  await page.goto(`${dev.origin}${workspacePath}/home`);
   await expect(page.getByRole('heading', { name: 'Today’s operations' })).toBeVisible();
-  const workspacePath = new URL(page.url()).pathname.split('/').slice(0, 3).join('/');
-  const workspaceApi = `${dev.origin}/api/v1/workspaces/${workspacePath.split('/')[2]}`;
   await page.getByRole('link', { name: 'Workspace status', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Workspace status' })).toBeVisible();
   await expect(page.getByRole('row', { name: /Publishing schedule.*Available/ })).toBeVisible();

@@ -7,8 +7,10 @@ import { personalInbox, summary, today, workspaceContext } from './overview.js';
 import { canFollow, search } from './search.js';
 import { addDependencies, batchTasks, createTask, getTask, handover, listTasks, updateTask } from './tasks.js';
 import { brandScope, internal, manage } from './shared.js';
+import { viewOperations } from './views/index.js';
 
 export const operations: Operation[] = [
+  ...viewOperations,
   { method: 'GET', path: '/', name: 'workspace_get', roles: READ, summary: 'Read workspace settings', run: workspace },
   { method: 'PATCH', path: '/', name: 'workspace_update', roles: ADMIN, summary: 'Update workspace settings', run: updateWorkspace },
   { method: 'GET', path: '/context', name: 'workspace_get_context', roles: READ, summary: 'Read brand, market and account context', run: workspaceContext },

@@ -75,20 +75,20 @@ async function backgroundFixture() {
   // The initial cycle starts immediately. Resolve only at the worker drain or after the scheduler's queue transaction commits.
   async function cycle(role: 'scheduler' | 'worker', selectedSubscriber: Subscriber, selectedSchedules: Schedule[] = [schedule!]) {
     const { promise, resolve, reject } = Promise.withResolvers<void>();
-    let committed = 0;
+    let cycles = 0;
     const observed: BackgroundStore = {
       workspaces: store.workspaces,
       async transact<T>(...args: Parameters<BackgroundStore['transact']>): Promise<T> {
-        const result = await store.transact(...args) as T;
-        if (role === 'scheduler' && ++committed === selectedSchedules.length + 1) resolve();
-        return result;
+        // Each scheduler cycle opens with one read-only check of what is due; the second one means the first cycle,
+        // including any due schedules and the outbox dispatch, has committed.
+        if (role === 'scheduler' && args[1] && ++cycles === 2) resolve();
+        return await store.transact(...args) as T;
       },
     };
     const stop = runWorkspaceBackground(observed, { ...configuration({}), roles: new Set<ProcessRole>([role]) },
       [selectedSubscriber], selectedSchedules, log, [], undefined, async () => resolve());
     const timeout = setTimeout(() => reject(new Error(`${role} did not finish its initial cycle`)), 10_000);
     try { await promise; } finally { clearTimeout(timeout); await stop(); }
-    if (role === 'scheduler') assert.equal(committed, selectedSchedules.length + 1);
   }
   return { transact, cycle, schedule, subscriber, schedules, logs, setCommandRetention };
 }

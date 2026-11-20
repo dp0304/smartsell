@@ -6,6 +6,7 @@ import { approvers, array, bad, block, choice, collaborationStatus, created, dat
 
 import { createCommands } from './commands.ts';
 import { parseCsv } from '../ingest/csv.js';
+import { fromAgent } from '../../agent-actor.js';
 
 const closed = ['cancelled', 'completed'];
 const collaborationTypes = ['gifted', 'fixed_fee', 'commission', 'hybrid'] as const;
@@ -206,7 +207,7 @@ export const operations: Operation[] = [
   } },
   { method: 'POST', path: '/collaborations/:id/outreach', name: 'outreach_draft', roles: WRITE, summary: 'Draft an invitation without sending it', run(ctx, { params, body }) {
     const collaboration = editableCollaboration(ctx, params.id);
-    return created(ctx, 'outreach', { collaboration_id: collaboration.id, channel: choice(body, 'channel', channelTypes), body: text(body, 'body', 20_000), language: optional(body, 'language'), status: 'draft', direction: 'outbound', ai_generated: ctx.role === 'agent' });
+    return created(ctx, 'outreach', { collaboration_id: collaboration.id, channel: choice(body, 'channel', channelTypes), body: text(body, 'body', 20_000), language: optional(body, 'language'), status: 'draft', direction: 'outbound', ai_generated: fromAgent(ctx) });
   } },
   { method: 'POST', path: '/outreach/:id/send', name: 'outreach_send', roles: operators, versionKind: 'outreach', external: true, summary: 'Return manual outreach instructions for a saved draft', run(ctx, { params }) {
     const row = ctx.get('outreach', params.id);

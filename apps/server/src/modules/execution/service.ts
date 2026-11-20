@@ -292,16 +292,35 @@ export function matchingPost(ctx: Context, account: Row, values: Data, task?: Ro
   return existing;
 }
 
+export const fromAgent = (ctx: Context) => ctx.role === 'agent' || Boolean((ctx as Context & { agentCredentialId?: string }).agentCredentialId);
+const TRUST = ['agent_reported', 'manual_confirmed', 'system_verified'];
+const trust = (verification: unknown) => TRUST.indexOf(String(verification));
+const known = (value: unknown) => typeof value === 'string' && value ? value : undefined;
+/** Reporting dimensions a post inherits from its publish target, else only the posting account's brand. */
+export function postAttribution(account: Row, target?: Row): Data {
+  const values = { brand_id: known(target?.brand_id) ?? known(account.brand_id), campaign_id: known(target?.campaign_id),
+    content_item_id: known(target?.content_item_id), content_type: known(target?.content_format) };
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+}
+
 export function savePost(ctx: Context, account: Row, values: Data, task?: Row) {
   const existing = matchingPost(ctx, account, values, task);
   const links = task ? { publish_target_id: task.publish_target_id, execution_task_id: task.id } : {};
+  const target = task ? targetOf(ctx, task) : find(ctx, 'publish_target', existing?.publish_target_id);
+  const attribution = postAttribution(account, target);
+  // An agent's report never replaces what a person or the platform already confirmed.
+  const weaker = existing !== undefined && trust(values.verification) < trust(existing.verification);
+  const reported = weaker && values.verification === 'agent_reported';
+  const registeredVia = weaker ? existing?.registered_via ?? values.registered_via : values.registered_via ?? existing?.registered_via;
   const post = existing ? ctx.update(POST, existing.id, { ...links, external_post_id: existing.external_post_id ?? values.external_post_id,
-    permalink: values.permalink ?? existing.permalink,
+    ...Object.fromEntries(Object.entries(attribution).filter(([field]) => target || existing[field] == null)),
+    permalink: reported ? existing.permalink ?? values.permalink : values.permalink ?? existing.permalink,
     ...(values.verification === 'system_verified' && values.visibility != null ? { visibility: values.visibility } : {}),
     ...(values.verification === 'system_verified' && values.submitted_by != null ? { submitted_by: values.submitted_by } : {}),
-    verification: existing.verification === 'system_verified' ? existing.verification : values.verification,
+    ...(registeredVia !== undefined && { registered_via: registeredVia }),
+    verification: weaker ? existing.verification : values.verification,
     evidence_ids: [...new Set([...(Array.isArray(existing.evidence_ids) ? existing.evidence_ids : []), ...(Array.isArray(values.evidence_ids) ? values.evidence_ids : [])])], last_observed_at: ctx.now,
-  }) : ctx.create(POST, { ...values, ...links, social_account_id: account.id, provider: account.provider ?? account.platform, first_seen_at: ctx.now, last_observed_at: ctx.now });
+  }) : ctx.create(POST, { ...values, ...links, ...attribution, social_account_id: account.id, provider: account.provider ?? account.platform, first_seen_at: ctx.now, last_observed_at: ctx.now });
   if (!existing) ctx.emit('execution.platform_post.observed', { platform_post_id: post.id, origin: post.origin });
   if (task && !existing?.publish_target_id) ctx.emit('execution.platform_post.linked', { platform_post_id: post.id, ...links });
   return post;
@@ -379,10 +398,13 @@ export function manualComplete(ctx: Context, task: Row, body: Data, origin = 'sy
     task = ctx.update(TASK, task.id, { attempt_count: attempt_no });
   }
   const evidence_ids = attachEvidence(ctx, body.evidence_file_ids ?? body.evidence_ids, 'execution_attempt', attempt.id);
-  return publish(ctx, task, attempt, { ...values, evidence_ids, origin, verification: 'manual_confirmed', submitted_by: attempt.executor === 'manual' ? 'manual' : attempt.submitted_by ?? null, post_status: 'live' });
+  return publish(ctx, task, attempt, { ...values, evidence_ids, origin, verification: 'manual_confirmed', submitted_by: attempt.executor === 'manual' ? 'manual' : attempt.submitted_by ?? null, post_status: 'live',
+    ...(origin === 'manual_registered' && { registered_via: 'human' }) });
 }
 
+/** Records a publication for a target, which completes its execution: a person's decision, never an agent's. */
 export function registerManualPost(ctx: Context, target: Row, body: Data) {
+  if (fromAgent(ctx)) throw new Problem(403, 'HUMAN_REQUIRED', 'Only a person can record the publication of a publish target');
   let task = taskFor(ctx, target) ?? ensureTask(ctx, target);
   if (task.status === 'published' && task.platform_post_id) {
     const post = ctx.get(POST, String(task.platform_post_id));

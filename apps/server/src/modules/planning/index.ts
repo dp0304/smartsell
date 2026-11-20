@@ -1,7 +1,7 @@
 import { ADMIN, APPROVE, READ, WRITE, Problem, type Context, type Data, type Input, type Operation, type Row } from '@smartsell/contracts';
 import { activePause, assessTarget, assertVersion, closeTarget, digest, entries, evergreenExpiry, findStandingGrant, hasExecutionRisk, instant, list, localMinute, locate, object, platformKey, resolveLocal, taskFor, time, type Stage } from '../../../../../packages/domain/src/publishing/index.js';
 import { platformScheduleOperation, readPlatformSchedule } from './schedule-reconciliation.js';
-import { acceptsVerification, cancellationTracking, ensureTask, pending, registerManualPost, requestCancellation, transition } from '../execution/service.js';
+import { acceptsVerification, cancellationTracking, ensureTask, pending, postAttribution, registerManualPost, requestCancellation, transition } from '../execution/service.js';
 import { isSafeMode } from '../ops/controls.js';
 import { assertLicenseAllowed, getLicenseState } from '../ops/metering.js';
 import { DAY, date, dow, integer, minute, queueSlots, recurringDates, similarity } from './expansion.js';
@@ -1116,7 +1116,8 @@ export const operations: Operation[] = [
         if (cancelled?.status !== 'cancelled') return conflict('The target execution could not be safely stopped');
       }
       retireRequest(ctx, target, 'matched_native', 'cancelled');
-      ctx.update('platform_post', post.id, { publish_target_id: target.id });
+      // A matched native post inherits the target's brand, campaign and content so dashboards can attribute it.
+      ctx.update('platform_post', post.id, { publish_target_id: target.id, ...postAttribution(ctx.get('social_account', String(post.social_account_id)), target) });
       closeTarget(ctx, target, 'matched_native');
       ctx.emit('planning.target.matched_post', { target_id: target.id, platform_post_id: post.id });
       for (const other of ctx.list('reconciliation_candidate')) {

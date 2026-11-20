@@ -32,7 +32,9 @@ async function signIn(page, dev, email, password) {
   await page.locator('input[name=email]').fill(email);
   await page.locator('input[name=password]').fill(password);
   await page.getByRole('button', { name: /^(登入|Sign in)$/ }).click();
-  await expect(page).toHaveURL(/\/w\/[^/]+\/home$/);
+  // Sign-in lands on the dashboard; these checks cover the advanced workbench, so open it directly.
+  await expect(page).toHaveURL(/\/app\/[^/]+$/);
+  await page.goto(page.url().replace(/\/app\/([^/]+)$/, '/w/$1/home'));
   await expect(page.locator('.workspace-main').getByRole('heading').first()).toBeVisible();
 }
 

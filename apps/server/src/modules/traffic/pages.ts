@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { APPROVE, READ, WRITE, type Context, type Data, type Operation, type Row } from '@smartsell/contracts';
 import { publicLink, resolveLink } from './links.js';
 import { probeDestination } from './probe.js';
+import { fromAgent } from '../../agent-actor.js';
 import { conflict, destination, invalid, items, missing, object, oneOf, optional, productView, safeUrl, slug, text, time } from './operation-policy.js';
 
 export function hash(content: unknown): string { return createHash('sha256').update(JSON.stringify(content)).digest('hex'); }
@@ -217,11 +218,15 @@ export const pageOperations: Operation[] = [
       results.push({ check: 'platform_redirect', result: /unknown|not found/i.test(detail) ? 'unknown' : 'fail', detail });
     }
     const observed = items(body.items ?? [], 20).map(object);
+    // An Agent may report what it saw, but it cannot vouch for a page a person will publish: its "pass" stays unknown.
+    const byAgent = fromAgent(ctx);
     for (const row of observed) {
       const check = oneOf(row.check, ['http_status','language','mobile','form','promotion','availability'], 'check');
       if (kind === 'auto_link') invalid('Automatic checks cannot accept manual results');
-      const result = oneOf(row.result, ['pass','warn','fail','unknown'], 'result');
-      results.push({ check, result, detail: text(row.detail, 'detail', 1000), source: 'manual', evidence_id: optional(row.evidence_id, 'evidence_id') ?? null });
+      const reported = oneOf(row.result, ['pass','warn','fail','unknown'], 'result');
+      const result = byAgent && reported === 'pass' ? 'unknown' : reported;
+      results.push({ check, result, ...(result !== reported && { reported_result: reported }), detail: text(row.detail, 'detail', 1000),
+        source: byAgent ? 'agent' : 'manual', evidence_id: optional(row.evidence_id, 'evidence_id') ?? null });
     }
     if (!results.some(row => row.check === 'http_status')) results.push({ check: 'http_status', result: 'unknown' });
     const status = ['fail','unknown','warn','pass'].find(status => results.some(row => row.result === status))!;

@@ -7,6 +7,7 @@ import type { FastifyRequest } from 'fastify';
 import { bodyObject, denied, digest, header, invalid, isObject, membership, nowSeconds, type Auth, type Principal } from './identity.js';
 import type { Config } from './config.js';
 import { makeContext } from './context.js';
+import { humanRequired } from './agent-actor.js';
 import { brandOperationAllowed, scopedBrandContext } from './integration/brand-access.js';
 import type { Membership } from './identity.js';
 import { agentSubscriber, bindTeamOperation, guardExternalOperation, semanticSearchOperation, workspaceSchedule, workspaceServices, workspaceTeam } from './integration/workspace-services.js';
@@ -108,17 +109,69 @@ export async function discoverOperations() {
 const paramPattern = /:([A-Za-z_][A-Za-z0-9_]*)/g;
 export const parameterNames = (route: Registered) => [...route.path.matchAll(paramPattern)].map(match => match[1]);
 
-export function metadata({ module, method, name, path, summary, versionKind, external }: Registered) {
-  return { module, method, name, path, summary, requires_version: Boolean(versionKind), external: Boolean(external) };
+/** Decisions an Agent credential may never make, whatever its role or tool grant (design 4.3). */
+export const HUMAN_ONLY: ReadonlySet<string> = new Set([
+  'publishing_approve', 'publishing_reject', 'publishing_request_changes', 'publishing_batch_approve', 'change_sets_apply',
+  'change_sets_reject', 'agent_jobs_accept', 'agent_jobs_return', 'agent_jobs_finish', 'agent_jobs_reconcile', 'inbox_approve_reply',
+  'inbox_reject_auto_reply', 'commerce_fact_approve', 'commerce_fact_reject', 'commerce_localization_approve',
+  'commerce_localization_reject', 'knowledge_approve', 'knowledge_reject', 'brief_revision_approve', 'brief_revision_request_changes',
+  'campaign_budget_approval_decide', 'ads_decide_proposal', 'ads_decide_adjustment', 'rights_activate', 'rights_revoke',
+  'submission_accept', 'submission_accept_batch', 'submission_reject', 'commissions_approve', 'commissions_batch_approve',
+  'commissions_batch_record_payment', 'product_candidate_decide', 'account_enable_auto_mode', 'account_update_auto_mode',
+  'account_release_account_auto', 'account_release_workspace_auto', 'account_approve_mobile_device',
+  'account_register_owned_social_account', 'account_revoke_connection', 'account_revoke_device', 'publishing_release_pause',
+  'team_member_remove', 'publishing_manual_complete', 'posts_complete_operation', 'publishing_confirm_post_match',
+  'publishing_reject_post_match', 'campaign_closeout', 'data_gap_accept', 'collaborations_mark_terms_signed',
+  // Releases outside an approval queue: going live in public, mailing customers, re-approving, and security settings.
+  'pages_publish', 'pages_configure_experiment', 'bio_add_item', 'bio_edit_item', 'bio_remove_item', 'forms_activate',
+  'links_allow_host', 'links_revoke_host', 'links_domain_create', 'links_domain_verify',
+  'lifecycle_test_send_campaign', 'lifecycle_schedule_campaign', 'lifecycle_submit_local_esp',
+  'commerce_localization_accept', 'commerce_localization_writeback', 'deliverables_review', 'deliverables_verify_publication',
+  'account_enable_social_account', 'account_resolve_account_block', 'account_link_accounts', 'account_start_oauth',
+  'account_connect_shopify_merchant', 'account_register_platform_app', 'account_update_platform_app', 'commerce_store_connect',
+  // Starting a test sends live page traffic to its arms; a budget cap bounds paid collection.
+  'experiment_start', 'collection_budget_set',
+  // Undoing a person's pause or archive. A retracted fact cannot be revised and its key cannot be reused, so it is not a stop.
+  'data_source_resume', 'workspace_brand_restore', 'commerce_fact_retract',
+]);
+/** Endpoints that both release and stop: an Agent may send only the stop (design 4.3: Agent 可以「停」…不能「解除」). */
+export const AGENT_STOP_ONLY: Readonly<Record<string, (body: Data) => boolean>> = {
+  bio_publish: body => body.unpublish === true,
+  lifecycle_change_flow_status: body => ['manual', 'paused', 'archived'].includes(String(body.status)),
+  // Archived links are immutable, so only the reversible stops.
+  links_update: body => ['paused', 'expired'].includes(String(body.status)),
+};
+/** Fields that carry a person's decision inside an otherwise Agent-callable write. */
+export const AGENT_HUMAN_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  // What collected data may be shown, shared, exported or sent to models is the data licence.
+  data_source_create: ['allowed_uses'], data_source_update: ['allowed_uses'],
+};
+
+export const humanOnly = (operation: Pick<Registered, 'name' | 'mcp'>) => HUMAN_ONLY.has(operation.name) || operation.mcp === false;
+/** Whether this call, with this body, is a decision an Agent credential may not make. */
+export const humanDecision = (operation: Pick<Registered, 'name' | 'mcp'>, body: Data) => humanOnly(operation) ||
+  (Object.hasOwn(AGENT_STOP_ONLY, operation.name) && !AGENT_STOP_ONLY[operation.name]!(body)) ||
+  (Object.hasOwn(AGENT_HUMAN_FIELDS, operation.name) && AGENT_HUMAN_FIELDS[operation.name]!.some(field => body[field] !== undefined));
+/** Agent module operations are opt-in; every other operation is Agent-callable unless it is human-only. */
+export const agentCallable = (operation: Pick<Registered, 'name' | 'mcp' | 'module'>) =>
+  !humanOnly(operation) && !(operation.module === 'agent' && operation.mcp !== true);
+
+export function metadata(operation: Registered) {
+  const { module, method, name, path, summary, versionKind, external } = operation;
+  return { module, method, name, path, summary, requires_version: Boolean(versionKind), external: Boolean(external),
+    mcp: agentCallable(operation), human_only: humanOnly(operation) };
+}
+
+export function grantAllows(operation: Registered, grant: { access: 'read' | 'write'; tools?: readonly string[] }, source: 'rest' | 'mcp') {
+  return operation.mcp !== false &&
+    !(operation.module === 'agent' && (source === 'rest' || operation.mcp !== true)) &&
+    (grant.access === 'write' || operation.method === 'GET') &&
+    (!grant.tools || grant.tools.includes(operation.name));
 }
 
 export function allowed(operation: Registered, principal: Principal, member: { role: Role; scopes?: string[] }, source: 'rest' | 'mcp') {
-  return operation.roles.includes(member.role) && brandOperationAllowed(member.scopes, operation.name, operation.method) && (!principal.grant || (
-    operation.mcp !== false &&
-    !(operation.module === 'agent' && (source === 'rest' || operation.mcp !== true)) &&
-    (principal.grant.access === 'write' || operation.method === 'GET') &&
-    (!principal.grant.tools || principal.grant.tools.includes(operation.name))
-  ));
+  return operation.roles.includes(member.role) && brandOperationAllowed(member.scopes, operation.name, operation.method) &&
+    (!principal.grant || grantAllows(operation, principal.grant, source));
 }
 
 export function expectedVersion(value: unknown) {
@@ -170,20 +223,65 @@ function paginate(data: unknown[], query: Record<string, string>, cursorScope: s
   return { data: data.slice(offset, offset + limit), next_cursor: data.length > offset + limit ? `${next}.${sign(next)}` : null };
 }
 
-export async function runScopedOperation(records: Records, scope: Scope, principal: { actorId: string; grantId?: string },
+export interface OperationPrincipal { actorId: string; grantId?: string; credentialLabel?: string }
+
+const resourcePrefixes: [RegExp, string][] = [
+  [/^workspace_brand_/, 'brand'], [/^workspace_market_/, 'market'], [/^commerce_store_import$|^import_/, 'import_batch'],
+  [/^commerce_store_/, 'store'], [/^commerce_product_/, 'product'], [/^commerce_variant_/, 'product_variant'],
+  [/^commerce_record_listing$/, 'listing_snapshot'], [/^campaign_goal_/, 'campaign_goal'], [/^campaign_plan_slot_/, 'campaign_plan_slot'],
+  [/^campaign_/, 'campaign'], [/^content_commit_revision$/, 'content_revision'],
+  [/^content_(?:create|autosave|update)_variant$|^content_create_translation$/, 'content_variant'], [/^content_create_(?:item|draft)$/, 'content_item'],
+  [/^publishing_(?:create|update|request|cancel|submit).*target|^publishing_request_approval$/, 'publish_target'],
+  [/^ads_.*proposal$/, 'ad_proposal'], [/^links_/, 'short_link'], [/^analytics_record_observations$/, 'metric_observation'],
+  [/^posts_|^publishing_register_post$/, 'platform_post'], [/^agent_jobs_/, 'agent_job'], [/^change_sets_/, 'change_set'],
+  [/^agent_connection_/, 'agent_connection'],
+];
+
+function resultRow(data: unknown) {
+  if (!isObject(data)) return undefined;
+  if (typeof data.id === 'string') return data;
+  return Object.values(data).find((value): value is Data => isObject(value) && typeof value.id === 'string');
+}
+
+/** One feed row per committed write. Readers group bursts and never treat a missing label as a person. */
+export function activityEvent(operation: Pick<Registered, 'name'>, principal: OperationPrincipal, source: 'rest' | 'mcp',
+  requestId: string, now: string, data: unknown, params: Record<string, string> = {}) {
+  const row = resultRow(data);
+  const text = (value: unknown) => typeof value === 'string' && value ? value.slice(0, 200) : null;
+  const resourceType = resourcePrefixes.find(([pattern]) => pattern.test(operation.name))?.[1] ??
+    (typeof row?.kind === 'string' && /^[a-z][a-z0-9_]{1,63}$/.test(row.kind) ? row.kind : null);
+  const id = randomUUID();
+  return {
+    id, version: 1, created_at: now, updated_at: now, occurred_at: now, action: operation.name,
+    actor_id: principal.actorId, actor_type: principal.grantId ? 'agent' : 'human',
+    credential_id: principal.grantId ?? null, credential_label: principal.credentialLabel ?? null,
+    source, request_id: requestId, resource_id: text(row?.id) ?? text(params.id), resource_type: resourceType,
+    resource_title: text(row?.title) ?? text(row?.name),
+    brand_id: text(row?.brand_id) ?? (resourceType === 'brand' ? text(row?.id) : null),
+  };
+}
+
+export async function runScopedOperation(records: Records, scope: Scope, principal: OperationPrincipal,
   role: Role, requestId: string, operation: Registered, input: Input, source: 'rest' | 'mcp', config: Config,
   enrich = workspaceServices([]), identity?: Records, brandScopes?: readonly string[]) {
   const readOnly = operation.method === 'GET';
   const scopes = brandScopes ?? identity?.get<Membership>(`member/${principal.actorId}/${scope.workspaceId}`)?.scopes;
   if (!brandOperationAllowed(scopes, operation.name, operation.method)) throw denied();
-  let ctx: Context = enrich(makeContext(records, scope, role, requestId), identity, principal.grantId);
+  if (principal.grantId && humanDecision(operation, input.body)) throw humanRequired(operation.name);
+  const base = makeContext(records, scope, role, requestId);
+  const create = base.create;
+  const via = principal.grantId ? 'agent' : 'human';
+  base.create = (kind, values) => create(kind, { ...values, created_via: values.created_via ?? via });
+  let ctx: Context = enrich(base, identity, principal.grantId);
   if (scopes?.length) ctx = scopedBrandContext(ctx, scopes);
   ctx = operation.scopeContext?.(ctx, input) ?? ctx;
   guardExternalOperation(ctx, operation);
   const { cursor, limit, ...filters } = input.query;
   const access = digest(canonical([role, [...(scopes ?? [])].sort()]));
   const queryScope = digest(canonical([scope.workspaceId, principal.actorId, principal.grantId, access, operation.name, input.params, filters]));
-  const key = !readOnly && input.idempotencyKey ? `idem/${principal.actorId}/${digest(input.idempotencyKey)}` : undefined;
+  // Each credential has its own key space: one person's Agents pick keys like "brand-1" independently.
+  const key = !readOnly && input.idempotencyKey
+    ? `idem/${principal.actorId}/${principal.grantId ? `${principal.grantId}/` : ''}${digest(input.idempotencyKey)}` : undefined;
   const fingerprint = key ? digest(canonical([operation.method, operation.path, input.params, input.query, input.body, input.expectedVersion])) : '';
   const existing = key && records.get<IdempotencyRecord>(key);
   if (existing && existing.expires > nowSeconds()) {
@@ -216,6 +314,8 @@ export async function runScopedOperation(records: Records, scope: Scope, princip
       id, action: operation.name, actor_id: principal.actorId, credential_id: principal.grantId,
       source, request_id: requestId, occurred_at: ctx.now, resource_id: input.params.id ?? (isObject(data) ? data.id : undefined),
     });
+    const activity = activityEvent(operation, principal, source, requestId, ctx.now, data, input.params);
+    records.put(`row/activity_event/${activity.id}`, activity);
     records.put('stream/revision', (records.get<number>('stream/revision') ?? 0) + 1);
     if (key) records.put(key, { fingerprint, access, grantId: principal.grantId, expires: nowSeconds() + 86400, outcome } satisfies IdempotencyRecord);
   }

@@ -2,6 +2,7 @@ import { Problem, type Context, type Data, type Row } from '@smartsell/contracts
 import { catalogOperations } from '../commerce/catalog-operations.js';
 import { choice, conflict, invalid, money, number, object, optionalText, strings, text, time } from './input.js';
 import { evidenceItems } from './intel-research.js';
+import { fromAgent } from '../../agent-actor.js';
 
 export const dimensions = ['demand_evidence', 'competition', 'product_fit', 'supply_feasibility'] as const;
 export function candidateValues(ctx: Context, body: Data): Data {
@@ -32,8 +33,8 @@ export function addScore(ctx: Context, candidate: Row, body: Data): Row {
   const derivedEstimate = evidence.some(item => item.item_type === 'observation' && (ctx.get('observation', String(item.ref_id)).source as Data)?.estimate === true);
   const changes = {
     candidate_id: candidate.id, dimension, score: number(body.score, 'score', 0, 100), uncertainty: number(body.uncertainty, 'uncertainty', 0, 1),
-    evidence_item_ids: evidence.map(row => row.id), is_estimate: body.is_estimate === true || (ctx.role === 'agent' && !evidence.length) || derivedEstimate,
-    stance: ctx.role === 'agent' && !evidence.length ? 'hypothesis' : 'assessment', scored_by: ctx.actorId,
+    evidence_item_ids: evidence.map(row => row.id), is_estimate: body.is_estimate === true || (fromAgent(ctx) && !evidence.length) || derivedEstimate,
+    stance: fromAgent(ctx) && !evidence.length ? 'hypothesis' : 'assessment', scored_by: ctx.actorId,
   };
   const existing = ctx.list('candidate_score').find(row => row.candidate_id === candidate.id && row.dimension === dimension);
   const row = existing ? ctx.update('candidate_score', existing.id, changes) : ctx.create('candidate_score', changes);

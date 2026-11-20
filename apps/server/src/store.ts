@@ -24,7 +24,8 @@ export interface Store {
   setup(input: Setup, tokenHash: string, replace?: string): Promise<boolean>;
   credentials(email: string): Promise<{ id: string; passwordHash: string } | undefined>;
   acceptMemberInvitation?(input: { tokenHash: string; email: string; name: string; passwordHash: string }): Promise<boolean>;
-  issueSession(userId: string, tokenHash: string, replace?: string): Promise<void>;
+  /** ttlSeconds defaults to SESSION_SECONDS. Agent connections pass their own lifetime and no replace hash. */
+  issueSession(userId: string, tokenHash: string, replace?: string, ttlSeconds?: number): Promise<void>;
   commandIdentity?<T>(run: (unit: import('./integration/command-identity-state.js').CommandIdentityUnit) => Promise<T>): Promise<T>;
   revokeSession(tokenHash: string): Promise<void>;
   session(tokenHash: string): Promise<{ user: User; workspaces: Workspace[] } | undefined>;
@@ -37,6 +38,7 @@ export interface Store {
 }
 
 export const SESSION_SECONDS = 12 * 60 * 60;
+export const MAX_SESSION_SECONDS = 365 * 24 * 60 * 60;
 export const unauthenticated = () => new DomainError('unauthenticated', 'Sign in required', 401);
 export const missingWorkspace = () => new DomainError('not_found', 'Workspace not found', 404);
 export const versionConflict = () => new DomainError('version_conflict', 'Record version has changed', 409);

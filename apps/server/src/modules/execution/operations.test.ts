@@ -64,10 +64,10 @@ function fixture(api = false, manualDate = false, setup?: (ctx: Context, revisio
 }
 
 test('an owner bearer credential cannot backfill manual evidence or hand work over in a batch', () => {
-  const { ctx, invoke, task } = fixture();
+  const { ctx, invoke, task, target } = fixture();
   Object.assign(ctx, { agentCredentialId: 'pat' });
   assert.throws(() => invoke('publishing_manual_complete'), { code: 'PERMISSION_DENIED' });
-  assert.throws(() => invoke('posts_register_manual'), { code: 'PERMISSION_DENIED' });
+  assert.throws(() => invoke('posts_register_manual', task.id, { publish_target_id: target.id, permalink: 'https://www.instagram.com/p/agent/' }), { code: 'HUMAN_REQUIRED' });
   assert.throws(() => invoke('publishing_preview_execution_batch', task.id, { action: 'handover', reason: 'handoff', task_ids: [task.id] }), { code: 'PERMISSION_DENIED' });
   assert.equal(ctx.list('execution_batch').length, 0);
 });
@@ -774,4 +774,57 @@ test('official YouTube maintenance requires a receipt and independent readback a
   assert.equal(ctx.get('post_operation', uncertain.id).status, 'outcome_unknown');
   assert.throws(() => invoke('posts_request_operation', another.id, { kind: 'delete', reason: 'again' }), { code: 'OPERATION_PENDING' });
   assert.equal(writes, 3);
+});
+
+test('posts inherit brand, campaign and content from the publish target, else the account brand only', () => {
+  const { ctx, task, target, invoke } = fixture(false, false, (setupCtx, _revision, account) => {
+    setupCtx.update('social_account', account.id, { brand_id: 'brand-a' });
+    return { brand_id: 'brand-a', campaign_id: 'campaign-a' };
+  });
+  const file = ctx.create('file_object', { purpose: 'evidence', scan_status: 'clean' });
+  const account = String(task.social_account_id);
+  const native = upsertObservedPost(ctx, account, { external_post_id: 'native-1', permalink: 'https://www.instagram.com/p/native-1/', published_at: ctx.now });
+  assert.equal(native.brand_id, 'brand-a');
+  assert.ok(!('campaign_id' in native) && !('content_item_id' in native), 'unknown attribution stays absent');
+  const standalone = invoke('posts_register_manual', task.id, { social_account_id: account, permalink: 'https://www.instagram.com/p/old/', evidence_file_ids: [file.id] }) as Row;
+  assert.deepEqual([standalone.brand_id, standalone.campaign_id, standalone.registered_via, standalone.verification], ['brand-a', undefined, 'human', 'manual_confirmed']);
+  invoke('publishing_run_now');
+  invoke('publishing_manual_start');
+  invoke('publishing_manual_complete', task.id, { permalink: 'https://www.instagram.com/p/linked/', evidence_file_ids: [file.id] });
+  const linked = ctx.list('platform_post').find(row => row.publish_target_id === target.id)!;
+  assert.deepEqual([linked.brand_id, linked.campaign_id, linked.content_item_id, linked.content_type], ['brand-a', 'campaign-a', 'item', 'text']);
+  ctx.update('social_account', account, { brand_id: 'brand-b' });
+  assert.equal(upsertObservedPost(ctx, account, { external_post_id: 'native-1', post_status: 'live' }).brand_id, 'brand-a', 'a recorded brand is not rewritten by an account move');
+  assert.equal(upsertObservedPost(ctx, account, { external_post_id: 'native-2', published_at: ctx.now }).brand_id, 'brand-b');
+});
+
+test('an agent can report an existing external post for metrics but cannot complete or downgrade a publication', () => {
+  const { ctx, task, target, invoke } = fixture(false, false, (setupCtx, _revision, account) => {
+    setupCtx.update('social_account', account.id, { brand_id: 'brand-a' });
+    return { brand_id: 'brand-a' };
+  });
+  const register = operations.find(operation => operation.name === 'posts_register_manual')!;
+  assert.ok(register.roles.includes('agent'));
+  assert.notEqual((register as { mcp?: boolean }).mcp, false);
+  assert.equal((operations.find(operation => operation.name === 'publishing_manual_complete') as { mcp?: boolean }).mcp, false);
+  const account = String(task.social_account_id);
+  const report = { social_account_id: account, permalink: 'https://www.instagram.com/p/history/', external_post_id: 'history', published_at: '2025-12-01T10:00:00.000Z' };
+  Object.assign(ctx, { agentCredentialId: 'pat' });
+  assert.throws(() => invoke('posts_register_manual', task.id, { ...report, published_at: undefined }), { code: 'INVALID_INPUT' });
+  const reported = invoke('posts_register_manual', task.id, report) as Row;
+  assert.deepEqual([reported.verification, reported.registered_via, reported.origin, reported.brand_id, reported.published_at, reported.submitted_by],
+    ['agent_reported', 'agent', 'manual_registered', 'brand-a', report.published_at, undefined]);
+  assert.deepEqual(reported.evidence_ids, []);
+  assert.throws(() => invoke('posts_register_manual', task.id, { publish_target_id: target.id, permalink: 'https://www.instagram.com/p/target/' }), { code: 'HUMAN_REQUIRED' });
+  assert.equal(ctx.get('execution_task', task.id).status, task.status);
+  Object.assign(ctx, { agentCredentialId: undefined });
+  const file = ctx.create('file_object', { purpose: 'evidence', scan_status: 'clean' });
+  const confirmed = invoke('posts_register_manual', task.id, { social_account_id: account, permalink: 'https://www.instagram.com/p/confirmed/', evidence_file_ids: [file.id] }) as Row;
+  ctx.role = 'agent';
+  const again = invoke('posts_register_manual', task.id, { social_account_id: account, permalink: 'https://www.instagram.com/p/confirmed/', external_post_id: 'confirmed', published_at: ctx.now }) as Row;
+  assert.equal(again.id, confirmed.id);
+  assert.deepEqual([again.verification, again.registered_via, again.external_post_id], ['manual_confirmed', 'human', 'confirmed']);
+  ctx.role = 'owner';
+  const upgraded = invoke('posts_register_manual', task.id, { ...report, evidence_file_ids: [file.id] }) as Row;
+  assert.deepEqual([upgraded.id, upgraded.verification, upgraded.registered_via], [reported.id, 'manual_confirmed', 'human']);
 });

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Fragment, Suspense, lazy, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
@@ -37,6 +37,8 @@ const groups = [
 ] as const;
 const settingsModules = ['workspace', 'account', 'team', 'ingest', 'agent', 'ops'] as const;
 const base = (ws: string) => `/w/${encodeURIComponent(ws)}`;
+const viewBase = (ws: string) => `/app/${encodeURIComponent(ws)}`;
+const ViewApp = lazy(() => import('./view/routes').then(module => ({ default: module.ViewApp })));
 
 async function getSession(signal?: AbortSignal) {
   try { return await readSession(signal);
@@ -275,9 +277,10 @@ function RecordsRoute({ ws, workspace, userId, path, module }: {
 function App({ compatibility }: { compatibility: boolean }) {
   const { t } = useCopy();
   const location = useLocation();
-  const next = location.pathname.startsWith('/w/') ? `?next=${encodeURIComponent(location.pathname + location.search)}` : '';
+  const returnable = (path?: string | null) => Boolean(path && (path.startsWith('/w/') || path.startsWith('/app/')));
+  const next = returnable(location.pathname) ? `?next=${encodeURIComponent(location.pathname + location.search)}` : '';
   const returnTo = new URLSearchParams(location.search).get('next');
-  const signedInDestination = returnTo?.startsWith('/w/') ? returnTo : '/';
+  const signedInDestination = returnable(returnTo) ? returnTo! : '/';
   const session = useQuery({ queryKey: sessionKey, queryFn: ({ signal }) => getSession(signal) });
   const data = session.data?.data;
   const ws = data?.workspaces?.[0]?.id;
@@ -285,9 +288,10 @@ function App({ compatibility }: { compatibility: boolean }) {
     <Route path="/setup" element={data?.user ? <Navigate to={signedInDestination} replace /> : <Authentication key="setup" setup />} />
     <Route path="/login" element={data?.user ? <Navigate to={signedInDestination} replace /> : <Authentication key="login" setup={false} />} />
     <Route path="/invite" element={<MemberInvitation />} />
+    {ws && data && <Route path="/app/:ws/*" element={<Suspense fallback={<Busy label={t('loading')} />}><ViewApp session={data} /></Suspense>} />}
     {ws && data && <Route path="/w/:ws/*" element={<Workspace session={data} compatibility={compatibility} />} />}
     {ws && data && <Route path="/admin/*" element={<Workspace session={data} compatibility={compatibility} administrative />} />}
-    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={`${base(ws)}/home`} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
+    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
   </Routes></>;
 }
 

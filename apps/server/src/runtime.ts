@@ -62,6 +62,21 @@ export function runBackground(store: Store, config: Config, subscribers: Subscri
   return runWorkspaceBackground(kernelBackgroundStore(store), config, subscribers, schedules, log, operations, egress, drain);
 }
 
+const drainIntervalMs = 5_000;
+const pruneIntervalMs = 60 * 60_000;
+const retainDeliveredMs = 3 * 86_400_000;
+
+/** Drop events whose subscriber jobs all finished days ago, so the outbox does not grow without bound. */
+function pruneDelivered(records: Records, subscribers: Subscriber[], now: number) {
+  for (const event of records.list<DomainEvent>('outbox/')) {
+    if (!event.dispatched_at || Date.parse(event.dispatched_at) > now - retainDeliveredMs) continue;
+    const ids = subscribers.filter(subscriber => subscriber.accepts(event.type)).map(subscriber => `${subscriber.id}/${event.id}`);
+    if (ids.some(id => records.get(`job/${id}`))) continue;
+    for (const id of ids) if (records.get(`consumed/${id}`)) records.delete(`consumed/${id}`);
+    records.delete(`outbox/${event.id}`);
+  }
+}
+
 export function runWorkspaceBackground(store: BackgroundStore, config: Config, subscribers: Subscriber[], schedules: Schedule[], log: FastifyBaseLogger,
   operations: readonly Registered[] = [], egress?: CustomerEgress, drain?: BackgroundDrain) {
   const enrich = workspaceServices(operations, egress, !config.production);
@@ -73,13 +88,23 @@ export function runWorkspaceBackground(store: BackgroundStore, config: Config, s
   let stopped = false;
   const subscribersById = new Map(subscribers.map(subscriber => [subscriber.id, subscriber]));
 
+  const isDue = (schedule: Schedule, previous: number, now: number) => schedule.utcDaily
+    ? Math.floor(now / 86_400_000) > Math.floor(previous / 86_400_000) : now - previous >= (schedule.intervalMs ?? 60_000);
+  const lastDrain = new Map<string, number>();
+  const lastPrune = new Map<string, number>();
+
   async function cycle() {
     const workspaces = await store.workspaces();
     for (const ws of workspaces) {
       if (stopped) return;
       const now = Date.now();
+      // Decide what needs a write in one read so idle cycles do not open a write transaction per schedule.
+      const pending = await store.transact(ws, true, records => ({
+        due: new Set(scheduler ? schedules.filter(schedule => isDue(schedule, records.get<number>(`schedule/${schedule.id}`) ?? 0, now)).map(schedule => schedule.id) : []),
+        undispatched: records.list<DomainEvent>('outbox/').some(event => !event.dispatched_at),
+      }));
       if (scheduler) {
-        for (const schedule of schedules) {
+        for (const schedule of schedules.filter(schedule => pending.due.has(schedule.id))) {
           try {
             await store.transact(ws, false, async (records, scope, identity) => {
               const key = `schedule/${schedule.id}`;
@@ -95,7 +120,13 @@ export function runWorkspaceBackground(store: BackgroundStore, config: Config, s
           } catch (error) { log.error({ err: error, schedule: schedule.id }, 'Scheduled operation failed'); }
         }
       }
-      await store.transact(ws, false, records => {
+      if (!lastPrune.has(ws.id)) lastPrune.set(ws.id, now);
+      else if (now - lastPrune.get(ws.id)! >= pruneIntervalMs) {
+        lastPrune.set(ws.id, now);
+        await store.transact(ws, false, records => pruneDelivered(records, subscribers, now));
+      }
+      // Schedules that just ran may have emitted events, so dispatch in the same cycle.
+      if (pending.undispatched || pending.due.size) await store.transact(ws, false, records => {
         for (const event of records.list<DomainEvent>('outbox/').filter(event => !event.dispatched_at).slice(0, 100)) {
           for (const subscriber of subscribers.filter(subscriber => subscriber.accepts(event.type))) {
             const id = `${subscriber.id}/${event.id}`;
@@ -147,8 +178,12 @@ export function runWorkspaceBackground(store: BackgroundStore, config: Config, s
           });
         }
       }
-      if (worker && !stopped && drain) await drain(run => store.transact(ws, false, (records, scope, identity) =>
-        run(enrich(makeContext(records, scope, 'owner'), identity))));
+      // Publishing drains poll external state; every few seconds is enough and keeps idle workspaces cheap.
+      if (worker && !stopped && drain && (jobs.length || now - (lastDrain.get(ws.id) ?? 0) >= drainIntervalMs)) {
+        lastDrain.set(ws.id, now);
+        await drain(run => store.transact(ws, false, (records, scope, identity) =>
+          run(enrich(makeContext(records, scope, 'owner'), identity))));
+      }
     }
   }
 

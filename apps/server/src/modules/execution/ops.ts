@@ -4,7 +4,7 @@ import { assessTarget, closeTarget } from '../../../../../packages/domain/src/pu
 import {
   ATTEMPT, FINAL, POST, SLOT, TASK, VERIFY_SCHEDULE_SECONDS, acceptsVerification, after, assignee, attachEvidence, attempts, authorized, availableWriteSlot,
   blockExecution, cancellationTracking, conflict, confirmCancellation, endAttempt, executionCheck, fence,
-  find, holdWriteSlot, ids, invalid, late, latest, manualComplete, noPending, one, openAttempt, optional, pending, postDetails,
+  find, fromAgent, holdWriteSlot, ids, invalid, late, latest, manualComplete, noPending, one, openAttempt, optional, pending, postDetails,
   registerManualPost, requestCancellation, requestVerification, savePost, settleConnector, settleVerification, status, step, targetOf, taskFor, text, time,
   transition, uncertain,
 } from './service.js';
@@ -12,9 +12,7 @@ import {
 const HUMAN: typeof WRITE = WRITE.filter(role => role !== 'agent');
 const resource = (ctx: Context, input: Input, kind = TASK) => ctx.get(kind, input.params.id);
 function requireHuman(ctx: Context) {
-  if (ctx.role === 'agent' || (ctx as Context & { agentCredentialId?: string }).agentCredentialId) {
-    throw new Problem(403, 'PERMISSION_DENIED', 'Only a person can perform this action');
-  }
+  if (fromAgent(ctx)) throw new Problem(403, 'PERMISSION_DENIED', 'Only a person can perform this action');
 }
 
 export function retry(ctx: Context, task: Row) {
@@ -378,12 +376,16 @@ const executionOperations: Operation[] = [
     const patch = { platform_post_id: post.id, watch_until: new Date(until).toISOString(), last_status: post.post_status, status: 'active', completed_at: null };
     return previous ? ctx.update('post_watch', previous.id, patch) : ctx.create('post_watch', patch);
   } },
-  { path: '/platform-posts/register', method: 'POST', name: 'posts_register_manual', roles: HUMAN, summary: 'Register a post and its evidence', run(ctx, { body }) {
+  { path: '/platform-posts/register', method: 'POST', name: 'posts_register_manual', roles: WRITE, summary: 'Register a post and its evidence; an agent can report an existing external post for metrics import', run(ctx, { body }) {
     const targetId = body.publish_target_id ?? body.target_id;
     if (targetId) return registerManualPost(ctx, ctx.get('publish_target', text(targetId, 'publish_target_id')), body);
     const account = ctx.get('social_account', text(body.social_account_id, 'social_account_id'));
-    const post = savePost(ctx, account, { ...postDetails(ctx, body), origin: 'manual_registered', verification: 'manual_confirmed', submitted_by: 'manual', post_status: 'live' });
-    const evidence_ids = attachEvidence(ctx, body.evidence_file_ids, POST, post.id);
+    const agent = fromAgent(ctx);
+    // A historical post must not appear to have been published at registration time.
+    if (agent && body.published_at === undefined) throw invalid('Provide published_at for an agent-reported post');
+    const post = savePost(ctx, account, { ...postDetails(ctx, body), origin: 'manual_registered', post_status: 'live',
+      ...(agent ? { verification: 'agent_reported', registered_via: 'agent' } : { verification: 'manual_confirmed', registered_via: 'human', submitted_by: 'manual' }) });
+    const evidence_ids = agent && body.evidence_file_ids === undefined ? [] : attachEvidence(ctx, body.evidence_file_ids, POST, post.id);
     return ctx.update(POST, post.id, { evidence_ids: [...new Set([...(Array.isArray(post.evidence_ids) ? post.evidence_ids : []), ...evidence_ids])] });
   } },
   { path: '/platform-posts/:id/operations', method: 'POST', name: 'posts_request_operation', roles: HUMAN, summary: 'Request a platform post operation', run: (ctx, input) => postOperation(ctx, resource(ctx, input, POST), {

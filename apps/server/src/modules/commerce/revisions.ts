@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { type Context, type Data, type Input, type Row, Problem } from '@smartsell/contracts';
 import { conflict, enumValue, https, invalid, object, one, optional, stringMap, strings, text } from './domain.js';
 import { change } from './listings.js';
+import { fromAgent } from '../../agent-actor.js';
 
 const factCategories = ['spec', 'claim', 'selling_point', 'usage_scenario', 'marketing_copy', 'speculation'] as const;
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value ?? null)).digest('hex');
@@ -46,7 +47,7 @@ export function addFactRevision(ctx: Context, fact: Row, body: Data): Row {
   evidenceIds.forEach(id => ctx.get('evidence', id));
   const revision = ctx.create('product_fact_revision', {
     fact_id: fact.id, revision_no: children(ctx, 'product_fact_revision', 'fact_id', fact.id).length + 1, category: fact.category,
-    value, evidence_urls: evidenceUrls, evidence_ids: evidenceIds, source: { kind: ctx.role === 'agent' ? 'agent' : 'manual', collected_at: ctx.now },
+    value, evidence_urls: evidenceUrls, evidence_ids: evidenceIds, source: { kind: fromAgent(ctx) ? 'agent' : 'manual', collected_at: ctx.now },
     review_status: 'draft', content_hash: hash({ value, evidenceUrls, evidenceIds, category: fact.category }), created_by_id: ctx.actorId,
   });
   const saved = ctx.update('product_fact', fact.id, { current_revision_id: revision.id });
@@ -103,9 +104,12 @@ export function markSourceChanges(ctx: Context, product: Row, previous: Row): vo
     if (hash(product[field]) !== hash(previous[field])) markRelatedStale(ctx, product.id, field, hash(product[field]));
   }
 }
+/** Agents see every localization's state but only the text a person approved. */
 export function listLocalizations(ctx: Context, productId: string): Data[] {
   ctx.get('product', productId);
-  return children(ctx, 'product_localization', 'product_id', productId).map(row => ({ ...row, revisions: children(ctx, 'product_localization_revision', 'localization_id', row.id) }));
+  const agent = fromAgent(ctx);
+  return children(ctx, 'product_localization', 'product_id', productId).map(row => ({ ...row,
+    revisions: children(ctx, 'product_localization_revision', 'localization_id', row.id).filter(item => !agent || item.id === row.approved_revision_id) }));
 }
 export function localizationDraft(ctx: Context, productId: string, input: Input): Row {
   const body = input.body;
@@ -116,7 +120,7 @@ export function localizationDraft(ctx: Context, productId: string, input: Input)
   try { locale = Intl.getCanonicalLocales(localeInput)[0] ?? invalid('locale'); } catch { invalid('locale'); }
   const marketId = optional(body.market_id, 'market_id');
   if (marketId) ctx.get('market', marketId);
-  const origin = ctx.role === 'agent' ? 'agent' : enumValue(body.origin ?? 'human', ['human', 'agent'], 'origin');
+  const origin = fromAgent(ctx) ? 'agent' : enumValue(body.origin ?? 'human', ['human', 'agent'], 'origin');
   const source = sourceRef(ctx, product, field);
   const revisionText = text(body.text, 'text', 20000);
   const existing = one(children(ctx, 'product_localization', 'product_id', product.id).filter(row => row.field_key === field && row.locale === locale && row.market_id === marketId), 'duplicate_localization', 'Localization key is ambiguous');

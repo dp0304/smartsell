@@ -206,7 +206,9 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   const { data: session } = await (await checkResponse(await setup, 201, 'Default UI setup')).json();
   const wid = session.workspaces[0].id;
   const home = `${dev.origin}/w/${wid}/home`;
-  await expect(page).toHaveURL(home);
+  // Setup lands on the dashboard; this test covers the advanced workbench, so continue there.
+  await expect(page).toHaveURL(`${dev.origin}/app/${wid}`);
+  await page.goto(home);
 
   // Settings modules live in a folded sidebar section.
   const settings = page.getByRole('navigation').getByRole('button', { name: 'Settings', ...exact });
@@ -267,7 +269,7 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   const login = responseFor(page, 'POST', '/session');
   await page.getByRole('button', { name: 'Sign in', ...exact }).click();
   await checkResponse(await login, 200, 'Default UI sign-in');
-  await expect(page).toHaveURL(home);
+  await expect(page).toHaveURL(`${dev.origin}/app/${wid}`);
   expect(errors).toEqual([]);
 });
 

@@ -2,7 +2,7 @@ import { sendReportExport } from './modules/analytics/report-export.js';
 import { workspaceStream } from './stream.js';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { workspaceMemberInvite } from './modules/team/index.js';
-import { Problem, READ, workspaceOpenApiFile } from '@smartsell/contracts';
+import { Problem, READ, workspaceOpenApiFile, type Input } from '@smartsell/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Config } from './config.js';
 import { denied, invalid, originGuard } from './identity.js';
@@ -28,8 +28,12 @@ interface Options {
   patRead?: ReturnType<typeof registerCommandMcp>;
 }
 
+export interface ExecuteMeta { requestId: string; source: 'rest' | 'mcp'; grantId?: string; credentialLabel?: string }
+export type OperationExecutor = (unit: Unit, op: Registered, input: Input, meta: ExecuteMeta) =>
+  Promise<{ body: { data: unknown; next_cursor?: string | null }; etag?: string; status: number }>;
+
 const prefix = '/api/v1/workspaces/:ws';
-const reserved = new Set(['catalog', 'commands', 'records', 'stream', 'tokens', workspaceOpenApiFile]);
+const reserved = new Set(['agent-connections', 'catalog', 'commands', 'records', 'stream', 'tokens', workspaceOpenApiFile]);
 const methods = new Set(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']);
 
 function problem(reply: FastifyReply, req: FastifyRequest, error: unknown) {
@@ -108,6 +112,64 @@ export function registerOperationRoutes(app: FastifyInstance, { config, operatio
     } catch (error) { return problem(reply, req, error); }
   });
 
+  /** The single write path for REST and MCP: binding, Operation records, scoped run, flush, Command audit. */
+  async function execute(unit: Unit, op: Registered, input: Input, meta: ExecuteMeta) {
+    const { context } = unit;
+    if (!visible(op, unit)) throw denied();
+    const readOnly = op.method === 'GET';
+    let operation = op;
+    if (op.name === 'team_members_list' && unit.listMembers) {
+      operation = { ...op, run: async () => (await unit.listMembers!()).map(member => ({ ...member, id: member.user_id, scopes: member.scopes ?? [] })) };
+    } else if (op.name === 'team_member_invite' && unit.inviteMember) {
+      operation = { ...op, async run(ctx, { body }) {
+        const { email, role, scopes } = workspaceMemberInvite(ctx, body);
+        if (scopes.length) throw invalid('Resource-scoped grants are unavailable');
+        if (role !== 'admin' && role !== 'editor' && role !== 'reviewer' && role !== 'viewer') throw denied();
+        const id = randomUUID();
+        const tokenHash = createHash('sha256').update(invitationToken(id)).digest('hex');
+        await unit.inviteMember!({ id, email, role, tokenHash });
+        ctx.emit('team.member.invited', { invitation_id: id, role });
+        return { invitation_id: id };
+      } };
+    } else if (['team_member_roles_update', 'team_member_remove'].includes(op.name) && unit.listMembers && unit.changeMembership) {
+      const members = (await unit.listMembers()).map(member => ({ ...member, id: member.user_id, scopes: member.scopes ?? [] }));
+      operation = bindTeamOperation(op, {
+        work: workspaceTeamWork,
+        members: {
+          list: () => members,
+          invite: () => { throw invalid('Use the invitation endpoint'); },
+          async setRole(ctx, member, role, scopes) {
+            if (role !== 'admin' && role !== 'editor' && role !== 'reviewer' && role !== 'viewer') throw denied();
+            const brandScopes = validateBrandScopes(ctx, role, scopes);
+            await unit.changeMembership!({ memberId: member.user_id, action: 'set_role', role, scopes: brandScopes });
+          },
+          previewRemoval: (ctx, member) => workspaceTeamWork.forHandover(ctx, member.user_id),
+          async remove(ctx, member) {
+            await unit.changeMembership!({ memberId: member.user_id, action: 'remove' });
+            releaseOperationMember(ctx, member.user_id);
+            await releaseMemberOccupancy(context, member.user_id);
+            await context.emit('team.member.removed', { member_id: member.user_id });
+          },
+        },
+      });
+    } else if (op.name === 'team_handover_accept' && unit.listMembers) {
+      operation = bindTeamOperation(op, { work: workspaceTeamWork });
+    }
+    const run = async () => {
+      const { records, flush } = await operationRecords(context, readOnly);
+      const policies = op.module === 'files' && ['file_delete', 'file_retention_preview', 'file_retention_purge'].includes(op.name)
+        ? await compatibleMediaPolicies(context) : undefined;
+      const outcome = await runScopedOperation(records, context, { actorId: context.actorId, grantId: meta.grantId, credentialLabel: meta.credentialLabel },
+        context.role, meta.requestId, media.bind(operation, policies), input, meta.source, config, enrich, undefined, unit.brandScopes);
+      if (!readOnly) await flush();
+      return outcome;
+    };
+    // The operation runner owns caller idempotency. Command reserves an internal audit ID for this transaction.
+    const outcome = readOnly ? await run()
+      : await unit.command({ module: op.module, action: op.name, key: `operation/${randomUUID()}`, fingerprint: '' }, run) as Awaited<ReturnType<typeof run>>;
+    return { ...outcome, etag: outcome.etag ?? sharedBusinessVersion(op, outcome.body.data) };
+  }
+
   const commands = [];
   for (const { op, command } of entries) {
     function handler(alias?: typeof command) {
@@ -118,7 +180,6 @@ export function registerOperationRoutes(app: FastifyInstance, { config, operatio
           const fromPat = !alias && readOnly && req.headers.authorization
             ? await patRead?.(req, req.params.ws, op.name) : undefined;
           const result = fromPat ?? await workspace(req, req.params.ws, async unit => {
-            const { context } = unit;
             if (!visible(op, unit)) throw denied();
             if (!readOnly) {
               csrf(req);
@@ -126,56 +187,7 @@ export function registerOperationRoutes(app: FastifyInstance, { config, operatio
                 throw invalid('Expected application/json');
               }
             }
-            const input = alias ? alias.input(req) : restInput(req);
-            let operation = op;
-            if (op.name === 'team_members_list' && unit.listMembers) {
-              operation = { ...op, run: async () => (await unit.listMembers!()).map(member => ({ ...member, id: member.user_id, scopes: member.scopes ?? [] })) };
-            } else if (op.name === 'team_member_invite' && unit.inviteMember) {
-              operation = { ...op, async run(ctx, { body }) {
-                const { email, role, scopes } = workspaceMemberInvite(ctx, body);
-                if (scopes.length) throw invalid('Resource-scoped grants are unavailable');
-                if (role !== 'admin' && role !== 'editor' && role !== 'reviewer' && role !== 'viewer') throw denied();
-                const id = randomUUID();
-                const tokenHash = createHash('sha256').update(invitationToken(id)).digest('hex');
-                await unit.inviteMember!({ id, email, role, tokenHash });
-                ctx.emit('team.member.invited', { invitation_id: id, role });
-                return { invitation_id: id };
-              } };
-            } else if (['team_member_roles_update', 'team_member_remove'].includes(op.name) && unit.listMembers && unit.changeMembership) {
-              const members = (await unit.listMembers()).map(member => ({ ...member, id: member.user_id, scopes: member.scopes ?? [] }));
-              operation = bindTeamOperation(op, {
-                work: workspaceTeamWork,
-                members: {
-                  list: () => members,
-                  invite: () => { throw invalid('Use the invitation endpoint'); },
-                  async setRole(ctx, member, role, scopes) {
-                    if (role !== 'admin' && role !== 'editor' && role !== 'reviewer' && role !== 'viewer') throw denied();
-                    const brandScopes = validateBrandScopes(ctx, role, scopes);
-                    await unit.changeMembership!({ memberId: member.user_id, action: 'set_role', role, scopes: brandScopes });
-                  },
-                  previewRemoval: (ctx, member) => workspaceTeamWork.forHandover(ctx, member.user_id),
-                  async remove(ctx, member) {
-                    await unit.changeMembership!({ memberId: member.user_id, action: 'remove' });
-                    releaseOperationMember(ctx, member.user_id);
-                    await releaseMemberOccupancy(context, member.user_id);
-                    await context.emit('team.member.removed', { member_id: member.user_id });
-                  },
-                },
-              });
-            } else if (op.name === 'team_handover_accept' && unit.listMembers) {
-              operation = bindTeamOperation(op, { work: workspaceTeamWork });
-            }
-            const execute = async () => {
-              const { records, flush } = await operationRecords(context, readOnly);
-              const policies = op.module === 'files' && ['file_delete', 'file_retention_preview', 'file_retention_purge'].includes(op.name)
-                ? await compatibleMediaPolicies(context) : undefined;
-              const outcome = await runScopedOperation(records, context, { actorId: context.actorId }, context.role, req.id, media.bind(operation, policies), input, 'rest', config, enrich, undefined, unit.brandScopes);
-              if (!readOnly) await flush();
-              return outcome;
-            };
-            if (readOnly) return execute();
-            // The operation runner owns caller idempotency. Command reserves an internal audit ID for this transaction.
-            return await unit.command({ module: op.module, action: op.name, key: `operation/${randomUUID()}`, fingerprint: '' }, execute) as Awaited<ReturnType<typeof execute>>;
+            return execute(unit, op, alias ? alias.input(req) : restInput(req), { requestId: req.id, source: 'rest' });
           });
           const data = result.body.data;
           if (op.name === 'report_export_download') return sendReportExport(reply, data);
@@ -198,5 +210,5 @@ export function registerOperationRoutes(app: FastifyInstance, { config, operatio
       commands.push(command);
     }
   }
-  return commands;
+  return { commands, mounted, execute };
 }

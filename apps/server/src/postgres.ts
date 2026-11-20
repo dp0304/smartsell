@@ -58,7 +58,8 @@ export class PostgresStore implements Store {
         AND to_regprocedure('ss.scope_actor()') IS NOT NULL
         AND to_regprocedure('ss.lock_scoped_workspace(uuid)') IS NOT NULL
         AND to_regprocedure('ss.scoped_members_for_actor(uuid)') IS NOT NULL
-        AND to_regprocedure('ss.change_membership(uuid,uuid,text,text,text[])') IS NOT NULL AS safe,
+        AND to_regprocedure('ss.change_membership(uuid,uuid,text,text,text[])') IS NOT NULL
+        AND to_regprocedure('ss.issue_session_ttl(text,uuid,integer)') IS NOT NULL AS safe,
         coalesce(
           has_table_privilege(to_regclass('ss.command_identity_state'), 'SELECT')
           AND has_table_privilege(to_regclass('ss.command_identity_state'), 'INSERT')
@@ -116,8 +117,11 @@ export class PostgresStore implements Store {
     return row.accepted;
   }
 
-  async issueSession(userId: string, tokenHash: string, replace?: string) {
-    await this.pool.query('SELECT ss.issue_session($1,$2,$3)', [tokenHash, userId, replace]);
+  async issueSession(userId: string, tokenHash: string, replace?: string, ttlSeconds?: number) {
+    if (ttlSeconds === undefined) await this.pool.query('SELECT ss.issue_session($1,$2,$3)', [tokenHash, userId, replace]);
+    // Long-lived Agent sessions never replace the browser session.
+    else if (replace === undefined) await this.pool.query('SELECT ss.issue_session_ttl($1,$2,$3)', [tokenHash, userId, ttlSeconds]);
+    else throw new Error('A session lifetime cannot replace another session');
   }
 
   async revokeSession(tokenHash: string) {

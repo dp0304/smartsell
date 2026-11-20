@@ -64,7 +64,7 @@ test('checks origin, bearer, media types, and message size at the transport boun
   assert.equal((await handle(makeRequest(list, { Authorization: 'Bearer wrong' }))).status, 401);
   assert.equal((await handle(makeRequest(list, { Accept: 'application/json, text/event-stream;q=0, */*' }))).status, 406);
   assert.equal((await handle(makeRequest(list, { 'Content-Type': 'text/plain' }))).status, 415);
-  assert.equal((await handle(makeRequest(' '.repeat(65537)))).status, 413);
+  assert.equal((await handle(makeRequest(' '.repeat(1024 * 1024 + 1)))).status, 413);
   assert.equal((await parse(handle(makeRequest('{')))).error.code, -32700);
   assert.equal((await parse(handle(makeRequest([list])))).error.code, -32600);
   assert.equal((await parse(handle(makeRequest(rpc('unknown'))))).error.code, -32601);

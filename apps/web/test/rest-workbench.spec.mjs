@@ -18,6 +18,9 @@ test('default workbench performs real versioned writes and renders all module en
   const setupSent = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/api/v1/setup'));
   await page.getByRole('button', { name: '首次設定', exact: true }).click();
   expect((await setupSent).postDataJSON().workspaceName).toBe('Workbench QA');
+  // Setup lands on the dashboard; this test drives the advanced workbench.
+  await expect(page).toHaveURL(/\/app\/[^/]+$/);
+  await page.goto(`${origin}/w/${new URL(page.url()).pathname.split('/')[2]}/home`);
   await expect(page.getByRole('heading', { name: '今日營運' })).toBeVisible();
   await page.getByLabel('介面語言').selectOption('en');
   await expect(page.getByText('No items need attention')).toBeVisible();
@@ -67,5 +70,6 @@ test('default workbench performs real versioned writes and renders all module en
   await page.locator('[name=email]').fill(email);
   await page.locator('[name=password]').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Today’s operations' })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/[^/]+$/);
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
 });

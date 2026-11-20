@@ -42,14 +42,16 @@ export function prepare(ctx: Context, batch: Row, template: Template, values: Da
     const zone = asData(batch.options).timezone;
     const nextCalendarDate = typeof values.report_day === 'string' ? iso(Date.parse(`${values.report_day}T00:00:00Z`) + day).slice(0, 10) : undefined;
     const end = nextCalendarDate && typeof zone === 'string' ? timestamp(nextCalendarDate, zone) : iso(Date.parse(start) + day);
-    const observed = values.observed_at ?? batch.created_at;
+    const lifetime = values.period_kind === 'lifetime';
+    // A lifetime total is a snapshot as of the end of its report day, so several days in one file stay distinct points.
+    const observed = values.observed_at ?? (lifetime && Date.parse(end) < Date.parse(String(batch.created_at)) ? end : batch.created_at);
+    const period = lifetime ? { period_kind: 'lifetime' } : { period_kind: 'day', period_start: start, period_end: end, date: values.report_day };
     const observation = {
-      subject_type: subjectType, subject_id: subject.id, metric_key: values.metric_key, value, availability,
-      period_kind: 'day', period_start: start, period_end: end, observed_at: observed,
-      date: values.report_day, source: { method: 'import', batch_id: batch.id, data_source_id: source?.id },
+      subject_type: subjectType, subject_id: subject.id, metric_key: values.metric_key, value, availability, ...period, observed_at: observed,
+      source: { method: 'import', batch_id: batch.id, data_source_id: source?.id },
     };
     const matching = ctx.list('metric_observation').filter(row => row.subject_type === subjectType && row.subject_id === subject.id &&
-      row.metric_key === values.metric_key && row.period_start === start && row.period_end === end &&
+      row.metric_key === values.metric_key && (lifetime ? row.period_kind === 'lifetime' && row.observed_at === observed : row.period_kind !== 'lifetime' && row.period_start === start && row.period_end === end) &&
       asData(row.source).data_source_id === source?.id && !Object.values(asData(row.dims)).some(item => item !== undefined)).sort((a, b) => String(b.observed_at).localeCompare(String(a.observed_at)));
     const previous = values.observed_at === undefined ? matching[0] : matching.find(row => row.observed_at === observed);
     if (previous?.value === value && previous.availability === availability) {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { buildApp } from './app.js';
 import { configuration } from './config.js';
@@ -93,6 +94,26 @@ test('loopback preview persists session, records, and idempotency across restart
     assert.equal(await second.workspace('session', id, unit => unit.command(key, async () => assert.fail('replay ran again'))), 'committed');
     assert.deepEqual((await second.workspace('session', id, unit => unit.context.get('workspace', 'brand', 'brand')))?.data, { name: 'Persisted' });
   } finally { await second.close(); }
+});
+
+test('loopback preview forgets a write whose SQLite COMMIT failed', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'smartsell-core-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = join(dir, 'preview.sqlite');
+  const store = localStore(file);
+  t.after(() => store.close());
+  const { password: _, ...input } = payload;
+  assert.ok(await store.setup({ ...input, passwordHash: 'fixture' }, 'session'));
+  const id = (await store.session('session'))!.workspaces[0].id;
+  // Another connection holding a read lock makes the writer's COMMIT fail with "database is locked".
+  const reader = new DatabaseSync(file);
+  reader.exec('BEGIN');
+  reader.prepare('SELECT payload FROM snapshot').get();
+  const key = { module: 'workspace', action: 'save_brand', key: 'locked', fingerprint: 'same' };
+  await assert.rejects(store.workspace('session', id, unit => unit.command(key, () => unit.context.insert('workspace', 'brand', { name: 'Lost' }, 'brand'))), /locked/);
+  reader.exec('ROLLBACK');
+  reader.close();
+  assert.equal(await store.workspace('session', id, unit => unit.context.get('workspace', 'brand', 'brand')), undefined);
 });
 
 test('read projections and configuration default closed for sensitive records and production storage', () => {

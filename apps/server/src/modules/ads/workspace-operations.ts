@@ -2,6 +2,7 @@ import { ADMIN, APPROVE, READ, WRITE, Problem, type Context, type Data, type Inp
 import { conflict, dto, flag, hash, instant, integer, invalid, oneOf, optional, strings, text, unavailable, zone } from '../lifecycle/dto.js';
 import { asData } from '../ingest/ingest-input.js';
 import { nativeDay } from '../ingest/model.js';
+import { requireHuman } from '../../agent-actor.js';
 import { DomainError } from '../types.js';
 import { permissions } from './accounts.js';
 import { activeAccountGrant } from './domain.js';
@@ -290,6 +291,8 @@ export const operations: Operation[] = [
     const values = accountValues(ctx, { ...account, ...input.body });
     let grants: Data = {};
     if (input.body.permissions !== undefined) {
+      // Grants decide who may approve or spend on this account; an admin's Agent may edit the account but not its approvers.
+      requireHuman(ctx, 'Changing ad account permissions');
       try { grants = { permissions: permissions(input.body.permissions, ctx.now) }; }
       catch (error) { if (error instanceof DomainError) invalid(error.message); throw error; }
     }

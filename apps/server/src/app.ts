@@ -11,7 +11,7 @@ import type { Context } from './modules/types';
 import { missingWorkspace, type Store, type Unit } from './store';
 import { createOperationCsrf } from './operation-auth.js';
 import type { registerOperationRoutes } from './operation-server.js';
-import { registerCommandMcp } from './integration/command-mcp.js';
+import { registerCommandMcp, type OperationHost } from './integration/command-mcp.js';
 import { commandTraffic, type TrafficHostConfig } from './integration/traffic-host.js';
 import { commandIdentity } from './integration/command-identity.js';
 
@@ -33,9 +33,10 @@ type Options = AuthOptions & {
   traffic?: TrafficHostConfig;
   roles?: ReadonlySet<string>;
   commandIdentityKey?: Uint8Array;
+  origin?: string;
 };
 
-export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, logger = false, ...options }: Options) {
+export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, logger = false, ...options }: Options) {
   const app = Fastify({ logger, disableRequestLogging: true, bodyLimit: 1024 * 1024, requestTimeout: 30_000, requestIdHeader: false });
   const identity = commandIdentityKey && commandIdentity(store, commandIdentityKey);
   const csrfSecret = operationApi?.config.secret ?? secret;
@@ -95,7 +96,7 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
     return { csrf_token: csrf.token(sessions.tokenHash(request)) };
   });
 
-  let sharedCommands: ReturnType<typeof registerOperationRoutes>;
+  let sharedCommands: NonNullable<ReturnType<typeof registerOperationRoutes>>['commands'] | undefined;
   app.get<{ Params: { wid: string } }>('/api/v1/workspaces/:wid/commands', request => legacyWorkspace(request, request.params.wid, async ({ context }) => {
     const items = [...registry].flatMap(([module, group]) => [...group]
       .filter(([, command]) => command.roles.includes(context.role)).map(([action]) => ({ module, action })));
@@ -158,10 +159,16 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
     };
     (collaboration as typeof registerCollaboration)(app, services);
   }
+  // MCP tools run through the Operation executor, which exists only after the REST routes are registered.
+  const operationHost: OperationHost = {};
+  const csrfCheck = csrf && ((request: FastifyRequest) => csrf.check(request, sessions.tokenHash(request)));
   const patRead = secret && (roles?.has('mcp') ?? true)
-    ? registerCommandMcp(app, store, registry, secret, options.origins, sessions.tokenHash, operationApi) : undefined;
-  if (operationApi && csrf) {
-    sharedCommands = operationApi.register(app, { ...operationApi, workspace, patRead, csrf: request => csrf.check(request, sessions.tokenHash(request)) });
+    ? registerCommandMcp(app, store, registry, secret, options.origins, sessions.tokenHash, operationApi,
+      { host: operationHost, csrf: csrfCheck, origin: operationApi?.config.origin ?? origin }) : undefined;
+  if (operationApi && csrfCheck) {
+    const routes = operationApi.register(app, { ...operationApi, workspace, patRead, csrf: csrfCheck });
+    sharedCommands = routes?.commands;
+    if (routes) Object.assign(operationHost, { mounted: routes.mounted, execute: routes.execute });
     for (const { module, action } of sharedCommands ?? []) {
       if (registry.get(module)?.has(action)) throw new Error(`Duplicate command: ${module}.${action}`);
     }

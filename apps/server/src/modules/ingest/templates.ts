@@ -2,7 +2,8 @@ import type { Data } from '@smartsell/contracts';
 import { currency, integer, invalid, moneyMinor, timestamp } from './ingest-input';
 
 const catalog = ['external_product_id', 'external_variant_id', 'handle', 'title', 'sku', 'option1', 'option2', 'option3', 'currency', 'price', 'price_minor', 'available', 'market_id', 'channel'];
-const accounts = ['social_account_id', 'report_date', 'observed_at', 'metric_key', 'value', 'availability'];
+const accounts = ['social_account_id', 'report_date', 'observed_at', 'metric_key', 'value', 'availability', 'period_kind'];
+export const periodKinds = ['day', 'lifetime'] as const;
 const orders = ['external_order_id', 'placed_at', 'external_updated_at', 'currency', 'total', 'total_minor', 'status'];
 const refunds = ['external_order_id', 'external_refund_id', 'external_updated_at', 'currency', 'amount', 'amount_minor', 'status'];
 export const templates = {
@@ -63,6 +64,11 @@ export function normalize(template: Template, raw: Data, mapping: Record<string,
     if (value) values[field] = value;
   }
   if (template.startsWith('social_') && !values.social_account_id && typeof options.social_account_id === 'string') values.social_account_id = options.social_account_id;
+  if (template.startsWith('social_')) {
+    const kind = typeof values.period_kind === 'string' ? values.period_kind.toLowerCase() : 'day';
+    if (!(periodKinds as readonly string[]).includes(kind)) invalid('period_kind must be day or lifetime');
+    values.period_kind = kind;
+  }
   if (template === 'competitor_observation' && !values.watch_target_id && typeof options.watch_target_id === 'string') values.watch_target_id = options.watch_target_id;
   for (const key of ['placed_at', 'external_updated_at', 'observed_at', 'published_at', 'report_date']) {
     if (values[key] !== undefined) {
@@ -111,5 +117,6 @@ export function identity(template: Template, row: Data): string {
   if (fields.some(field => row[field] === undefined)) invalid(`Required fields: ${fields.join(', ')}`);
   if (template === 'ad_report') return JSON.stringify([row.external_ad_id, row.report_day ?? row.report_date]);
   if (template === 'unit_cost') return JSON.stringify([row.sku, row.observed_day ?? row.observed_at]);
+  if (template.startsWith('social_') && row.period_kind === 'lifetime') return JSON.stringify([...fields.map(field => row[field]), 'lifetime']);
   return JSON.stringify([...fields.map(field => row[field]), ...(template === 'competitor_observation' ? [row.external_id ?? row.url] : [])]);
 }

@@ -25,6 +25,8 @@ export interface WorkspaceOverviewContext extends WorkspaceReadContext {
 const find = (ctx: Context, kind: string, value: unknown) => value === undefined ? undefined : ctx.list(kind).find(row => row.id === value);
 const key = (value: unknown) => typeof value === 'string' ? value : undefined;
 const is = (row: Row, ...states: string[]) => states.includes(String(row.status));
+/** Deliverable states in which the creator still owes a submission, as the creator module uses them. */
+const OWED_DELIVERABLE = ['requested', 'in_progress', 'changes_requested'];
 const taskForMe = (ctx: Context, row: Row) => row.assignee_id === ctx.actorId && row.assignee_type === 'user';
 function belongsToMe(ctx: Context, row: Row) {
   const steps = row.steps as { approvers?: { roles?: string[]; user_ids?: string[] } }[] | undefined;
@@ -111,8 +113,16 @@ const projections: Record<string, (ctx: WorkspaceReadContext) => PendingItem[]> 
     .map(row => pending('commerce.risks', 'inventory_risk', 'listing', '/listings', row, 'high', 'Listing inventory requires attention')),
   'campaign.risks': ctx => ctx.list('work_item').filter(row => row.type === 'milestone' && open(row) && timestamp(row.due_at) < timestamp(ctx.now))
     .map(row => pending('campaign.risks', 'milestone_delayed', 'work_item', '/work-items', row, 'high', key(row.title) ?? 'Campaign milestone delayed')),
-  'creator.due': ctx => ctx.list('deliverable').filter(row => is(row, 'overdue') || (is(row, 'open', 'in_progress', 'pending') && timestamp(row.due_at) < nextDay(ctx)))
-    .map(row => pending('creator.due', 'deliverable_due', 'deliverable', '/deliverables', row, timestamp(row.due_at) < timestamp(ctx.now) ? 'high' : 'normal', 'Creator deliverable due')),
+  'creator.due': ctx => {
+    const end = nextDay(ctx);
+    // Deliverables carry no brand of their own; brand-scoped overviews need the collaboration's.
+    return ctx.list('deliverable').flatMap(row => {
+      const collaboration = find(ctx, 'collaboration', row.collaboration_id);
+      const owed = is(row, 'overdue') || (is(row, ...OWED_DELIVERABLE) && timestamp(row.due_at) < end);
+      return owed && !(collaboration && is(collaboration, 'cancelled', 'completed')) ? [pending('creator.due', 'deliverable_due', 'deliverable', '/deliverables', row,
+        timestamp(row.due_at) < timestamp(ctx.now) ? 'high' : 'normal', 'Creator deliverable due', { brand_id: row.brand_id ?? collaboration?.brand_id })] : [];
+    });
+  },
 };
 
 function day(instant: number, tz: string) {

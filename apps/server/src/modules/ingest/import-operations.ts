@@ -231,10 +231,29 @@ function confirm(ctx: Context, id: string, body: Data) {
   const chunk = remaining.slice(0, limit);
   const template = templateKey(batch.template_key);
   let merged = Number(batch.merged_rows ?? 0), failed = Number(batch.failed_rows ?? 0), skipped = Number(batch.skipped_rows ?? 0);
+  // Metric rows each record an observation event; one summary per chunk keeps large imports from flooding the outbox.
+  // Per-row events only carry a subject count, which cannot be summed, so keep the ids of the observations each event covers.
+  const observed = { count: 0, subjects: new Set<string>(), metric_keys: new Set<string>() };
+  let created: string[] = [];
+  const sinkCtx: Context = { ...ctx, create(kind, values) {
+    const row = ctx.create(kind, values);
+    if (kind === 'metric_observation') created.push(String(row.subject_id));
+    return row;
+  }, emit(type, payload) {
+    const subjects = created;
+    created = [];
+    if (type === 'analytics.observations.recorded' && payload.subject_type === undefined && typeof payload.count === 'number') {
+      observed.count += payload.count;
+      for (const subject of subjects) observed.subjects.add(subject);
+      for (const key of Array.isArray(payload.metric_keys) ? payload.metric_keys : []) observed.metric_keys.add(String(key));
+      return;
+    }
+    return ctx.emit(type, payload);
+  } };
   for (const row of chunk) {
     if (row.status === 'invalid' || row.status === 'dup_in_file') { failed++; continue; }
     let entry: ReturnType<typeof prepare>;
-    try { entry = prepare(ctx, batch, template, asData(row.normalized), String(row.dedupe_key), row.id); }
+    try { entry = prepare(sinkCtx, batch, template, asData(row.normalized), String(row.dedupe_key), row.id); }
     catch (error) {
       failed++;
       ctx.update(rowKind, row.id, { status: 'merge_failed', issues: [rowError(error)] });
@@ -246,6 +265,8 @@ function confirm(ctx: Context, id: string, body: Data) {
     else merged++;
     ctx.update(rowKind, row.id, { target_ref: ref, status: entry.status === 'unchanged' ? 'skipped' : 'merged', merged_at: ctx.now });
   }
+  if (observed.count) ctx.emit('analytics.observations.recorded', { count: observed.count, subjects: observed.subjects.size,
+    metric_keys: [...observed.metric_keys], import_batch_id: id });
   const done = remaining.length <= limit;
   const status = !done ? 'merging' : failed > 0 ? 'partially_merged' : 'merged';
   const counts = { merged_rows: merged, failed_rows: failed, skipped_rows: skipped };

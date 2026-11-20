@@ -19,6 +19,7 @@
     "start:kernel": "pnpm --filter @smartsell/server start:kernel",
     "db:migrate": "pnpm --filter @smartsell/db migrate",
     "db:migrate:kernel": "pnpm --filter @smartsell/db migrate:kernel",
+    "seed:demo": "node scripts/seed-demo.mjs",
     "test": "node scripts/test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "requirements": "node scripts/requirements.mjs --check",

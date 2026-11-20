@@ -39,3 +39,5 @@ export function Drawer({ title, closeLabel, onClose, children }: { title: string
     <div className="drawer-body">{children}</div>
   </dialog>;
 }
+
+export * from './view';

@@ -63,7 +63,7 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     for (const origin of (env.DEV_ORIGINS ?? '').split(',').filter(Boolean)) origins.add(new URL(origin).origin);
   }
   return {
-    production, port, host, databaseUrl, backgroundDatabaseUrl, setupToken, secret, portalOrigin, portalCustomOrigins, portalAssertionKey, origins, origin: publicUrl.origin, identityDeployment: identityDeployment as 'private' | 'saas', identityKey,
+    production, port, host, databaseUrl, backgroundDatabaseUrl, setupToken, secret, generatedSecret: !env.APP_SECRET, portalOrigin, portalCustomOrigins, portalAssertionKey, origins, origin: publicUrl.origin, identityDeployment: identityDeployment as 'private' | 'saas', identityKey,
     statePath: resolve(env.SMARTSELL_DATA_FILE ?? resolve(root, '.local/smartsell.sqlite')),
     kernelStatePath: resolve(env.SMARTSELL_DATA_FILE ?? resolve(root, '.local/smartsell.json')),
     secureCookie: publicUrl.protocol === 'https:',

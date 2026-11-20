@@ -95,7 +95,9 @@ export function createMediaHost(config: Config) {
     boundMedia.set(ctx, media);
     return subscriber.run(ctx, event);
   } });
-  const operations = media.operations.map(op => ({ ...op, module: 'files', mcp: false }));
+  // Agents upload the media they attach to content; deleting files and retention stay with people and operators.
+  const agentFileOperations = new Set(['file_begin_upload', 'file_complete_upload', 'file_get']);
+  const operations = media.operations.map(op => ({ ...op, module: 'files', ...(!agentFileOperations.has(op.name) && { mcp: false }) }));
   // Physical deletion runs in a separate transaction after a tombstone commits.
   const schedule: Schedule = { id: 'files.cleanup', run: ctx => media.cleanup(ctx) };
   return { media, operations, bind, bindSubscriber, schedule };

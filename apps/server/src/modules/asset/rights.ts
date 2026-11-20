@@ -1,5 +1,6 @@
 import { Problem, type Context, type Data, type Row } from '@smartsell/contracts';
 import { checkAssetRights, invalidateTargets } from '../../../../../packages/domain/src/publishing/index.js';
+import { fromAgent } from '../../agent-actor.js';
 import { choose, hash, objects, str, strings } from './values.js';
 
 export const grantKind = 'rights_grant';
@@ -9,7 +10,7 @@ const grantTypes = ['owned', 'license', 'ugc_permission', 'creator_contract', 's
 const grantors = ['brand', 'creator', 'external_party', 'stock_provider', 'employee'];
 const usages = ['organic_social', 'paid_ads', 'creator_whitelisting', 'website', 'email', 'marketplace_listing', 'offline'];
 const liveStatuses = ['active', 'expiring'];
-const by = (ctx: Context) => ({ created_by_type: ctx.role === 'agent' ? 'agent' : 'user', created_by_id: ctx.actorId });
+const by = (ctx: Context) => ({ created_by_type: fromAgent(ctx) ? 'agent' : 'user', created_by_id: ctx.actorId });
 
 export function date(value: unknown, name: string) {
   const text = str(value, name);

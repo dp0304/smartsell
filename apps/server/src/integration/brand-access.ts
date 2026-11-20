@@ -4,6 +4,9 @@ import { invalid, missing } from '../identity.js';
 const reads = new Set([
   'workspace_brands_list', 'workspace_brand_get', 'workspace_markets_list', 'workspace_market_get', 'workspace_get_context',
   'search_query', 'asset_search', 'asset_get', 'asset_list_versions', 'knowledge_get_context', 'catalog_list_facts', 'agent_preview_context',
+  // Dashboard read models; brand-scoped contexts hide rows outside the viewer's brands (and rows without a brand).
+  'views_home', 'views_products_list', 'views_product_get', 'views_plans_list', 'views_plan_get', 'views_calendar', 'views_social', 'views_ads',
+  'views_agent_presence',
 ]);
 
 export function validateBrandScopes(ctx: Context, role: Role, scopes: string[]) {

@@ -2,6 +2,31 @@
 
 SmartSell 是社群電商營運工作台。REST 與 MCP 的介面以 `plan.md` §4.12–4.13 及 `@smartsell/contracts` 的 `Operation` 為準。REST 基底為 `/api/v1`，工作區資源走 `/api/v1/workspaces/{workspaceId}/…`，MCP 使用 `/mcp`。
 
+## 產品怎麼用
+
+SmartSell 的錄入與提交交給**使用者電腦上的 Agent**（Claude Code 或 Codex），透過 MCP 連到 SmartSell；**Web 是給人看現況與做決定的看板**。
+
+- 看板：登入後的預設入口 `/app/:ws`，包含總覽、商品、推廣計劃、日曆、社媒成效、投放、待你決定、Agent、設定。
+- 人只做 Agent 不被允許的事：在「待你決定」核准或退回、緊急暫停與解除、登記自有社群帳號、連接與撤銷 Agent。
+- 進階工作台：舊的錄入式工作台保留在 `/w/:ws`，只在 Agent 不可用時使用。
+
+連接 Agent：在 Web 的「Agent」頁按「產生連線權杖」，複製畫面上的指令（權杖只顯示一次，預設 90 天，可隨時撤銷）。Claude Code：
+
+```sh
+export SMARTSELL_TOKEN=<權杖>
+claude mcp add --transport http smartsell <你的網址>/mcp --scope user --header "Authorization: Bearer $SMARTSELL_TOKEN"
+```
+
+Codex（`~/.codex/config.toml`）：
+
+```toml
+[mcp_servers.smartsell]
+url = "<你的網址>/mcp"
+bearer_token_env_var = "SMARTSELL_TOKEN"
+```
+
+把 `docs/agent-guide.md` 放進專案的 `AGENTS.md`／`CLAUDE.md`（或從 Agent 頁下載），Agent 就知道怎麼匯入商品、建推廣計劃、寫內容、排期送審與匯入成效。設計與介面契約見 `docs/agent-first-design.md`。
+
 ## 本機開發與首次設定
 
 安裝 Node.js 24 與 pnpm 10.11.0。在已安裝 nvm 的機器上可從專案根目錄執行以下指令。
@@ -83,3 +108,15 @@ PORT=3402 pnpm preview --host 127.0.0.1 --port 4180
 3. 在服務環境注入 `NODE_ENV=production`、`DATABASE_URL`、HTTPS 的 `PUBLIC_ORIGIN`，以及以 `openssl rand -hex 32` 產生的 `APP_SECRET`。`PUBLIC_ORIGIN` 請使用瀏覽器可存取的對外來源。服務執行時需要工作區原始碼及已安裝的執行依賴。使用 `pnpm start` 啟動與 `pnpm dev`、`pnpm preview` 和 Compose 相同的 Commands API，並在同一工作區掛接 Operations。
 4. 透過反向代理或靜態檔案服務提供 `apps/web/dist`，並將同來源的 `/api` 及 `/mcp` 轉給 API。單頁應用程式的其他路徑回退到 `index.html`。前置代理終結 TLS 時應保留請求來源資訊。
 5. 首次建立管理員時另行注入獨立產生的 `SETUP_TOKEN`，完成後移除並重新啟動。透過部署環境的祕密管理設定資料庫 URL、權杖與密鑰，避免寫入版本庫或前端建置變數。
+
+## 示範資料
+
+`pnpm seed:demo` 在本機開發伺服器建立示範品牌「Glow Lab 光研」，並完整走一遍 Agent 路徑：先以人的身分登入並建立 Agent 連線（標籤「示範資料 Agent」），之後所有錄入都由 Agent 透過 `/mcp` 完成，包括品牌與台灣、香港、美國三個市場，檔案匯入型店鋪與 6 個保養品（含低庫存、缺貨與未採集的市場），兩個推廣計劃（進行中與即將開始），內容、修訂、未來與過去 14 天的排期與送審，約 20 則既有貼文與每日成效匯入，以及投放帳戶、成效與投放方案。只有人能做的事由人以 REST 完成：登記自有社群帳號、核准發布、登記已發布的貼文，以及交辦任務給 Agent。
+
+```sh
+pnpm dev
+pnpm seed:demo
+pnpm seed:demo --origin http://127.0.0.1:5173 --email owner@example.com
+```
+
+密碼依序取自 `--password`、`SMARTSELL_SEED_PASSWORD`，或 `.local/dev-credentials.txt`（`email=…`、`password=…`）。品牌代號已存在時腳本不做任何變更；可用 `--slug` 另建一份。每個寫入都帶冪等鍵，已完成的步驟記在 `.local/seed-demo.<slug>.json`（權限 600，內含 Agent 權杖），中斷後重跑會從中斷處接續。執行結束會列出各檢視端點的筆數、Agent 被拒的操作與 `/app` 網址；權杖只顯示遮罩後的前綴。

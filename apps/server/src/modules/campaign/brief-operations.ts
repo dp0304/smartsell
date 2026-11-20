@@ -1,5 +1,6 @@
 import type { Context, Data, Operation, Row } from '@smartsell/contracts';
 import { CAMPAIGN, INTERNAL_READ, LEAD, PLAN, array, campaign, choice, conflict, event, fields, flag, hash, integer, invalid, jsonDoc, mutable, optionalText, optionalTimestamp, record, rows, scoped, text, version } from './shared.js';
+import { fromAgent } from '../../agent-actor.js';
 
 const BRIEFS = `${CAMPAIGN}/briefs`;
 const REVISIONS = '/briefs/:id/revisions';
@@ -76,8 +77,8 @@ export function createBriefRevision(ctx: Context, brief: Row, body: Data): Row {
   const aiGenerated = flag(body.ai_generated, 'ai_generated');
   const revision = ctx.create('brief_revision', {
     ...values, brief_id: brief.id, revision_no: Math.max(0, ...prior.map(row => Number(row.revision_no))) + 1,
-    status: 'draft', ai_generated: ctx.role === 'agent' || aiGenerated, content_hash: hash(values),
-    created_by_type: ctx.role === 'agent' ? 'agent_client' : 'user', created_by_id: ctx.actorId,
+    status: 'draft', ai_generated: fromAgent(ctx) || aiGenerated, content_hash: hash(values),
+    created_by_type: fromAgent(ctx) ? 'agent_client' : 'user', created_by_id: ctx.actorId,
   });
   ctx.update('brief', brief.id, { current_revision_id: revision.id });
   return revision;

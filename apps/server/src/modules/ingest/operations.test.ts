@@ -4,6 +4,8 @@ import { Problem, type Context, type Data, type Input, type Row } from '@smartse
 import { operations as adsOperations } from '../ads/workspace-operations';
 import { tradeOperations } from '../commerce/trade-operations';
 import { commissionOperations } from '../creator/commission-operations';
+import { compareMetrics, metricQueryInput } from '../analytics/metrics';
+import { operations as executionOperations } from '../execution/ops';
 import { dispatchDueSyncs, operations, recordCatalogPage, recordSyncPage, receiveVerifiedDelivery } from './index';
 import { recordStoreTradePage, requestStoreSync } from './sync-operations';
 
@@ -196,6 +198,40 @@ test('reported zero is distinct from missing and unchanged social report rows de
   assert.equal(missing.value, null);
   assert.equal(Date.parse(String(zero.period_end)) - Date.parse(String(zero.period_start)), 25 * 3_600_000);
   assert.equal((run('import_create', { body }).stats as Data).unchanged, 2);
+});
+
+test('social reports accept an optional period kind and lifetime totals feed post age comparisons', () => {
+  const { ctx, run } = workspace();
+  const account = ctx.create('social_account', { provider: 'youtube', brand_id: 'brand-a' });
+  const register = executionOperations.find(operation => operation.name === 'posts_register_manual')!;
+  Object.assign(ctx, { agentCredentialId: 'pat' });
+  const post = register.run(ctx, { params: {}, query: {}, body: { social_account_id: account.id, external_post_id: 'v1',
+    permalink: 'https://www.youtube.com/watch?v=v1', published_at: '2026-11-01T10:00:00.000Z' } }) as Row;
+  Object.assign(ctx, { agentCredentialId: undefined });
+  assert.equal(post.verification, 'agent_reported');
+  const csv = ['external_post_id,report_date,metric_key,value,period_kind', 'v1,2026-11-01,yt.video.views,120,lifetime',
+    'v1,2026-11-02,yt.video.views,150,LIFETIME', 'v1,2026-11-01,yt.video.views,40,', 'v1,2026-11-19,yt.video.views,300,lifetime', 'v1,2026-11-03,yt.video.views,1,weekly'].join('\n');
+  const body = { template_key: 'social_post_report', options: { timezone: 'America/Los_Angeles', social_account_id: account.id }, csv };
+  const batch = run('import_create', { body });
+  assert.deepEqual(batch.stats, { rows: 5, valid: 4, invalid: 1, dup_in_file: 0, new: 4, changed: 0, unchanged: 0 });
+  assert.match(JSON.stringify(run<Row[]>('import_rows', { params: { id: batch.id } }).at(-1)?.issues), /period_kind must be day or lifetime/);
+  run('import_confirm', { params: { id: batch.id } });
+  const observations = ctx.list('metric_observation');
+  const daily = observations.filter(row => row.period_kind === 'day');
+  assert.deepEqual(daily.map(row => [row.value, row.date]), [[40, '2026-11-01']]);
+  const lifetime = observations.filter(row => row.period_kind === 'lifetime');
+  assert.deepEqual(lifetime.map(row => [row.value, row.observed_at, row.period_start, row.date, row.brand_id]), [
+    [120, '2026-11-02T08:00:00.000Z', undefined, undefined, 'brand-a'],
+    [150, '2026-11-03T08:00:00.000Z', undefined, undefined, 'brand-a'],
+    [300, batch.created_at, undefined, undefined, 'brand-a'],
+  ]);
+  assert.equal((run('import_create', { body }).stats as Data).unchanged, 4);
+  const age = (bucket: string) => compareMetrics(ctx, metricQueryInput(ctx, { metrics: ['yt.video.views'], age_bucket: bucket,
+    subject: { type: 'platform_post', filter: { brand_ids: ['brand-a'] } }, time: { from: '2026-11-01', to: '2026-11-20', tz: 'America/Los_Angeles', basis: 'published_at' } }));
+  assert.equal(age('24h').rows[0]?.values['yt.video.views']?.value, 120);
+  assert.equal(age('72h').rows[0]?.values['yt.video.views']?.value, 150);
+  assert.deepEqual([age('1h').rows[0]?.values['yt.video.views']?.value, age('1h').rows[0]?.values['yt.video.views']?.availability], [null, 'not_collected'],
+    'no snapshot that young is unknown, not zero');
 });
 
 test('sync advances coverage only after a complete worker run, dedupes event and fences stale attempts', () => {

@@ -40,10 +40,16 @@ async function recoveryFixture(page, dev, request) {
   await page.getByLabel('密碼', { exact: true }).fill(password);
   const login = await clickForResponse(page, page.getByRole('button', { name: '登入', exact: true }), 'POST', `${dev.origin}/api/v1/session`);
   expect(login.status()).toBe(200);
+  // Sign-in lands on the dashboard; account recovery lives in the advanced workbench.
+  await expect(page).toHaveURL(`${dev.origin}/app/${workspace.id}`);
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
   const home = `/w/${workspace.id}/home`;
+  const advanced = page.getByRole('link', { name: '進階工作台', exact: true });
+  await expect(advanced).toHaveAttribute('href', home);
+  await advanced.click();
   await expect(page).toHaveURL(dev.origin + home);
   await expect(page.getByRole('heading', { name: '今日營運', exact: true })).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
   const securityPath = `/w/${workspace.id}/settings/security`;
   // Account security sits in the folded settings section of the sidebar.
   await page.getByRole('navigation', { name: '模組目錄' }).getByRole('button', { name: '設定與管理', exact: true }).click();

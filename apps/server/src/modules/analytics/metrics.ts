@@ -444,7 +444,7 @@ export function recordObservations(ctx: FlatContext, body: Data) {
       const item = plainObject(raw), type = choice(item.subject_type, subjectTypes, 'subject_type');
       const subject = ctx.get(type, text(item, 'subject_id', 200));
       const provider = optionalString(subject.platform ?? subject.provider);
-      return { ...item, published_at: subject.published_at, platform: provider && platformName(provider), brand_id: subject.brand_id };
+      return { ...item, published_at: subject.published_at ?? undefined, platform: provider && platformName(provider), brand_id: subject.brand_id };
     });
     const prepared = prepareObservations({ observations: input }, flatRegistry(ctx, now), now);
     const matches = new Map(ctx.list('metric_observation').map(row => [row.observation_key, row]));

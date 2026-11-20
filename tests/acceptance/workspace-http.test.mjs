@@ -263,7 +263,9 @@ test('TE06 applies a structural template across workspaces without transferring 
     assert.equal(history.template_id, local.id);
     assert.equal(history.template_version, local.version);
     assert.equal(history.target_workspace_id, dest.wid);
-    assert.deepEqual(history.applied, application.defaults);
+    // Rows now record whether a person or an agent created them; the applied history keeps only the template defaults.
+    const { created_via: _via, ...defaults } = application.defaults;
+    assert.deepEqual(history.applied, defaults);
     assert.deepEqual(history.created_objects, { defaults_id: application.defaults.id,
       approval_policy_ids: local.kind === 'workflow' ? [policies[0].id] : [] });
   }

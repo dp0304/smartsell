@@ -1,4 +1,5 @@
 import { Problem, type Context, type Data, type Row } from '@smartsell/contracts';
+import { fromAgent } from '../../agent-actor.js';
 import { choose, hash, object, str, strings } from './values.js';
 
 const ENTRY = 'knowledge_entry';
@@ -30,9 +31,12 @@ export function proposeKnowledge(ctx: Context, body: Data, existing?: Row) {
     const terms = object(structured, 'forbidden phrases');
     if (terms.patterns !== undefined) strings(terms.patterns, 'patterns');
   }
-  const source = body.source == null ? { kind: ctx.role === 'agent' ? 'agent' : 'human' } : object(body.source, 'source');
+  const agent = fromAgent(ctx);
+  const given = body.source == null ? { kind: agent ? 'agent' : 'human' } : object(body.source, 'source');
+  // An Agent may cite a document it imported, never claim a person wrote the text.
+  const source = agent && given.kind !== 'document_import' ? { ...given, kind: 'agent' } : given;
   const entry = existing ?? ctx.create(ENTRY, { brand_id, kind, priority, title: str(body.title, 'title', 250), market_ids: marketFilters, locales: localeFilters, status: 'proposed', active_revision_id: null });
-  const revision = ctx.create(REVISION, { entry_id: entry.id, revision_no: Number(previous?.revision_no ?? 0) + 1, body: text, structured, source, review_status: 'draft', content_hash: hash({ body: text, structured, source }), created_by_type: ctx.role === 'agent' ? 'agent' : 'user', created_by_id: ctx.actorId });
+  const revision = ctx.create(REVISION, { entry_id: entry.id, revision_no: Number(previous?.revision_no ?? 0) + 1, body: text, structured, source, review_status: 'draft', content_hash: hash({ body: text, structured, source }), created_by_type: agent ? 'agent' : 'user', created_by_id: ctx.actorId });
   const row = ctx.update(ENTRY, entry.id, { current_revision_id: revision.id, status: entry.active_revision_id ? 'active' : 'proposed' });
   ctx.emit('asset.knowledge.proposed', { knowledge_entry_id: entry.id, knowledge_revision_id: revision.id });
   return { ...row, knowledge_revision: revision };
@@ -81,8 +85,11 @@ export function retireKnowledge(ctx: Context, id: string) {
   ctx.emit('asset.knowledge.retired', { knowledge_entry_id: id, brand_id: entry.brand_id, kind: entry.kind });
   return row;
 }
+/** Agents read only knowledge a person approved; entry status still tells them a proposal is pending. */
 export function knowledgeDetail(ctx: Context, row: Row) {
-  return { ...row, revisions: ctx.list(REVISION).filter(revision => revision.entry_id === row.id).sort((a, b) => Number(b.revision_no) - Number(a.revision_no)) };
+  const agent = fromAgent(ctx);
+  return { ...row, revisions: ctx.list(REVISION).filter(revision => revision.entry_id === row.id &&
+    (!agent || ['approved', 'superseded'].includes(String(revision.review_status)))).sort((a, b) => Number(b.revision_no) - Number(a.revision_no)) };
 }
 export function approvedKnowledgeRevision(entry: Row, revision: Row | undefined): Row | undefined {
   if (revision && entry.status === 'active' && revision.id === entry.active_revision_id &&
@@ -101,18 +108,19 @@ export function context(ctx: Context, brand: string, query: Record<string, strin
     .filter(row => row.brand_id === brand && row.status !== 'retired' && scopes(row, query.market_id, query.locale))
     .sort((a, b) => kinds.indexOf(String(a.kind)) - kinds.indexOf(String(b.kind)) || Number(b.priority) - Number(a.priority) || a.id.localeCompare(b.id));
   const revisions = new Map(ctx.list(REVISION).map(row => [row.id, row]));
+  const proposed = query.include_proposed === 'true' && !fromAgent(ctx);
   const items = [];
   const glossary = [];
   let used = 0;
   let truncated = false;
   for (const row of candidates) {
     const ids = [row.status === 'active' ? row.active_revision_id : null];
-    if (query.include_proposed === 'true' && row.current_revision_id !== row.active_revision_id) ids.push(row.current_revision_id);
+    if (proposed && row.current_revision_id !== row.active_revision_id) ids.push(row.current_revision_id);
     for (const id of ids) {
       const revision = revisions.get(String(id));
       if (!revision || revision.entry_id !== row.id) continue;
       const approved = approvedKnowledgeRevision(row, revision);
-      if (!approved && !(query.include_proposed === 'true' && id === row.current_revision_id &&
+      if (!approved && !(proposed && id === row.current_revision_id &&
         id !== row.active_revision_id && revision.review_status === 'draft')) continue;
       if (approved && row.kind === 'glossary_term') glossary.push(revision.id);
       const item = { entry_id: row.id, revision_id: revision.id, revision_no: revision.revision_no, kind: row.kind, title: row.title, body: revision.body, structured: revision.structured, status: approved ? 'active' : 'proposed' };

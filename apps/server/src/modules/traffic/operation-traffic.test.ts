@@ -101,6 +101,23 @@ function checkedPage(fixture: ReturnType<typeof setup>, blocks: Data[]) {
   return page;
 }
 
+test('an agent credential cannot vouch for a page check: its pass stays unknown until a person attests', () => {
+  const fixture = setup();
+  const { ctx, run } = fixture;
+  const page = run<Row & { draft: Row }>('pages_create_draft', { title: 'Launch', slug: 'launch', brand_id: 'brand', blocks: [{ type: 'text', text: 'Hello' }] });
+  const checks = { target_type: 'landing_page_version', target_id: page.draft.id };
+  Object.assign(ctx, { agentCredentialId: 'connection-1' });
+  const reported = run<Row & { items: Data[] }>('links_check', { ...checks, items: [{ check: 'http_status', result: 'pass', detail: 'Agent fetched the page' }] });
+  assert.equal(reported.status, 'unknown');
+  assert.deepEqual(reported.items.find(item => item.check === 'http_status'), { check: 'http_status', result: 'unknown', reported_result: 'pass', detail: 'Agent fetched the page', source: 'agent', evidence_id: null });
+  // A failure the agent saw still counts.
+  assert.equal(run('links_check', { ...checks, items: [{ check: 'http_status', result: 'fail', detail: '404' }] }).status, 'fail');
+  Object.assign(ctx, { agentCredentialId: undefined });
+  assert.throws(() => run('pages_publish', { version_id: page.draft.id }, page.id), Problem);
+  run('links_check', { ...checks, items: [{ check: 'http_status', result: 'pass', detail: 'Operator observed response' }] });
+  assert.equal(run<Row>('pages_publish', { version_id: page.draft.id }, page.id).status, 'published');
+});
+
 test('published forms are scoped, use exact consent versions and store encrypted contacts', async () => {
   const fx = setup();
   const { ctx, run, bridge, secrets, events } = fx;

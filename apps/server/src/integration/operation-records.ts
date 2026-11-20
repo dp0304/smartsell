@@ -37,7 +37,8 @@ export async function operationRecords(context: Context, readOnly: boolean) {
       }
       for (const [key, value] of records.changes) {
         const entity = entities.get(key);
-        // The Command store permits versioned updates but no deletes. Null is absent in the Operation snapshot.
+        // The Command contract has no delete, so null marks an absent key. The memory/local store drops such rows;
+        // Postgres keeps them as tombstones because its roles have no DELETE on ss.entities.
         if (entity) await context.update(moduleName, recordKind, entity.id, { value }, entity.version);
         else if (value !== null) await context.insert(moduleName, recordKind, { value }, key);
       }

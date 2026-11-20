@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { buildApp } from './app';
 import { previewIdentityKey } from './integration/command-identity-key.js';
 import { configuration } from './config';
@@ -41,6 +41,11 @@ async function optionalOperationApi(config: ReturnType<typeof configuration>) {
     egress, drain, providers, publishing };
 }
 
+/** A stable development APP_SECRET derived from the owner-only preview key under .local/. */
+export function developmentSecret(statePath: string) {
+  return createHmac('sha256', previewIdentityKey(statePath)).update('smartsell:app-secret:v1').digest('hex');
+}
+
 export async function start(config = configuration()) {
   if (!config.roles.has('api')) throw new Error('The Commands server requires the api role');
   if (config.identityDeployment === 'saas') throw new Error('SaaS identity requires the Operation server');
@@ -50,6 +55,8 @@ export async function start(config = configuration()) {
     throw new Error('SMARTSELL_STORE must be postgres, local, or explicit test-mode memory');
   }
   if (mode === 'postgres' && !config.databaseUrl) throw new Error('Set DATABASE_URL to a migrated PostgreSQL 17+ request login');
+  // Development without APP_SECRET keeps Agent tokens, CSRF tokens and cursors valid across watch restarts.
+  if (!config.production && config.generatedSecret && mode !== 'memory') config = { ...config, secret: developmentSecret(config.statePath) };
   if (!config.production && !config.setupToken) {
     console.warn('Initial setup is disabled until SETUP_TOKEN is configured');
   }

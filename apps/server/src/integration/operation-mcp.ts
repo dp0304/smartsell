@@ -35,11 +35,17 @@ export function describeOperationTool(op: Registered): Tool {
 
 export function parseOperationTool(operation: Registered, payload: unknown) {
   const args = bodyObject(payload);
-  if (Object.keys(args).some(key => !['workspace_id', 'params', 'query', 'body', 'expected_version', 'idempotency_key'].includes(key))) throw invalid('Unknown argument');
+  const fields = ['workspace_id', 'params', 'query', 'body', 'expected_version', 'idempotency_key'];
+  const extra = Object.keys(args).filter(key => !fields.includes(key));
+  if (extra.length) throw invalid(`Unknown argument ${extra.join(', ')}; put payload fields in body and filters in query`);
   if (typeof args.workspace_id !== 'string') throw invalid('workspace_id is required');
   const params = stringMap(args.params);
   const names = parameterNames(operation);
-  if (names.some(name => !params[name]) || Object.keys(params).some(name => !names.includes(name))) throw invalid('Invalid path parameters');
+  const absent = names.filter(name => !params[name]);
+  const unknown = Object.keys(params).filter(name => !names.includes(name));
+  if (absent.length || unknown.length) {
+    throw invalid(`Invalid path parameters for ${operation.method} ${operation.path}${absent.length ? `; missing params.${absent.join(', params.')}` : ''}${unknown.length ? `; unknown ${unknown.join(', ')}` : ''}`);
+  }
   const input: Input = { params, query: stringMap(args.query, true), body: bodyObject(args.body),
     expectedVersion: expectedVersion(args.expected_version), idempotencyKey: idempotencyKey(args.idempotency_key) };
   return { workspaceId: args.workspace_id, input };

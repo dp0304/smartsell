@@ -42,7 +42,7 @@ interface ToolConfig {
   id?: string;
   query?: readonly string[];
   write?: 'update' | 'create';
-  result: 'jobs' | 'job' | 'operation' | 'change' | 'templates' | 'rules' | 'intel' | 'approved_read';
+  result: 'jobs' | 'job' | 'operation' | 'change' | 'templates' | 'rules' | 'intel' | 'approved_read' | 'operation_call';
   needsOutputPolicy?: boolean;
 }
 
@@ -57,6 +57,8 @@ export interface McpToolDefinition {
   readonly sideEffect: false;
   readonly needsOutputPolicy: boolean;
   readonly result: ToolConfig['result'];
+  /** Set on tools that run one Operation through the shared executor. */
+  readonly operation?: string;
   readonly parse: (args: JsonRecord) => McpDispatchInput | undefined;
 }
 
@@ -260,6 +262,7 @@ export function projectMcpResult(tool: McpToolDefinition, value: unknown): JsonR
       return { items: projected, truncated: items.length > 100 };
     }
     case 'approved_read': return isRecord(value) ? value : undefined;
+    case 'operation_call': return isRecord(value) && isRecord(value.body) ? value : undefined;
     case 'templates':
     case 'rules':
     case 'intel': return {};
