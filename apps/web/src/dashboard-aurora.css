@@ -1,0 +1,238 @@
+.dashboard-aurora {
+  --dashboard-gutter: clamp(16px, 2.5vw, 32px);
+  --dashboard-radius: var(--radius-card, 24px);
+  --dashboard-motion: var(--motion-cta, 500ms ease-out);
+  position: relative;
+  isolation: isolate;
+  container: dashboard-aurora / inline-size;
+  margin-block-end: 20px;
+  padding: 0 var(--dashboard-gutter) var(--dashboard-gutter);
+  border-radius: var(--dashboard-radius);
+  background: var(--color-deep-indigo, #1e1b4b);
+  color: #fff;
+  font-family: var(--font-sans, Inter, 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif);
+}
+
+.dashboard-aurora > .dashboard-hero {
+  min-height: 240px;
+  margin: 0 calc(-1 * var(--dashboard-gutter));
+  padding: 28px var(--dashboard-gutter);
+  border-radius: var(--dashboard-radius) var(--dashboard-radius) 0 0;
+  background: none;
+  overflow: visible;
+}
+
+.dashboard-aurora > .dashboard-hero > .hero-orbit {
+  position: absolute;
+  inset: 0 0 -16px auto;
+  width: 54%;
+  height: auto;
+  border-radius: 0 var(--dashboard-radius) 0 0;
+  background:
+    radial-gradient(ellipse at 73% 72%, rgba(6, 182, 212, .16), transparent 46%),
+    radial-gradient(ellipse at 86% 18%, rgba(236, 72, 153, .24), transparent 51%),
+    radial-gradient(ellipse at 60% 49%, rgba(139, 92, 246, .43), transparent 63%);
+  opacity: 1;
+  transform: none;
+  mask-image: linear-gradient(#000 85%, transparent);
+  pointer-events: none;
+}
+
+.dashboard-aurora .hero-orbit::after {
+  content: '';
+  position: absolute;
+  inset: 12px 28px auto auto;
+  width: min(440px, 89%);
+  height: calc(100% - 28px);
+  background: url('./assets/dashboard-ribbon.webp') center right / contain no-repeat;
+}
+
+.dashboard-aurora > .dashboard-hero > div:last-child {
+  max-width: min(51%, 36rem);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-aurora .dashboard-hero p,
+.dashboard-aurora .dashboard-hero span {
+  color: var(--muted, #ded8f3);
+  line-height: 1.5;
+}
+
+.dashboard-aurora .dashboard-hero p {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-aurora .dashboard-hero h1 {
+  font-size: clamp(var(--font-size-title), 7cqi, var(--font-size-display));
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -.04em;
+}
+
+.dashboard-aurora .dashboard-hero span {
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.dashboard-aurora > .dashboard-tabs {
+  position: relative;
+  gap: 6px;
+  margin: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .20);
+}
+
+.dashboard-aurora > .dashboard-tabs a {
+  padding: 10px 14px;
+  border-radius: 10px 10px 0 0;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.dashboard-aurora > .dashboard-tabs a:hover,
+.dashboard-aurora > .dashboard-tabs a.selected {
+  background-color: var(--color-glass, rgba(255, 255, 255, .10));
+}
+
+.dashboard-aurora > .dashboard-tabs a.selected {
+  border-bottom-color: var(--focus-ring, #c4a7ff);
+  color: #fff;
+}
+
+.dashboard-aurora > .dashboard-stats {
+  position: relative;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0 0;
+}
+
+.dashboard-aurora .dashboard-stat {
+  position: relative;
+  grid-column: span 4;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+  border: 1px solid var(--line, rgba(255, 255, 255, .20));
+  border-radius: var(--dashboard-radius);
+  background: var(--color-glass, rgba(255, 255, 255, .10));
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: var(--glass-blur, blur(20px));
+  box-shadow: var(--shadow-glass, 0 18px 44px rgba(8, 6, 32, .24));
+  color: #fff;
+  transition:
+    transform var(--dashboard-motion),
+    background-color var(--dashboard-motion),
+    border-color var(--dashboard-motion),
+    box-shadow var(--dashboard-motion);
+}
+
+.dashboard-aurora .dashboard-stat > svg {
+  width: 56px;
+  height: 56px;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #5b21b6, var(--color-violet, #8b5cf6));
+  color: #fff;
+  transition: transform var(--dashboard-motion);
+}
+
+.dashboard-aurora .dashboard-stat:nth-child(2) > svg {
+  background: linear-gradient(145deg, #7e22ce, var(--color-fuchsia, #ec4899));
+}
+
+.dashboard-aurora .dashboard-stat:nth-child(3) > svg {
+  background: linear-gradient(145deg, #3730a3, var(--color-violet, #8b5cf6));
+}
+
+.dashboard-aurora .dashboard-stat > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-aurora .dashboard-stat span {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dashboard-aurora .dashboard-stat strong {
+  font-size: 36px;
+  line-height: 1.1;
+}
+
+.dashboard-aurora .dashboard-tabs a:focus-visible,
+.dashboard-aurora .dashboard-stat:focus-visible {
+  z-index: 1;
+  outline: 3px solid var(--focus-ring, #c4a7ff);
+  outline-offset: 4px;
+}
+
+.dashboard-aurora .dashboard-tabs a:focus-visible {
+  position: relative;
+}
+
+@media (hover: hover) {
+  .dashboard-aurora .dashboard-stat:hover {
+    border-color: rgba(139, 92, 246, .50);
+    background-color: var(--surface-hover, rgba(255, 255, 255, .15));
+    box-shadow: 0 20px 50px rgba(167, 139, 250, .18);
+    transform: translateY(-8px) scale(1.02);
+  }
+
+  .dashboard-aurora .dashboard-stat:hover > svg {
+    transform: scale(1.1) rotate(12deg);
+  }
+}
+
+@container dashboard-aurora (width < 840px) {
+  .dashboard-aurora .dashboard-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
+  }
+}
+
+@container dashboard-aurora (width < 600px) {
+  .dashboard-aurora > .dashboard-hero {
+    min-height: 176px;
+  }
+
+  .dashboard-aurora > .dashboard-hero > div:last-child {
+    max-width: none;
+  }
+
+  .dashboard-aurora .hero-orbit::after {
+    content: none;
+  }
+
+  .dashboard-aurora > .dashboard-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-aurora .dashboard-stat {
+    grid-column: 1;
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media (width < 600px) {
+  .dashboard-aurora .hero-orbit::after {
+    content: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-aurora .dashboard-stat,
+  .dashboard-aurora .dashboard-stat > svg {
+    transition: none;
+  }
+
+  .dashboard-aurora .dashboard-stat:hover,
+  .dashboard-aurora .dashboard-stat:hover > svg {
+    transform: none;
+  }
+}

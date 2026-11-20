@@ -1,0 +1,14 @@
+{
+  "name": "@smartsell/connector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "test": "vitest run test/connector.test.ts test/workflow.test.ts"
+  },
+  "dependencies": {
+    "@smartsell/connector-tasks": "workspace:*"
+  }
+}

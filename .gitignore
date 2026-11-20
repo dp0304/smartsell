@@ -1,0 +1,15 @@
+.alma-snapshots
+node_modules/
+.pnpm-store/
+.turbo/
+**/dist/
+**/coverage/
+**/test-results/
+**/playwright-report/
+.smartsell/
+.data/
+.local/
+.env
+.env.*
+!.env.example
+.DS_Store

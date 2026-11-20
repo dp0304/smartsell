@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
+    environment:
+      POSTGRES_DB: smartsell
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      SMARTSELL_MIGRATION_PASSWORD: ${SMARTSELL_MIGRATION_PASSWORD:?set SMARTSELL_MIGRATION_PASSWORD}
+      SMARTSELL_RUNTIME_PASSWORD: ${SMARTSELL_RUNTIME_PASSWORD:?set SMARTSELL_RUNTIME_PASSWORD}
+      SMARTSELL_BACKGROUND_PASSWORD: ${SMARTSELL_BACKGROUND_PASSWORD:-}
+    ports:
+      - "127.0.0.1:${PG_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+    healthcheck:
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, postgres, -d, smartsell]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    image: ${SMARTSELL_SERVER_IMAGE:-smartsell-server:local}
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    profiles: [server]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MIGRATION_DATABASE_URL: postgres://app_owner:${SMARTSELL_MIGRATION_PASSWORD}@postgres:5432/smartsell
+    command: [node, --import, tsx, ../../packages/db/src/migrate-core.ts]
+
+  server:
+    image: ${SMARTSELL_SERVER_IMAGE:-smartsell-server:local}
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    profiles: [server]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3401'
+      ROLE: ${ROLE:-all}
+      DATABASE_URL: postgres://app_rw:${SMARTSELL_RUNTIME_PASSWORD}@postgres:5432/smartsell
+      BACKGROUND_DATABASE_URL: ${BACKGROUND_DATABASE_URL:-${SMARTSELL_BACKGROUND_PASSWORD:+postgres://app_background:${SMARTSELL_BACKGROUND_PASSWORD:-}@postgres:5432/smartsell}}
+      SMARTSELL_OPERATION_API:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      APP_SECRET: ${APP_SECRET:-}
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+      SMARTSELL_IDENTITY_DEPLOYMENT: ${SMARTSELL_IDENTITY_DEPLOYMENT:-private}
+      IDENTITY_ENCRYPTION_KEY:
+      PORTAL_ORIGIN:
+      PORTAL_CUSTOM_ORIGINS: ${PORTAL_CUSTOM_ORIGINS:-}
+      PORTAL_ASSERTION_KEY:
+      SMARTSELL_COMMERCE_ENCRYPTION_KEY:
+      SMARTSELL_COMMERCE_PROVIDER_CREDENTIALS:
+      SMARTSELL_SHOPIFY_APPS:
+      SMARTSELL_SHOPEE_CATALOG_GRANTS:
+      SMARTSELL_TRAFFIC_HOSTS:
+      SMARTSELL_TRAFFIC_PII_KEY:
+      MEDIA_DIRECTORY: /var/lib/smartsell/media
+    volumes:
+      - media-data:/var/lib/smartsell/media
+    ports:
+      - '127.0.0.1:${PORT:-3401}:3401'
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3401/readyz").then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    image: ${SMARTSELL_WEB_IMAGE:-smartsell-web:local}
+    build:
+      context: ..
+      dockerfile: infra/Web.Dockerfile
+    profiles: [server]
+    restart: unless-stopped
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      PORTAL_ORIGIN: ${PORTAL_ORIGIN:-}
+      NGINX_ENVSUBST_FILTER: '^(PUBLIC_ORIGIN|PORTAL_ORIGIN)$'
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8080}:8080'
+      - '127.0.0.1:${PORTAL_PORT:-8081}:8081'
+    healthcheck:
+      test: [CMD, wget, -qO, /dev/null, 'http://127.0.0.1:8080/readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 8
+
+volumes:
+  postgres-data:
+  media-data:

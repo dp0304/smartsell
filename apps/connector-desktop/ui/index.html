@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartSell Connector</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="renderer.js" defer></script>
+</head>
+<body>
+<main>
+  <header><div><span class="brand">SmartSell</span><h1>桌面连接器</h1></div><button class="stop" id="stop">紧急停止</button></header>
+  <section aria-labelledby="device-heading">
+    <h2 id="device-heading">设备连接</h2>
+    <p id="connection"></p><p id="origin" class="muted"></p>
+    <p id="message" role="status"></p><p id="error" role="alert"></p>
+    <form id="pair" hidden>
+      <div class="fields"><label>工作区 ID<input name="workspace" required maxlength="128" autocomplete="off"></label>
+      <label>设备名称<input name="name" required maxlength="100" value="SmartSell Desktop"></label>
+      <label>工作台配对码<input name="code" type="password" required maxlength="32" minlength="32" autocomplete="off"></label></div>
+      <label class="check"><input name="owns" type="checkbox" required>我拥有或获授权管理此设备，并主动同意将其绑定到此工作区。</label>
+      <button class="primary">配对设备</button>
+    </form>
+    <div class="actions"><button class="primary" id="connect">连接</button><button id="disconnect">断开</button><button id="forget">注销本机配对</button><button id="workbench">打开工作台</button></div>
+  </section>
+  <section id="idle" hidden>
+    <h2>任务交接</h2><button class="primary" id="claim">领取一项任务</button>
+    <details><summary>核验工作台中已绑定的浏览器账号</summary>
+      <div class="actions"><button id="douyin">打开抖音创作者中心</button><button id="xhs">打开小红书创作服务平台</button></div>
+      <form id="session">
+        <div class="fields"><label>工作台浏览器会话 ID<input name="session" maxlength="128" required></label><label>官方页面中实际登录的账号 ID<input name="observed" maxlength="128" required></label></div>
+        <label class="check"><input name="confirmed" type="checkbox" required>我已在此账号的专用浏览器配置中核对实际账号，并有权使用该账号。</label>
+        <button>核验会话</button>
+      </form>
+    </details>
+  </section>
+  <section id="task" hidden>
+    <h2>当前任务</h2><p id="task-meta"></p><p id="task-scope" class="muted"></p>
+    <pre id="revision" hidden></pre>
+    <div id="prepare" hidden>
+      <div class="actions"><button id="creator">打开官方创作者页面</button><button id="media">选取本机媒体</button></div>
+      <p id="media-note" class="muted">选取的文件仅在本机校验 SHA-256。请在官方页面亲自选取同一文件，并按审批顺序排放。</p><pre id="picked" hidden></pre>
+      <form id="confirm" hidden>
+        <label>从官方页面读到的账号 ID<input name="observed" maxlength="128" required autocomplete="off"></label>
+        <label class="check"><input name="confirmed" type="checkbox" required><span id="confirm-label"></span></label>
+        <button class="primary">确认账号及交接</button>
+      </form>
+    </div>
+    <form id="outcome" hidden>
+      <p id="handoff"></p>
+      <fieldset id="receipt"><legend>已登记的脱敏截图证据</legend><p class="muted">请在工作台登记证据，再填写对象 ID 和 SHA-256。</p>
+      <div class="fields"><label>官方作品 ID<input name="postId" maxlength="128"></label><label>官方作品完整链接<input name="url" maxlength="2048"></label>
+      <label>证据对象 ID<input name="objectId" maxlength="128"></label><label>证据 SHA-256<input name="sha256" maxlength="64"></label></div></fieldset>
+      <div class="actions"><button id="captured" value="captured">回填作品及证据</button><button id="submitted" value="submitted">我已提交，回填结果</button>
+      <button id="visible" value="visible">作品可见</button><button id="not-visible" value="not_visible">作品不可见</button><button value="unknown">结果未知</button></div>
+    </form>
+    <div id="challenge" class="actions" hidden>
+      <label>遇到平台限制<select id="reason"><option value="captcha">验证码</option><option value="risk_control">风控提示</option><option value="login_expired">登录失效</option><option value="app_prompt">平台弹窗</option></select></label>
+      <button id="block">中止任务并回填</button>
+    </div>
+    <button id="report" hidden>回填待发送的任务状态</button>
+  </section>
+  <section>
+    <h2>平台支持</h2>
+    <p>抖音、小红书支持通过官方创作者页面人工交付。请用已绑定账号的专用浏览器配置打开页面并亲自登录、选取媒体和发布。</p>
+    <p class="muted">当前版本未提供平台 OAuth、自动发布、手机连接或 App 交付。TikTok、Instagram 和 Facebook 暂不可用。</p>
+  </section>
+  <footer><span id="update-status"></span><button id="update-check">检查签名更新</button><button id="update-install" hidden>安装已验证更新</button></footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <!-- Set a same-origin portal sign-in route when deploying the isolated host. -->
+  <meta name="portal-login" content="">
+  <title>SmartSell 客戶門戶</title>
+  <link rel="stylesheet" href="/src/styles.css">
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">SmartSell</a>
+      <label><span class="sr-only" id="language-label"></span><select id="language" aria-labelledby="language-label"><option value="zh-Hant">繁體中文</option><option value="en">English</option></select></label>
+    </div>
+  </header>
+  <aside class="desktop-notice" id="desktop-notice"></aside>
+  <main id="main" aria-busy="true"></main>
+</body>
+</html>

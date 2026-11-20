@@ -1,0 +1,35 @@
+:root {
+  color: #172b29;
+  background: #f0f4ef;
+  font: 16px/1.55 system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 1280px; }
+.topbar { border-bottom: 1px solid #ccd8ce; background: #fff; }
+.topbar-inner { width: 1100px; min-height: 64px; margin: auto; display: flex; align-items: center; justify-content: space-between; }
+.brand { font-size: 1.3rem; font-weight: 750; color: #172b29; text-decoration: none; }
+a { color: #175d50; }
+main { width: 960px; margin: 48px auto; }
+article, main > .status { background: #fff; border: 1px solid #ccd8ce; border-radius: 12px; padding: 28px 36px; }
+section { margin-top: 32px; border-top: 1px solid #dce5dc; padding-top: 18px; }
+h1, h2, p { overflow-wrap: anywhere; }
+h1 { font-size: 2rem; line-height: 1.2; margin-bottom: .45em; }
+h2 { font-size: 1.2rem; }
+.meta, time { color: #4e625e; font-size: .9rem; }
+.preview { white-space: pre-wrap; padding: 20px; background: #f0f4ef; border-radius: 8px; }
+.status { border-left: 4px solid #175d50; padding: 10px 16px; background: #e1f0e9; }
+.shares, .comments { list-style: none; padding: 0; }
+.shares li, .comments li { border-top: 1px solid #dce5dc; padding: 12px 0; overflow-wrap: anywhere; }
+button, select, textarea { font: inherit; }
+button, select { border-radius: 6px; padding: 6px 14px; }
+button { background: #175d50; color: #fff; border: 1px solid #175d50; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; }
+button:disabled { opacity: .6; cursor: wait; }
+textarea { display: block; width: 100%; max-width: 640px; border: 1px solid #859b94; border-radius: 6px; padding: 8px; margin: 8px 0; }
+:focus-visible { outline: 3px solid #155d98; outline-offset: 3px; }
+.desktop-notice { display: none; background: #fff3d9; padding: 8px 18px; width: 100vw; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 1279px) { .desktop-notice { display: block; } }
+.share-brand { border-inline-start: .25rem solid; padding-inline-start: .75rem; font-weight: 700; overflow-wrap: anywhere; }
+.brand-logo { width: auto; max-width: 64px; height: 32px; object-fit: contain; vertical-align: middle; margin-inline-end: .5rem; }
+.delivery-times { display: flex; flex-wrap: wrap; gap: 1rem 2rem; }
+.delivery-times dd { margin: 0; }

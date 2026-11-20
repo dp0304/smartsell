@@ -1,0 +1,12 @@
+{
+  "name": "@smartsell/adapters",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./oauth": "./src/oauth.ts"
+  },
+  "scripts": {
+    "test": "vitest run test"
+  }
+}

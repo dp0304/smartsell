@@ -1,0 +1,36 @@
+{
+  "name": "smartsell",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": "^24.0.0",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "setup:local": "node --import tsx apps/server/init-local.ts",
+    "dev": "pnpm run dev:workspace",
+    "dev:workspace": "node --watch --import tsx apps/server/dev.ts",
+    "preview": "pnpm run preview:workspace",
+    "preview:workspace": "node --import tsx apps/server/dev.ts preview",
+    "build": "pnpm typecheck && pnpm exec turbo run build",
+    "start": "pnpm --filter @smartsell/server start",
+    "start:workspace": "pnpm start",
+    "start:kernel": "pnpm --filter @smartsell/server start:kernel",
+    "db:migrate": "pnpm --filter @smartsell/db migrate",
+    "db:migrate:kernel": "pnpm --filter @smartsell/db migrate:kernel",
+    "test": "node scripts/test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "requirements": "node scripts/requirements.mjs --check",
+    "verify": "pnpm requirements && pnpm build && pnpm test --built-web",
+    "verify:services": "bash scripts/verify-services.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "vitest": "^3.2.4",
+    "turbo": "^2.5.0",
+    "@playwright/test": "^1.55.0"
+  }
+}

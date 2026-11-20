@@ -1,0 +1,95 @@
+@font-face {
+  font-family: Inter;
+  src: url('/fonts/InterVariable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --color-deep-indigo: #1e1b4b;
+  --color-violet: #8b5cf6;
+  --color-fuchsia: #ec4899;
+  --color-cyan: #06b6d4;
+  --color-amber: #f59e0b;
+  --color-glass: rgba(255, 255, 255, .10);
+  --color-reading: #8be7f7;
+  --ink: #f8fafc;
+  --muted: #cdd3e9;
+  --placeholder: #e0e6f8;
+  --line: rgba(255, 255, 255, .20);
+  --line-control: rgba(255, 255, 255, .18);
+  --accent: #ddccff;
+  --soft: rgba(139, 92, 246, .23);
+  --side: #171538;
+  --surface-input: rgba(255, 255, 255, .08);
+  --surface-inset: rgba(15, 12, 43, .27);
+  --surface-hover: rgba(255, 255, 255, .15);
+  --surface-raised: #2b2656;
+  --status-good: #a1efce;
+  --status-good-bg: rgba(52, 211, 153, .14);
+  --status-warning: #ffdc99;
+  --status-warning-bg: rgba(245, 158, 11, .14);
+  --status-critical: #ffc6d3;
+  --status-critical-bg: rgba(244, 63, 94, .15);
+
+  --font-sans: Inter, 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', system-ui, sans-serif;
+  --font-size-body: 14px;
+  --font-size-title: 40px;
+  --font-size-display: 64px;
+  --radius-card: 24px;
+  --radius-input: 16px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+  --glass-blur: blur(20px);
+  --input-blur: blur(10px);
+  --shadow-glass: 0 18px 44px rgba(8, 6, 32, .24);
+  --focus-ring: #c4a7ff;
+  --content-max: 1200px;
+  --content-gutter: 24px;
+  --motion-fast: 180ms ease-out;
+  --motion-cta: 500ms ease-out;
+  /* The indigo scrim keeps white readable at every gradient position. */
+  --gradient-cta: linear-gradient(rgba(30, 27, 75, .32), rgba(30, 27, 75, .32)),
+    linear-gradient(90deg in srgb, var(--color-violet), var(--color-fuchsia), var(--color-violet));
+}
+
+:is(button, .button):is(.primary, .wb-primary) {
+  padding: 16px 32px;
+  border: 0;
+  border-radius: var(--radius-input);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  background-color: var(--color-deep-indigo);
+  background-image: var(--gradient-cta);
+  background-size: 200% 100%;
+  background-position: left center;
+  box-shadow: 0 8px 20px rgba(167, 139, 250, .30);
+  transition: background-position var(--motion-cta), transform var(--motion-cta), box-shadow var(--motion-cta);
+}
+
+@media (hover: hover) {
+  :is(button, .button):is(.primary, .wb-primary):where(:enabled, a[href]):where(:not([aria-disabled=true])):hover {
+    background-position: right center;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(217, 70, 239, .40);
+  }
+}
+
+:is(button, .button):is(.primary, .wb-primary):where(:enabled, a[href]):where(:not([aria-disabled=true])):active {
+  transform: scale(.95);
+}
+
+:is(button, .button):is(.primary, .wb-primary):is(:disabled, [aria-disabled=true]) {
+  color: var(--muted);
+  background: var(--surface-raised);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(button, .button):is(.primary, .wb-primary) { transition: none; }
+  :is(button, .button):is(.primary, .wb-primary):is(:hover, :active) { transform: none; }
+}

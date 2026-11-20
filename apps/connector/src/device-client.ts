@@ -1,0 +1,148 @@
+import { createHash, createPublicKey, randomBytes, sign, type KeyObject } from 'node:crypto';
+import { exportDevicePublicKey, fields, opaqueId, parseConnectorClaim, type ConnectorClaim } from '../../../packages/connector-tasks/src/index.ts';
+import { PermitError, parseConsumePermitDecision, parseSubmitPermitDecision, type ConsumePermitRequest, type SubmitPermitClient, type SubmitPermitRequest } from './permit.ts';
+import type { Report } from './workflow.ts';
+
+export type DeviceAction = 'heartbeat' | 'claim' | 'browser.identity' | 'mobile.identity' | 'mobile.report' | 'attempt.ready' | 'attempt.permit' | 'attempt.consume' | 'attempt.report';
+export type SignedDeviceRequest = { device_id: string; timestamp: string; nonce: string; signature: string };
+export type SignedDeviceTransport = (action: DeviceAction, rawBody: Uint8Array, signed: SignedDeviceRequest, workspaceId?: string) => Promise<unknown>;
+
+const devicePaths = {
+  heartbeat: '/api/v1/device/heartbeat', claim: '/api/v1/device/claim', 'browser.identity': '/api/v1/device/browser-identity',
+  'mobile.identity': '/api/v1/device/mobile-identity', 'mobile.report': '/api/v1/device/mobile-devices/report',
+} as const;
+const attemptPaths = {
+  'attempt.ready': 'ready', 'attempt.permit': 'submit-permit', 'attempt.consume': 'submit-permit/consume', 'attempt.report': 'device-report',
+} as const;
+
+function apiOrigin(origin: string): string {
+  const endpoint = new URL(origin);
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname);
+  if ((endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && loopback)) || endpoint.username || endpoint.password ||
+    endpoint.pathname !== '/' || endpoint.search || endpoint.hash) throw new TypeError('Expected an HTTPS API origin or a loopback HTTP API origin');
+  return endpoint.origin;
+}
+
+async function postDeviceJson(origin: string, path: string, bytes: Uint8Array, fetcher: typeof fetch, headers: Record<string, string> = {}) {
+  const response = await fetcher(new URL(path, origin), {
+    method: 'POST', body: Uint8Array.from(bytes), redirect: 'error', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(10_000),
+    headers: { 'content-type': 'application/json', ...headers },
+  });
+  if (!response.ok) throw new PermitError(response.status);
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('Missing gateway response');
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let size = 0;
+  let json = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > 128_000) throw new Error('Gateway response too large');
+      json += decoder.decode(value, { stream: true });
+    }
+    return fields(JSON.parse(json + decoder.decode()), ['data']).data;
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
+export async function pairOverHttp(origin: string, workspaceId: string, pairingCode: string, platform: 'darwin' | 'win32',
+  name: string, key: KeyObject, confirmation: { userInitiated: boolean; ownsDevice: boolean }, fetcher: typeof fetch = fetch) {
+  const body = createPairingRequest(workspaceId, pairingCode, platform, name, key, confirmation);
+  const { device_id } = fields(await postDeviceJson(apiOrigin(origin), '/api/v1/device/pair', Buffer.from(JSON.stringify(body)), fetcher, { 'x-smartsell-workspace': workspaceId }), ['device_id']);
+  return opaqueId(device_id, 'device_id');
+}
+
+export function createSignedHttpTransport(origin: string, fetcher: typeof fetch = fetch): SignedDeviceTransport {
+  const trustedOrigin = apiOrigin(origin);
+  return async (action, bytes, signed, workspaceId) => {
+    let path: string;
+    if (Object.hasOwn(attemptPaths, action)) {
+      const body = JSON.parse(Buffer.from(bytes).toString('utf8')) as Record<string, unknown>;
+      const id = opaqueId(body.attempt_id, 'attempt_id');
+      path = `/api/v1/attempts/${encodeURIComponent(id)}/${attemptPaths[action as keyof typeof attemptPaths]}`;
+    } else {
+      if (!Object.hasOwn(devicePaths, action)) throw new TypeError('Unknown device action');
+      path = devicePaths[action as keyof typeof devicePaths];
+    }
+    return postDeviceJson(trustedOrigin, path, bytes, fetcher, {
+      ...(workspaceId && { 'x-smartsell-workspace': workspaceId }),
+      'x-smartsell-device': signed.device_id, 'x-smartsell-timestamp': signed.timestamp,
+      'x-smartsell-nonce': signed.nonce, 'x-smartsell-signature': signed.signature,
+    });
+  };
+}
+
+function signature(key: KeyObject, bytes: Uint8Array): string {
+  if (key.type !== 'private' || key.asymmetricKeyType !== 'ed25519') throw new TypeError('Expected an Ed25519 device key');
+  return sign(null, bytes, key).toString('base64url');
+}
+export function createPairingRequest(workspaceId: string, pairing_code: string, platform: 'darwin' | 'win32', name: string,
+  key: KeyObject, confirmation: { userInitiated: boolean; ownsDevice: boolean }) {
+  opaqueId(workspaceId, 'workspace_id');
+  if (confirmation?.userInitiated !== true || confirmation?.ownsDevice !== true || !/^[A-Za-z0-9_-]{32}$/.test(pairing_code)
+    || (platform !== 'darwin' && platform !== 'win32') || !name.trim() || name.trim() !== name || name.length > 100) throw new TypeError('Invalid pairing request');
+  const public_key = exportDevicePublicKey(createPublicKey(key));
+  const proof = signature(key, Buffer.from(JSON.stringify(['smartsell.pair.v1', workspaceId, pairing_code, public_key, platform, name])));
+  return { pairing_code, public_key, platform, name, proof };
+}
+export class SignedDeviceClient implements SubmitPermitClient {
+  constructor(private readonly workspaceId: string, private readonly deviceId: string, private readonly key: KeyObject,
+    private readonly transport: SignedDeviceTransport, private readonly now: () => number = Date.now) {
+    opaqueId(workspaceId, 'workspace_id');
+    opaqueId(deviceId, 'device_id');
+  }
+  #send(action: DeviceAction, body: object) {
+    const rawBody = Buffer.from(JSON.stringify(body));
+    const timestamp = new Date(this.now()).toISOString();
+    const nonce = randomBytes(18).toString('base64url');
+    const digest = createHash('sha256').update(rawBody).digest('hex');
+    const bytes = Buffer.from(JSON.stringify(['smartsell.device.v1', this.workspaceId, this.deviceId, action, timestamp, nonce, digest]));
+    return this.transport(action, rawBody, { device_id: this.deviceId, timestamp, nonce, signature: signature(this.key, bytes) }, this.workspaceId);
+  }
+  #assertScope(claim: ConnectorClaim) {
+    if (claim.task.workspace_id !== this.workspaceId || claim.task.connector_device_id !== this.deviceId) throw new Error('Connector claim scope mismatch');
+  }
+  async heartbeat(client_version: string) {
+    if (!client_version.trim() || client_version.length > 80) throw new TypeError('Invalid client version');
+    const { status } = fields(await this.#send('heartbeat', { client_version }), ['status']);
+    if (status !== 'online') throw new Error('Connector heartbeat failed');
+  }
+  async claim(bindingId?: string): Promise<ConnectorClaim | null> {
+    const body = bindingId === undefined ? {} : { binding_id: opaqueId(bindingId, 'binding_id') };
+    const { claim } = fields(await this.#send('claim', body), ['claim']);
+    if (claim === null) return null;
+    const parsed = parseConnectorClaim(claim);
+    this.#assertScope(parsed);
+    return parsed;
+  }
+  async reportAndroid(input: { hardware_id_hash: string; connection: 'usb' | 'lan'; model: string; serial_suffix: string; os_version: string; driver_version: string }) {
+    const data = await this.#send('mobile.report', { ...input, platform: 'android', physical: true, emulator: false, cloud: false, connected: true, prerequisites_ready: true });
+    const { status, mobile_device_id } = fields(data, ['status', 'mobile_device_id']);
+    if (typeof status !== 'string') throw new Error('Unexpected mobile status');
+    return { status, mobile_device_id: opaqueId(mobile_device_id, 'mobile_device_id') };
+  }
+  async reportIdentity(channel: 'browser' | 'mobile', sessionId: string, observedIdentity: string) {
+    const { status } = fields(await this.#send(channel === 'browser' ? 'browser.identity' : 'mobile.identity', {
+      session_id: opaqueId(sessionId, 'session_id'), observed_platform_identity: opaqueId(observedIdentity, 'observed_platform_identity'),
+    }), ['status']);
+    if (status !== 'verified' && status !== 'blocked') throw new Error('Unexpected identity status');
+    return status;
+  }
+  async ready(claim: ConnectorClaim, observed_platform_identity: string) {
+    this.#assertScope(claim);
+    const { status } = fields(await this.#send('attempt.ready', { attempt_id: claim.task.attempt_id, fencing_token: claim.fencing_token,
+      write_slot_token: claim.write_slot_token, observed_platform_identity }), ['status']);
+    if (status !== 'verified') throw new PermitError(status === 'blocked' ? 409 : 502);
+  }
+  async request(input: SubmitPermitRequest) {
+    const data = await this.#send('attempt.permit', input);
+    if (data && typeof data === 'object' && 'decision' in data && data.decision === 'late') throw new PermitError(409);
+    return parseSubmitPermitDecision(data);
+  }
+  async consume(input: ConsumePermitRequest) { return parseConsumePermitDecision(await this.#send('attempt.consume', input)); }
+  report(report: Report) { return this.#send('attempt.report', report); }
+}
