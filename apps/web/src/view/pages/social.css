@@ -1,0 +1,82 @@
+/* Social performance page, plus the page-local pieces the ads page shares (vsx-*). */
+
+.vsoc-stack, .vads-stack { display: grid; gap: 16px; min-width: 0; }
+.vsx-answer { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink); overflow-wrap: anywhere; }
+
+.vsx-kpi-note { color: var(--muted); font-size: 12px; }
+.vsx-delta-pct { font-weight: 500; }
+.vsx-value { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: inherit; gap: 4px 6px; font-variant-numeric: tabular-nums; }
+
+.vsx-notices { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.vsx-notices li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; padding: 8px 12px; font-size: 13px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface-input);
+}
+.vsx-notices.warning li { border-color: color-mix(in srgb, var(--tone-warning) 55%, transparent); }
+.vsx-notices.warning .vs-glyph { margin-top: 2px; color: var(--tone-warning); }
+.vsx-notices.info .vs-glyph { margin-top: 2px; color: var(--tone-info); }
+
+.vsx-ask { display: grid; justify-items: start; gap: 6px; margin-top: 12px; padding: 12px; font-size: 13px; border: 1px dashed var(--line); border-radius: 12px; background: var(--surface-inset); }
+.vsx-ask p { margin: 0; overflow-wrap: anywhere; }
+.vsx-ask-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.vsx-ask-line q { quotes: none; color: var(--ink); font-weight: 600; }
+.vs-card > .vsx-ask:first-of-type:not(:only-child) { margin-top: 0; }
+
+.vsx-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.view-shell .vsx-choice button { min-height: 30px; padding: 3px 11px; }
+.vsx-foot { margin: 8px 0 0; font-size: 12px; }
+
+/* Tables become stacked label/value cards on narrow screens instead of scrolling the page sideways. */
+.vsx-table-wrap { min-width: 0; overflow-x: auto; }
+.vsx-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.vsx-table :is(th, td) { padding: 9px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.vsx-table thead th { color: var(--muted); background: var(--surface-inset); font-size: 12px; font-weight: 650; white-space: nowrap; }
+.vsx-table :is(th, td).num { text-align: right; }
+.vsx-table td.num .vsx-value { justify-content: flex-end; }
+.vsx-table td > small { display: block; margin-top: 2px; font-size: 11px; }
+.vsx-table tbody tr:last-child > * { border-bottom: 0; }
+.vsx-table th.lead { display: grid; gap: 2px; min-width: 9em; font-weight: 600; }
+.vsx-platform { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.vsx-name { overflow-wrap: anywhere; }
+.vsx-change { color: var(--muted); }
+.vsx-change.up { color: var(--status-good, var(--ink)); }
+
+@media (width < 760px) {
+  .vsx-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .vsx-table, .vsx-table tbody { display: block; }
+  .vsx-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .vsx-table tbody tr:last-child { border-bottom: 0; }
+  .vsx-table :is(th, td) { display: grid; align-content: start; gap: 2px; padding: 0; border: 0; }
+  .vsx-table :is(th, td).num { text-align: left; }
+  .vsx-table td.num .vsx-value { justify-content: flex-start; }
+  .vsx-table th.lead, .vsx-table td.wide { grid-column: 1 / -1; }
+  .vsx-table td[data-label]::before { content: attr(data-label); color: var(--muted); font-size: 11px; font-weight: 400; }
+}
+
+.vsoc-posts { display: grid; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.vsoc-posts > li {
+  display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto auto; align-items: center; gap: 6px 14px; min-width: 0; padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.vsoc-posts > li:last-child { border-bottom: 0; }
+.vsoc-rank {
+  display: grid; place-items: center; width: 2em; height: 2em; color: var(--muted); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); border-radius: 50%;
+}
+.vsoc-posts > li:first-child .vsoc-rank { color: var(--ink); border-color: var(--focus-ring); }
+.vsoc-post-main { display: grid; gap: 2px; min-width: 0; }
+.vsoc-post-title { font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vsoc-post-metrics { display: flex; gap: 16px; margin: 0; font-variant-numeric: tabular-nums; }
+.vsoc-post-metrics div { display: grid; justify-items: end; gap: 1px; min-width: 4.5em; }
+.vsoc-post-metrics dt { color: var(--muted); font-size: 11px; }
+.vsoc-post-metrics dd { margin: 0; font-weight: 650; }
+.view-shell .vsoc-open { min-height: 30px; padding: 4px 10px; white-space: nowrap; }
+
+@media (width < 640px) {
+  .vsoc-posts > li { grid-template-columns: 2.2em minmax(0, 1fr); }
+  .vsoc-post-metrics, .vsoc-open { grid-column: 2; }
+  .vsoc-post-metrics { justify-content: flex-start; }
+  .vsoc-post-metrics div { justify-items: start; }
+  .view-shell .vsoc-open { justify-self: start; }
+  .vsx-answer { font-size: 15px; }
+}

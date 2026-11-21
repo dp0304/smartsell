@@ -1,0 +1,26 @@
+:root {
+  color: #192526;
+  background: #f3f5f2;
+  font-family: system-ui, sans-serif;
+  line-height: 1.55;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(100% - 2rem, 44rem); margin: clamp(1rem, 5vw, 4rem) auto; }
+h1 { font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.12; }
+h1, h2, p, label, a { overflow-wrap: anywhere; }
+section, nav { margin: 1rem 0; }
+section { background: #fff; border: 1px solid #d8e0db; border-radius: 0.9rem; padding: clamp(1rem, 4vw, 2rem); }
+section > :first-child { margin-top: 0; }
+section > :last-child { margin-bottom: 0; }
+img, video { display: block; max-inline-size: 100%; block-size: auto; border-radius: 0.5rem; }
+form, fieldset, nav { display: grid; gap: 0.75rem; }
+fieldset { min-inline-size: 0; border: 1px solid #c5d3ca; border-radius: 0.5rem; margin: 0; }
+label:not(.choice) { display: grid; gap: 0.25rem; }
+.choice { display: flex; gap: 0.6rem; align-items: baseline; min-height: 2.75rem; }
+input:not([type='checkbox']), textarea { width: 100%; padding: 0.65rem; border: 1px solid #768d81; border-radius: 0.4rem; }
+input, textarea, button { font: inherit; }
+button, .action { display: inline-block; min-height: 2.75rem; padding: 0.65rem 1rem; border-radius: 0.5rem; background: #184e40; color: #fff; border: 0; text-align: center; }
+button, summary { cursor: pointer; }
+:focus-visible { outline: 3px solid #a04922; outline-offset: 3px; }
+small { display: block; }

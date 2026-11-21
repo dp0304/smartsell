@@ -1,0 +1,1 @@
+{"name":"@smartsell/sdk","private":true,"type":"module","exports":"./src/index.ts","dependencies":{"@smartsell/contracts":"workspace:*"}}

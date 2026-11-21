@@ -1,0 +1,25 @@
+{
+  "name": "@smartsell/connector-desktop",
+  "productName": "SmartSell Connector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SmartSell desktop connector",
+  "author": "SmartSell",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --experimental-transform-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test ../../tests/connector-desktop/*.test.ts",
+    "start": "electron .",
+    "package:mac": "npm run build && node scripts/package.mjs mac",
+    "package:win": "npm run build && node scripts/package.mjs win"
+  },
+  "dependencies": { "electron-updater": "6.8.11" },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  }
+}

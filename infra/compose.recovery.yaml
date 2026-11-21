@@ -1,0 +1,10 @@
+# Apply after restoring a Commands snapshot. Keep this overlay until reconciliation completes.
+services:
+  server:
+    environment:
+      ROLE: api
+      SETUP_TOKEN: ''
+      BACKGROUND_DATABASE_URL: ''
+      SMARTSELL_COMMERCE_PROVIDER_CREDENTIALS: ''
+      SMARTSELL_SHOPIFY_APPS: ''
+      SMARTSELL_SHOPEE_CATALOG_GRANTS: '[]'

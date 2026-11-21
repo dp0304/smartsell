@@ -1,0 +1,96 @@
+/* Settings page (P-settings). Scoped with st- classes; shared tokens come from view.css and the theme. */
+.st-page [id^="st-"] { scroll-margin-top: 84px; }
+.st-role { white-space: nowrap; }
+
+/* Setup at a glance */
+.st-summary ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.view-shell .st-check a {
+  display: flex; align-items: flex-start; gap: 10px; height: 100%; padding: 12px 14px; color: var(--ink); text-decoration: none;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--vs-surface);
+}
+.view-shell .st-check a:hover { border-color: var(--focus-ring); text-decoration: none; }
+.st-check .vs-glyph { flex: 0 0 auto; margin-top: 2px; color: var(--tone); }
+.st-check a > span { display: grid; gap: 2px; min-width: 0; }
+.st-check small { color: var(--muted); font-size: 12px; }
+.st-check strong { font-size: 14px; overflow-wrap: anywhere; }
+.view-shell .st-check.tone-critical a { border-color: color-mix(in srgb, var(--tone-critical) 70%, transparent); background: var(--status-critical-bg); }
+.view-shell .st-check.tone-warning a { border-color: color-mix(in srgb, var(--tone-warning) 55%, transparent); }
+
+/* Emergency pause */
+.st-pause-card.is-paused { border-color: color-mix(in srgb, var(--tone-critical) 70%, transparent); }
+.st-pause-body { display: grid; gap: 10px; }
+.st-state { display: flex; align-items: flex-start; gap: 8px; }
+.st-state .vs-glyph { flex: 0 0 auto; margin-top: 3px; }
+.st-state.is-paused { font-size: 16px; }
+.st-state.is-paused .vs-glyph { color: var(--tone-critical); }
+.st-lead { color: var(--muted); font-size: 13px; }
+.st-pauses > li.st-pause { display: grid; align-items: stretch; gap: 6px; }
+.st-reason { padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; border-inline-start: 3px solid var(--tone-critical); border-radius: 8px; background: var(--surface-input); }
+.st-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.st-confirm { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-inset); }
+.st-history summary, .st-more summary { color: var(--muted); font-size: 13px; cursor: pointer; }
+.st-history .vs-list { margin-top: 6px; }
+
+/* Brands and markets */
+.st-brands { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.st-brands > li { display: grid; gap: 4px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-inset); }
+.st-brands h3 { font-size: 15px; overflow-wrap: anywhere; }
+.st-market-name { margin-inline-end: 6px; font-weight: 600; }
+.st-more { margin-top: 10px; }
+.st-more[open] > summary { margin-bottom: 8px; }
+
+/* Social accounts */
+.st-platform {
+  flex: 0 0 auto; min-width: 5.5em; padding: 2px 8px; font-size: 12px; font-weight: 650; text-align: center; white-space: nowrap;
+  border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface-input);
+}
+.st-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.st-foot { margin-top: 10px; }
+.st-empty { display: grid; justify-items: start; gap: 8px; padding: 6px 0; }
+.st-registered { display: grid; gap: 8px; margin-bottom: 10px; }
+
+/* Members, agent, advanced */
+.st-agent { display: grid; gap: 6px; margin-bottom: 10px; }
+.st-links > li { padding: 6px 0; }
+
+/* Dialog and forms */
+.st-dialog {
+  width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); padding: 0; overflow: auto; color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--vs-surface); box-shadow: var(--shadow-glass);
+}
+.st-dialog::backdrop { background: var(--vs-backdrop); }
+.st-dialog-head {
+  position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--line); background: var(--vs-surface);
+}
+.st-dialog-head h2 { font-size: 17px; }
+.st-dialog-body { padding: 16px; }
+.vs-form .st-radios { gap: 6px; }
+.st-radios legend { margin-bottom: 6px; padding: 0; color: var(--muted); font-size: 13px; }
+.st-radio {
+  display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 6px 10px; color: var(--ink); cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-input);
+}
+.st-radio:has(input:checked) { border-color: var(--focus-ring); background: var(--soft); }
+.view-shell .st-form input:is([type=checkbox], [type=radio]) { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; padding: 0; }
+.st-check-field { display: flex; align-items: flex-start; gap: 10px; color: var(--ink); font-size: 14px; cursor: pointer; }
+.st-check-field input { margin-top: 3px !important; }
+.st-check-field > span { display: grid; gap: 4px; min-width: 0; }
+.st-owned { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-inset); }
+.st-owned:has(input:checked) { border-color: color-mix(in srgb, var(--tone-good) 60%, transparent); }
+.st-field small { font-size: 12px; }
+.st-required { margin-inline-start: 3px; color: var(--tone-serious); text-decoration: none; }
+.st-problem { display: grid; gap: 8px; margin-top: 10px; }
+.st-problem .problem { margin: 0; }
+
+@media (width < 900px) {
+  .st-summary ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (width < 420px) {
+  .st-summary ul { grid-template-columns: minmax(0, 1fr); }
+  .st-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .st-dialog-body { padding: 12px; }
+}
+@media (forced-colors: active) {
+  .st-check a, .st-platform, .st-radio { border: 1px solid CanvasText; }
+}

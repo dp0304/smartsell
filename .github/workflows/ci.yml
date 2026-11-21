@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install workspace dependencies
+        id: install
+        run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm verify
+      - name: Validate Compose and pull the pinned PostgreSQL image
+        id: postgres
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          export POSTGRES_PASSWORD="$(openssl rand -hex 32)"
+          export SMARTSELL_MIGRATION_PASSWORD="$(openssl rand -hex 32)"
+          export SMARTSELL_RUNTIME_PASSWORD="$(openssl rand -hex 32)"
+          export SMARTSELL_BACKGROUND_PASSWORD="$(openssl rand -hex 32)"
+          docker compose -f infra/compose.yaml --profile server config --quiet
+          docker compose -f infra/compose.yaml pull postgres
+      - name: Run local PostgreSQL and curl smoke
+        if: ${{ !cancelled() && steps.postgres.outcome == 'success' }}
+        run: bash infra/smoke.sh
+      - name: Verify domain migrations and PostgreSQL workflows
+        if: ${{ !cancelled() && steps.postgres.outcome == 'success' }}
+        run: |
+          export POSTGRES_PASSWORD="$(openssl rand -hex 32)"
+          export SMARTSELL_MIGRATION_PASSWORD="$(openssl rand -hex 32)"
+          export SMARTSELL_RUNTIME_PASSWORD="$(openssl rand -hex 32)"
+          SMARTSELL_TEST_PG_IMAGE="$(docker compose -f infra/compose.yaml --profile server config --images | grep '^postgres:')" bash tests/acceptance/domain-postgres.sh

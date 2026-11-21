@@ -1,0 +1,34 @@
+{
+  "name": "@smartsell/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/command-main.ts",
+    "start": "node --import tsx src/command-main.ts",
+    "dev:commands": "pnpm dev",
+    "dev:kernel": "tsx watch src/kernel-main.ts",
+    "start:kernel": "tsx src/kernel-main.ts",
+    "identity:configure": "tsx src/integration/configure-enterprise.ts",
+    "test": "tsx --test src/core.test.ts src/postgres.test.ts test/kernel.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@node-rs/argon2": "^2.0.2",
+    "@smartsell/contracts": "workspace:*",
+    "@smartsell/db": "workspace:*",
+    "@smartsell/media-store": "workspace:*",
+    "fastify": "^5.8.5",
+    "pg": "^8.23.1",
+    "saxes": "^6.0.0",
+    "tsx": "^4.20.0",
+    "yauzl": "^3.4.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
+    "yazl": "^3.3.1"
+  }
+}

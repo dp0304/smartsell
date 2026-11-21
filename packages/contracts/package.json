@@ -1,0 +1,13 @@
+{
+  "name": "@smartsell/contracts",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./module": "./src/module.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}

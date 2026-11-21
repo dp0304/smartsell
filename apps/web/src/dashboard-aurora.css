@@ -1,0 +1,113 @@
+.dashboard-aurora {
+  container: dashboard-aurora / inline-size;
+  display: grid;
+  gap: 16px;
+  margin-block-end: 24px;
+}
+
+.dashboard-hero {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-hero p {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-hero span {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.dashboard-aurora > .dashboard-tabs {
+  margin: 0;
+}
+
+.dashboard-tabs a {
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.dashboard-tabs a:hover {
+  background: var(--surface-hover);
+}
+
+.dashboard-tabs a.selected {
+  border-bottom-color: var(--accent);
+  background: var(--soft);
+  color: var(--accent);
+}
+
+.dashboard-aurora > .dashboard-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.dashboard-aurora .dashboard-stat {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast);
+}
+
+.dashboard-aurora .dashboard-stat > svg {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+}
+
+.dashboard-aurora .dashboard-stat:nth-child(2) > svg {
+  background: var(--soft-purple);
+  color: var(--accent-purple);
+}
+
+.dashboard-aurora .dashboard-stat > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-aurora .dashboard-stat strong {
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.dashboard-aurora .dashboard-stat strong.stat-text {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.dashboard-aurora .dashboard-stat:hover {
+  background: var(--surface-hover);
+}
+
+@container dashboard-aurora (width < 840px) {
+  .dashboard-aurora .dashboard-stat {
+    flex-direction: column;
+  }
+}
+
+@container dashboard-aurora (width < 600px) {
+  .dashboard-aurora > .dashboard-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-aurora .dashboard-stat {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-aurora .dashboard-stat { transition: none; }
+}

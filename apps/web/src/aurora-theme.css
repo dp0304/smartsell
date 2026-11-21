@@ -1,0 +1,86 @@
+@font-face {
+  font-family: Inter;
+  src: url('/fonts/InterVariable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --ink: #0f172a;
+  --muted: #475569;
+  --placeholder: #57667b;
+  --line: #e2e8f0;
+  --line-control: #8291a6;
+  --accent: #005fc2;
+  --accent-hover: #004d9e;
+  --on-accent: #fff;
+  --soft: #eaf4ff;
+  --accent-purple: #6d28d9;
+  --chart-blue: #0080ff;
+  --chart-purple: #8b00ff;
+  --soft-purple: color-mix(in srgb, var(--chart-purple) 8%, var(--surface));
+  --canvas: #f8fafc;
+  --surface: #fff;
+  --side: var(--surface);
+  --surface-input: var(--surface);
+  --surface-inset: var(--canvas);
+  --surface-hover: #f1f5f9;
+  --surface-raised: var(--surface);
+  --status-good: #166534;
+  --status-good-bg: color-mix(in srgb, #22c55e 8%, var(--surface));
+  --status-warning: #854d0e;
+  --status-warning-bg: #fffbeb;
+  --status-critical: #b42335;
+  --status-critical-bg: #fff1f2;
+  --scrim: rgb(15 23 42 / .46);
+
+  --font-sans: Inter, 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', system-ui, sans-serif;
+  --font-size-body: 14px;
+  --font-size-title: 32px;
+  --font-size-display: 48px;
+  --radius-card: 16px;
+  --radius-input: 12px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / .06);
+  --shadow-raised: 0 12px 32px rgb(15 23 42 / .12);
+  --focus-ring: var(--accent);
+  --content-max: 1200px;
+  --content-gutter: 24px;
+  --motion-fast: 180ms ease-out;
+  --gradient-brand: linear-gradient(145deg, var(--accent), var(--accent-purple));
+}
+
+.auth-links { display: grid; justify-items: start; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-weight: 650; }
+.auth-links a:hover { text-decoration: underline; }
+.auth-password small { display: block; margin-block-start: 4px; color: var(--muted); }
+:is(.auth-card, .wb-auth-card) .auth-notice > button { margin-top: 8px; }
+.wb-auth-card :is(.problem, .notice) { margin: 0 0 16px; padding: 8px 12px; border-inline-start: 3px solid currentColor; border-radius: var(--radius-control); }
+.wb-auth-card .problem { color: var(--status-critical); background: var(--status-critical-bg); }
+.wb-auth-card .notice { color: var(--status-warning); background: var(--status-warning-bg); }
+
+:is(button, .button):is(.primary, .wb-primary) {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--on-accent);
+  font-weight: 650;
+  background: var(--accent);
+  transition: background-color var(--motion-fast), border-color var(--motion-fast);
+}
+
+:is(button, .button):is(.primary, .wb-primary):where(:enabled, a[href]):where(:not([aria-disabled=true])):is(:hover, :active) {
+  background: var(--accent-hover);
+}
+
+:is(button, .button):is(.primary, .wb-primary):is(:disabled, [aria-disabled=true]) {
+  color: var(--muted);
+  background: var(--surface-hover);
+  border-color: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(button, .button):is(.primary, .wb-primary) { transition: none; }
+}

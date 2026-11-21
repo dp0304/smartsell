@@ -1,0 +1,783 @@
+{
+  "requirements": {
+    "WS01": {
+      "status": "partial",
+      "gap": "各受支援桌面瀏覽器於 1280px 驗全部頁面水平捲動及品牌切換器實際清單。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/workspace/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "UI 語系改 en 後市場語言仍為 ja-JP。",
+          "case": "brand and market maintain references and UI locale stays independent of content language"
+        },
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "相容工作台首次設定、全新瀏覽器登入及中英切換通過。",
+          "case": "strict UI | compatibility setup, fresh-browser sign-in and both languages"
+        },
+        {
+          "file": "tests/web-e2e/primary.spec.mjs",
+          "case": "primary root supports first-time setup and fresh-session sign-in in both languages",
+          "surface": "UI",
+          "result": "fail",
+          "assertion": "首次設定 POST /api/v1/setup 回 422，後續 UI 流程未跑完。"
+        },
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "case": "strict UI | default setup, catalog-backed write and reciprocal workspace links",
+          "surface": "UI",
+          "result": "fail",
+          "assertion": "首次設定 POST /api/v1/setup 回 422，後續 UI 流程未跑完。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "REST 與 MCP 用同一品牌授權，即時反映切換。異品牌 REST 404、MCP 資源拒絕。英文化後日本市場和內容語言保持。",
+          "case": "WS01 WS03 AI03 share the same live brand scope for REST search and MCP resources",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "切換品牌後清單只顯示該品牌資料",
+            "以他品牌 ID 呼叫 API／MCP 回 404",
+            "介面切換為 `en` 後任何內容變體與市場語言不變"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "品牌滿額 402，保留既有品牌，封存後可新增。",
+          "case": "WS01 OP10 retains existing brands and frees capacity after archiving",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "（P1）品牌數達 `brands` 額度時新增品牌回 `402 LICENSE_LIMIT`，既有品牌照常可用，封存一個品牌後可再新增"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "WS01 OP10 retains existing brands and frees capacity after archiving",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "額度用盡時新增與恢復皆回 402 LICENSE_LIMIT。封存既有品牌後歷史仍可讀，釋出額度後以同 ID 恢復。再封存與恢復的用量依次為 0、1。"
+        }
+      ],
+      "completeConditions": [
+        "介面切換為 `en` 後任何內容變體與市場語言不變",
+        "（P1）品牌數達 `brands` 額度時新增品牌回 `402 LICENSE_LIMIT`，既有品牌照常可用，封存一個品牌後可再新增"
+      ]
+    },
+    "WS02": {
+      "status": "partial",
+      "gap": "仍需用顧客平台重跑同步週期，並用瀏覽器驗證提供者降級、條款通知與實際重確認。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/workspace/workbench.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "來源故障顯示 unavailable 且總數 null。",
+          "case": "overview keeps healthy providers available when another provider fails"
+        },
+        {
+          "file": "apps/server/src/modules/workspace/workbench.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "重疊停止合併一列並列來源。",
+          "case": "overview combines overlapping emergency stops and keeps independent provider totals"
+        },
+        {
+          "file": "apps/server/src/modules/workspace/workbench.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "注入重複條款事件只建立一筆管理待辦，重開後結案。",
+          "case": "terms expiry creates one administrative task and re-enablement resolves it",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "（P0b，D15）發布新條款版本後未重新確認的自動模式帳號以「條款過期待重新確認」出現在總覽（無阻塞），工作區管理員收到要求確認新條款的通知與一筆待辦（不出現「處理阻塞」字樣），重複的 `auto_stopped` 事件不產生第二筆待辦"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "較早 Chromium 診斷輪次在 1280×800 渲染工作區不可用通知。後續重跑失敗，見門禁。",
+          "case": "diagnostic | operator shell fits 1280 × 800 and renders an unavailable workspace notice"
+        },
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "1280 × 800 shell 無橫向溢出並呈現不可用提示。",
+          "case": "diagnostic | operator shell fits 1280 × 800 and renders an unavailable workspace notice"
+        },
+        {
+          "file": "apps/server/src/modules/workspace/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "提供者失敗保留 null。重疊停止合為一項並列來源，釋放 Workspace 後保留 Ops。",
+          "case": "today aggregates live sources and keeps unavailable provider totals unknown",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "提供者故障時顯示「暫不可用」而非空白",
+            "帳號自動模式被自動停止或任一層緊急停止生效時出現在總覽，同一工作區的 OP 停止與工作區停止只顯示一項並標示來源，自動停止項目在對應阻塞解決前不消失（P0b）"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/primary.spec.mjs",
+          "case": "WS02 Today reflects the workspace emergency stop until released",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "正式 Today 顯示工作區急停與來源，解除後重載消失。",
+          "conditions": [
+            "帳號自動模式被自動停止或任一層緊急停止生效時出現在總覽，同一工作區的 OP 停止與工作區停止只顯示一項並標示來源，自動停止項目在對應阻塞解決前不消失（P0b）"
+          ],
+          "report": "docs/acceptance/workspace-results.md"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "surface": "REST",
+          "case": "WS02 overview shows expired credentials and retains an unresolved account block",
+          "assertion": "本機正式今日總覽首次查詢即顯示超過 expires_at 的授權。更新有效期移除授權問題，獨立的 captcha 阻塞保留至解決。",
+          "result": "pass"
+        }
+      ],
+      "completeConditions": []
+    },
+    "WS06": {
+      "status": "partial",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/workspace/workbench.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "配對有錯誤 App 身分時回 blocked 及原因。",
+          "case": "onboarding persists shared progress and blocks a mismatched mobile identity",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "（P0b）連接器在線但綁定手機的 App 內登入身分不符時，`connector_pairing` 顯示 `blocked` 與原因，完成配對不會開啟任何帳號的自動模式"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/workspace/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "完成現行配對流程仍為 assist，未開啟自動。",
+          "case": "connector onboarding requires verified phone identity and leaves automation mode untouched",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "（P0b）連接器在線但綁定手機的 App 內登入身分不符時，`connector_pairing` 顯示 `blocked` 與原因，完成配對不會開啟任何帳號的自動模式"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/primary.spec.mjs",
+          "case": "WS06 another administrator resumes setup and Today shows the skipped history impact",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "另一管理員續做同一步，略過同步後 Today 顯示影響。",
+          "conditions": [
+            "中途離開後另一位管理員可從同一步驟續做",
+            "略過步驟在總覽顯示影響"
+          ],
+          "report": "docs/acceptance/workspace-results.md"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "WS06 a second administrator resumes shared setup and the overview reports the skipped step",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "第二位管理員從正式 API 讀到同一步驟的略過理由與影響，總覽亦回傳影響，再完成品牌步驟，原管理員可見結果。"
+        }
+      ],
+      "completeConditions": [
+        "中途離開後另一位管理員可從同一步驟續做",
+        "略過步驟在總覽顯示影響",
+        "（P0b）連接器在線但綁定手機的 App 內登入身分不符時，`connector_pairing` 顯示 `blocked` 與原因，完成配對不會開啟任何帳號的自動模式"
+      ],
+      "gap": "在同一瀏覽器回歸重跑雙管理員續做及略過影響。"
+    },
+    "AI02": {
+      "status": "partial",
+      "gap": "MCP 無狀態 JSON 已驗後續請求撤銷，支援持久 MCP 串流的宿主仍需驗證已開串流。",
+      "checks": [
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "A06 PAT 工具按讀寫分流，拒絕異租戶作業，撤銷後下一請求回 401。",
+          "case": "A06 MCP HTTP honors PAT permissions, tenant boundaries and revocation"
+        },
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "A08 預設 Command 入口已回 bearer 401。",
+          "case": "A08 default Command entry mounts MCP as a bearer-protected endpoint"
+        },
+        {
+          "file": "tests/integration-contract/dual-runtime.test.ts",
+          "case": "the preserved Operation kernel uses real sessions and scoped MCP bearer tokens",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "獨立 Operation 核心只允許 PAT 核准的搜尋工具，拒絕跨工作區並立即撤銷。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "全寫 MCP token 可用 Agent 作業，但 discovery 和 call 均排除開啟／放寬自動模式、修改綁定、開啟手機或解除停止。撤銷後下次請求立即 401。",
+          "case": "AI02 keeps connector automatic-mode privileges out of full-access MCP discovery",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "無權限的工具不出現在清單",
+            "Agent 經 MCP 無法開啟或放寬任何帳號的自動模式（含手機自動操作）"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "AI02 an already-open workspace SSE connection closes after its PAT is revoked",
+          "surface": "REST SSE",
+          "result": "pass",
+          "assertion": "以正式 PAT 開啟工作區 SSE，撤銷後 10 秒測試時限內既有連線收到 EOF，重連得到 401。MCP 為無狀態 JSON 傳輸。"
+        }
+      ],
+      "completeConditions": [
+        "無權限的工具不出現在清單",
+        "Agent 經 MCP 無法開啟或放寬任何帳號的自動模式（含手機自動操作）"
+      ]
+    },
+    "AI04": {
+      "status": "partial",
+      "gap": "本機已驗並行、隔離與租約過期。真實外部副作用仍需透過正式平台憑據取得回執再核實。",
+      "checks": [
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "A06 寫入憑證能申領本租戶工作，讀取憑證能讀回該工作。",
+          "case": "A06 MCP HTTP honors PAT permissions, tenant boundaries and revocation"
+        },
+        {
+          "file": "apps/server/src/modules/agent/agent-workflows.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "只有第一個 Agent 有有效租約，租約過期先核實而不自動改派。",
+          "case": "one claimant wins, leases are credential-bound and expired jobs require reconciliation",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "兩個 Agent 同時 claim 僅一個成功",
+            "租約逾時後不自動改派"
+          ]
+        },
+        {
+          "file": "apps/server/src/extensions/mcp-streamable.test.ts",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "實際工作指令檢查租約憑證與版本。",
+          "case": "binds the real job command lease to the verified credential and enforces its version"
+        },
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "正式 MCP 交接保留原操作者、待核實效果和收據；禁止再領，成功核實才使原任務重開。",
+          "case": "AI04 holds an Agent handoff until a reviewer reconciles pending effects",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": []
+        },
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "surface": "REST / MCP",
+          "case": "AI04 concurrent MCP claims yield one lease and require review after it expires",
+          "assertion": "兩個正式 PAT 並行領取同一版本僅一個成功。另一 PAT 不能續租。以本機時鐘推過兩分鐘後，原 PAT 也無法續租，其他 PAT 不能直接重新領取，REST 歷程只有一筆成功領取。",
+          "result": "pass"
+        }
+      ],
+      "completeConditions": [
+        "兩個 Agent 同時 claim 僅一個成功",
+        "租約逾時後不自動改派"
+      ]
+    },
+    "AI05": {
+      "status": "partial",
+      "gap": "其餘模組長任務的 operation_id／202 合約、進度通知及支援 Tasks 的宿主仍待驗。",
+      "checks": [
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "REST 建立取得 operation_id。重啟後同鍵回原 ID，MCP 取回原作業及版本。以原租約確認取消，重放維持一筆作業，建立及取消事件各一次。",
+          "case": "AI05 resumes the original operation after a server restart and confirms cancellation with the existing lease",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "斷線重連後以 `operation_id` 查到原任務，不重建"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "同目的工作區以 MCP 按 operation_id 查得成功的非 Agent 範本套用作業。",
+          "case": "TE06 applies a structural template across workspaces without transferring fixture records",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "斷線重連後以 `operation_id` 查到原任務，不重建"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "case": "AI05 resumes the original operation after a server restart and confirms cancellation with the existing lease",
+          "surface": "REST / MCP",
+          "result": "pass",
+          "assertion": "REST 建立與同鍵重放皆為 202，使用正式 PAT 在重啟前後初始化 MCP 並查得同 ID、版本和狀態。取消由原租約確認，REST／MCP 回同一結果，只有一筆作業及各一筆建立和取消事件。"
+        }
+      ],
+      "completeConditions": [
+        "斷線重連後以 `operation_id` 查到原任務，不重建"
+      ]
+    },
+    "OP01": {
+      "status": "partial",
+      "gap": "跨容器 worker 心跳、ROLE=all 完整發布與物理還原，以及商家平台前置檢查和實際 403 仍待驗。",
+      "blockers": [
+        "商家許可",
+        "外部環境"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/ops/ops-operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "模擬時鐘使 worker 30 秒後離線，健康讀模型含匯入與輪詢備援。",
+          "case": "deployment distinguishes stale roles, callback polling, and IP-denied file import",
+          "conditions": [
+            "停掉 worker 後健康頁 30 秒內顯示該角色離線",
+            "店鋪平台部署前置檢查（5.19.11 (10)）可在 `/admin/health` 顯示",
+            "私有部署未提供固定出口 IP 時 Shopify 檢查標示未通過且店鋪維持檔案匯入"
+          ]
+        },
+        {
+          "file": "infra/smoke.sh",
+          "surface": "部署",
+          "result": "pass",
+          "assertion": "PostgreSQL 17 遷移和執行角色檢查通過。",
+          "shellAssertion": "AND NOT has_schema_privilege('ss_migrations', 'USAGE')"
+        },
+        {
+          "file": "infra/smoke.sh",
+          "surface": "部署",
+          "result": "pass",
+          "assertion": "ROLE=all 本地冒煙驗證登入、Web catalog、權限指令、冪等重放和登出。",
+          "shellAssertion": "deepStrictEqual(first, replay);",
+          "conditions": [
+            "ROLE=all 單容器可走完主鏈"
+          ]
+        },
+        {
+          "file": "tests/integration-contract/dual-runtime.test.ts",
+          "case": "Commands and Operations use the same session and persist across local store restarts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "兩套入口共用會話，重啟後冪等重放同一商品且登出後兩套入口均回 401。"
+        },
+        {
+          "file": "tests/integration-contract/dual-runtime.test.ts",
+          "case": "Commands and Operations use the same PostgreSQL workspace and session",
+          "surface": "資料庫",
+          "result": "pass",
+          "assertion": "PostgreSQL 17 共用工作區與會話，關閉重開後仍能冪等重放同一商品。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP01 OP08 deployment health distinguishes callback fallback from an IP-denied provider",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "使用本機 provider 觀測，正式管理健康 API 在私有模式區分缺固定出口 IP／IP 被拒的檔案匯入、缺回呼前置條件或不可達的輪詢，並可查 IP 拒絕告警。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP01 OP08 deployment health distinguishes callback fallback from an IP-denied provider",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "使用本機 provider 觀測，正式管理健康 API 在私有模式區分缺固定出口 IP／IP 被拒的檔案匯入、缺回呼前置條件或不可達的輪詢，並可查 IP 拒絕告警。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP01 a running worker reports its role and ages offline when heartbeats stop",
+          "surface": "REST / 宿主",
+          "result": "pass",
+          "assertion": "兩個本機 Operation 宿主實例共享隔離儲存。worker 每 15 秒寫入心跳，關閉 worker 並推進時鐘後，健康 API 在 29.999 秒仍在線、30 秒離線，API 角色維持在線。"
+        }
+      ],
+      "completeConditions": []
+    },
+    "OP02": {
+      "status": "partial",
+      "gap": "成員移除與 SCIM 停用 API 已驗。私有部署 SSO 設定入口的實際 UI，以及平台／裝置已派送任務重驗待驗。",
+      "checks": [
+        {
+          "file": "tests/identity/identity.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "SCIM 停用清除樣本 PAT/OAuth 並阻止新 OIDC 登入。",
+          "case": "signed OIDC code flow checks PKCE, browser, state, tenant, nonce, expiry, signature and active SCIM membership",
+          "conditions": [
+            "停用使用者後其 MCP 權杖立即失效"
+          ]
+        },
+        {
+          "file": "tests/identity/identity.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "私有 Fastify 不提供 OIDC 和 SCIM 路由。",
+          "case": "private Fastify exposes TOTP management and core session handoff only",
+          "conditions": [
+            "私有部署不出現 SSO 設定入口"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "WS01 OP10 retains existing brands and frees capacity after archiving",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "以該成員既有 PAT 領取 Agent 工作。正式移除流程撤銷 PAT，下一次 MCP 呼叫即為 401，領取中的工作轉為 lease_expired，普通工作可照原交接流程轉移。"
+        },
+        {
+          "file": "tests/identity/http.test.ts",
+          "case": "SaaS signed OIDC and SCIM over HTTP issue and revoke actual core sessions, PATs and OAuth grants",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "本機正式 SaaS API 以簽署的 OIDC 回應登入，SCIM 停用後原 session、PAT 和 OAuth grant 失效。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "WS01 OP10 retains existing brands and frees capacity after archiving",
+          "surface": "REST / MCP",
+          "result": "pass",
+          "assertion": "以該成員既有 PAT 領取 Agent 工作。正式移除流程撤銷 PAT，下一次 MCP 呼叫即為 401，領取中的工作轉為 lease_expired，普通工作可照原交接流程轉移。"
+        },
+        {
+          "file": "tests/identity/http.test.ts",
+          "case": "SaaS signed OIDC and SCIM over HTTP issue and revoke actual core sessions, PATs and OAuth grants",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "本機正式 SaaS API 以簽署的 OIDC 回應登入，SCIM 停用後原 session、PAT 和 OAuth grant 失效。"
+        },
+        {
+          "file": "tests/identity/http.test.ts",
+          "case": "production PostgreSQL TOTP and session invalidation are shared across independent API processes",
+          "surface": "API / PostgreSQL",
+          "result": "pass",
+          "assertion": "一次性 PostgreSQL 17 上兩個獨立正式 API 程序共享 TOTP 生命週期、一次性驗證與 session 撤銷。"
+        }
+      ],
+      "completeConditions": []
+    },
+    "OP04": {
+      "status": "partial",
+      "gap": "仍需已派送真機與瀏覽器在 5 秒內同步停止，以及解除後的真機行為。",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/ops/ops-command.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "OP 恢復後仍保留自主工作區停止與原 auto 模式。",
+          "case": "connector stops are layered and safe mode affects only side-effect worker flags",
+          "conditions": [
+            "解除後帳號綁定的 `connector_mode` 未被改寫、回到原設定，工作區管理員在 AC 自行設定的停止仍保留"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/workflow.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "暫停期間人工任務不能開始，解除後可開始。",
+          "case": "manual execution respects pause, due time, assignee, fencing and recorded evidence",
+          "conditions": [
+            "暫停 `publish` 佇列後新到期目標不執行，恢復後依遲到策略處理"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "publish queue pause preserves a due task and applies the late policy when resumed",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "暫停 publish 佇列保留到期任務且無嘗試，解除後依 skip 遲到策略到期失效，提交次數為零。"
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "publish queue pause preserves a due task and applies the late policy when resumed",
+          "surface": "執行器",
+          "result": "pass",
+          "assertion": "暫停 publish 佇列保留到期任務且無嘗試，解除後依 skip 遲到策略到期失效，提交次數為零。"
+        }
+      ],
+      "completeConditions": [
+        "解除後帳號綁定的 `connector_mode` 未被改寫、回到原設定，工作區管理員在 AC 自行設定的停止仍保留"
+      ]
+    },
+    "OP05": {
+      "status": "partial",
+      "gap": "排程引用與覆寫在正式 API、本機儲存 fixture 已驗，Amazon 使用本機資料驗證每日工作。仍需正式物件儲存及客戶資料接入環境驗證。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/ops/ops-operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "清除預覽列 scheduled_target 阻塞，批准後重查法務保留。",
+          "case": "retention applies source TTL and rechecks legal holds and schedule references before purge",
+          "conditions": [
+            "被排程引用的素材無法被清除，預覽列出阻擋原因"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/ops/ops-command.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "Amazon 保留期以送達為起點，工作區可縮不可放寬。",
+          "case": "retention defaults, legal holds, and Amazon shortening are preserved",
+          "conditions": [
+            "`amazon_sp` 資料混入 `postalCode` 等個資欄位時，DS 每日任務刪除並寫審計，最遲不超過訂單送達後 30 天，工作區無法放寬"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/ingest/amazon-privacy.test.ts",
+          "case": "real scheduler and worker scrub all scoped legacy surfaces immediately and audit the delivery or receipt deadline once",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "正式每日任務清理三個資料面、寫一次審計並保留期限。",
+          "conditions": [
+            "`amazon_sp` 資料混入 `postalCode` 等個資欄位時，DS 每日任務刪除並寫審計，最遲不超過訂單送達後 30 天，工作區無法放寬"
+          ],
+          "report": "docs/acceptance/ingest-quality-results.md"
+        },
+        {
+          "file": "apps/server/src/modules/ingest/amazon-privacy.test.ts",
+          "case": "effective Amazon retention never exceeds 30 days or a subsequently shortened tenant policy",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "資料送達時計算最長 30 天。縮短後工作區不能放寬。",
+          "conditions": [
+            "`amazon_sp` 資料混入 `postalCode` 等個資欄位時，DS 每日任務刪除並寫審計，最遲不超過訂單送達後 30 天，工作區無法放寬"
+          ],
+          "report": "docs/acceptance/ingest-quality-results.md"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP05 retention previews recalculate policy and protect a scheduled asset",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "正式清除預覽依 30／0 天覆寫重新計算，批准前重查政策，排程引用素材在本機儲存 fixture 內始終保留。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP05 retention previews recalculate policy and protect a scheduled asset",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "正式清除預覽依 30／0 天覆寫重新計算，批准前重查政策，排程引用素材在本機儲存 fixture 內始終保留。"
+        },
+        {
+          "file": "apps/server/src/modules/ingest/amazon-privacy.test.ts",
+          "case": "real scheduler and worker scrub all scoped legacy surfaces immediately and audit the delivery or receipt deadline once",
+          "surface": "本機排程器 / Worker",
+          "result": "pass",
+          "assertion": "本機排程器和 worker 使用隔離記錄清除歷史 Amazon postalCode 等欄位，檢查送達／接收期限且重跑不重複審計。"
+        }
+      ],
+      "completeConditions": [
+        "`amazon_sp` 資料混入 `postalCode` 等個資欄位時，DS 每日任務刪除並寫審計，最遲不超過訂單送達後 30 天，工作區無法放寬"
+      ]
+    },
+    "OP07": {
+      "status": "partial",
+      "gap": "部署的實體快照、物件儲存與設定還原，已上線作品的平台讀回，及還原後重啟的零提交紀錄待驗。",
+      "blockers": [
+        "真實帳戶",
+        "外部環境"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/ops/ops-operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "模擬還原進安全模式，有既有回執標 adopt_external，不確定結果禁止重排。",
+          "case": "restore commits safe mode, adopts a confirmed published post, and refuses unknown replay",
+          "conditions": [
+            "還原到 1 小時前的備份後，已在平台上線的貼文被識別為 `adopt_external`，不重發"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP07 gates recurring publication through restore and expands the occurrence only once after resume",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "使用本機恢復服務 fixture 經正式路由進入安全模式，拒絕提前恢復及僅有工作區 admin 的操作。實際排程掃描與手動展開均不建立目標，fixture 回執被標記 adopt_external，恢復後排程及手動重放維持同一目標 ID。"
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "restore starting during publication preparation fences the claim before submission",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "在準備期間開始恢復，提交前重新檢查，放棄原嘗試並解除寫入租約，提交次數為零。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP07 gates recurring publication through restore and expands the occurrence only once after resume",
+          "surface": "REST / 排程器",
+          "result": "pass",
+          "assertion": "使用本機恢復服務 fixture 經正式路由進入安全模式，拒絕提前恢復及僅有工作區 admin 的操作。實際排程掃描與手動展開均不建立目標，fixture 回執被標記 adopt_external，恢復後排程及手動重放維持同一目標 ID。"
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "restore starting during publication preparation fences the claim before submission",
+          "surface": "執行器",
+          "result": "pass",
+          "assertion": "在準備期間開始恢復，提交前重新檢查，放棄原嘗試並解除寫入租約，提交次數為零。"
+        }
+      ],
+      "completeConditions": []
+    },
+    "OP08": {
+      "status": "partial",
+      "gap": "客戶接收端自動暫停和逐項 SQS／EventBridge、OV／EV 憑證、真實回呼及 IP 拒絕觀測仍待驗。",
+      "blockers": [
+        "商家許可",
+        "外部環境"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/ops/ops-operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "接收 fixture 驗 HMAC 和事件鍵，一次失敗後重試，成功重放無新增送出。",
+          "case": "webhooks sign exact payloads, delay retries, and deduplicate successful delivery",
+          "conditions": [
+            "出站 Webhook 簽章可被接收方驗證",
+            "同事件重送不產生重複處理"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP01 OP08 deployment health distinguishes callback fallback from an IP-denied provider",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "使用本機 provider 觀測，正式管理健康 API 在私有模式區分缺固定出口 IP／IP 被拒的檔案匯入、缺回呼前置條件或不可達的輪詢，並可查 IP 拒絕告警。"
+        },
+        {
+          "file": "apps/server/src/integration/signed-webhook.test.ts",
+          "case": "a real loopback receiver verifies exact-byte signatures and deduplicates stable delivery keys",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "本機接收端對原始位元組驗 HMAC。兩次 HTTP 請求帶同一去重鍵，接收端只保存一張收據。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP01 OP08 deployment health distinguishes callback fallback from an IP-denied provider",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "使用本機 provider 觀測，正式管理健康 API 在私有模式區分缺固定出口 IP／IP 被拒的檔案匯入、缺回呼前置條件或不可達的輪詢，並可查 IP 拒絕告警。"
+        },
+        {
+          "file": "apps/server/src/integration/signed-webhook.test.ts",
+          "case": "a real loopback receiver verifies exact-byte signatures and deduplicates stable delivery keys",
+          "surface": "本機 HTTP",
+          "result": "pass",
+          "assertion": "本機接收端對原始位元組驗 HMAC。兩次 HTTP 請求帶同一去重鍵，接收端只保存一張收據。"
+        }
+      ],
+      "completeConditions": [
+        "出站 Webhook 簽章可被接收方驗證"
+      ]
+    },
+    "OP09": {
+      "status": "partial",
+      "gap": "真實連接器與手機版本阻擋、更新提示和告警送達，以及平台發布主體的正式寫入仍待驗。",
+      "blockers": [
+        "真機",
+        "外部環境"
+      ],
+      "checks": [
+        {
+          "file": "apps/connector/test/workflow.test.ts",
+          "surface": "適配器",
+          "result": "pass",
+          "assertion": "不支援的主機或手機組合在提交前阻擋。",
+          "case": "D20/D21 rejects unowned and unsupported machines before requesting a permit",
+          "conditions": [
+            "舊版連接器被標 `blocked` 後不再收到任務並看到更新提示",
+            "手機系統、驅動或目標 App 版本被標 `blocked` 或不符 `device_requirements` 後該手機不再收到任務，工作區管理員收到 `device_compat_blocked`"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP09 SaaS tenant owner and admin cannot publish component compatibility or auto terms",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "SaaS 模式下具租戶授權的 owner 與 admin 可讀列表，寫入相容版本或發布條款皆為 403。"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "OP09 SaaS tenant owner and admin cannot publish component compatibility or auto terms",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "SaaS 模式下具租戶授權的 owner 與 admin 可讀列表，寫入相容版本或發布條款皆為 403。"
+        }
+      ],
+      "completeConditions": []
+    },
+    "OP10": {
+      "status": "partial",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/ops/ops-operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "離線授權防篡改，席位 guard 超限後減量可恢復，過期允許核實和匯出類型。",
+          "case": "usage counts signed gauge deltas, UTC monthly sums, and verified seat quota"
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "席位達額邀請回 402，移除成員後能再邀請。",
+          "case": "WS01 OP10 retains existing brands and frees capacity after archiving",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "席位額度用盡時新增成員回 402，停用成員後釋放席位"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "寬限後進 read_only，新增品牌回 402；仍匯出審計並核實原發布嘗試，沒有新增嘗試。",
+          "case": "OP10 keeps export and original-attempt reconciliation available after the license grace period",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "授權到期進入唯讀後仍可匯出資料，進行中的發布仍完成核實"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-access.test.mjs",
+          "case": "WS01 OP10 retains existing brands and frees capacity after archiving",
+          "surface": "REST",
+          "result": "pass",
+          "assertion": "額度用盡時新增與恢復皆回 402 LICENSE_LIMIT。封存既有品牌後歷史仍可讀，釋出額度後以同 ID 恢復。再封存與恢復的用量依次為 0、1。"
+        }
+      ],
+      "completeConditions": [
+        "席位額度用盡時新增成員回 402，停用成員後釋放席位"
+      ],
+      "gap": "本機完成唯讀匯出與原嘗試缺席核實。另需以已上線回執核實原作品，保持零新提交。"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+.campaign-detail .entity-table th {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.campaign-detail .entity-table time {
+  white-space: nowrap;
+}
+
+.campaign-detail .entity-table {
+  min-width: max-content;
+}
+
+.campaign-detail .entity-table td {
+  max-width: 16rem;
+}

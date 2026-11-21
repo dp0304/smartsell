@@ -1,0 +1,28 @@
+export const messages = {
+  'zh-Hant': {
+    portal: '客戶門戶', language: '語言', desktop: '請使用桌面瀏覽器開啟此門戶（建議寬度至少 1280 像素）。',
+    loading: '載入中…', shared: '與您共享的項目', empty: '目前沒有共享項目。', signIn: '登入門戶',
+    search: '搜尋', searchShared: '搜尋共享項目標題', noMatches: '找不到符合的共享項目。',
+    session: '請先登入門戶。', unavailable: '無法存取此項目。分享可能已到期或被撤銷。', retry: '目前無法完成操作，請稍後再試。',
+    stale: '已有新版本。等待團隊重新分享期間，仍可查看原版本。', expires: '有效期限', back: '所有共享項目',
+    files: '可下載附件', feedback: '回饋', leaveFeedback: '留下回饋', send: '送出回饋', reply: '回覆',
+    review: '審閱', approve: '批准', changes: '要求修改', reason: '修改原因', submitted: '已記錄。',
+    invitation: '門戶邀請', accept: '接受邀請', submit: '送出創作者交付', submission: '交付說明',
+    confirm: '確認收到交付', confirmationReminder: '請確認是否已收到這項交付。',
+    delivery: '交付時間', produced_at: '產生', sent_at: '送達', confirmed_at: '確認',
+    content: '內容', report: '報告', asset_pack: '素材', campaign: '活動',
+  },
+  en: {
+    portal: 'Client portal', language: 'Language', desktop: 'Open this portal in a desktop browser at least 1280 pixels wide.',
+    loading: 'Loading…', shared: 'Shared with you', empty: 'Nothing has been shared with you yet.', signIn: 'Sign in to the portal',
+    search: 'Search', searchShared: 'Search shared titles', noMatches: 'No matching shared items.',
+    session: 'Sign in to open the portal.', unavailable: 'This item is unavailable. The share may have expired or been revoked.', retry: 'The request could not be completed. Try again.',
+    stale: 'A newer revision exists. You can view this revision while the team prepares a new share.', expires: 'Expires', back: 'All shared items',
+    files: 'Downloads', feedback: 'Feedback', leaveFeedback: 'Leave feedback', send: 'Post feedback', reply: 'Reply',
+    review: 'Review', approve: 'Approve', changes: 'Request changes', reason: 'Changes requested', submitted: 'Recorded.',
+    invitation: 'Portal invitation', accept: 'Accept invitation', submit: 'Submit creator delivery', submission: 'Delivery notes',
+    confirm: 'Acknowledge delivery', confirmationReminder: 'Please confirm that you received this delivery.',
+    delivery: 'Delivery timeline', produced_at: 'Produced', sent_at: 'Sent', confirmed_at: 'Confirmed',
+    content: 'Content', report: 'Report', asset_pack: 'Assets', campaign: 'Campaign',
+  },
+};

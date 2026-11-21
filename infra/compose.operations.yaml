@@ -1,0 +1,6 @@
+# Use with compose.yaml to deploy the workspace Operations API and MCP.
+services:
+  migrate:
+    command: [node, --import, tsx, ../../packages/db/src/migrate.ts]
+  server:
+    command: [node, --import, tsx, src/kernel-main.ts]

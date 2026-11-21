@@ -1,0 +1,653 @@
+{
+  "requirements": {
+    "AC04": {
+      "status": "partial",
+      "gap": "仍需驗證離線保留授權、審計查詢、每機每 App 綁定唯一性及真機安全閥。",
+      "blockers": [
+        "真機",
+        "真實帳戶",
+        "外部環境"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/account/commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "簽章心跳拒絕重放、撤銷租約拒 token。",
+          "case": "registers Commands and enforces scopes, licensing, revocation and single-use leases",
+          "conditions": [
+            "撤銷裝置後舊權杖立即失效"
+          ]
+        },
+        {
+          "file": "apps/connector/test/workflow.test.ts",
+          "surface": "適配器",
+          "result": "pass",
+          "assertion": "不支援或不屬客戶的裝置 fixture 在提交前被拒。",
+          "case": "D20/D21 rejects unowned and unsupported machines before requesting a permit",
+          "conditions": [
+            "模擬器或雲手機無法登錄",
+            "未經人員確認的手機與綁定不生效"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "未確認風險時拒絕開啟自動模式。工作區停止後即使解除，先前許可仍失效，原帳號模式不變。",
+          "case": "workspace auto stop and release preserve account settings but invalidate an outstanding permit",
+          "conditions": [
+            "未完成風險確認無法開啟自動模式"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "未完成風險確認無法開啟自動模式"
+      ]
+    },
+    "AC07": {
+      "status": "partial",
+      "gap": "補完整連接／帳號停用與獨立手機移除預覽、切換後 assist 的回讀、iPhone 實機及 P2 批次遷移演練。",
+      "blockers": [
+        "真機"
+      ],
+      "checks": [
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "排空中兩端均不能領取新工作。舊嘗試保留未知或待核實結果。新位置簽章復驗後僅領安全未提交工作，舊裝置不能就舊租約回寫，也無法憑新嘗試的 token 申請許可或回報。",
+          "case": "AC07 drains signed source claims, keeps unresolved attempts and verifies the new location before activation",
+          "report": "docs/acceptance/account-migration-results.md",
+          "conditions": [
+            "結果未知的任務不隨遷移重新派發",
+            "遷移完成前新任務不派到舊裝置或舊手機"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同一宿主換 Android 綁定仍要新簽章核身。舊 App 可解綁，宿主繼續可用。",
+          "case": "AC07 phone-to-phone cutover requires a new signed identity check even on the same host",
+          "report": "docs/acceptance/account-migration-results.md",
+          "conditions": [
+            "遷移完成前新任務不派到舊裝置或舊手機"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/account-migration.spec.mjs",
+          "case": "Account Recovery previews a migration and refuses completion without destination identity",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "預覽排空與未知結果，未完成目標新核身不可切換。",
+          "conditions": [],
+          "report": "docs/acceptance/account-migration-results.md"
+        },
+        {
+          "file": "tests/web-e2e/account-migration.spec.mjs",
+          "case": "Account Recovery previews and confirms mobile unbinding and device revocation",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "預覽並確認 App 解綁與設備撤銷，讀到撤銷狀態及實機撤除偵錯提示。",
+          "conditions": [],
+          "report": "docs/acceptance/account-migration-results.md"
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "case": "AC07 browser-to-phone cutover fences the old host and delivers safe work to the verified phone",
+          "assertion": "電腦轉 Android 的排空期間兩端均不能領取。新手機簽章核身後正常排程恢復，舊宿主即使取得新 token 也無法申請許可。",
+          "conditions": [
+            "遷移完成前新任務不派到舊裝置或舊手機"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "結果未知的任務不隨遷移重新派發",
+        "遷移完成前新任務不派到舊裝置或舊手機"
+      ]
+    },
+    "CO08": {
+      "status": "partial",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "case": "CO02 CO03 CO05 CO06 CO08 | content board, accessibility, translations and reuse",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "新草稿保留原內容與原修訂血緣。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "複用保留血緣"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/content/content.test.ts",
+          "case": "CO08 draft reuse rechecks rights and product references, and links first committed revision",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "複製建立新草稿，剔除撤權素材並重新釘選商品語系文字、核准事實版號與採集時間及最新刊登快照。首次提交保留原修訂血緣，未複審不得標記就緒。",
+          "conditions": [
+            "複用保留血緣"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/content/content.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "內容詳情保留既有發布，顯示經 EX 人工證據核實維護結果。",
+          "case": "content details retain older published posts, delegate maintenance, and show the verified result",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "外部修改以 EX 核實結果為準"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "複用保留血緣",
+        "外部修改以 EX 核實結果為準"
+      ],
+      "gap": "需真實帳戶確認各平台支援的發布後維護能力。"
+    },
+    "AS05": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/asset/asset.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "到期即 expired，缺付費用途回 usage_not_covered。",
+          "case": "exact-version rights enforce scope, human confirmation and the exclusive expiry boundary"
+        },
+        {
+          "file": "apps/server/src/modules/planning/planning.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "排期後權利到期，執行預檢阻擋。",
+          "case": "rights expire between the scheduled time and execution, and visibility changes need new approval"
+        },
+        {
+          "file": "apps/server/src/modules/asset/asset.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "已到期時新自然排期提交被拒，目標保持 draft 且沒有批准。",
+          "testId": "AS05-EXPIRED-ORGANIC",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "授權過期後新排期與新投放被阻擋（構思 11.3）"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/asset/asset.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "新付費提案提交被拒，無批准、無廣告操作。",
+          "testId": "AS05-EXPIRED-PAID",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "授權過期後新排期與新投放被阻擋（構思 11.3）"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "就緒及取得許可後撤權，消費仍回 403，新嘗試不建立，原凍結內容不變。",
+          "case": "rights revoked after connector readiness blocks consume and preserves the frozen revision"
+        }
+      ],
+      "completeConditions": [
+        "授權過期後新排期與新投放被阻擋（構思 11.3）"
+      ]
+    },
+    "PL05": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "修改或恢復正文產生新修訂，舊批准失效不得入列。",
+          "case": "A01 draft handoff rejects stale writes and a restored revision cannot reuse approval",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "修改正文後原批准失效"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/planning/publishing.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "領域入口對實際 fixture 目標拒 owner bearer 作出人工審批。",
+          "case": "treats an owner bearer credential as an agent and preserves the assigned portal reviewer flow",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "Agent 無法寫審批決定"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "case": "strict UI | owner self-review is denied and a different reviewer approves the target",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "本輪 Chromium owner 自審被拒，另一 reviewer 可批准。"
+        },
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "MCP",
+          "result": "pass",
+          "assertion": "正式 MCP 無人工審批 mutation，直呼也被拒。",
+          "case": "PL05 the authenticated MCP endpoint excludes human approval mutations",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "Agent 無法寫審批決定"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "拒絕舊目標版本與舊批准 hash。重新批准後原任務更新快照世代和凍結版號，只有新修訂能領取。",
+          "case": "PL–EX reapproval refreezes one task and the connector receives only the new revision",
+          "conditions": [
+            "修改正文後原批准失效"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "修改正文後原批准失效",
+        "Agent 無法寫審批決定"
+      ]
+    },
+    "EX02": {
+      "status": "partial",
+      "blockers": [
+        "商家許可"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/planning/publishing.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "核准後無庫存使排程回 awaiting_approval、預檢 blocked、執行任務 blocked，內容版號不變。",
+          "case": "invalidates price claims only in the affected market and blocks stock loss without changing the revision"
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "catalog availability drift after preparation blocks submission and sends the target back for review",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "批准及準備後事實漂移使任務 blocked、目標回審，適配器提交數為零。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "批准後商品停售，任務停在 `blocked` 並回審，不發出"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "catalog price drift after preparation blocks submission and sends the target back for review",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "批准及準備後事實漂移使任務 blocked、目標回審，適配器提交數為零。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "批准後商品停售，任務停在 `blocked` 並回審，不發出"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "提交前重新檢查素材權利，拒絕使用舊許可且內容與批准進入失效狀態。",
+          "case": "rights revoked after connector readiness blocks consume and preserves the frozen revision"
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "舊凍結修訂不能領取。重新批准相同計畫目標後，簽章領取僅包含新修訂與新批准。",
+          "case": "PL–EX reapproval refreezes one task and the connector receives only the new revision"
+        }
+      ],
+      "completeConditions": [
+        "批准後商品停售，任務停在 `blocked` 並回審，不發出"
+      ]
+    },
+    "EX03": {
+      "status": "partial",
+      "blockers": [
+        "真機"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "two hours of connector downtime follows skip when the device recovers",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "模擬斷線兩小時後恢復，按 skip 到期或待決，沒有補送。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "裝置離線 2 小時後恢復，依策略跳過或待決，不無條件補發"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "two hours of connector downtime follows grace_window when the device recovers",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "模擬斷線兩小時後恢復，按 grace_window 到期或待決，沒有補送。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "裝置離線 2 小時後恢復，依策略跳過或待決，不無條件補發"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "case": "two hours of connector downtime follows notify when the device recovers",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "模擬斷線兩小時後恢復，按 notify 到期或待決，沒有補送。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "裝置離線 2 小時後恢復，依策略跳過或待決，不無條件補發"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/operator.spec.mjs",
+          "case": "EX03 | Workbench gates an overdue publication and records the late decision",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "結果待決後選擇 skip，目標關閉且嘗試數為零。",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "裝置離線 2 小時後恢復，依策略跳過或待決，不無條件補發"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "每小時上限推遲超過寬限時間，原嘗試安全封存並轉為待人工決定，無新許可。",
+          "case": "auto permit hourly deferral beyond grace requires an explicit late decision"
+        }
+      ],
+      "completeConditions": [
+        "裝置離線 2 小時後恢復，依策略跳過或待決，不無條件補發"
+      ]
+    },
+    "EX04": {
+      "status": "partial",
+      "gap": "仍需覆核同手機槽競爭、真機媒體庫、OP 停止到連接器的端到端流程，以及降級後真人提交失敗不計數。",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/execution/workflow.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "同帳號第二筆官方準備被 account_busy 阻擋。",
+          "case": "official timeout holds the account and quota and observes once without resubmitting",
+          "conditions": [
+            "同帳號兩任務不會同時提交"
+          ]
+        },
+        {
+          "file": "apps/connector/test/workflow.test.ts",
+          "surface": "適配器",
+          "result": "pass",
+          "assertion": "延後後按 retry_at 重新取得許可且只 consume 一次。",
+          "case": "deferred permits wait, then consume once and emit accepted evidence for later verification",
+          "conditions": [
+            "未達最小間隔或達每小時上限時延後到 `retry_at` 再申請、延後超過寬限依遲到策略處理"
+          ]
+        },
+        {
+          "file": "apps/connector/test/workflow.test.ts",
+          "surface": "適配器",
+          "result": "pass",
+          "assertion": "緊急拒絕時無自動提交，真人點擊記 human。",
+          "case": "denial and heartbeat stop allow only an explicit local assist click",
+          "conditions": [
+            "時段外、達每日上限、緊急停止（含 OP `connector_auto`）、自動模式已停止或條款版本過期時不發生自動提交並降為輔助",
+            "降級後提交記為 `human`，且不計入 AC 自動停止的連續失敗"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "最小間隔延後且不建立許可。到期重申取得同一許可，重複消費與回報被拒，未知結果保留原嘗試。",
+          "case": "signed auto permits defer by frequency, consume once, and isolate a lost result",
+          "conditions": [
+            "未達最小間隔或達每小時上限時延後到 `retry_at` 再申請、延後超過寬限依遲到策略處理",
+            "自動提交後未核實不轉 Published"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "每小時上限的重申時間超過寬限時轉為待人工決定，原嘗試無副作用。",
+          "case": "auto permit hourly deferral beyond grace requires an explicit late decision",
+          "conditions": [
+            "未達最小間隔或達每小時上限時延後到 `retry_at` 再申請、延後超過寬限依遲到策略處理"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "不在帳號當地允許時段時拒發許可。",
+          "case": "auto permit denies publication outside the local window without creating a grant"
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "計入先前已消費的當日許可，到達日上限拒發。",
+          "case": "auto permit denies publication at the daily cap without creating a grant"
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "帳號緊急停止發生於取得與消費許可之間。合成驅動只進入輔助等待，滿 30 分鐘關頁並用原簽章回報未提交，才轉人工及釋放寫入槽。",
+          "case": "stop between permit and consume leaves a confirmed assist timeout for manual handover",
+          "conditions": [
+            "`awaiting_user_click` 只出現在輔助模式，等待人員提交逾時（預設 30 分鐘）任務轉 Manual"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "未確認風險時拒絕開啟自動模式。工作區停止後即使解除，先前許可仍失效，原帳號模式不變。",
+          "case": "workspace auto stop and release preserve account settings but invalidate an outstanding permit"
+        }
+      ],
+      "completeConditions": [
+        "同帳號兩任務不會同時提交",
+        "未達最小間隔或達每小時上限時延後到 `retry_at` 再申請、延後超過寬限依遲到策略處理",
+        "`awaiting_user_click` 只出現在輔助模式，等待人員提交逾時（預設 30 分鐘）任務轉 Manual",
+        "自動提交後未核實不轉 Published"
+      ]
+    },
+    "EX05": {
+      "status": "partial",
+      "gap": "以 Android TikTok 模擬對端覆核原 publish_id 核實和未知時拒再次完成、重傳與路徑切換。",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "提交回覆遺失後原作業待核實，平台讀回找到作品後關聯原目標，維持一次提交。",
+          "case": "A02 transport loss after submit holds the target until observation, with no resubmission",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "提交後斷網進入待核實",
+            "找到作品後關聯成功，不重送"
+          ]
+        },
+        {
+          "file": "apps/connector/test/workflow.test.ts",
+          "surface": "適配器",
+          "result": "pass",
+          "assertion": "多份收件匣草稿無法唯一識別時阻擋提交。",
+          "case": "independent approval, SHA-256 media and unique TikTok draft are required"
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "自動許可只消費一次，未知結果保留原嘗試和待核實紀錄，無作品及二次派送。",
+          "case": "signed auto permits defer by frequency, consume once, and isolate a lost result"
+        }
+      ],
+      "completeConditions": [
+        "提交後斷網進入待核實",
+        "找到作品後關聯成功，不重送"
+      ]
+    },
+    "EX06": {
+      "status": "partial",
+      "gap": "需實地中斷後沿用上傳階段的本地連接器契約，再以實機覆核。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/execution/workflow.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "未送出過期租約恢復配額，原 fencing token 不能執行。",
+          "case": "prepared lease expires with released quota and a new fence while unsent restore work needs evidence"
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "結果未知只允許讀回，完整缺席核實後才可重試。",
+          "case": "an unknown adapter outcome permits read-back only until complete absence is verified",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "`verified_absent` 才進入重試"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "提交後租約到期維持隔離，遲回執仍關聯原嘗試。",
+          "case": "an expired post-submit lease stays isolated and retains a late adapter receipt for verification",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "租約到期不直接重發"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "確認是未送出才可按退避換 fence 重試。",
+          "case": "a pre-submit lease expiry backs off and safely retries with a new fence",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "租約到期不直接重發"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "輔助嘗試到期未收到關頁證明，原嘗試隔離待核實，拒絕過期回報或人工重送。",
+          "case": "assist lease expiration without a closure report keeps the original attempt uncertain",
+          "conditions": [
+            "租約到期不直接重發"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "租約到期不直接重發",
+        "`verified_absent` 才進入重試"
+      ],
+      "blockers": [
+        "真機"
+      ]
+    },
+    "EX08": {
+      "status": "partial",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "A02 未知官方結果轉人工回 409 verification_required。",
+          "case": "A02 transport loss after submit holds the target until observation, with no resubmission"
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "人工回填作用於原嘗試與指定原目標。",
+          "case": "unconfigured execution stays manual and evidence is linked to the original attempt",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "人工回填關聯原目標"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "過期手機嘗試在查證前拒絕所有 API、瀏覽器、手機和人工切換。",
+          "case": "expired connector claimed stays fenced against API, browser, mobile and manual resend",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "結果未知時切換路徑被拒絕（API、電腦瀏覽器、手機 App 之間皆同）"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/execution/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "過期手機嘗試在查證前拒絕所有 API、瀏覽器、手機和人工切換。",
+          "case": "expired connector outcome_unknown stays fenced against API, browser, mobile and manual resend",
+          "report": "docs/acceptance/publishing-results.md",
+          "conditions": [
+            "結果未知時切換路徑被拒絕（API、電腦瀏覽器、手機 App 之間皆同）"
+          ]
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "確認未提交後記錄對應原嘗試的人工交接，推進 fencing token，拒絕舊回報。",
+          "case": "stop between permit and consume leaves a confirmed assist timeout for manual handover"
+        },
+        {
+          "file": "tests/acceptance/account-migration-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "缺關頁證明時以原嘗試保留潛在副作用，拒絕人工接管重送。",
+          "case": "assist lease expiration without a closure report keeps the original attempt uncertain"
+        }
+      ],
+      "completeConditions": [
+        "結果未知時切換路徑被拒絕（API、電腦瀏覽器、手機 App 之間皆同）",
+        "人工回填關聯原目標"
+      ]
+    }
+  }
+}

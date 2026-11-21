@@ -1,0 +1,1630 @@
+{
+  "requirements": {
+    "CR01": {
+      "status": "partial",
+      "gap": "本機兩項原文條件均過。仍需授權的真實達人帳戶及可獨立核對的受眾來源。",
+      "checks": [
+        {
+          "file": "tests/web-e2e/creator.spec.mjs",
+          "case": "creator workbench persists evaluation overrides, contacts and deadline changes",
+          "surface": "UI",
+          "result": "fail",
+          "assertion": "最新 Chromium 在找不到 Creator evaluations 標題時停止，未到達受眾來源／時間的斷言。",
+          "conditions": [
+            "每項受眾數據顯示來源與時間"
+          ],
+          "report": "docs/acceptance/engagement-results.md"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同暱稱和 handle 保留獨立檔案，重複外部 ID 被拒。各受眾觀測回傳來源、時間並保留真零。",
+          "case": "CR01 same nickname keeps two profiles and each observation carries its source and time",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "暱稱相同不合併",
+            "每項受眾數據顯示來源與時間"
+          ]
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同暱稱和 handle 不合併。每筆受眾來源與時間讀回，真零保留。人工核實需要來源與註記並保存操作者，另一帳戶維持 self_reported。",
+          "case": "CR01 same nickname keeps two profiles and each observation carries its source and time",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "暱稱相同不合併",
+            "每項受眾數據顯示來源與時間"
+          ]
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "CSV 只寫所選檔案並去重，關聯／撤銷需人工證據，保留兩份檔案與操作者。",
+          "case": "CR01 imports contacts only into the selected profile and reverses evidenced duplicate associations",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "暱稱相同不合併"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/creator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "同名檔案獨立。人工關聯撤銷後另一檔案仍無受眾資料。同一市場兩來源各顯示來源、參照、觀測時間與真零。",
+          "case": "creator workbench persists evaluation overrides, contacts and deadline changes",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "暱稱相同不合併",
+            "每項受眾數據顯示來源與時間"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "暱稱相同不合併",
+        "每項受眾數據顯示來源與時間"
+      ],
+      "blockers": [
+        "真實帳戶"
+      ]
+    },
+    "CR02": {
+      "status": "partial",
+      "gap": "對一份由 Agent 作出的評估走人工調整並核對原分、理由和人員審計。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "Agent 無證據不得評分，有證據時一個維度得 80。",
+          "case": "creator evaluation preserves unknown dimensions and requires evidence for scores"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "區分真零與未知。人工覆寫留存前後值、操作者與理由，原評估不變。",
+          "case": "CR02 records genuine zero, missing dimensions and an immutable human override audit",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "缺失欄位顯示未知",
+            "Agent 評估可被人工調整並留痕"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/creator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "工作台顯示未知，操作員將 shortlist 改 hold 並讀回舊評分、前後決策及理由。",
+          "case": "creator workbench persists evaluation overrides, contacts and deadline changes",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "缺失欄位顯示未知"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "缺失欄位顯示未知"
+      ]
+    },
+    "CR03": {
+      "status": "partial",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "請求寄出仍是草稿，記錄證據後合作進入 negotiating。",
+          "case": "creator outreach, terms, delivery revisions and publication use distinct evidence"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "草稿、已送、回覆是獨立狀態，跨活動重複聯絡有警告。",
+          "case": "CR03 keeps draft, sent and received outreach distinct and warns on repeat contact across campaigns",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "草稿、已送、已回覆分開",
+            "重複聯絡警示"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "草稿、已送、已回覆分開",
+        "重複聯絡警示"
+      ]
+    },
+    "CR04": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "投稿待審、舊版不能驗收、驗收鎖定最新版。",
+          "case": "creator outreach, terms, delivery revisions and publication use distinct evidence"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "期限更新標出受影響排期並建站內通知，原排期及提交記錄不變。",
+          "case": "CR04 deadline change flags its linked campaign schedule and preserves the schedule and submissions",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "日期變動提示相關排程"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/creator/creator-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "範圍受限的門戶提交新交付版後，內部仍讀為 submitted，審閱為另外一步。",
+          "case": "Creator commands and scoped portal submissions share delivery state",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "上傳不等於驗收"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/creator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "工作台保存交付期限變更及理由，原交付未變為已驗收。REST 通知指向受影響排程，原排程時間保留。",
+          "case": "creator workbench persists evaluation overrides, contacts and deadline changes",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "上傳不等於驗收",
+            "日期變動提示相關排程"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "上傳不等於驗收",
+        "日期變動提示相關排程"
+      ]
+    },
+    "CR05": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "簽收後合作仍 active，沒有新交付物，出貨回應不含 ship_to_ref。",
+          "case": "sample delivery records logistics evidence and does not accept creator work"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "簽收只增加物流證據，交付與應付款保持。地址依權限遮罩。",
+          "case": "CR05 and CR10 mask sample addresses and gate picking and acceptance on signed terms",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "簽收不改變交付或付款狀態",
+            "地址欄位遮罩"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "簽收不改變交付或付款狀態",
+        "地址欄位遮罩"
+      ]
+    },
+    "CR06": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "只限自然發布的權利不通過付費檢查，錯版及撤銷被拒。",
+          "case": "deliverable acceptance checks the submitted asset version and paid scope"
+        },
+        {
+          "file": "apps/server/src/modules/ads/ads.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "缺付費權利的提案送審失敗。",
+          "case": "preview exposes unsupported settings and estimated values and blocks partial rights and currencies"
+        },
+        {
+          "file": "tests/acceptance/ads-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "自然發布授權素材不得選入付費創意，補同版本付費授權可核准，撤權再次阻擋兩種送出入口。",
+          "case": "CR06 and AD03 creator material requires paid rights at selection and after approval",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "無付費授權的素材不能進 AD 創意"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "無付費授權的素材不能進 AD 創意"
+      ]
+    },
+    "CR07": {
+      "status": "partial",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "API 目錄僅企劃與人工觀測，沒有開播命令。預熱與活動範圍相符，片段依版本、剪輯、平台、市場、用途、預定日期及撤權檢查。",
+          "case": "CR07 plans and observes an external live session and gates clip reuse against current and intended rights",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "不自建推流",
+            "片段復用經授權檢查"
+          ]
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "HTTP 目錄沒有開播命令。流程表、活動配對預熱、平台觀測和片段授權可走登入 API。版本、剪輯、用途、平台、市場、日期、撤權都受檢查。",
+          "case": "CR07 plans and observes an external live session and gates clip reuse against current and intended rights",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "不自建推流",
+            "片段復用經授權檢查"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/creator.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "工作台無站內開播，流程表與預熱目標可查，記錄場次進度。缺權利的片段提交回 409，沒有建立任務。",
+          "case": "creator workbench persists evaluation overrides, contacts and deadline changes",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "不自建推流",
+            "片段復用經授權檢查"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "不自建推流",
+        "片段復用經授權檢查"
+      ],
+      "gap": "授權場次資料及回放的實際平臺讀回尚未驗收，現有本機觀測由操作員錄入。"
+    },
+    "CR08": {
+      "status": "partial",
+      "gap": "主工作台以含交易資料核對平台歸因與自身鏈路分欄。",
+      "blockers": [
+        "商家許可"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "拒絕估算計提，優惠碼匹配已付訂單產生 1000 基數和 100 佣金。",
+          "case": "verified refund appends a deduplicated negative commission entry"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同一 Amazon 訂單之平台匯入和自身應付分欄，不混加；結果抹除買家資料。",
+          "case": "CR08 keeps reported commission and a creator’s payable-order accrual separate on the same Amazon order",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "平台歸因不與自有鏈路相加",
+            "Amazon 分錄不含買家個資"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "估算值不可進應付佣金，訂單衍生才可入帳。",
+          "case": "creator outreach, terms, delivery revisions and publication use distinct evidence",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "估算營業額不進佣金"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "估算營業額不進佣金",
+        "平台歸因不與自有鏈路相加",
+        "Amazon 分錄不含買家個資"
+      ]
+    },
+    "CR09": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "重放計提返回同一分錄 ID。",
+          "case": "Creator command registry calculates paid-order commissions and excludes external settlements from self-payment"
+        },
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "平台已結算項目拒絕進自付批次。",
+          "case": "external commissions cannot enter a self-settlement batch",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "平台已結算不進自行付款"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "同一已確認退款重播只追加一筆負向佣金分錄。",
+          "case": "verified refund appends a deduplicated negative commission entry",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "同一訂單行不重複計佣"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/creator/creator.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "同筆訂單行入帳重放返回原分錄，未增加計佣。",
+          "case": "creator outreach, terms, delivery revisions and publication use distinct evidence",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "同一訂單行不重複計佣"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "同一訂單行不重複計佣",
+        "平台已結算不進自行付款"
+      ]
+    },
+    "CR10": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/creator/creator-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "未簽不得投稿，舊條款寫入衝突，未知簽署證據回 404。",
+          "case": "Creator commands and scoped portal submissions share delivery state"
+        },
+        {
+          "file": "tests/acceptance/creator-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "未簽阻擋寄樣與驗收。可讀兩版及差異。",
+          "case": "CR05 and CR10 mask sample addresses and gate picking and acceptance on signed terms",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "未簽條款時阻擋寄樣與驗收（依政策）",
+            "修訂可比對"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "未簽條款時阻擋寄樣與驗收（依政策）",
+        "修訂可比對"
+      ]
+    },
+    "EM01": {
+      "status": "partial",
+      "gap": "已驗本地排程請求重檢。正式 ESP 提交前重檢、對端抑制同步與失敗回執仍待驗。",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "case": "LP04 EM01 | public form submits separate consent and signed unsubscribe withdraws one channel",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "簽名退出只撤回指定渠道，其他渠道與用途保留。",
+          "conditions": [
+            "退出某渠道後該渠道停止新增行銷動作，其他渠道不受影響"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/lifecycle/workspace-lifecycle.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "撤回 Email 同意後該渠道不可用，SMS 同意及服務／行銷區分保留。",
+          "case": "traffic consent is append-only, channel-specific and purpose-specific",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "退出某渠道後該渠道停止新增行銷動作，其他渠道不受影響"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同暱稱參與者保持獨立，僅有人工依據才關聯，撤銷有稽核。",
+          "case": "IN07 and EM01 leave same-nickname participants separate and audit manual linking and undo",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "暱稱不作合併依據"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "打開退訂連結不改變狀態，確認按鈕才 POST。已確認的 Email 行銷撤回，Email 服務與 SMS 行銷保留。",
+          "case": "LP04 EM01 | public form submits separate consent and signed unsubscribe withdraws one channel",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "退出某渠道後該渠道停止新增行銷動作，其他渠道不受影響"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "case": "EM01 rechecks channel consent on every ESP scheduling request",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "撤回 Email 同意後，重新請求排程及測試寄送均被擋，SMS 仍可產生人工處理任務。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "退出某渠道後該渠道停止新增行銷動作，其他渠道不受影響"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "退出某渠道後該渠道停止新增行銷動作，其他渠道不受影響",
+        "暱稱不作合併依據"
+      ]
+    },
+    "EM02": {
+      "status": "partial",
+      "gap": "本機以匯入 ESP 報表證明預覽與實送分存。真實 ESP 讀回及成員快照仍待驗。",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/lifecycle/workspace-lifecycle.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "快照為不可變彙總，執行前重新評估抑制和頻次。",
+          "case": "segments re-evaluate suppression and frequency while keeping snapshots immutable and aggregate-only",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "預覽人數與發送時人數分開保存並可對照"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "case": "EM02 retains separate audience previews and immutable ESP send observations",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "在同一分群保存本地預覽的真零及匯入 ESP 報表的實送人數 3。可同時查詢兩筆，重複匯入不覆寫，拒絕其他活動重用同一外部活動 ID。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "預覽人數與發送時人數分開保存並可對照"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "預覽人數與發送時人數分開保存並可對照"
+      ]
+    },
+    "EM05": {
+      "status": "partial",
+      "gap": "交付健康 API 已分列報表覆蓋與開信、點擊、購買。工作台呈現與真實 ESP 報表仍待驗。",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/lifecycle/workspace-lifecycle.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "頻率排除只計已觀察 ESP 發送。",
+          "case": "segments re-evaluate suppression and frequency while keeping snapshots immutable and aggregate-only"
+        },
+        {
+          "file": "apps/server/src/modules/lifecycle/workspace-lifecycle.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "觀測到的 ESP 寄送才納入頻率，輸出 observed_esp_sends_only。",
+          "case": "ESP local campaign plans stay separate from external scheduling and flow status",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "未接入渠道的發送標示覆蓋限制"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "case": "EM05 reports channel coverage and keeps ESP opens, clicks and purchases separate",
+          "result": "pass",
+          "surface": "API",
+          "assertion": "同一 ESP 報表分列開信 5、點擊 2、購買真零，未回報的退信保持未知。可區分有匯入報表、已登錄但期間無報表、未接入的渠道。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "未接入渠道的發送標示覆蓋限制",
+            "開信點擊不等同購買"
+          ]
+        }
+      ],
+      "completeConditions": []
+    },
+    "IN01": {
+      "status": "partial",
+      "gap": "工作台無權限文案及手機自動停止與急停中斷原因仍待覆核。",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "同訊息 webhook 和輪詢重放去重，遲到上游訊息可合併暫存對話。",
+          "case": "late ancestors merge provisional threads and webhook/poll duplicates stay deduplicated",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "重複 Webhook 不產生重複訊息"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "正式 HTTP 依類型回傳 needs_authorization（missing_scope）、unsupported 和 unverified，沒有把不可觀測數值當成零。",
+          "case": "IN01 distinguishes a missing permission, an unsupported API, and unverified access",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "無權限的類型顯示「無權限」而非 0",
+            "API `unsupported` 的類型顯示「API 不支援；P1 評估手機路徑」而非 0"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "工作台區分小紅書 API 不支援、待評估手機路徑與 Facebook 未驗證。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "API `unsupported` 的類型顯示「API 不支援；P1 評估手機路徑」而非 0"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "Chromium 覆蓋頁顯示小紅書 API 不支援及手機路徑 P1 評估，對照 Facebook 未核實，不以零呈現。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "API `unsupported` 的類型顯示「API 不支援；P1 評估手機路徑」而非 0"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "重複 Webhook 不產生重複訊息",
+        "無權限的類型顯示「無權限」而非 0",
+        "API `unsupported` 的類型顯示「API 不支援；P1 評估手機路徑」而非 0"
+      ]
+    },
+    "IN02": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "已讀後對話仍 open。",
+          "case": "inbox deduplicates deliveries, tracks personal read state and keeps notes separate",
+          "conditions": [
+            "已讀不改變處理狀態"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "已讀後無狀態或指派事件。實際變更指派與狀態後，時間線列操作者、時間與前後值。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "已讀不改變處理狀態",
+            "狀態與指派變更皆可在時間線追溯"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "已讀不改變處理狀態",
+        "狀態與指派變更皆可在時間線追溯"
+      ]
+    },
+    "IN03": {
+      "status": "partial",
+      "gap": "需以配置及未配置 AI07 的環境，覆核 AI 翻譯／摘要入口與一般功能。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "讀回時筆記與外部進件分開。",
+          "case": "inbox deduplicates deliveries, tracks personal read state and keeps notes separate"
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "回環 HTTP 執行器只收到核准回覆及路由資料；內部備註仍在對話內，平台讀回才核實。",
+          "case": "IN03 sends only the approved reply to a loopback executor and reconciles platform readback",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "備註永不出現在送出內容"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "人工翻譯展開和收起時原文均可讀，內部備註透過獨立入口新增。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "翻譯保留原文入口"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "Chromium 切換人工翻譯前後均能直接閱讀原文。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "翻譯保留原文入口"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "備註永不出現在送出內容",
+        "翻譯保留原文入口"
+      ],
+      "blockers": [
+        "真實帳戶"
+      ]
+    },
+    "IN04": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "撤成員後接手取得更大 fence，舊租約釋放／送出被拒。",
+          "case": "membership removal fences the old holder inside the workspace transaction"
+        },
+        {
+          "file": "apps/server/src/modules/inbox/inbox.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "第二申領者收到 LEASE_HELD。",
+          "case": "manual reply uses fencing and requires evidence without creating a platform message"
+        },
+        {
+          "file": "tests/acceptance/inbox-contested-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "兩名真人和受委派 MCP Agent 競爭同一租約，後到者 LEASE_HELD，新增回覆只有一筆。",
+          "case": "IN04 REST users and a delegated MCP agent contend for one inbox lease",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "兩人同時送出時後到者收到 `LEASE_HELD`",
+            "Agent 與人共用同一租約"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "兩人同時送出時後到者收到 `LEASE_HELD`",
+        "Agent 與人共用同一租約"
+      ]
+    },
+    "IN05": {
+      "status": "partial",
+      "gap": "需以瀏覽器核對多次 API 嘗試的各次核實狀態。真機共槽、自動回覆許可及額度仍待驗。",
+      "blockers": [
+        "真機",
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "受理不發 delivered 事件，未知不允盲重試，舊回執被拒且讀回才驗證。",
+          "case": "API receipt tracks timeout, rejects blind retry and verifies only platform readback"
+        },
+        {
+          "file": "tests/acceptance/inbox-contested-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "對端收到 POST 後逾時，一筆嘗試保持未知，拒盲目重送，讀回才轉核實。",
+          "case": "IN05 times out after the loopback platform receives the POST and never resubmits blindly",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "平台逾時進入「結果待核實」，不重送",
+            "送出後狀態可解釋到每次嘗試"
+          ]
+        },
+        {
+          "file": "tests/acceptance/inbox-contested-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "證實未送達才接受一次明確重試，舊回執被 fencing 拒絕，保留逐次證據。",
+          "case": "IN05 a confirmed non-delivery permits one explicit retry and fences the old receipt",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "平台逾時進入「結果待核實」，不重送",
+            "送出後狀態可解釋到每次嘗試"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "從 REST 排入人工回覆，在 Chromium 填平台連結及確認。頁面顯示送達，API 保留序號、執行方式、結果與操作者。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "送出後狀態可解釋到每次嘗試"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "平台逾時進入「結果待核實」，不重送",
+        "送出後狀態可解釋到每次嘗試"
+      ]
+    },
+    "IN06": {
+      "status": "partial",
+      "gap": "兩項本機原文條件均通過。仍缺支援渠道的官方隱藏、刪除、封鎖及獨立讀回適配器，P2 規則提議和批次預覽未驗。",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "人工處置記錄保留原文及操作者。原評論編輯後快照不變。未確認、私訊和他對話訊息均拒絕。 不支援的測試帳號只有人工路徑。 不支援的測試帳號只有人工路徑。",
+          "case": "IN06 records moderation with intact original and actor, and keeps private messages out",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "管理動作保留原文與操作者",
+            "API 不支援的平台只顯示人工入口"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "人工路徑回傳平台原文及 manual_only。人工處置快照保留原文、操作者，回匯平台編輯後不覆寫快照。",
+          "case": "IN06 records moderation with intact original and actor, and keeps private messages out",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "管理動作保留原文與操作者"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "實際走人工評論處置，顯示平台原文入口及人工記錄，歷史保留原文與操作者。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "管理動作保留原文與操作者"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "Chromium 打開小紅書評論，只見平台原文及人工處置記錄，無直接處置動作。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "API 不支援的平台只顯示人工入口"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "管理動作保留原文與操作者",
+        "API 不支援的平台只顯示人工入口"
+      ]
+    },
+    "IN07": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "兩個同暱稱跨渠道身分各自未關聯。缺依據回 422，確認只關聯指定身分，撤銷保留原身分、操作者及原因。",
+          "case": "IN07 and EM01 leave same-nickname participants separate and audit manual linking and undo",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "暱稱相同不自動合併",
+            "合併可撤銷並留痕"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "瀏覽器提交並撤銷有依據的客戶連結，顯示撤銷原因。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "合併可撤銷並留痕"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "暱稱相同不自動合併",
+        "合併可撤銷並留痕"
+      ]
+    },
+    "IN08": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox-commands.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "等待客戶暫停 3900 秒，報表回傳樣本、首次回覆、未解決及排除時間，逾期僅發一次。",
+          "case": "SLA pauses resolution while awaiting a customer and emits breach only once",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "等待客戶期間依政策暫停計時",
+            "報表顯示樣本數與被排除時間"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/inbox/service-settings.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "依工作區時區、例外及假日計算時限，等客戶依政策暫停並移動到期時間。",
+          "case": "SLA deadlines use workspace time, exceptions and holidays, and preserve the assigned calendar through pauses",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "等待客戶期間依政策暫停計時",
+            "報表顯示樣本數與被排除時間"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "正常 API 接收有、無政策樣本各一件。等待顧客時計入至少 3900 秒政策排除時間，解決後保留排除值並計入解決樣本。",
+          "case": "IN08 reports SLA samples and policy-excluded time through the inbox API",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "等待客戶期間依政策暫停計時",
+            "報表顯示樣本數與被排除時間"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "正常工作台顯示有政策樣本 1、無政策 0，等待客戶 fixture 的政策排除至少 3900 秒。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "等待客戶期間依政策暫停計時",
+            "報表顯示樣本數與被排除時間"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "等待客戶期間依政策暫停計時",
+        "報表顯示樣本數與被排除時間"
+      ]
+    },
+    "IN09": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "外部接收確認是解決案件前置，接收、解決與關閉分開。",
+          "case": "case handoff requires acknowledgment before external resolution",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "外部接收與結案分開"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "跨帳號一般評論匯入後案件與客戶列表仍為空，不自動建立商機。",
+          "case": "IN07 and EM01 leave same-nickname participants separate and audit manual linking and undo",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "普通互動不自動成商機"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "外部接收與結案分開",
+        "普通互動不自動成商機"
+      ]
+    },
+    "IN10": {
+      "status": "partial",
+      "gap": "缺授權來源的唯讀評價同步、由平台獨立讀回回覆的契約及工作台口碑摘要呈現。",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "surface": "UI",
+          "result": "fail",
+          "assertion": "較早輪次等不到唯讀評價文案，後續輪次在對話頁等不到原評論。",
+          "conditions": [
+            "不推定可刪評"
+          ],
+          "report": "docs/acceptance/engagement-results.md"
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "公開評價與私訊分別讀取，評價不能經訊息匯入。無刪評路由，人工交接及回覆核實保留證據。",
+          "case": "IN10 separates public reviews from DMs and supports handoff and manual verification only",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "評價與私訊分開建模",
+            "不推定可刪評"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "評價與私訊各自查詢，無刪評路由。人工讀回保存平台回覆 URL、證據與操作者。口碑摘要按來源、評分尺度分組，保留真零，不把人工核實充作平台回執。",
+          "case": "IN10 separates public reviews from DMs and supports handoff and manual verification only",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "評價與私訊分開建模",
+            "不推定可刪評"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "公開評價只讀且無刪除按鈕，實際指派並登記回覆觀測，顯示驗證證據。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "評價與私訊分開建模",
+            "不推定可刪評"
+          ]
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "case": "IN10 separates public reviews from DMs and supports handoff and manual verification only",
+          "result": "pass",
+          "surface": "API",
+          "assertion": "評價查詢與私訊分流。刪除路由不存在。未交接的核實及跨來源 URL 被拒，失敗不寫核實歷史。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "評價與私訊分開建模",
+            "不推定可刪評"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "評價與私訊分開建模",
+        "不推定可刪評"
+      ]
+    },
+    "IN11": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/inbox/inbox.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "重複事件和頻率上限只留一份草稿，零外送且不允許配置自動發送。",
+          "case": "trusted inbox messages trigger draft-only rules once and respect participant limits"
+        },
+        {
+          "file": "tests/acceptance/engagement-inbox-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "占用或已回覆分別略過且留原因，重送不增紀錄、不建草稿，客戶同意及帳本相同。",
+          "case": "IN11 audits occupied and already-replied skips without modifying the linked customer consent ledger",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "人工占用或已回覆時規則跳過並記錄原因",
+            "不擴張行銷同意"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/inbox-engagement.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "工作台規則歷史顯示真人占用略過及原訊息識別碼。",
+          "case": "inbox exposes manual moderation, reversible customer links, internal notes and read-only reviews",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "人工占用或已回覆時規則跳過並記錄原因"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "人工占用或已回覆時規則跳過並記錄原因",
+        "不擴張行銷同意"
+      ]
+    },
+    "LP01": {
+      "status": "partial",
+      "gap": "本機以店鋪 fixture 通過四項原文條件。真實商家授權與實際商品 URL 尚待核對。",
+      "blockers": [
+        "商家許可"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "平台承接 CTA 及目的地須匹配官方商品網址，非平台網址拒絕。",
+          "case": "listing-backed links and purchase CTAs must use the storefront URL",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "要求導回平台的店鋪（如 Shopee），目的地與 CTA 只指向平台商品頁，違反時阻擋（5.13.11 第 10 條）"
+          ]
+        },
+        {
+          "file": "apps/server/src/integration/traffic-host.test.ts",
+          "case": "kernel public traffic over a local TCP socket",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "公開商品頁顯示真零價格、店鋪市場價格來源及獨立的價格觀測時間。商品與 CTA 都連到保存的店鋪商品頁，頁面無結帳。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "頁面不含結帳",
+            "價格顯示來源與時間",
+            "要求導回平台的店鋪（如 Shopee），目的地與 CTA 只指向平台商品頁，違反時阻擋（5.13.11 第 10 條）"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "case": "listing-backed links and purchase CTAs must use the storefront URL",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "改為 Lazada 後，即使 HTTP 檢查通過，平台導回仍標 unknown，且公開商品頁不可讀。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "Lazada 導回規則 P2 登錄前記 `unknown`（D17）"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "頁面不含結帳",
+        "價格顯示來源與時間",
+        "要求導回平台的店鋪（如 Shopee），目的地與 CTA 只指向平台商品頁，違反時阻擋（5.13.11 第 10 條）",
+        "Lazada 導回規則 P2 登錄前記 `unknown`（D17）"
+      ]
+    },
+    "LP02": {
+      "status": "partial",
+      "gap": "本機跳轉報表與改址歷史已驗。真實商家網域與其授權待驗。",
+      "blockers": [
+        "商家許可"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "改目的地保留歷史點擊版本，兩次跳轉只有一次 human_likely。",
+          "case": "short links revalidate exact hosts, preserve revisions and classify observed redirects"
+        },
+        {
+          "file": "apps/server/src/modules/traffic/traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "已驗證的確切網域可用；撤銷後不再跳轉。",
+          "case": "exact-host DNS proof gates link creation and redirects, including after revocation",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "報表區分跳轉與疑似真人"
+          ]
+        },
+        {
+          "file": "apps/server/src/integration/traffic-host.test.ts",
+          "case": "LP05 reads CRM handoff state and advances only after confirmed provider evidence",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "公開入口產生一筆預覽爬蟲和一筆疑似真人跳轉，統計分列總數 2、疑似真人 1、爬蟲 1。改址後 API 可讀原、新版本，公開入口跳到新址。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "改址保留歷史",
+            "報表區分跳轉與疑似真人"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "改址保留歷史",
+        "報表區分跳轉與疑似真人"
+      ]
+    },
+    "LP03": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "市場選擇器忽略外來 URL 並跳轉到儲存的台灣網址。",
+          "case": "market choice uses saved routes rather than query-supplied destinations"
+        },
+        {
+          "file": "apps/server/src/modules/traffic/traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "底層短鏈遇到期採用已驗證備用目的地。",
+          "case": "short links enforce marketplace destinations and use verified fallback at expiration",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "到期與下架項目自動提示"
+          ]
+        },
+        {
+          "file": "apps/server/src/integration/traffic-host.test.ts",
+          "case": "LP05 reads CRM handoff state and advances only after confirmed provider evidence",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "員工 API 顯示 active、expired、unlisted。暫停短鏈後項目切換為 unlisted，公開頁自動移除。手動選台灣市場及英文 Accept-Language 均保留繁體頁語言。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "到期與下架項目自動提示",
+            "不以位置強制語言"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "到期與下架項目自動提示",
+        "不以位置強制語言"
+      ]
+    },
+    "LP04": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "case": "LP04 EM01 | public form submits separate consent and signed unsubscribe withdraws one channel",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "公開表單三個選項初始未勾。獨立勾選後真實 POST，服務生效而兩種營銷同意待確認。",
+          "conditions": [
+            "不預勾選",
+            "服務聯絡與行銷訂閱分開"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "HTML 同意選項未預勾。",
+          "case": "unticked consent creates no opt-in and tracking requires an opted-in first-party session"
+        },
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "未勾不寫入，服務用郵件與行銷簡訊分別儲存用途和版本。",
+          "case": "published forms are scoped, use exact consent versions and store encrypted contacts"
+        },
+        {
+          "file": "apps/server/src/modules/traffic/traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "表單檢查顯示版本，私有服務聯絡與行銷同意分開存。",
+          "case": "published landing enforces shown version and separates consent from private lead contact",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "不預勾選",
+            "服務聯絡與行銷訂閱分開"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "Chromium 的三個選項預設未勾選。獨立勾選後真正 POST，服務同意立即生效，兩渠道行銷進入待確認。",
+          "case": "LP04 EM01 | public form submits separate consent and signed unsubscribe withdraws one channel",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "不預勾選",
+            "服務聯絡與行銷訂閱分開"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "不預勾選",
+        "服務聯絡與行銷訂閱分開"
+      ]
+    },
+    "LP05": {
+      "status": "partial",
+      "gap": "主工作台同時呈現待聯絡、同意聯絡、成交，並由回執表單走到核實。",
+      "blockers": [
+        "真實帳戶"
+      ],
+      "checks": [
+        {
+          "file": "apps/server/src/modules/traffic/traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "名單不含明文或加密中介資料，無權讀聯絡資料回 403。",
+          "case": "published landing enforces shown version and separates consent from private lead contact"
+        },
+        {
+          "file": "apps/server/src/integration/traffic-host.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "公開表單來件為遮罩，服務同意才可交接。pending／unknown 保持 qualified、重送與提前結案 409，證據核實後可成交。",
+          "case": "LP05 reads CRM handoff state and advances only after confirmed provider evidence",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": [
+            "聯絡資料依權限遮罩",
+            "待聯絡、同意聯絡、已成交分開"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "聯絡資料依權限遮罩"
+      ]
+    },
+    "LP06": {
+      "status": "partial",
+      "gap": "API 已保留 unknown 並阻擋發佈，實驗報表讀回可區分缺資料、零流量與有流量零轉化。工作台畫面及非零小樣本閾值未驗。",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "無法判定的連結檢查回 unknown。",
+          "case": "HTTP checks revalidate redirect hosts and keep inconclusive results unknown"
+        },
+        {
+          "file": "apps/server/src/modules/traffic/operation-traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "同實驗期間訪客重訪仍分配到同組。",
+          "case": "page experiments follow the agreed versions, time window and stable visitor bucket"
+        },
+        {
+          "file": "apps/server/src/modules/traffic/traffic.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "到期後改用已驗證備用，不從請求自由傳入目的地。",
+          "case": "short links enforce marketplace destinations and use verified fallback at expiration",
+          "report": "docs/acceptance/engagement-results.md",
+          "conditions": []
+        },
+        {
+          "file": "apps/server/src/integration/traffic-host.test.ts",
+          "case": "LP05 reads CRM handoff state and advances only after confirmed provider evidence",
+          "result": "pass",
+          "surface": "API",
+          "assertion": "掛載入口中未知檢查回 unknown 且發佈被擋。實驗無報表時為 unavailable，匯入某組零流量後回 insufficient_traffic，保留其他組實際零轉化。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "檢查 `unknown` 不顯示為通過",
+            "實驗報表標示流量不足"
+          ]
+        }
+      ],
+      "completeConditions": []
+    },
+    "TE03": {
+      "status": "partial",
+      "gap": "搜尋、下載及報告隔離已驗。1280px 於 Chromium 與 macOS Chrome 通過。WebKit 因 PushAPIEnabled 協定錯誤未完成，Edge 和 Firefox 本機缺執行檔，實機 Safari 與 Windows 未驗。",
+      "checks": [
+        {
+          "file": "tests/acceptance/portal-http.test.mjs",
+          "case": "TE03 portal report listing and detail enforce the client grant across tenants",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "已核實客戶的列表只見綁定的已分享報告。另一租戶或未分享草稿的報告、下載及討論為 404，撤銷後清單空。",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件",
+            "內部草稿永不可見"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "case": "TE03 TE04 | signed client share hides internal records and revocation takes effect in the browser",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "未登入員工可讀簽名交付，不見內部草稿，1280px 無水平捲動。撤銷後重載立即 404。",
+          "conditions": [
+            "內部草稿永不可見",
+            "門戶在 1280px 寬的支援桌面瀏覽器中不需水平捲動"
+          ]
+        },
+        {
+          "file": "tests/acceptance/flows.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "A05 分享讀取 no-store、遮罩樣本郵件且撤銷立即回 404（PostgreSQL 17）。",
+          "case": "A05 previously issued public share stops working as soon as it is revoked",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件"
+          ]
+        },
+        {
+          "file": "tests/acceptance/portal-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "Operation 報告分享核對收件人、領取與撤銷。",
+          "case": "Operations HTTP mounts report shares and revalidates recipient claim, link and revocation",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/team/team.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "下載分享範圍外檔案回 404。",
+          "case": "links use a hashed capability, allow only read/download, and stop at revocation or expiry",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "無員工登入的 Chromium 讀取已分享交付。草稿預覽回 409，回應無內部註記及草稿，1280px 無水平捲動。撤銷後重載回 404。",
+          "case": "TE03 TE04 | signed client share hides internal records and revocation takes effect in the browser",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "內部草稿永不可見",
+            "門戶在 1280px 寬的支援桌面瀏覽器中不需水平捲動"
+          ]
+        },
+        {
+          "file": "tests/acceptance/portal-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同一已核實信箱在另一租戶具同名收件分享仍不能讀取。列表只見已授權報告，未分享草稿及另一租戶的詳細、討論串、下載均回 404。撤銷後列表清空。",
+          "case": "TE03 portal report listing and detail enforce the client grant across tenants",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件",
+            "內部草稿永不可見"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/portal.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "具名客戶 SPA 於 1280px Chromium 無水平捲動，原核准文字可見且內部備註不出現。",
+          "case": "PL06 | the client portal keeps the pinned revision visible and rejects stale approval",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "內部草稿永不可見",
+            "門戶在 1280px 寬的支援桌面瀏覽器中不需水平捲動"
+          ]
+        },
+        {
+          "file": "tests/acceptance/portal-http.test.mjs",
+          "case": "TE03 portal report listing and detail enforce the client grant across tenants",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "同信箱在另一租戶有具名分享。透過 q 搜尋僅可讀本租戶的共享報告，另一租戶與草稿均無結果。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件",
+            "內部草稿永不可見"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/portal.spec.mjs",
+          "case": "PL06 | the client portal keeps the pinned revision visible and rejects stale approval",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "在具名客戶 SPA 搜尋內部備註無結果，可搜尋已分享標題，於 Chromium 和系統 Chrome 的 1280px 視窗無水平捲動。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "客戶在搜尋、下載、報告查詢都看不到未分享物件",
+            "內部草稿永不可見",
+            "門戶在 1280px 寬的支援桌面瀏覽器中不需水平捲動"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "客戶在搜尋、下載、報告查詢都看不到未分享物件",
+        "內部草稿永不可見",
+        "門戶在 1280px 寬的支援桌面瀏覽器中不需水平捲動"
+      ]
+    },
+    "TE04": {
+      "status": "partial",
+      "gap": "角色異動後，仍需在實際通知發送宿主重檢已排隊的資源摘要。",
+      "checks": [
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "case": "TE03 TE04 | signed client share hides internal records and revocation takes effect in the browser",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "簽名交付無內部備註與草稿。撤銷後重新載入拒絕。",
+          "conditions": [
+            "內部備註不出現在任何門戶回應"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/team/team.test.ts",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "分享含公開筆記／回饋，無內部筆記和作者，另一分享不含該回饋。",
+          "case": "recipient, workspace, CSRF, exact revision, and per-share comment visibility gate access",
+          "conditions": [
+            "內部備註不出現在任何門戶回應"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/collaboration-public.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "簽名交付回應無內部備註與草稿，撤銷後重載立即回 404。",
+          "case": "TE03 TE04 | signed client share hides internal records and revocation takes effect in the browser",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "內部備註不出現在任何門戶回應"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/portal.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "具名門戶顯示公開回饋，原版及有新修訂時均不呈現內部備註。",
+          "case": "PL06 | the client portal keeps the pinned revision visible and rejects stale approval",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "內部備註不出現在任何門戶回應"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/portal.spec.mjs",
+          "case": "PL06 | the client portal keeps the pinned revision visible and rejects stale approval",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "具名門戶分享詳情與討論串只回傳客戶備註。原稿與後續修訂間切換時仍隱藏內部備註。",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "內部備註不出現在任何門戶回應"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "內部備註不出現在任何門戶回應"
+      ]
+    },
+    "TE05": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "apps/server/src/modules/team/team.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "未產生不得送達，產生、人工送達與確認各自存時間。",
+          "case": "delivery records production, manual send, and client confirmation as separate steps",
+          "conditions": [
+            "產生、送達、確認三個時間點分開"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/analytics/operations.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "另建新回補修訂仍可匯出舊值。",
+          "case": "finalized reports preserve the original result after backfills and reject narrative changes",
+          "conditions": [
+            "後補數據不改變已交付的報告版本"
+          ]
+        },
+        {
+          "file": "tests/web-e2e/portal.spec.mjs",
+          "surface": "UI",
+          "result": "pass",
+          "assertion": "員工標記產生與送達，觸發門戶確認提示。同日重試不改資料。客戶在 Chromium 點確認後提示消失，三類時間分開保存。",
+          "case": "PL06 | the client portal keeps the pinned revision visible and rejects stale approval",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "產生、送達、確認三個時間點分開"
+          ]
+        },
+        {
+          "file": "tests/acceptance/portal-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "新報告修訂定稿後，原交付的具名分享仍顯示原文字與獨立確認操作。確認後交付項仍指向原修訂。",
+          "case": "Operations HTTP mounts report shares and revalidates recipient claim, link and revocation",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "後補數據不改變已交付的報告版本"
+          ]
+        },
+        {
+          "file": "apps/server/src/modules/team/team.test.ts",
+          "surface": "領域",
+          "result": "pass",
+          "assertion": "每日掃描同日去重，已撤銷或已確認的項目不再產生門戶確認提示。",
+          "case": "daily delivery reminders only reach active shares with outstanding confirmations",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": []
+        }
+      ],
+      "completeConditions": [
+        "產生、送達、確認三個時間點分開",
+        "後補數據不改變已交付的報告版本"
+      ]
+    },
+    "TE06": {
+      "status": "full",
+      "checks": [
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "三種範本經兩服務各自的 SQLite 匯出、匯入、套用。目的無連接、密封秘密、客戶、權利或發布資料，注入的未知欄位不穿透。重啟和重放保持原套用作業。",
+          "case": "TE06 applies a structural template across workspaces without transferring fixture records",
+          "report": "docs/acceptance/workspace-results.md",
+          "conditions": [
+            "套用範本的新工作區沒有任何連接、秘密或客戶資料"
+          ]
+        },
+        {
+          "file": "tests/acceptance/workspace-http.test.mjs",
+          "surface": "API",
+          "result": "pass",
+          "assertion": "用兩套獨立 SQLite HTTP 服務匯出並套用三種範本。目的端不存在來源連接、密封秘密或客戶，範本套用紀錄可重啟讀回。",
+          "case": "TE06 applies a structural template across workspaces without transferring fixture records",
+          "report": "docs/acceptance/engagement-local-results.md",
+          "conditions": [
+            "套用範本的新工作區沒有任何連接、秘密或客戶資料"
+          ]
+        }
+      ],
+      "completeConditions": [
+        "套用範本的新工作區沒有任何連接、秘密或客戶資料"
+      ]
+    }
+  }
+}
