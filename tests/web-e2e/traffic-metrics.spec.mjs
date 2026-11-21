@@ -157,7 +157,7 @@ test('LP02 LP03 AN03 | HTTPS short-link revisions, Bio refresh, and workspace li
   await page.route(`${shop}/**`, route => route.fulfill({ body: 'Merchant destination fixture' }));
   const bioUrl = `${origin}/b/brand`;
   await page.goto(bioUrl);
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
+  await expectBioLanguagePreference(page, bioUrl);
   await page.getByRole('link', { name: 'English' }).click();
   await expect(page.getByRole('link', { name: 'Taiwan product' })).toHaveCount(0);
   await page.getByRole('navigation', { name: 'Market' }).getByRole('link', { name: 'tw', exact: true }).click();
@@ -310,10 +310,10 @@ test('LP05 | public lead consent, workbench columns and manual CRM receipts', as
     await expect(field).not.toBeChecked();
     if (permitsContact) await field.check();
     await page.getByLabel('Email').fill(`${name}@example.test`);
-    const posted = page.waitForResponse(res => res.url().endsWith(`/f/${form.id}/submit`));
-    await page.getByRole('button', { name: '送出', exact: true }).click();
+    const posted = page.waitForResponse(res => new URL(res.url()).pathname === `/f/${form.id}/submit` && res.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
     expect((await posted).status()).toBe(200);
-    await expect(page.getByRole('heading', { name: '已收到您的資料' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'We received your information' })).toBeVisible();
     const leads = await op('/leads');
     expect(leads).toHaveLength(submitted.size + 1);
     const lead = leads.find(lead => !submitted.has(lead.id));
@@ -474,3 +474,11 @@ test('AN03 | consented Chromium sessions with identical browser signals stay sep
     await separate.close();
   }
 });
+
+async function expectBioLanguagePreference(page, bioUrl) {
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await page.getByRole('link', { name: '简体中文' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans');
+  await page.goto(bioUrl);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans');
+}

@@ -94,11 +94,11 @@ async function exercise(address: string, fixture: ReturnType<typeof seed>) {
   assert.match(page.body, /&lt;Campaign&gt;.*Published content/);
   assert.match(page.body, /name="consent" value="email:service"/);
   assert.doesNotMatch(page.body, /private fixture|checked|workspace_id|consent_text_version_id/);
-  assert.equal((await http(address, '/assets/traffic.css')).status, 200);
+  const preference = await checkLanguagePreference(address, fixture);
   const product = await http(address, '/p/product');
   assert.equal(product.status, 200, product.body);
   assert.ok(product.body.includes(`$0.00<small>店鋪市場價格 · <time datetime="${fixture.priceTime}">${fixture.priceTime}</time>`));
-  assert.deepEqual([...product.body.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)].map(match => match[1]), [fixture.purchaseUrl, fixture.purchaseUrl]);
+  assertProductLinks(product.body, fixture.purchaseUrl);
   const consentForm = '<form method="post" action="/p/product">' +
     '<button name="analytics" value="allow">允許分析</button> ' +
     '<button name="analytics" value="deny">拒絕分析</button></form>';
@@ -111,7 +111,7 @@ async function exercise(address: string, fixture: ReturnType<typeof seed>) {
   });
   assert.equal(rejectedConsent.status, 403);
   assert.equal(rejectedConsent.headers['set-cookie'], undefined);
-  assert.equal((await http(address, '/p/draft')).status, 404);
+  await checkLocalizedAnalytics(address, preference);
   assert.equal((await http(address, '/p/campaign', { host: otherHost })).status, 404);
   assert.equal((await http(address, '/p/campaign', { host: 'unknown.brand.co', headers: { 'x-forwarded-host': publicHost } })).status, 404);
   assert.equal((await http(address, '/api/v1/session')).status, 404);
@@ -130,7 +130,7 @@ async function exercise(address: string, fixture: ReturnType<typeof seed>) {
   assert.equal(posted.status, 200, posted.body);
   assert.match(posted.body, /已收到您的資料/);
   assert.doesNotMatch(posted.body, new RegExp(contact));
-  assert.equal((await http(address, form, { body })).status, 200);
+  await checkLocalizedSubmission(address, form, body, contact);
 }
 
 function verify(ctx: Context, fixture: ReturnType<typeof seed>) {
@@ -266,13 +266,33 @@ test('LP05 reads CRM handoff state and advances only after confirmed provider ev
   const [currentBio] = await op('/bio-pages');
   await op(`${bioPath}/publish`, { version: currentBio.version, body: {} });
   const defaultBio = await http(address, '/b/brand', { headers: { 'accept-language': 'en-US' } });
-  const marketBio = await http(address, '/b/brand?market=tw', { headers: { 'accept-language': 'en-US' } });
+  const marketBio = await http(address, '/b/brand?market=tw&lang=zh-Hans', { headers: { 'accept-language': 'en-US' } });
   assert.equal(defaultBio.status, 200);
   assert.equal(marketBio.status, 200);
-  assert.match(defaultBio.body, /lang="zh-Hant".*繁體品牌/);
-  assert.match(marketBio.body, /lang="zh-Hant".*台灣連結/);
+  assert.match(defaultBio.body, /<html lang="en".*繁體品牌.*Some links have expired/);
+  assert.match(marketBio.body, /<html lang="zh-Hans".*台灣連結.*部分链接已过期/);
+  assert.match(marketBio.body, /href="\?market=tw&amp;lang=en"/);
+  assert.match(marketBio.body, /href="\?lang=zh-Hans"[^>]*>所有市场/);
   assert.doesNotMatch(defaultBio.body, /台灣連結|Expired item|Paused item/);
   assert.doesNotMatch(marketBio.body, /Expired item|Paused item/);
+  await op('/short-links', { body: { domain_id: link.domain_id, code: 'regional', brand_id: 'brand', destination_url: destination,
+    market_routes: [{ market_id: 'tw', label: '臺灣特惠', url: nextUrl }] } });
+  const marketChoice = await http(address, '/regional?lang=zh-Hans');
+  assert.equal(marketChoice.status, 200);
+  assert.match(marketChoice.body, /选择市场.*默认目的地.*href="\?lang=zh-Hans&amp;market=tw"[^>]*>臺灣特惠/);
+  const routed = await http(address, '/regional?lang=zh-Hans&market=tw');
+  assert.equal(routed.status, 302);
+  assert.equal(routed.headers.location, nextUrl);
+
+  const authored = await op('/landing-pages', { body: { slug: 'simplified-content', brand_id: 'brand', locale: 'zh-CN', title: '活动介绍',
+    blocks: [{ type: 'text', text: '这是已发布的内容。' }] } });
+  await op('/page-checks', { body: { target_type: 'landing_page_version', target_id: authored.draft.id,
+    items: [{ check: 'http_status', result: 'pass', detail: 'Observed fixture' }] } });
+  await op(`/landing-pages/${authored.id}/publish`, { version: authored.version, body: { version_id: authored.draft.id } });
+  const fallback = await http(address, '/p/simplified-content', { headers: { 'accept-language': 'ja' } });
+  assert.equal(fallback.status, 200);
+  assert.match(fallback.body, /<html lang="zh-Hans".*<h1 lang="zh-CN">活动介绍<\/h1>.*action="\/p\/simplified-content".*允许分析/);
+  assert.equal(fallback.headers['set-cookie'], undefined);
   const initialItems = await op(`${bioPath}/items`);
   assert.deepEqual(initialItems.map((row: Row) => row.disposition), ['active', 'expired', 'unlisted']);
   await op(linkPath, { method: 'PATCH', version: revised.version, body: { status: 'paused' } });
@@ -344,6 +364,9 @@ async function exerciseCommand(t: TestContext, store: Store, provision: (id: str
   const oldPage = await http(address, `/landing/${landing.page.id}`);
   assert.equal(oldPage.status, 200, oldPage.body);
   assert.match(oldPage.body, /Legacy copy/);
+  const simplified = await http(address, `/landing/${landing.page.id}?lang=zh-Hans`);
+  assert.match(simplified.body, /<html lang="zh-Hans".*Legacy copy.*电子邮箱.*Reply to this message/);
+  assert.ok(simplified.body.includes(`name="form_version_id" value="${landing.version.id}"`));
   const oldLink = await http(address, `/r/${link.link.id}`);
   assert.equal(oldLink.status, 302);
   assert.equal(oldLink.headers.location, destination);
@@ -370,3 +393,72 @@ test('command PostgreSQL traffic scope over a local TCP socket', { skip: !pgRequ
     INSERT INTO ss.public_locators (locator, id, tenant_id, workspace_id)
     SELECT 'traffic.workspace', id::text, tenant_id, id FROM ss.workspaces WHERE id = $1::uuid`, [id]));
 });
+
+async function checkLanguagePreference(address: string, fixture: ReturnType<typeof seed>) {
+  assert.equal((await http(address, '/assets/traffic.css')).status, 200);
+  const simplified = await http(address, '/p/campaign?lang=zh-CN&source=fixture', {
+    headers: { 'accept-language': 'en', cookie: 'smartsell_traffic_lang=zh-Hant' },
+  });
+  assert.match(simplified.body, /<html lang="zh-Hans"/);
+  assert.match(simplified.body, /<h1 lang="zh-Hant">&lt;Campaign&gt;<\/h1>/);
+  assert.match(simplified.body, /<legend lang="zh-Hans">服务联系<\/legend>/);
+  assert.match(simplified.body, /Reply to my inquiry.*>提交<\/button>/);
+  assert.match(simplified.body, /href="\?lang=en&amp;source=fixture"/);
+  assert.ok(simplified.body.includes(`action="/f/${fixture.form.id}/submit?lang=zh-Hans"`));
+  assert.ok(simplified.body.includes(`name="version_id" value="${fixture.version.id}"`));
+  assert.ok(simplified.body.includes(`name="form_version_id" value="${fixture.formVersion.id}"`));
+  assert.equal(simplified.headers.vary, 'Accept-Language, Cookie');
+  const preferences = simplified.headers['set-cookie'] as string[];
+  assert.equal(preferences.length, 1);
+  assert.match(preferences[0]!, /^smartsell_traffic_lang=zh-Hans; Path=\/; Max-Age=\d+; HttpOnly; SameSite=Lax; Secure$/);
+  const preference = preferences[0]!.split(';', 1)[0]!;
+  const saved = await http(address, '/p/product?lang=unsupported', { headers: { cookie: preference, 'accept-language': 'en' } });
+  assert.match(saved.body, /<html lang="zh-Hans"/);
+  assert.match(saved.body, /店铺市场价格/);
+  assert.equal(saved.headers['set-cookie'], undefined);
+  const negotiated = await http(address, '/p/product', { headers: { 'accept-language': 'zh-TW;q=0, en;q=0.3, zh-SG;q=0.9' } });
+  assert.match(negotiated.body, /<html lang="zh-Hans"/);
+  assert.equal(negotiated.headers['set-cookie'], undefined);
+  const bareChinese = await http(address, '/p/product', { headers: { 'accept-language': 'zh' } });
+  assert.match(bareChinese.body, /<html lang="zh-Hans">/);
+  return preference;
+}
+
+function assertProductLinks(html: string, destination: string) {
+  assert.deepEqual([...html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)].map(match => match[1]),
+    ['?lang=zh-Hant', '?lang=zh-Hans', '?lang=en', destination, destination]);
+}
+
+async function checkLocalizedAnalytics(address: string, preference: string) {
+  const analytics = await http(address, '/p/campaign?lang=zh-Hans&source=fixture', { body: new URLSearchParams({ analytics: 'deny' }) });
+  assert.equal(analytics.status, 303);
+  assert.equal(analytics.headers.location, '/p/campaign?lang=zh-Hans&source=fixture');
+  const afterAnalytics = await http(address, String(analytics.headers.location), {
+    headers: { cookie: `${preference}; ${(analytics.headers['set-cookie'] as string[])[0]!.split(';', 1)[0]}` },
+  });
+  assert.match(afterAnalytics.body, /<html lang="zh-Hans"/);
+  assert.match(afterAnalytics.body, /value="deny" disabled>拒绝分析/);
+  const unpublished = await http(address, '/p/draft', { headers: { cookie: preference } });
+  assert.equal(unpublished.status, 404);
+  assert.match(unpublished.body, /找不到此页面/);
+}
+
+async function checkLocalizedSubmission(address: string, form: string, body: URLSearchParams, contact: string) {
+  const localizedForm = `${form}?lang=zh-Hans`;
+  const wrongOrigin = await http(address, localizedForm, { body, headers: { origin: 'https://foreign.example.org' } });
+  assert.equal(wrongOrigin.status, 403);
+  assert.match(wrongOrigin.body, /请从原活动页面提交/);
+  const wrongFormat = await http(address, localizedForm, { body, headers: { 'content-type': 'application/json' } });
+  assert.equal(wrongFormat.status, 415);
+  assert.match(wrongFormat.body, /不支持此表单格式/);
+  const oversized = await http(address, localizedForm, { body: 'a'.repeat(65 * 1024) });
+  assert.equal(oversized.status, 413);
+  assert.match(oversized.body, /请缩短留言后重试/);
+  const stale = await http(address, localizedForm, { body: new URLSearchParams({ ...Object.fromEntries(body), form_version_id: 'stale' }) });
+  assert.equal(stale.status, 409);
+  assert.match(stale.body, /表单已更新/);
+  const translatedReceipt = await http(address, localizedForm, { body });
+  assert.equal(translatedReceipt.status, 200);
+  assert.match(translatedReceipt.body, /<html lang="zh-Hans".*已收到您的信息/);
+  assert.doesNotMatch(translatedReceipt.body, new RegExp(contact));
+}

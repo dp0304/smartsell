@@ -1,3 +1,4 @@
+import { viewLanguage } from '../locale';
 import { Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, request, workspacePath, type Operation, type Session } from '@smartsell/sdk';
@@ -39,7 +40,7 @@ export function ViewApp({ session }: { session: Session }) {
   } });
   if (!workspace) return <Navigate to={appPath(session.workspaces[0].id)} replace />;
   const base = appPath(ws);
-  return <ViewLang lang={locale === 'en' ? 'en' : 'zh'}><ViewLinkProvider link={RouterLink}>
+  return <ViewLang lang={viewLanguage(locale)}><ViewLinkProvider link={RouterLink}>
     <ViewContext.Provider value={{ ws, session, workspace, base }}>
       <ApiContext.Provider value={{ ws, session, catalog: catalog.data ?? [], brandId: params.get('brand') ?? undefined, compatibility: false }}>
         <Routes>

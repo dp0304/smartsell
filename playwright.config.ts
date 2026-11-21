@@ -9,6 +9,7 @@ export default {
   use: {
     channel: 'chromium',
     viewport: { width: 1280, height: 800 },
+    locale: 'zh-TW',
     timezoneId: 'UTC',
     actionTimeout: 6_000,
     navigationTimeout: 10_000,

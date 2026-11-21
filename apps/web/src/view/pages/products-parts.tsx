@@ -19,13 +19,13 @@ export function ProductThumb({ title, imageUrl, size = 'md' }: { title: string |
 
 export function ProductStatus({ status }: { status: string | null | undefined }) {
   const known = status ? productStatusText[status] : undefined;
-  return known ? <StatusChip status={status} tone={known[0]} label={[known[1], known[2]]} /> : <StatusChip status={status} />;
+  return known ? <StatusChip status={status} tone={known[0]} label={[known[1], known[2], known[3]]} /> : <StatusChip status={status} />;
 }
 
 /** Status chip that also knows publication, post, change and fact states the shared chip lacks. */
 export function AnyStatus({ status }: { status: string | null | undefined }) {
   const known = status ? extraStatusText[status] : undefined;
-  return known ? <StatusChip status={status} tone={known[0]} label={[known[1], known[2]]} /> : <StatusChip status={status} />;
+  return known ? <StatusChip status={status} tone={known[0]} label={[known[1], known[2], known[3]]} /> : <StatusChip status={status} />;
 }
 
 const stockTone: Record<string, Tone> = { in_stock: 'good', low: 'warning', out_of_stock: 'critical' };
@@ -36,7 +36,7 @@ export function StockChip({ stock, status, quantity }: { stock?: MarketStock | n
   const text = pick(stockText[value] ?? [value.replace(/_/g, ' '), value.replace(/_/g, ' ')], lang);
   const label = isNum(count) && value !== 'out_of_stock' ? `${text} ${formatNumber(count, lang, true)}` : text;
   const partial = stock && isNum(stock.variants_total) && isNum(stock.variants_observed) && stock.variants_total > 0 && stock.variants_observed < stock.variants_total
-    ? pick([`${stock.variants_observed}/${stock.variants_total} 個變體已採集庫存`, `Stock collected for ${stock.variants_observed} of ${stock.variants_total} variants`], lang) : undefined;
+    ? pick([`${stock.variants_observed}/${stock.variants_total} 個變體已採集庫存`, `Stock collected for ${stock.variants_observed} of ${stock.variants_total} variants`, `${stock.variants_observed}/${stock.variants_total} 个变体已采集库存`], lang) : undefined;
   return <span className="pp-stock" title={partial}>
     <StatusChip status={value} tone={stockTone[value] ?? 'neutral'} label={label} />
     {partial && value !== 'unknown' && <small className="muted">{stock!.variants_observed}/{stock!.variants_total}</small>}
@@ -44,9 +44,9 @@ export function StockChip({ stock, status, quantity }: { stock?: MarketStock | n
 }
 
 export const flagText = {
-  estimate: { short: ['估算', 'Estimate'], long: ['由匯率或規則推估，不是店鋪實際標價。', 'Derived from an exchange rate or rule, not the price the store shows.'] },
-  stale: { short: ['已過時', 'Stale'], long: ['超過店鋪設定的同步時效沒有重新取得，實際價格可能已變動。', 'Not re-read within the store’s sync window; the real price may have changed.'] },
-  unpublishable: { short: ['不可用於發布', 'Not for publishing'], long: ['估算、過時、商品未上架或資料不完整時，這個價格不能放進貼文或投放。', 'Estimated, stale, unpublished or incomplete prices cannot go into posts or ads.'] },
+  estimate: { short: ['估算', 'Estimate'], long: ['由匯率或規則推估，不是店鋪實際標價。', 'Derived from an exchange rate or rule, not the price the store shows.', '由汇率或规则推估，不是店铺实际标价。'] },
+  stale: { short: ['已過時', 'Stale', '已过时'], long: ['超過店鋪設定的同步時效沒有重新取得，實際價格可能已變動。', 'Not re-read within the store’s sync window; the real price may have changed.', '超过店铺设置的同步时效没有重新取得，实际价格可能已变动。'] },
+  unpublishable: { short: ['不可用於發布', 'Not for publishing', '不可用于发布'], long: ['估算、過時、商品未上架或資料不完整時，這個價格不能放進貼文或投放。', 'Estimated, stale, unpublished or incomplete prices cannot go into posts or ads.', '估算、过时、商品未上架或数据不完整时，这个价格不能放进帖子或投放。'] },
 } satisfies Record<string, { short: Tuple; long: Tuple }>;
 
 /** Small tags for an estimated, stale or unpublishable price; each one carries its explanation as a tooltip. */
@@ -78,7 +78,7 @@ export function MetricValue({ metric, empty }: { metric: Metric | null | undefin
   return <AvailabilityTag availability={metric?.availability ?? 'not_collected'} />;
 }
 
-export const salesNoOrders: Tuple = ['沒有已記錄的訂單', 'No recorded orders'];
+export const salesNoOrders: Tuple = ['沒有已記錄的訂單', 'No recorded orders', '没有已记录的订单'];
 /** Orders recorded in SmartSell that include the product; hidden sales say so instead of showing zero. */
 export function SalesValue({ sales }: { sales: Sales | null | undefined }) {
   const lang = useLang();
@@ -102,8 +102,8 @@ export function AttentionChips({ items, limit = items.length }: { items: readonl
 
 export function CreatedVia({ via, showHuman = false }: { via: 'agent' | 'human' | null | undefined; showHuman?: boolean }) {
   const lang = useLang();
-  if (via === 'agent') return <ActorBadge type="agent" label={pick(['由 Agent 建立', 'Created by agent'], lang)} />;
-  if (via === 'human' && showHuman) return <ActorBadge type="human" label={pick(['由人建立', 'Created by a person'], lang)} />;
+  if (via === 'agent') return <ActorBadge type="agent" label={pick(['由 Agent 建立', 'Created by agent', '由 Agent 创建'], lang)} />;
+  if (via === 'human' && showHuman) return <ActorBadge type="human" label={pick(['由人建立', 'Created by a person', '由人创建'], lang)} />;
   return null;
 }
 

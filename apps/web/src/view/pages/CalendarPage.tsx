@@ -59,7 +59,7 @@ export function CalendarPage() {
   const open = (event: CalendarEvent) => update(eventParams(params, event.id));
   const unit = state.unit === 'week';
   const rangeLabel = unit ? `${shortDay(state.from, lang)} – ${shortDay(state.to, lang)}` : monthLabel(state.month, lang);
-  const modes: [Mode, readonly [string, string]][] = [['month', t.month], ['week', t.week], ['list', t.list]];
+  const modes: [Mode, readonly [string, string, string?]][] = [['month', t.month], ['week', t.week], ['list', t.list]];
 
   return <div className="cal-page">
     <PageHeader title={l(copy.pages.calendarTitle)} subtitle={l(t.subtitle)} asOf={read.isPending ? undefined : read.asOf ?? null} timeZone={zone} />

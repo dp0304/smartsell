@@ -49,11 +49,11 @@ test('activity groups consecutive same-credential actions within ten minutes, ne
   assert.deepEqual(items.map(item => [item.action, item.count]), [
     ['custom_tool_run', 1], ['campaign_update', 2], ['publishing_approve', 1], ['publishing_create_target', 2], ['publishing_create_target', 1],
   ]);
-  assert.deepEqual(items[0]!.summary, ['執行了 custom_tool_run', 'Ran custom_tool_run']);
+  assert.deepEqual(items[0]!.summary, ['執行了 custom_tool_run', 'Ran custom_tool_run', '运行了 custom_tool_run']);
   assert.deepEqual(items[1], {
     id: items[1]!.id, occurred_at: '2026-11-20T11:57:00.000Z',
     actor: { type: 'agent', user_id: 'owner', credential_id: 'cred-claude', label: 'Claude Code' },
-    source: 'mcp', action: 'campaign_update', verb: 'updated', summary: ['更新了推廣計劃 ×2', 'Updated a campaign ×2'],
+    source: 'mcp', action: 'campaign_update', verb: 'updated', summary: ['更新了推廣計劃 ×2', 'Updated a campaign ×2', '更新了推广计划 ×2'],
     resource: { type: 'campaign', id: campaign.id, title: 'Winter launch' }, count: 2,
   });
   assert.deepEqual(items[2]!.actor, { type: 'human', user_id: 'owner', credential_id: null, label: null });
@@ -88,7 +88,7 @@ test('agent presence is unknown without attributed events and counts credentials
   agent(30, 'content_create_item', { credential_id: 'cred-codex' });
   assert.deepEqual(agentPresence(ctx), { connections: 2, last_seen_at: '2026-11-20T11:30:00.000Z' });
   assert.deepEqual(describeAction('publishing_archive_slot_template').verb, 'deleted');
-  assert.deepEqual(describeAction('publishing_create_target', 3).summary, ['建立了發布排期 ×3', 'Created a publish schedule ×3']);
+  assert.deepEqual(describeAction('publishing_create_target', 3).summary, ['建立了發布排期 ×3', 'Created a publish schedule ×3', '创建了发布排期 ×3']);
 });
 
 test('activity names and links only resources the caller may read in their own module', () => {
@@ -114,7 +114,7 @@ test('activity names and links only resources the caller may read in their own m
     ads_create_proposal: [null, null], ads_revise_proposal: [shared.id, 'Spring boost'], brief_update_draft: [brief.id, 'Launch brief'],
     tasks_update: [theirs.id, 'Their task'], tasks_create: [mine.id, 'My task'], agent_jobs_create: [job.id, 'Private job'], campaign_brief_create: [null, null],
   });
-  assert.deepEqual(view().find(item => item.action === 'ads_create_proposal')!.summary, ['建立了投放方案', 'Created an ad proposal'], 'The event itself stays visible');
+  assert.deepEqual(view().find(item => item.action === 'ads_create_proposal')!.summary, ['建立了投放方案', 'Created an ad proposal', '创建了投放方案'], 'The event itself stays visible');
   ctx.role = 'reviewer';
   assert.deepEqual(refs().brief_update_draft, [null, null]);
   ctx.role = 'agent';
@@ -149,7 +149,7 @@ test('activity names and links jobs and change sets only when the agent module w
     agent_jobs_create: [null, null], agent_jobs_heartbeat: [null, null], agent_jobs_claim: [open.id, 'Answer a question'],
     change_sets_create: [null, null], change_sets_reject: [shown.id, 'Answer drafts'],
   }, 'A job the member created still hides once a resource it references is someone else’s');
-  assert.deepEqual(view().find(item => item.action === 'agent_jobs_create')!.summary, ['交辦了任務', 'Assigned a task'], 'The event itself stays visible');
+  assert.deepEqual(view().find(item => item.action === 'agent_jobs_create')!.summary, ['交辦了任務', 'Assigned a task', '交办了任务'], 'The event itself stays visible');
   ctx.role = 'manager';
   assert.deepEqual([refs().agent_jobs_create, refs().change_sets_create], [[blocked.id, 'Reply to VIP complaint'], [hidden.id, 'VIP reply drafts']]);
 });

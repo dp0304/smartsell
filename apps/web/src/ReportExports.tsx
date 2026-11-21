@@ -40,10 +40,10 @@ export function ReportExports({ record }: { record: RecordData }) {
   }
 
   return <section className="detail-block">
-    <h3>{label(['報告匯出', 'Report exports'])}</h3>
+    <h3>{label(['報告匯出', 'Report exports', '报告导出'])}</h3>
     <form className="inline-form" onSubmit={submit}>
-      <label>{label(['檔案格式', 'File format'])} <select name="format"><option value="pdf">PDF</option><option value="csv">CSV</option><option value="xlsx">XLSX</option></select></label>
-      <button disabled={pending}>{label(['匯出報告', 'Export report'])}</button>
+      <label>{label(['檔案格式', 'File format', '文件格式'])} <select name="format"><option value="pdf">PDF</option><option value="csv">CSV</option><option value="xlsx">XLSX</option></select></label>
+      <button disabled={pending}>{label(['匯出報告', 'Export report', '导出报告'])}</button>
     </form>
     {query.isPending && <p role="status">{t('loading')}</p>}
     {(error ?? query.error) && <ProblemNotice error={error ?? query.error} />}
@@ -51,10 +51,10 @@ export function ReportExports({ record }: { record: RecordData }) {
       <span role="status">{job.format.toUpperCase()} <Status value={job.status} /> <code>{job.operation_id}</code></span>
       {job.error_code && <small>{job.error_code}</small>}
       {cancel && job.status === 'queued' && <button disabled={pending} onClick={() => void act(() => callOperation(api, cancel, [job.operation_id], { body: {}, version: job.version }))}>
-        {label(['取消匯出', 'Cancel export'])}
+        {label(['取消匯出', 'Cancel export', '取消导出'])}
       </button>}
       {download && job.status === 'succeeded' && <a href={`${workspacePath(api.ws)}/report-exports/${encodeURIComponent(job.operation_id)}/download`} download>
-        {label(['下載', 'Download'])} {job.format.toUpperCase()}
+        {label(['下載', 'Download', '下载'])} {job.format.toUpperCase()}
       </a>}
     </div>)}
   </section>;

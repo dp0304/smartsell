@@ -48,7 +48,7 @@ function ReferencePicker({ field, initial, lookupIds = [], choices, pending = fa
   const waitingForParent = lookupIds.some(id => !id);
   // Member rows carry only IDs and roles, so describe them by who they are rather than by UUID.
   const records = (choices ?? recordRows(lookup.data?.data))?.map(record => field.lookup !== '/members' || rowTitle(record) !== stringValue(record.id) ? record : {
-    ...record, title: [record.user_id === api.session.user.id ? label(['我', 'Me']) : label(['成員', 'Member']) + ' ' + stringValue(record.user_id ?? record.id).slice(0, 8),
+    ...record, title: [record.user_id === api.session.user.id ? label(['我', 'Me']) : label(['成員', 'Member', '成员']) + ' ' + stringValue(record.user_id ?? record.id).slice(0, 8),
       record.role ? optionLabel(stringValue(record.role), locale) : ''].filter(Boolean).join(' · '),
   });
   const multiple = field.type === 'ids';
@@ -63,7 +63,7 @@ function ReferencePicker({ field, initial, lookupIds = [], choices, pending = fa
   }, [multiple, preferred, value, onChange]);
   const caption = <>{field.label ? label(field.label) : field.key}{field.optional || <span aria-hidden="true"> *</span>}</>;
   const route = createPath ?? (field.lookup ? createRoutes[field.lookup] : undefined);
-  if (waitingForParent) return <label className="field">{caption}<select disabled><option>{label(['請先完成上一個欄位', 'Complete the previous field first'])}</option></select><input type="hidden" name={field.key} value="" /></label>;
+  if (waitingForParent) return <label className="field">{caption}<select disabled><option>{label(['請先完成上一個欄位', 'Complete the previous field first', '请先完成上一个字段'])}</option></select><input type="hidden" name={field.key} value="" /></label>;
   // Without read access, or when the list fails, accept a typed ID so the form still works.
   if (!choices && !pending && (!lookup.op || lookup.isError)) {
     return <label className="field">{caption}<input name={field.key} defaultValue={initial} required={!field.optional} onChange={event => onChange?.(event.target.value)} />
@@ -71,8 +71,8 @@ function ReferencePicker({ field, initial, lookupIds = [], choices, pending = fa
   }
   if (!records || pending) return <label className="field">{caption}<select disabled><option>{t('loading')}</option></select></label>;
   if (!records.length) return <div className="field">{caption}<div className="field-empty">
-    <span>{label(['目前沒有可選的項目', 'Nothing to choose yet'])}</span>
-    {route && <Link to={`/w/${encodeURIComponent(api.ws)}/${route}`}>{label(['前往建立', 'Create one'])} →</Link>}
+    <span>{label(['目前沒有可選的項目', 'Nothing to choose yet', '目前没有可选的项目'])}</span>
+    {route && <Link to={`/w/${encodeURIComponent(api.ws)}/${route}`}>{label(['前往建立', 'Create one', '前往创建'])} →</Link>}
   </div>{!field.optional && <input type="hidden" name={field.key} value="" required />}</div>;
   if (multiple) return <fieldset className="field choice-list"><legend>{caption}</legend>
     {records.map(record => {
@@ -273,7 +273,7 @@ export function OperationForm({ selection, onClose, follow }: { selection: Selec
       <fieldset disabled={pending || (write && Boolean(result))}>
         {names.map((name, index) => ids[index] ? developer && <div key={name} className="field"><span>{name}</span><code>{ids[index]}</code></div> : <Input key={name} field={{ key: `parameter-${name}`, label: [name, name] }} initial="" />)}
         {fields.filter(field => !field.advanced).map(fieldFor)}
-        {advancedFields.length > 0 && <details className="form-more"><summary>{label(['更多設定', 'More settings'])}</summary>{advancedFields.map(fieldFor)}</details>}
+        {advancedFields.length > 0 && <details className="form-more"><summary>{label(['更多設定', 'More settings', '更多设置'])}</summary>{advancedFields.map(fieldFor)}</details>}
         {!action && <label className="field">{t(write ? 'payload' : 'parameters')}<textarea rows={8} name={write ? 'payload' : 'query'} defaultValue="{}" spellCheck={false} /></label>}
         {write && (requiredVersion || !action) && !versionOf(record) && <label className="field">{t('version')}<input name="if-match" required={requiredVersion} /><small>{t('versionHelp')}</small></label>}
         {((write && !action) || action?.confirm) && <label className="check"><input type="checkbox" required />{t('confirmAction')}</label>}
@@ -288,7 +288,7 @@ export function OperationForm({ selection, onClose, follow }: { selection: Selec
     </section>}
     {result && <section className="result"><strong role="status">{write && !reportJob ? label(['已完成', 'Saved']) : t(reportJob ? 'done' : 'result')}</strong>
       {write && created && <p>{created}</p>}
-      {(!write || developer) ? <details open={!write}><summary>{label(['回應資料', 'Response data'])}</summary><Json value={result} /></details> : null}
+      {(!write || developer) ? <details open={!write}><summary>{label(['回應資料', 'Response data', '回应数据'])}</summary><Json value={result} /></details> : null}
       <div className="action-row">
         {canFollow ? <button className="primary" onClick={() => follow(followKind!, followRecord)}>{t('view')}</button> : null}
         <button type="button" onClick={onClose}>{label(['完成', 'Done'])}</button>

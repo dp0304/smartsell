@@ -113,7 +113,7 @@ async function expectSetupAndSkip(page, locale = 'zh-Hant') {
 
 test('primary root supports first-time setup and fresh-session sign-in in both languages', async ({ browser, page, dev }) => {
   const password = await setupWorkspace(page, dev);
-  const fresh = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const fresh = await browser.newContext({ locale: 'zh-TW', viewport: { width: 1280, height: 800 } });
   try {
     const loginPage = await fresh.newPage();
     await loginPage.goto(`${dev.origin}/`);

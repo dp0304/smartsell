@@ -45,8 +45,8 @@ export function goalValueText(value: number, unit: string, currency: string | nu
   if (unit === 'percent') return `${formatNumber(value, lang)}%`;
   if (unit === 'ratio') return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(value);
   if (unit === 'seconds') {
-    if (value >= 3600) return lang === 'en' ? `${formatNumber(Math.round(value / 360) / 10, lang)} h` : `${formatNumber(Math.round(value / 360) / 10, lang)} 小時`;
-    if (value >= 60) return lang === 'en' ? `${formatNumber(Math.round(value / 60), lang)} min` : `${formatNumber(Math.round(value / 60), lang)} 分鐘`;
+    if (value >= 3600) return lang === 'en' ? `${formatNumber(Math.round(value / 360) / 10, lang)} h` : lang === 'zh-Hans' ? `${formatNumber(Math.round(value / 360) / 10, lang)} 小时` : `${formatNumber(Math.round(value / 360) / 10, lang)} 小時`;
+    if (value >= 60) return lang === 'en' ? `${formatNumber(Math.round(value / 60), lang)} min` : lang === 'zh-Hans' ? `${formatNumber(Math.round(value / 60), lang)} 分钟` : `${formatNumber(Math.round(value / 60), lang)} 分鐘`;
     return lang === 'en' ? `${formatNumber(value, lang)} s` : `${formatNumber(value, lang)} 秒`;
   }
   return formatNumber(value, lang, true);

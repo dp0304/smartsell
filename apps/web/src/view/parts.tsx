@@ -1,7 +1,8 @@
+import { viewLanguage } from '../locale';
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@smartsell/sdk';
-import { Busy, DecisionCard, Freshness, decisionKindText, pick, type DecisionItem, type Lang, type ResourceRef } from '@smartsell/ui';
+import { Busy, DecisionCard, Freshness, decisionKindText, pick, type DecisionItem, type ResourceRef } from '@smartsell/ui';
 import { ProblemNotice } from '../api';
 import { useCopy } from '../i18n';
 import { copy, fill } from './copy';
@@ -10,7 +11,7 @@ import { leavesList, useDecide, useUnfinishedDecisions, useViewContext, type Dec
 
 export function useText() {
   const { label, locale } = useCopy();
-  return { l: label, lang: (locale === 'en' ? 'en' : 'zh') as Lang };
+  return { l: label, lang: viewLanguage(locale) };
 }
 
 /** Brand and period filters live in the URL so links and reloads keep the same slice. */

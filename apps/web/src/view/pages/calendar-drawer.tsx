@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import { ExternalLink, X } from 'lucide-react';
-import { CopyButton, Glyph, type CalendarEvent, type Lang } from '@smartsell/ui';
+import { CopyButton, Glyph, localizedLabel, type CalendarEvent, type Lang } from '@smartsell/ui';
 import { RouterLink, resourcePath, useText } from '../parts';
 import { decisionHref, eventSpan, periodProgress, safePermalink } from './calendar-logic';
 import { KindKey, NeedsMark, OverdueTag, StatusTag, isAllDay } from './calendar-parts';
@@ -10,7 +10,7 @@ import { clock, dayLabel, fill, kindLabel, needsDetail, platformLabel, resourceL
 export function whenText(event: CalendarEvent, lang: Lang, timeZone: string | undefined, today: string) {
   const span = eventSpan(event, timeZone);
   if (!span) return '';
-  const pick = (text: readonly [string, string]) => text[lang === 'en' ? 1 : 0];
+  const pick = (text: readonly [string, string, string?]) => localizedLabel(text, lang);
   const timed = !isAllDay(event) && clock(event.starts_at, lang, timeZone) !== '00:00';
   if (span.period) {
     const start = `${dayLabel(span.first, lang, true)}${timed ? ` ${clock(event.starts_at, lang, timeZone)}` : ''}`;

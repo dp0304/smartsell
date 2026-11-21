@@ -29,6 +29,8 @@
   scroll-padding-block: 88px 16px;
 }
 
+html[lang='zh-Hant'] { font-family: Inter, 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', system-ui, sans-serif; }
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; }
@@ -213,6 +215,8 @@ button:disabled { background: var(--surface-hover); color: var(--muted); border-
 .stop-mark { width: 9px; height: 9px; border-radius: 2px; background: currentColor; }
 .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .topbar-actions { margin: 0; }
+.language-control { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.language-control select { width: auto; }
 .connection-actions:has(> :not([hidden])) { margin-top: 12px; }
 .connection-actions:not(:has(> :not([hidden]))) { display: none; }
 .challenge-actions { align-items: end; }

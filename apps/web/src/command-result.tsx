@@ -1,3 +1,4 @@
+import { problemSummary } from './problem-copy';
 import { AnalyticsResult } from './analytics-result';
 import { EntityTable } from '@smartsell/ui';
 import { Status, useFormat } from './workbench-ui';
@@ -85,7 +86,7 @@ export function CommandResult({ module, action, result, raw }: { module: string;
     {analytics}
     {counts.length > 0 && <div className="wb-inline-actions">{counts.map(([state, count]) => <span key={state}>{label('state', state)} · {number(Number(count))}</span>)}</div>}
     {issues.length > 0 && <EntityTable records={issues.slice(0, 100)} rowKey={row => String(issues.indexOf(row))} columns={[
-      { label: t('ui.csvLine'), cell: row => number(Number(row.line)) }, { label: t('ui.csvIssue'), cell: row => String(row.message ?? row.code ?? '') },
+      { label: t('ui.csvLine'), cell: row => number(Number(row.line)) }, { label: t('ui.csvIssue'), cell: row => problemSummary(locale, String(row.code ?? '')) ?? String(row.message ?? row.code ?? '') },
     ]} />}
     {rows.length > 0 && <details open><summary>{t('ui.importPreview')}</summary><EntityTable records={rows.slice(0, 25)} rowKey={row => String(row.line)} columns={[
       { label: t('ui.csvLine'), cell: row => number(Number(row.line)) }, { label: t('ui.status'), cell: row => <Status value={String(row.status ?? '')} /> },

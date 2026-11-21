@@ -16,12 +16,12 @@ const test = base.extend({
     };
     const serve = (route, file, type) => app.get(route, async (_, reply) =>
       reply.type(type).send(await readFile(new URL(`../../apps/${file}`, import.meta.url), 'utf8')));
-    serve('/landing/:slug', 'public/index.html', 'text/html');
-    serve('/unsubscribe', 'public/index.html', 'text/html');
-    app.get('/share', async (_, reply) => {
+    for (const route of ['/landing/:slug', '/unsubscribe']) serve(route, 'public/index.html', 'text/html');
+    for (const route of ['/share', '/creator']) app.get(route, async (_, reply) => {
       const html = await readFile(new URL('../../apps/portal/collaboration.html', import.meta.url), 'utf8');
       return reply.type('text/html').send(html.replaceAll('/assets/', '/portal-assets/'));
     });
+    serve('/src/i18n.js', 'portal/src/i18n.js', 'text/javascript');
     for (const [path, [file, type]] of Object.entries(assets)) serve(path, file, type);
     try {
       const origin = await app.listen({ host: '127.0.0.1', port: 0 });
@@ -203,4 +203,65 @@ test('TE03 | legacy signed delivery descriptions fit the minimum desktop layout'
   await testInfo.attach('1279px desktop boundary', { body: JSON.stringify(narrow), contentType: 'application/json' });
   expect(narrow).toEqual({ ...desktop, clientWidth: 1279, scrollX: 1 });
   expect(await page.locator('body').evaluate(body => body.getBoundingClientRect().width)).toBe(1280);
+});
+
+
+test('public language switch preserves form data, consent copy and unsubscribe token', async ({ page, host }) => {
+  const consent = '電子郵件通知：請保留原文。';
+  const versionId = 'Version_繁體';
+  await page.route('**/api/public/landing/campaign', async route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ version_id: versionId, name: '張小華', email: 'lead@example.test', service_contact: true });
+      await route.fulfill({ status: 409, json: { error: { code: 'version_conflict', message: 'Raw server detail' } } });
+    } else {
+      await route.fulfill({ json: { data: { title: '繁體活動', version_id: versionId, service_contact: { channel: 'email', text: consent } } } });
+    }
+  });
+  await page.goto(`${host.origin}/landing/campaign?lang=zh-CN&ref=Original`);
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('lang', 'zh-Hans');
+  await expect(page.getByRole('heading', { name: '繁體活動' })).toBeVisible();
+  await page.getByLabel('姓名（选填）').fill('張小華');
+  await page.getByLabel('电子邮件', { exact: true }).fill('lead@example.test');
+  await page.getByRole('checkbox', { name: new RegExp(consent) }).check();
+  await page.locator('#language').selectOption('en');
+  await expect(page.getByLabel('Name (optional)')).toHaveValue('張小華');
+  await expect(page.getByRole('checkbox', { name: new RegExp(consent) })).toBeChecked();
+  expect(new URL(page.url()).searchParams.get('ref')).toBe('Original');
+  await page.getByRole('button', { name: 'Submit' }).click();
+  await expect(page.getByRole('status')).toContainText('latest consent wording');
+  await page.locator('#language').selectOption('zh-Hans');
+  await expect(page.getByRole('status')).toContainText('最新的同意条款');
+  const token = 'Original_token-ABC';
+  await page.goto(`${host.origin}/unsubscribe?lang=zh#${token}`);
+  await expect(page.getByRole('heading', { name: '退订', exact: true })).toBeVisible();
+  await page.locator('#language').selectOption('en');
+  expect(new URL(page.url()).hash).toBe(`#${token}`);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Confirm unsubscribe' })).toBeVisible();
+});
+
+test('collaboration negotiates Simplified Chinese and preserves creator draft and token', async ({ browser, host }) => {
+  const context = await browser.newContext({ locale: 'zh-SG' });
+  try {
+    const page = await context.newPage();
+    const token = 'Original_Creator-Token';
+    await page.route('**/api/portal/creator-submit', async route => {
+      expect(route.request().postDataJSON()).toEqual({ token, post_url: 'https://example.test/post/Unchanged-ID' });
+      await route.fulfill({ status: 410, json: { error: { code: 'gone', message: 'Raw server detail' } } });
+    });
+    await page.goto(`${host.origin}/creator#${token}`);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans');
+    const field = page.getByLabel('帖子链接（HTTPS）');
+    await field.fill('http://example.test/post/Unchanged-ID');
+    await page.getByRole('button', { name: '提交帖子链接' }).click();
+    await expect(page.getByRole('status')).toHaveText('请输入有效的 HTTPS 帖子链接。');
+    await field.fill('https://example.test/post/Unchanged-ID');
+    await page.getByRole('button', { name: '提交帖子链接' }).click();
+    await expect(page.getByRole('status')).toHaveText('请联系邀请您的团队获取有效链接。');
+    await page.locator('#language').selectOption('en');
+    await expect(page.getByLabel('Post URL (HTTPS)')).toHaveValue('https://example.test/post/Unchanged-ID');
+    await expect(page.getByRole('status')).toHaveText('Ask the team that invited you for a valid link.');
+    expect(new URL(page.url()).hash).toBe(`#${token}`);
+  } finally { await context.close(); }
 });

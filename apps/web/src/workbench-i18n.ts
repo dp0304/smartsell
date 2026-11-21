@@ -1,3 +1,4 @@
+import { connectLocale, getLocale, languages } from './locale';
 import { createInstance } from 'i18next';
 
 const en = {
@@ -19,19 +20,24 @@ const zh = {
   command: {} as Record<string, string>,
 };
 
+const hans = {
+  nav: { me: '我的待办', work: '内容与发布', channels: '渠道与商务', admin: '数据与管理', home: '运营总览', campaigns: '行销活动', content: '内容工作台', calendar: '发布日历', approvals: '审批中心', execution: '运行监控', inbox: '收件箱', commerce: '商品与市场', assets: '素材中心', creators: '达人合作', research: '情报研究', traffic: '导流与短链', lifecycle: '生命周期行销', ads: '广告管理', data: '数据源', reports: '分析与报告', automation: '自动化', access: '访问权限', settings: '工作区设置', 'settings/accounts': '连接账号', 'settings/system': '系统设置' },
+  ui: { notifications: "通知", firstMessages: "最早消息", nextMessages: "后续消息", csvLine: "CSV 列号", csvIssue: "问题", downloadResult: "下载文件", allValues: "全部", dimensionFilters: "更多筛选", untilDate: "结束日期", savedView: "加载我的筛选", saveView: "保存我的筛选", filtersSaved: "已在此浏览器保存筛选", dateFilter: "记录日期",  defaultWorkspace: "返回主要工作区", globalSearch: "搜索工作区", commandSearch: "搜索命令记录", searchSubmit: "搜索", month: "月历", previousPeriod: "上一期", nextPeriod: "下一期", currentPeriod: "今天", backToRecord: "返回 {{name}}", approvalBinding: "发布目标版本 {{version}}", serverDetails: "服务器详情", inviteMember: "邀请成员", editRole: "编辑角色", currentAccess: "您目前的角色", language: "界面语言", setupToken: "初始设置令牌（由部署管理员提供）", endpointUnavailable: "此角色或部署未提供此数据。", summary: "运营摘要", loadedItems: "已加载的项目", loaded: "已加载 {{loaded}} / {{total}} 条", partialOverview: "部分来源未就绪。请在工作区状态查看详情。", from: "开始日期", toExclusive: "结束日期（不含）", apply: "套用", output: "已发布", onTime: "准时发布率", internalNotes: "内部备注", commitImport: "确认导入", recheckImport: "重新检查", noConnection: "尚无可用的对话。请先连接渠道或导入消息。", notSynced: "尚无同步记录。", referenceId: "输入识别码",  desktop: '工作台支持宽度 1280 px 以上的桌面浏览器。目前可水平卷动继续使用。', workbench: '运营工作台', chooseWorkspace: '切换工作区', tools: '工具', signout: '注销', signin: '登录', setup: '设置 SmartSell', setupLink: '首次使用？创建工作区', loginLink: '返回登录', setupHelp: '创建第一个工作区与拥有者账号。', signinHelp: '请使用工作区账号登录。', email: '电子邮箱', password: '密码', name: '您的姓名', workspaceName: '工作区名称', loading: '加载中…', retry: '重新加载', unavailable: '无法加载数据。', forbidden: '目前的工作区角色无权访问。', noWorkspace: '此账号尚未获分配工作区。', unknownWorkspace: '此账号无法访问该工作区。', empty: '此查看目前没有记录。', emptySearch: '没有符合筛选条件的记录。', noTools: '您的角色没有可用的操作。', noForm: '此操作尚无对应的工作台表单。', run: '运行操作', replay: '重试同一请求', close: '关闭', cancel: '取消', confirm: '确认操作', confirmHelp: '继续前请确认所选记录及输入内容。', succeeded: '服务器已接受操作。', error: '请求失败。', search: '筛选记录', all: '全部状态', record: '记录', status: '状态', updated: '最后更新', action: '操作', select: '请选择…', optional: '选填', invalid: '请检查字段格式。', json: '请输入有效的 JSON。', data: '记录详情', result: '服务器结果', overview: '运营总览', today: '今日概况', needs: '须处理', health: '工作区状态', queue: '待办类型', count: '记录数', selectConversation: '选择对话以阅读消息及查看可用操作。', context: '对话详情', messages: '消息', noMessages: '此对话没有可显示的消息。', week: '周历', list: '清单', previous: '上一周', next: '下一周', current: '本周', importPreview: '预览数据行', rows: '{{count}} 条', noCoverage: '无法取得', noDate: '尚未排期', controls: '查看控制项', account: '登录账号' },
+  queue: { all: '所有对话', unassigned: '未分派', mine: '分派给我', open: '待处理', waiting: '等待客户', snoozed: '暂缓', resolved: '已解决' },
+  state: { owner: '拥有者', admin: '管理员', editor: '编辑者', reviewer: '审批者', viewer: '查看者', critical: '紧急', high: '高', normal: '一般', low: '低', available: '可用', not_collected: '未采集', partial: '部分可用', pending: '待处理', in_review: '审批中', submitted: '已送交', approved: '已批准', rejected: '已退回', invalidated: '已失效', open: '待处理', resolved: '已解决', blocked: '受阻', failed: '失败', ready: '就绪', active: '进行中', draft: '草稿', scheduled: '已排期', published: '已发布', running: '运行中', unknown: '未知', unverified: '待核实', needs_verification: '待核实', paused: '已暂停', done: '完成', pending_review: '待审阅', pending_approval: '待审批', needs_reply: '待回复' },
+  field: { id: '识别码', version: '版本', title: '标题', name: '名称', status: '状态', body: '内文', description: '说明', content: '内容', email: '电子邮箱', role: '角色', reason: '原因', url: '网址', text: '文字', platform: '平台', locale: '语言', timezone: '时区', due_at: '到期时间', scheduled_at: '计划发布时间', account_id: '账号', campaign_id: '活动', conversation_id: '对话', target_id: '发布目标', item_id: '内容项目', revision_id: '修订', created_at: '创建时间', updated_at: '更新时间' },
+  kind: { content_item: '内容项目', content_variant: '内容变体', variant_revision: '版本修订', publish_target: '发布目标', approval_request: '审批请求', execution_task: '运行任务', platform_post: '平台作品', tag: '标签', import_batch: '导入批量', product_change: '商品异动', rights_grant: '授权', watch_target: '监测目标', research_board: '研究板', product_candidate: '候选商品', short_link: '短链', landing_page: '承接页', esp_flow: 'ESP 流程', ad_account: '广告账户', ad_entity: '广告活动与组合', adjustment_suggestion: '调整建议', data_source: '数据源', sync_run: '同步记录', quality_issue: '品质问题', import_template: '导入模板', metric_definition: '指标定义', automation_rule: '自动化规则', agent_job: 'Agent 任务', task: '工作项目', handover: '交接', delivery: '交付', social_account: '社交媒体账号', account_block: '账号阻塞', work_item: '待办事项', notification: '通知', campaign: '活动', item: '内容项目', revision: '修订', idea: '选题', target: '发布目标', approval: '审批', attempt: '运行尝试', post: '平台作品', manual_task: '人工任务', conversation: '对话', message: '消息', reply: '回复', product: '商品', store: '店铺', import: '导入批量', asset: '素材', right: '授权', knowledge: '知识', creator: '创作者', collaboration: '合作', watch: '监测', observation: '观测', board: '研究板', link: '短链', destination: '承接网址', customer: '客户', consent: '同意', segment: '分群', account: '账号', creative: '创意', proposal: '提案', source: '数据源', sync_job: '同步任务', report: '报告', metric: '指标', job: '任务', change_set: '变更集', rule: '规则', member: '成员', invite: '邀请', brand: '品牌', market: '市场', settings: '设置', setting: '设置', connection: '连接', device: '设备', audit: '审核' },
+  command: {} as Record<string, string>,
+};
+
 const i18n = createInstance();
 
-export const locales = ['zh-Hant', 'en'] as const;
-const previous = localStorage.getItem('smartsell-language') ?? localStorage.getItem('smartsell.locale');
-document.documentElement.lang = previous === 'en' ? 'en' : 'zh-Hant';
 void i18n.init({
-  resources: { 'zh-Hant': { translation: zh }, en: { translation: en } },
+  resources: { 'zh-Hant': { translation: zh }, 'zh-Hans': { translation: hans }, en: { translation: en } },
   ns: ['translation'], defaultNS: 'translation',
-  lng: previous === 'en' ? 'en' : 'zh-Hant', fallbackLng: false,
+  lng: getLocale(), supportedLngs: languages.map(({ code }) => code), load: 'currentOnly',
+  fallbackLng: { 'zh-Hans': ['zh-Hant', 'en'], default: ['en'] },
   interpolation: { escapeValue: false }, keySeparator: '.',
 });
-i18n.on('languageChanged', language => {
-  document.documentElement.lang = language;
-  localStorage.setItem('smartsell-language', language);
-});
+connectLocale(i18n);
 export default i18n;

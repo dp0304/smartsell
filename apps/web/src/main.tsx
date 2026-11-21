@@ -1,3 +1,4 @@
+import { languages } from './locale';
 import { Fragment, Suspense, lazy, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -51,7 +52,7 @@ async function getSession(signal?: AbortSignal) {
 function Brand() { return <div className="brand"><span><Zap size={19} fill="currentColor" /></span>SmartSell</div>; }
 function Language() {
   const { t, locale, setLanguage } = useCopy();
-  return <label className="language"><Globe size={15} /><select aria-label={t('language')} value={locale} onChange={event => setLanguage(event.target.value)}><option value="zh-Hant">繁體中文</option><option value="en">English</option></select></label>;
+  return <label className="language"><Globe size={15} /><select aria-label={t('language')} value={locale} onChange={event => setLanguage(event.target.value)}>{languages.map(({ code, name }) => <option key={code} value={code} lang={code}>{name}</option>)}</select></label>;
 }
 
 function Authentication({ setupPath, registerToMain }: { setupPath: boolean; registerToMain: boolean }) {
@@ -79,7 +80,7 @@ function MemberInvitation() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>();
   const flight = useRef(false);
-  const title = label(['接受成員邀請', 'Accept member invitation']);
+  const title = label(['接受成員邀請', 'Accept member invitation', '接受成员邀请']);
   const tokenFromLink = /^[A-Za-z0-9_-]{43}$/.test(hash.slice(1)) ? hash.slice(1) : undefined;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -104,7 +105,7 @@ function MemberInvitation() {
   return <div className="auth-page"><aside className="auth-side"><Brand /><h1>{t('authWelcome')}</h1></aside>
     <main className="auth-main"><Language /><section className="auth-card"><h2>{title}</h2>
       <form className="fields" onSubmit={submit}><fieldset disabled={pending}>
-        {!tokenFromLink && <label className="field">{label(['邀請權杖', 'Invitation token'])}<input name="token" type="password" autoComplete="off" required pattern="[A-Za-z0-9_\-]{43}" maxLength={43} /></label>}
+        {!tokenFromLink && <label className="field">{label(['邀請權杖', 'Invitation token', '邀请令牌'])}<input name="token" type="password" autoComplete="off" required pattern="[A-Za-z0-9_\-]{43}" maxLength={43} /></label>}
         <label className="field">{t('email')}<input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
         <label className="field">{t('displayName')}<input name="name" required maxLength={120} autoComplete="name" /></label>
         <label className="field">{t('password')}<input name="password" type="password" required minLength={12} autoComplete="new-password" /></label>
@@ -266,7 +267,7 @@ function App({ compatibility }: { compatibility: boolean }) {
     {ws && data && <Route path="/app/:ws/*" element={<Suspense fallback={<Busy label={t('loading')} />}><ViewApp session={data} /></Suspense>} />}
     {ws && data && <Route path="/w/:ws/*" element={<Workspace session={data} compatibility={compatibility} />} />}
     {ws && data && <Route path="/admin/*" element={<Workspace session={data} compatibility={compatibility} administrative />} />}
-    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
+    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><Language /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
   </Routes></>;
 }
 

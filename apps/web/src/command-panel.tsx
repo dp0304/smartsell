@@ -62,7 +62,7 @@ function Editor({ field, wid, record, spec, command, commands, invalid, clearErr
       : field.type === 'textarea' || field.type === 'json' || field.type === 'lines' ? <textarea {...attributes} rows={5} spellCheck={field.type !== 'json'} />
       : <input {...attributes} type={field.secret ? 'password' : field.type ?? 'text'} min={field.min} max={field.max} step={field.type === 'number' ? field.integer ? 1 : 'any' : field.type === 'datetime-local' ? 'any' : undefined} />}
     </label>
-    {manualReference && <small>{locale.startsWith('en') ? 'Enter a record ID.' : '請輸入紀錄 ID。'}</small>}
+    {manualReference && <small>{locale.startsWith('en') ? 'Enter a record ID.' : locale === 'zh-Hans' ? '请输入记录 ID。' : '請輸入紀錄 ID。'}</small>}
     {field.type === 'csv' && <><input type="file" accept=".csv,text/csv" aria-label={fieldLabel} onChange={event => {
       const file = event.target.files?.[0];
       const request = ++upload.current;

@@ -1,3 +1,4 @@
+import { languages } from '../../locale';
 import { Link } from 'react-router-dom';
 import { AgentPrompt, Glyph, StatusChip, formatDateTime, intlLocale, relativeTime, type Lang } from '@smartsell/ui';
 import { useCopy } from '../../i18n';
@@ -63,7 +64,7 @@ function BrandMarkets({ brand }: { brand: Row }) {
     return <ul className="vs-list st-markets">{markets.map(market => <li key={String(market.id)}>
       <span className="vs-grow"><span className="st-market-name">{String(market.name ?? market.country_code ?? market.id)}</span>
         {market.id === brand.default_market_id && <span className="vs-tag">{l(text.defaultMarket)}</span>}<br />
-        <small className="muted">{[market.name ? (typeof market.country_code === 'string' ? market.country_code.toUpperCase() : undefined) : region(market.country_code, lang), typeof market.primary_language === 'string' ? optionLabel(market.primary_language, lang === 'en' ? 'en' : 'zh-Hant') : undefined,
+        <small className="muted">{[market.name ? (typeof market.country_code === 'string' ? market.country_code.toUpperCase() : undefined) : region(market.country_code, lang), typeof market.primary_language === 'string' ? optionLabel(market.primary_language, lang) : undefined,
           market.currency, market.timezone].filter(Boolean).map(String).join(' · ')}</small></span>
       {market.status !== 'active' && <StatusChip status={String(market.status ?? 'unknown')} />}
     </li>)}</ul>;
@@ -146,11 +147,9 @@ function AgentSection({ connections }: { connections: ViewResult<AgentConnection
 function LanguageSection() {
   const { l } = useText();
   const { locale, setLanguage } = useCopy();
-  const english = locale === 'en';
   return <Section title={<span id="st-language">{l(copy.shell.language)}</span>}>
     <div className="vs-filter-row" role="group" aria-label={l(copy.shell.language)}>
-      <button type="button" lang="zh-Hant" aria-pressed={!english} onClick={() => setLanguage('zh-Hant')}>繁體中文</button>
-      <button type="button" lang="en" aria-pressed={english} onClick={() => setLanguage('en')}>English</button>
+      {languages.map(({ code, name }) => <button key={code} type="button" lang={code} aria-pressed={locale === code} onClick={() => setLanguage(code)}>{name}</button>)}
     </div>
     <p className="muted"><small>{l(text.languageHint)}</small></p>
   </Section>;

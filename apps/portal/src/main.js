@@ -1,23 +1,30 @@
 import { fetchPortal, localSignInPath, routeFor } from './api.js';
-import { messages } from './i18n.js';
+import { appendText, bindLanguagePicker, messages, updateText, writeText } from './i18n.js';
 
 const main = document.querySelector('#main');
 const picker = document.querySelector('#language');
 const route = routeFor(location.pathname, location.hash);
-if (route.token) history.replaceState(null, '', location.pathname);
+if (route.token) history.replaceState(null, '', location.pathname + location.search);
 const login = localSignInPath(document.querySelector('meta[name="portal-login"]')?.content);
-const savedLocale = localStorage.getItem('portal-locale');
-picker.value = savedLocale === 'en' ? 'en' : 'zh-Hant';
 let revision = 0;
 
-const t = key => messages[picker.value][key];
+const translate = key => messages[picker.value][key];
+const t = key => () => translate(key);
 const date = value => new Intl.DateTimeFormat(picker.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
 function node(tag, value, attributes = {}) {
   const item = document.createElement(tag);
-  if (value !== undefined) item.textContent = value;
+  appendText(item, value);
   for (const [key, attr] of Object.entries(attributes)) item.setAttribute(key, attr);
   return item;
+}
+
+function applyLocale() {
+  document.documentElement.lang = picker.value;
+  document.title = `SmartSell · ${translate('portal')}`;
+  document.querySelector('#language-label').textContent = translate('language');
+  document.querySelector('#desktop-notice').textContent = translate('desktop');
+  updateText(main);
 }
 
 function panel(title) {
@@ -30,8 +37,10 @@ function status(key) {
   return node('p', t(key), { role: 'status', class: 'status' });
 }
 
-function errorKey(error) {
-  return error.status === 401 ? 'session' : [403, 404].includes(error.status) ? 'unavailable' : 'retry';
+function errorKey(error, action = false) {
+  if (action && error.status === 403) return 'denied';
+  return ({ 400: 'invalid', 401: 'session', 403: 'unavailable', 404: 'unavailable', 409: 'conflict',
+    410: 'unavailable', 413: 'tooLong', 422: 'invalid', 429: 'limited' })[error.status] ?? 'retry';
 }
 
 function action(parent, label, call, field, done = () => render('submitted')) {
@@ -55,7 +64,7 @@ function action(parent, label, call, field, done = () => render('submitted')) {
       await call(input?.value);
       if (form.isConnected) done();
     } catch (error) {
-      result.textContent = t(errorKey(error));
+      writeText(result, t(errorKey(error, true)));
     } finally {
       submit.disabled = false;
     }
@@ -79,7 +88,7 @@ function shareView(share, path) {
   }
   const send = (action, body = {}) => fetchPortal(`${path}/${action}`, { body });
   if (!route.token) article.append(node('a', t('back'), { href: '/' }));
-  article.append(node('h1', share.title), node('p', `${t('expires')} · ${date(share.expires_at)}`, { class: 'meta' }));
+  article.append(node('h1', share.title), node('p', () => `${translate('expires')} · ${date(share.expires_at)}`, { class: 'meta' }));
   if (share.status === 'stale') article.append(status('stale'));
   article.append(node('p', share.text, { class: 'preview' }));
   if (share.deliveries?.length) {
@@ -89,7 +98,7 @@ function shareView(share, path) {
       for (const key of ['produced_at', 'sent_at', 'confirmed_at']) {
         const event = node('div');
         const value = node('dd');
-        value.append(node('time', date(delivery[key]), { datetime: delivery[key] }));
+        value.append(node('time', () => date(delivery[key]), { datetime: delivery[key] }));
         event.append(node('dt', t(key)), value);
         times.append(event);
       }
@@ -113,7 +122,7 @@ function shareView(share, path) {
       const list = node('ul', undefined, { class: 'comments' });
       for (const comment of thread.comments) {
         const item = node('li');
-        item.append(node('time', date(comment.at), { datetime: comment.at }), node('p', comment.text));
+        item.append(node('time', () => date(comment.at), { datetime: comment.at }), node('p', comment.text));
         list.append(item);
       }
       feedback.append(list);
@@ -140,10 +149,6 @@ function shareView(share, path) {
 
 async function render(notice) {
   const generation = ++revision;
-  document.documentElement.lang = picker.value;
-  document.title = `SmartSell · ${t('portal')}`;
-  document.querySelector('#language-label').textContent = t('language');
-  document.querySelector('#desktop-notice').textContent = t('desktop');
   main.setAttribute('aria-busy', 'true');
   main.replaceChildren(status('loading'));
   try {
@@ -171,7 +176,7 @@ async function render(notice) {
       for (const share of shares) {
         const item = node('li');
         const link = node('a', share.title, { href: `/s/${encodeURIComponent(share.id)}` });
-        item.append(link, node('p', `${t(share.kind) ?? t('shared')} · ${t('expires')} ${date(share.expires_at)}`, { class: 'meta' }));
+        item.append(link, node('p', () => `${Object.hasOwn(messages[picker.value], share.kind) ? translate(share.kind) : translate('shared')} · ${translate('expires')} ${date(share.expires_at)}`, { class: 'meta' }));
         list.append(item);
       }
       content.append(list);
@@ -216,8 +221,6 @@ fetchPortal('/branding').then(branding => {
 
 if (route.type === 'home') window.addEventListener('popstate', () => render());
 
-picker.addEventListener('change', () => {
-  localStorage.setItem('portal-locale', picker.value);
-  render();
-});
+bindLanguagePicker(picker, applyLocale);
+applyLocale();
 render();

@@ -9,13 +9,13 @@ export const platforms = ['meta_instagram', 'meta_facebook', 'tiktok', 'youtube'
 export type Platform = typeof platforms[number];
 export const platformText: Record<string, Tuple> = {
   meta_instagram: ['Instagram', 'Instagram'], meta_facebook: ['Facebook', 'Facebook'], tiktok: ['TikTok', 'TikTok'],
-  youtube: ['YouTube', 'YouTube'], xiaohongshu: ['小紅書', 'Xiaohongshu'], douyin: ['抖音', 'Douyin'],
+  youtube: ['YouTube', 'YouTube'], xiaohongshu: ['小紅書', 'Xiaohongshu', '小红书'], douyin: ['抖音', 'Douyin'],
   instagram: ['Instagram', 'Instagram'], facebook: ['Facebook', 'Facebook'],
 };
 
 export const roleText: Record<string, Tuple> = {
-  owner: ['擁有者', 'Owner'], admin: ['管理員', 'Admin'], manager: ['經理', 'Manager'], editor: ['編輯', 'Editor'],
-  reviewer: ['審核者', 'Reviewer'], analyst: ['分析師', 'Analyst'], viewer: ['檢視者', 'Viewer'], agent: ['Agent', 'Agent'],
+  owner: ['擁有者', 'Owner', '拥有者'], admin: ['管理員', 'Admin', '管理员'], manager: ['經理', 'Manager', '经理'], editor: ['編輯', 'Editor', '编辑'],
+  reviewer: ['審核者', 'Reviewer', '审核者'], analyst: ['分析師', 'Analyst', '分析师'], viewer: ['檢視者', 'Viewer', '查看者'], agent: ['Agent', 'Agent'],
 };
 
 // Mirrors the server role lists: ADMIN registers accounts, WRITE pauses, POLICY_ADMIN releases.
@@ -118,19 +118,19 @@ export function setupTones(input: SetupInput): Record<'publishing' | 'brands' | 
 }
 
 const problems: Record<string, Tuple> = {
-  ACCOUNT_ALREADY_REGISTERED: ['這個平台帳號已經登記過了。', 'This platform account is already registered.'],
-  ACCOUNT_OWNERSHIP_REQUIRED: ['請先勾選確認這個帳號屬於你的公司。', 'Confirm that your company owns this account first.'],
-  INVALID_TIME_ZONE: ['時區無效，請重新選擇。', 'That time zone is not valid; choose another.'],
-  BRAND_INACTIVE: ['這個品牌已停用或封存，請選擇其他品牌。', 'This brand is inactive or archived; choose another.'],
-  HUMAN_SESSION_REQUIRED: ['這個動作只能由人在瀏覽器裡完成。', 'Only a person signed in to the browser can do this.'],
-  HUMAN_REQUIRED: ['這個動作只能由人在瀏覽器裡完成。', 'Only a person signed in to the browser can do this.'],
-  VERSION_CONFLICT: ['暫停狀態剛剛有變更，請看過最新狀態再操作。', 'This pause just changed; check the latest state and try again.'],
-  INVALID_INPUT: ['有欄位格式不正確，請檢查後再送出。', 'A field is not in the expected format; check and try again.'],
+  ACCOUNT_ALREADY_REGISTERED: ['這個平台帳號已經登記過了。', 'This platform account is already registered.', '这个平台账号已经登记过了。'],
+  ACCOUNT_OWNERSHIP_REQUIRED: ['請先勾選確認這個帳號屬於你的公司。', 'Confirm that your company owns this account first.', '请先勾选确认这个账号属于你的公司。'],
+  INVALID_TIME_ZONE: ['時區無效，請重新選擇。', 'That time zone is not valid; choose another.', '时区无效，请重新选择。'],
+  BRAND_INACTIVE: ['這個品牌已停用或封存，請選擇其他品牌。', 'This brand is inactive or archived; choose another.', '这个品牌已禁用或封存，请选择其他品牌。'],
+  HUMAN_SESSION_REQUIRED: ['這個動作只能由人在瀏覽器裡完成。', 'Only a person signed in to the browser can do this.', '这个动作只能由人在浏览器里完成。'],
+  HUMAN_REQUIRED: ['這個動作只能由人在瀏覽器裡完成。', 'Only a person signed in to the browser can do this.', '这个动作只能由人在浏览器里完成。'],
+  VERSION_CONFLICT: ['暫停狀態剛剛有變更，請看過最新狀態再操作。', 'This pause just changed; check the latest state and try again.', '暂停状态刚刚有变更，请看过最新状态再操作。'],
+  INVALID_INPUT: ['有欄位格式不正確，請檢查後再送出。', 'A field is not in the expected format; check and try again.', '有字段格式不正确，请检查后再送出。'],
 };
 /** A plain-language reading of a known API problem; unknown problems fall back to the generic notice. */
 export function problemText(status: number | undefined, code: unknown): Tuple | undefined {
   if (typeof code === 'string' && problems[code]) return problems[code];
-  if (status === 403) return ['你的角色沒有權限做這件事，請找工作區擁有者或管理員。', 'Your role cannot do this; ask a workspace owner or admin.'];
-  if (status === 409 || status === 412) return ['資料剛剛有變更，請看過最新狀態再操作。', 'This just changed; check the latest state and try again.'];
+  if (status === 403) return ['你的角色沒有權限做這件事，請找工作區擁有者或管理員。', 'Your role cannot do this; ask a workspace owner or admin.', '你的角色没有权限做这件事，请找工作区拥有者或管理员。'];
+  if (status === 409 || status === 412) return ['資料剛剛有變更，請看過最新狀態再操作。', 'This just changed; check the latest state and try again.', '数据刚刚有变更，请看过最新状态再操作。'];
   return undefined;
 }

@@ -1,3 +1,4 @@
+import { DesktopError } from './errors.ts';
 import { createPrivateKey, type KeyObject } from 'node:crypto';
 import { readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { fields, opaqueId } from '../../../packages/connector-tasks/src/tasks.ts';
@@ -19,7 +20,7 @@ type SafeStorage = {
 export function deviceVault(path: string, safe: SafeStorage, platform: string): Vault {
   const available = () => (platform === 'darwin' || platform === 'win32') && safe.isEncryptionAvailable();
   function requireEncryption() {
-    if (!available()) throw new Error('系统安全存储不可用。');
+    if (!available()) throw DesktopError.create('系统安全存储不可用。');
   }
   return {
     available,
@@ -31,11 +32,11 @@ export function deviceVault(path: string, safe: SafeStorage, platform: string): 
         throw error;
       }
       requireEncryption();
-      if (ciphertext.length > 16_384) throw new Error('配对记录无效。');
+      if (ciphertext.length > 16_384) throw DesktopError.create('配对记录无效。');
       const row = fields(JSON.parse(safe.decryptString(ciphertext)), ['origin', 'workspace', 'device', 'name', 'privateKey']);
-      if (typeof row.origin !== 'string' || typeof row.name !== 'string' || typeof row.privateKey !== 'string') throw new Error('配对记录无效。');
+      if (typeof row.origin !== 'string' || typeof row.name !== 'string' || typeof row.privateKey !== 'string') throw DesktopError.create('配对记录无效。');
       const key = createPrivateKey(row.privateKey);
-      if (key.asymmetricKeyType !== 'ed25519') throw new Error('配对密钥无效。');
+      if (key.asymmetricKeyType !== 'ed25519') throw DesktopError.create('配对密钥无效。');
       return { origin: row.origin, workspace: opaqueId(row.workspace, 'workspace'), device: opaqueId(row.device, 'device'), name: row.name, key };
     },
     save({ key, ...pairing }) {

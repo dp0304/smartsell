@@ -25,12 +25,12 @@ const CLOSED_PUBLICATION = ['published', 'expired', 'failed', 'cancel_requested'
 const DECISION_KINDS = new Set(['approval', 'publish_due_today']);
 const ALERT_PROVIDERS = new Set(['planning.missed', 'execution.attention', 'account.health', 'ingest.health', 'commerce.risks', 'campaign.risks', 'creator.due']);
 const alertLabels: Record<string, Label> = {
-  missed_publish: ['發布錯過排定時間', 'Publication missed its scheduled time'], outcome_unknown: ['發布結果未知', 'Publication outcome unknown'],
-  failed: ['發布失敗', 'Publication failed'], connector_auto_halted: ['自動模式已緊急停止', 'Automatic mode emergency stop active'],
-  account_emergency_stop: ['帳號自動模式已停止', 'Account automatic mode is stopped'], expired: ['授權已過期', 'Authorization expired'],
-  sync_failed: ['資料同步失敗', 'Data synchronization failed'], sync_delayed: ['資料同步延遲', 'Data synchronization is delayed'],
-  inventory_risk: ['庫存需要注意', 'Listing inventory requires attention'], milestone_delayed: ['里程碑延遲', 'Campaign milestone delayed'],
-  deliverable_due: ['達人交付到期', 'Creator deliverable due'], terms_outdated: ['自動模式條款已更新', 'Automatic mode terms changed'],
+  missed_publish: ['發布錯過排定時間', 'Publication missed its scheduled time', '发布错过排定时间'], outcome_unknown: ['發布結果未知', 'Publication outcome unknown', '发布结果未知'],
+  failed: ['發布失敗', 'Publication failed', '发布失败'], connector_auto_halted: ['自動模式已緊急停止', 'Automatic mode emergency stop active', '自动模式已紧急停止'],
+  account_emergency_stop: ['帳號自動模式已停止', 'Account automatic mode is stopped', '账号自动模式已停止'], expired: ['授權已過期', 'Authorization expired', '授权已过期'],
+  sync_failed: ['資料同步失敗', 'Data synchronization failed', '数据同步失败'], sync_delayed: ['資料同步延遲', 'Data synchronization is delayed', '数据同步延迟'],
+  inventory_risk: ['庫存需要注意', 'Listing inventory requires attention', '库存需要注意'], milestone_delayed: ['里程碑延遲', 'Campaign milestone delayed', '里程碑延迟'],
+  deliverable_due: ['達人交付到期', 'Creator deliverable due', '达人交付到期'], terms_outdated: ['自動模式條款已更新', 'Automatic mode terms changed', '自动模式条款已更新'],
 };
 
 function kpi(key: Kpi['key'], metric: Cell & { previous_value?: number | null; change_ratio?: number | null; currency?: string | null; by_currency?: unknown }, sparkline: Point[], unit: Kpi['unit'] = 'count'): Kpi {

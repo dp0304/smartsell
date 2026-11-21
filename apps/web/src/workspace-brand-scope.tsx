@@ -21,7 +21,7 @@ export function useBrandScope(api: WorkspaceApi) {
 export function BrandScope({ scope }: { scope: ReturnType<typeof useBrandScope> }) {
   const { label } = useCopy();
   if (!scope.brands.length) return null;
-  return <select aria-label={label(['品牌範圍', 'Brand scope'])} value={scope.brandId}
+  return <select aria-label={label(['品牌範圍', 'Brand scope', '品牌范围'])} value={scope.brandId}
     style={{ maxWidth: '11rem' }} onChange={event => scope.select(event.target.value)}>
     <option value="">{label(['全部品牌', 'All brands'])}</option>
     {scope.brands.map(row => <option key={stringValue(row.id)} value={stringValue(row.id)}>{stringValue(row.name)}</option>)}

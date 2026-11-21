@@ -16,12 +16,12 @@ export function CommerceChangesTable({ rows, onPick }: { rows: RecordData[]; onP
   const { ws } = useApi();
   const { label, locale, t } = useCopy();
   return <EntityTable records={rows} rowKey={row => stringValue(row.id)} columns={[
-    { label: label(['商品變更', 'Product change']), cell: row => <>
-      <button className="text-button" onClick={() => onPick(row)}>{row.change_type === 'price_changed' ? label(['價格已變更', 'Price changed']) : <Status value={row.change_type} />}</button>
+    { label: label(['商品變更', 'Product change', '商品变更']), cell: row => <>
+      <button className="text-button" onClick={() => onPick(row)}>{row.change_type === 'price_changed' ? label(['價格已變更', 'Price changed', '价格已变更']) : <Status value={row.change_type} />}</button>
       <div>{[row.product_title, row.sku].map(stringValue).filter(Boolean).join(' · ')}</div>
     </> },
-    { label: label(['價格變動', 'Price change']), cell: row => row.change_type === 'price_changed' ? `${price(row.before, locale)} → ${price(row.after, locale)}` : '—' },
-    { label: label(['受影響的發布目標', 'Affected publish targets']), cell: row => {
+    { label: label(['價格變動', 'Price change', '价格变动']), cell: row => row.change_type === 'price_changed' ? `${price(row.before, locale)} → ${price(row.after, locale)}` : '—' },
+    { label: label(['受影響的發布目標', 'Affected publish targets', '受影响的发布目标']), cell: row => {
       const targets = records(row.affected_targets);
       return targets.length ? <ul>{targets.map(target => {
         const id = stringValue(target.id);
@@ -32,6 +32,6 @@ export function CommerceChangesTable({ rows, onPick }: { rows: RecordData[]; onP
       })}</ul> : '—';
     } },
     { label: t('status'), cell: row => <Status value={row.status} /> },
-    { label: label(['偵測時間', 'Detected at']), cell: row => <Timestamp value={row.detected_at} /> },
+    { label: label(['偵測時間', 'Detected at', '侦测时间']), cell: row => <Timestamp value={row.detected_at} /> },
   ]} />;
 }

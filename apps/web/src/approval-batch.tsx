@@ -1,3 +1,4 @@
+import { problemSummary } from './problem-copy';
 import { useRef, useState } from 'react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { asRecord, type RecordData } from '@smartsell/sdk';
@@ -10,7 +11,7 @@ export const approvalTargetId = (row: RecordData) => stringValue(row.resource_id
 export const approvalBatchPath = '/approvals/batch';
 
 export function ApprovalBatch({ requests, close }: { requests: RecordData[]; close: () => void }) {
-  const { t } = useCopy();
+  const { t, locale } = useCopy();
   const api = useApi();
   const client = useQueryClient();
   const detail = findOperation(api, 'GET', '/publish-targets/:id', 'planning');
@@ -76,7 +77,7 @@ export function ApprovalBatch({ requests, close }: { requests: RecordData[]; clo
         const outcome = result.find(item => (item.target_id ?? item.id) === row.id);
         if (!outcome) return t('approvalBatchMissing');
         const failure = asRecord(outcome.error);
-        if (failure.code) return <span>{t('state.failed')} · {stringValue(failure.message) || stringValue(failure.code)}</span>;
+        if (failure.code) return <span>{t('state.failed')} · {problemSummary(locale, stringValue(failure.code)) ?? (stringValue(failure.message) || stringValue(failure.code))}</span>;
         return <Status value={outcome.plan_status ?? outcome.status ?? outcome.display_status} />;
       } },
     ]} />

@@ -122,8 +122,8 @@ export function OverviewPage() {
                 item.due_at ? `${l(['期限', 'Due'])} ${formatDateTime(item.due_at, lang, tz)}` : null].filter(Boolean).join(' · ')}</small>
               {item.severity !== 'normal' && <StatusChip status={item.severity} />}
             </div>
-            <Link className="vs-btn primary-soft" to={link('decisions', { kind: item.kind })} aria-label={`${l(['去決定', 'Decide'])} · ${item.title}`}>
-              {l(['去決定', 'Decide'])}<ArrowUpRight size={13} aria-hidden="true" />
+            <Link className="vs-btn primary-soft" to={link('decisions', { kind: item.kind })} aria-label={`${l(['去決定', 'Decide', '去决定'])} · ${item.title}`}>
+              {l(['去決定', 'Decide', '去决定'])}<ArrowUpRight size={13} aria-hidden="true" />
             </Link>
           </li>)}</ul>}
       </Section>;

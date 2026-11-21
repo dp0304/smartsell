@@ -31,15 +31,15 @@ const LEAD: readonly Role[] = ['owner', 'admin', 'manager'];
 const BRIEF_READ: readonly Role[] = ['owner', 'admin', 'manager', 'editor', 'analyst', 'viewer', 'agent'];
 const HUMAN_WRITE = WRITE.filter(role => role !== 'agent');
 const kindLabels: Record<DecisionKind, Label> = {
-  publish_approval: ['發布審批', 'Publish approval'], change_set: ['變更審核', 'Change review'], agent_job_review: ['任務驗收', 'Task review'],
-  reply_draft: ['回覆審批', 'Reply approval'], ad_proposal: ['投放方案', 'Ad proposal'], brief_revision: ['簡報審核', 'Brief review'],
-  budget_approval: ['預算核准', 'Budget approval'], fact_revision: ['商品事實', 'Product fact'], knowledge_revision: ['品牌知識', 'Brand knowledge'],
-  localization: ['商品翻譯', 'Product translation'], late_decision: ['逾時發布', 'Late publication'],
+  publish_approval: ['發布審批', 'Publish approval', '发布审批'], change_set: ['變更審核', 'Change review', '变更审核'], agent_job_review: ['任務驗收', 'Task review', '任务验收'],
+  reply_draft: ['回覆審批', 'Reply approval', '回复审批'], ad_proposal: ['投放方案', 'Ad proposal'], brief_revision: ['簡報審核', 'Brief review', '演示文稿审核'],
+  budget_approval: ['預算核准', 'Budget approval', '预算核准'], fact_revision: ['商品事實', 'Product fact', '商品事实'], knowledge_revision: ['品牌知識', 'Brand knowledge', '品牌知识'],
+  localization: ['商品翻譯', 'Product translation', '商品翻译'], late_decision: ['逾時發布', 'Late publication', '逾时发布'],
 };
 const actionLabels: Record<string, [Label, Tone]> = {
-  approve: [['核准', 'Approve'], 'primary'], reject: [['拒絕', 'Reject'], 'danger'], request_changes: [['要求修改', 'Request changes'], 'neutral'],
-  apply: [['套用變更', 'Apply changes'], 'primary'], accept: [['驗收', 'Accept'], 'primary'], return: [['退回', 'Return'], 'neutral'],
-  run_now: [['立即發布', 'Publish now'], 'primary'], reschedule: [['改期', 'Reschedule'], 'neutral'], skip: [['略過', 'Skip'], 'danger'],
+  approve: [['核准', 'Approve'], 'primary'], reject: [['拒絕', 'Reject', '拒绝'], 'danger'], request_changes: [['要求修改', 'Request changes'], 'neutral'],
+  apply: [['套用變更', 'Apply changes', '套用变更'], 'primary'], accept: [['驗收', 'Accept', '验收'], 'primary'], return: [['退回', 'Return'], 'neutral'],
+  run_now: [['立即發布', 'Publish now', '立即发布'], 'primary'], reschedule: [['改期', 'Reschedule'], 'neutral'], skip: [['略過', 'Skip', '略过'], 'danger'],
 };
 const severityRank: Record<Severity, number> = { blocker: 0, high: 1, normal: 2 };
 const DAY = 86_400_000;
@@ -148,7 +148,7 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: requester(s, request, context.submitted_by_type === 'agent_client' || target.origin === 'agent', context.submitted_by, target.id),
         resource: { type: 'publish_target', id: target.id, version: target.version, hash: str(request.resource_hash), route: route.plan(target.campaign_id) },
         preview: { text: clip((revision?.rendered as Data | undefined)?.text ?? revision?.body), scheduled_at: str(target.scheduled_at), schedule_tz: str(target.schedule_tz), platform,
-          fields: [{ label: ['發布時間', 'Scheduled at'], before: null, after: when }, { label: ['帳號', 'Account'], before: null, after: handle }, { label: ['平台', 'Platform'], before: null, after: platform }] },
+          fields: [{ label: ['發布時間', 'Scheduled at', '发布时间'], before: null, after: when }, { label: ['帳號', 'Account', '账号'], before: null, after: handle }, { label: ['平台', 'Platform'], before: null, after: platform }] },
         actions: can(s, APPROVE) && assigned && !decided ? [
           act('approve', `${path}/approve`, target.version, body),
           act('request_changes', `${path}/request-changes`, target.version, body),
@@ -163,12 +163,14 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
     if (!items.length) return [];
     const job = s.find('agent_job', set.agent_job_id);
     return [item('change_set', set.id, { brand_id: str(set.brand_id), campaign_id: str(job?.campaign_id) }, () => {
-      const fieldNames: Data = { title: ['標題', 'Title'], body_markdown: ['內文', 'Body'] };
+      const fieldNames: Data = { title: ['標題', 'Title', '标题'], body_markdown: ['內文', 'Body', '内文'] };
       const fields = items.flatMap(change => Object.entries((change.preview ?? {}) as Record<string, { before?: unknown; after?: unknown }>).map(([field, diff]) => {
         const target = s.find(String(change.target_type), change.target_id);
         const name = str(target?.title) ?? str(target?.name) ?? `${String(change.target_type)} ${String(change.target_id)}`;
-        const [zh, en] = (fieldNames[field] as Label | undefined) ?? [field, field];
-        return { label: [`${name} · ${zh}`, `${name} · ${en}`] as Label, before: diff?.before ?? null, after: diff?.after ?? null };
+        const [zh, en, hans] = (fieldNames[field] as Label | undefined) ?? [field, field];
+        const label: Label = [`${name} · ${zh}`, `${name} · ${en}`];
+        if (hans !== undefined) label.push(`${name} · ${hans}`);
+        return { label, before: diff?.before ?? null, after: diff?.after ?? null };
       }));
       const path = `/change-sets/${enc(set.id)}`;
       return {
@@ -192,7 +194,7 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: requester(s, job, job.assignee_type === 'agent_client', job.lease_credential_id),
         resource: { type: 'agent_job', id: job.id, version: job.version, hash: null, route: '/agent' },
         preview: { text: clip(result.note ?? job.progress_note), fields: [
-          { label: ['產出', 'Output'], before: null, after: str(output?.title) ?? str(result.change_set_id) ?? str(result.report_id) ?? str(result.operation_id) },
+          { label: ['產出', 'Output', '产出'], before: null, after: str(output?.title) ?? str(result.change_set_id) ?? str(result.report_id) ?? str(result.operation_id) },
           { label: ['期限', 'Due'], before: null, after: str(job.due_at) },
         ] },
         actions: can(s, APPROVE) ? [act('accept', `${path}/accept`, job.version, {}, { field: null }), act('return', `${path}/return`, job.version, {}, { field: 'note', required: true })] : [],
@@ -213,7 +215,7 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: rule ? { type: 'rule', label: null } : requester(s, draft, false),
         resource: { type: 'reply_draft', id: draft.id, version: draft.version, hash: str(draft.content_hash), route: null },
         preview: { text: clip(draft.body_text), fields: [
-          { label: ['回覆對象', 'Replying to'], before: clip(message?.body_text ?? message?.text, 1000), after: null },
+          { label: ['回覆對象', 'Replying to', '回复对象'], before: clip(message?.body_text ?? message?.text, 1000), after: null },
           { label: ['方式', 'Mode'], before: null, after: str(draft.reply_mode) },
         ] },
         // Only rule-generated drafts have a reject endpoint; other drafts are edited instead.
@@ -239,11 +241,11 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: requester(s, proposal, false),
         resource: { type: 'ad_proposal', id: proposal.id, version: proposal.version, hash: str(revision?.content_hash), route: proposal.campaign_id ? route.plan(proposal.campaign_id) : '/ads' },
         preview: { text: str((revision?.audience_spec as Data | undefined)?.description), budget, schedule, estimates: Array.isArray(revision?.estimates) ? revision.estimates : [], fields: [
-          { label: ['目標', 'Objective'], before: null, after: str(revision?.objective) },
-          { label: ['預算', 'Budget'], before: null, after: num(budget?.amount_minor), unit: 'currency', currency: budget?.currency ?? null },
-          { label: ['預算類型', 'Budget type'], before: null, after: str(budget?.type) },
-          { label: ['開始', 'Starts'], before: null, after: str(schedule?.starts_at) },
-          { label: ['結束', 'Ends'], before: null, after: str(schedule?.ends_at) },
+          { label: ['目標', 'Objective', '目标'], before: null, after: str(revision?.objective) },
+          { label: ['預算', 'Budget', '预算'], before: null, after: num(budget?.amount_minor), unit: 'currency', currency: budget?.currency ?? null },
+          { label: ['預算類型', 'Budget type', '预算类型'], before: null, after: str(budget?.type) },
+          { label: ['開始', 'Starts', '开始'], before: null, after: str(schedule?.starts_at) },
+          { label: ['結束', 'Ends', '结束'], before: null, after: str(schedule?.ends_at) },
         ] },
         actions: can(s, APPROVE) && (ADMIN.includes(s.ctx.role) || actions.includes('approve')) ? [
           act('approve', path, proposal.version, { decision: 'approved' }), act('reject', path, proposal.version, { decision: 'rejected' }),
@@ -264,8 +266,8 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: requester(s, revision, revision.created_by_type === 'agent_client'),
         resource: { type: 'brief_revision', id: revision.id, version: revision.version, hash: str(revision.content_hash), route: route.plan(brief.campaign_id) },
         preview: { text: clip(documentText(revision.body_doc)), fields: [
-          { label: ['內容', 'Content'], before: approved ? clip(documentText(approved.body_doc), 1000) : null, after: clip(documentText(revision.body_doc), 1000) },
-          { label: ['需求數', 'Requirements'], before: approved && Array.isArray(approved.requirements) ? approved.requirements.length : null, after: Array.isArray(revision.requirements) ? revision.requirements.length : null },
+          { label: ['內容', 'Content', '内容'], before: approved ? clip(documentText(approved.body_doc), 1000) : null, after: clip(documentText(revision.body_doc), 1000) },
+          { label: ['需求數', 'Requirements', '需求数'], before: approved && Array.isArray(approved.requirements) ? approved.requirements.length : null, after: Array.isArray(revision.requirements) ? revision.requirements.length : null },
         ] },
         actions: can(s, LEAD) && mutable ? [
           act('approve', `${path}/approve`, revision.version), act('request_changes', `${path}/request-changes`, revision.version, {}, { field: 'reason', required: true }),
@@ -292,12 +294,12 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: overrun ? { type: 'rule', label: null } : requester(s, proposal ?? request, false),
         resource: { type: 'approval_request', id: request.id, version: request.version, hash: str(request.resource_hash), route: route.plan(campaign.id) },
         preview: { text: overrun ? null : clip(proposal?.reason), fields: overrun ? [
-          money(['預算', 'Budget'], context.budget_minor), money(['實際花費', 'Actual spend'], context.actual_minor),
-          money(['未付承諾', 'Open commitments'], context.open_commitment_minor), money(['超支', 'Overrun'], context.overrun_minor),
+          money(['預算', 'Budget', '预算'], context.budget_minor), money(['實際花費', 'Actual spend', '实际花费'], context.actual_minor),
+          money(['未付承諾', 'Open commitments', '未付承诺'], context.open_commitment_minor), money(['超支', 'Overrun'], context.overrun_minor),
         ] : [
-          money(['調撥金額', 'Amount'], proposal?.amount_minor),
-          money([`轉出：${String(from?.category ?? '')}`, `From: ${String(from?.category ?? '')}`], num(from?.amount_minor) !== null && num(proposal?.amount_minor) !== null ? Number(from!.amount_minor) - Number(proposal!.amount_minor) : null, from?.amount_minor),
-          money([`轉入：${String(to?.category ?? '')}`, `To: ${String(to?.category ?? '')}`], num(to?.amount_minor) !== null && num(proposal?.amount_minor) !== null ? Number(to!.amount_minor) + Number(proposal!.amount_minor) : null, to?.amount_minor),
+          money(['調撥金額', 'Amount', '调拨金额'], proposal?.amount_minor),
+          money([`轉出：${String(from?.category ?? '')}`, `From: ${String(from?.category ?? '')}`, `转出：${String(from?.category ?? '')}`], num(from?.amount_minor) !== null && num(proposal?.amount_minor) !== null ? Number(from!.amount_minor) - Number(proposal!.amount_minor) : null, from?.amount_minor),
+          money([`轉入：${String(to?.category ?? '')}`, `To: ${String(to?.category ?? '')}`, `转入：${String(to?.category ?? '')}`], num(to?.amount_minor) !== null && num(proposal?.amount_minor) !== null ? Number(to!.amount_minor) + Number(proposal!.amount_minor) : null, to?.amount_minor),
         ] },
         actions: can(s, LEAD) && !['closed', 'cancelled'].includes(String(campaign.status)) ? [
           act('approve', path, request.version, { decision: 'approve' }, { field: 'reason', required: true }),
@@ -325,7 +327,7 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         resource: { type: 'product_fact_revision', id: revision.id, version: null, hash: str(revision.content_hash), route: route.product(fact.product_id) },
         preview: { text: factText(revision.value), fields: [
           { label: [String(fact.fact_key), String(fact.fact_key)], before: approved ? factText(approved.value) : null, after: factText(revision.value) },
-          { label: ['證據', 'Evidence'], before: null, after: evidence },
+          { label: ['證據', 'Evidence', '证据'], before: null, after: evidence },
         ] },
         actions: can(s, APPROVE) ? [...(approvable ? [act('approve', `${path}/approve`, null, {}, { field: null })] : []), act('reject', `${path}/reject`, null, {}, { field: null })] : [],
       };
@@ -341,7 +343,7 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         severity: 'normal', title: str(entry.title) ?? 'Knowledge', summary: str(entry.kind), created_at: revision.created_at, due_at: null,
         requested_by: requester(s, revision, revision.created_by_type === 'agent' || (revision.source as Data | undefined)?.kind === 'agent', undefined, entry.id),
         resource: { type: 'knowledge_revision', id: revision.id, version: revision.version, hash: str(revision.content_hash), route: null },
-        preview: { text: clip(revision.body), fields: [{ label: ['內容', 'Content'], before: clip(active?.body, 1000), after: clip(revision.body, 1000) }] },
+        preview: { text: clip(revision.body), fields: [{ label: ['內容', 'Content', '内容'], before: clip(active?.body, 1000), after: clip(revision.body, 1000) }] },
         actions: can(s, APPROVE) ? [act('approve', `${path}/approve`, revision.version, {}, { field: null }), act('reject', `${path}/reject`, revision.version, {}, { field: null })] : [],
       };
     })];
@@ -377,8 +379,8 @@ const collectors: Record<DecisionKind, { visible(s: Scan): boolean; collect(s: S
         requested_by: { type: 'rule', label: null },
         resource: { type: 'execution_task', id: task.id, version: task.version, hash: null, route: route.plan(target?.campaign_id) },
         preview: { text: null, fields: [
-          { label: ['原定時間', 'Scheduled at'], before: null, after: str(target?.scheduled_at) ?? str(task.due_at) },
-          { label: ['延遲分鐘', 'Minutes late'], before: null, after: num(task.delay_minutes) },
+          { label: ['原定時間', 'Scheduled at', '原定时间'], before: null, after: str(target?.scheduled_at) ?? str(task.due_at) },
+          { label: ['延遲分鐘', 'Minutes late', '延迟分钟'], before: null, after: num(task.delay_minutes) },
         ] },
         actions: can(s, HUMAN_WRITE) ? [
           act('run_now', path, task.version, { decision: 'run_now' }), act('reschedule', path, task.version, { decision: 'reschedule' }), act('skip', path, task.version, { decision: 'skip' }),

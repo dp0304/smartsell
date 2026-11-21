@@ -58,17 +58,17 @@ export function RecordFilters({ storageKey, wid, userId, role, resourceType, row
 }
 
 const presetCopy = {
-  select: ['篩選預設', 'Filter presets'],
-  empty: ['尚無篩選預設', 'No filter presets yet'],
-  create: ['新增預設', 'New preset'],
-  update: ['以目前篩選更新預設', 'Update preset with current filters'],
-  name: ['預設名稱', 'Preset name'],
-  visibility: ['可見範圍', 'Visibility'],
-  personal: ['個人', 'Personal'],
-  shared: ['工作區共享', 'Workspace shared'],
-  save: ['儲存預設', 'Save preset'],
-  saved: ['已儲存預設', 'Preset saved'],
-  conflict: ['此預設已變更。請關閉並重新開啟編輯視窗。', 'This preset changed. Close and reopen the editor.'],
+  select: ['篩選預設', 'Filter presets', '筛选预设'],
+  empty: ['尚無篩選預設', 'No filter presets yet', '尚无筛选预设'],
+  create: ['新增預設', 'New preset', '添加预设'],
+  update: ['以目前篩選更新預設', 'Update preset with current filters', '以目前筛选更新预设'],
+  name: ['預設名稱', 'Preset name', '预设名称'],
+  visibility: ['可見範圍', 'Visibility', '可见范围'],
+  personal: ['個人', 'Personal', '个人'],
+  shared: ['工作區共享', 'Workspace shared', '工作区共享'],
+  save: ['儲存預設', 'Save preset', '保存预设'],
+  saved: ['已儲存預設', 'Preset saved', '已保存预设'],
+  conflict: ['此預設已變更。請關閉並重新開啟編輯視窗。', 'This preset changed. Close and reopen the editor.', '此预设已变更。请关闭并重新打开编辑窗口。'],
 } as const;
 
 function FilterPresets({ wid, userId, role, resourceType, storageKey, filters, change }:

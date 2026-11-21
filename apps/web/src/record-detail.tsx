@@ -8,7 +8,7 @@ import { AgentAssistant } from './agent-assistant';
 import type { Command, Entity, Payload } from './workbench-api';
 import { CreatorAccounts, CreatorAudience, CreatorDeliverables, CreatorEvaluations, CreatorLivePlans, CreatorProfileRelations, CreatorTermsComparison } from './creator-detail';
 
-const readers: Record<string, [string, string]> = {
+const readers: Record<string, [string, string, string?]> = {
   'campaign.campaign': ['get_context', 'campaign_id'],
   'content.content_item': ['content_get', 'content_item_id'],
   'content.content_variant': ['content_get_variant', 'variant_id'],

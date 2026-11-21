@@ -23,7 +23,7 @@ export function SuggestionPrompt({ suggestion, name, title, agentHref }: { sugge
 export function InlinePrompt({ suggestion, name }: { suggestion: { key: SuggestionKey; n?: number }; name: string }) {
   const { l, lang } = useText();
   const text = fill(l(suggestionPrompt(suggestion.key)), { name, n: suggestion.n ?? '' });
-  return <p className="pl-ask"><Glyph name="bot" size={13} /><span className="muted">{l(['請你的 Agent：', 'Tell your agent:'])}</span>
+  return <p className="pl-ask"><Glyph name="bot" size={13} /><span className="muted">{l(['請你的 Agent：', 'Tell your agent:', '请你的 Agent：'])}</span>
     <span className="pl-ask-text">{lang === 'en' ? `“${text}”` : `「${text}」`}</span><CopyButton text={text} className="vs-btn ghost pl-ask-copy" /></p>;
 }
 
@@ -73,7 +73,7 @@ const kindColor: Record<string, string> = {
   publish: seriesColor(0), production_due: seriesColor(1), post: seriesColor(2), milestone: seriesColor(3), deliverable_due: seriesColor(4),
   ad_flight: seriesColor(5), promotion: seriesColor(6), live: seriesColor(7),
 };
-const needsHumanText: Record<string, Tuple> = { approval: ['待審批', 'Needs approval'], late_decision: ['逾時待決定', 'Late, needs a decision'], outcome_unknown: ['結果待核實', 'Outcome unknown'] };
+const needsHumanText: Record<string, Tuple> = { approval: ['待審批', 'Needs approval', '待审批'], late_decision: ['逾時待決定', 'Late, needs a decision', '逾时待决定'], outcome_unknown: ['結果待核實', 'Outcome unknown', '结果待核实'] };
 
 function EventRow({ event, timeZone, base }: { event: CalendarEvent; timeZone?: string; base: string }) {
   const { l, lang } = useText();
@@ -225,7 +225,7 @@ export function ProposalRow({ proposal, timeZone }: { proposal: PlanAdProposal; 
       <strong className="vs-grow">{proposal.name ?? '—'}</strong>
       {status ? <StatusChip status={proposal.status} tone={status.tone} label={status.label} /> : <StatusChip status={proposal.status} />}
       {proposal.approval_status && proposal.approval_status !== proposal.status && !(proposal.approval_status === 'pending' && proposal.status === 'in_review')
-        && <StatusChip status={proposal.approval_status} label={[`審批：${statusInfo(proposal.approval_status, 'zh').label}`, `Approval: ${statusInfo(proposal.approval_status, 'en').label}`]} />}
+        && <StatusChip status={proposal.approval_status} label={[`審批：${statusInfo(proposal.approval_status, 'zh').label}`, `Approval: ${statusInfo(proposal.approval_status, 'en').label}`, `审批：${statusInfo(proposal.approval_status, 'zh').label}`]} />}
       {proposal.created_via === 'agent' && <span title={l(pc.byAgent)}><ActorBadge type="agent" /></span>}
     </div>
     <small className="muted">

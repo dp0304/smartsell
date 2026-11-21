@@ -1,4 +1,4 @@
-import { diffDays, formatDay, formatMeasure, intlLocale, isNum, metricDelta, type Lang, type Metric, type Point, type Tuple } from '@smartsell/ui';
+import { pick, diffDays, formatDay, formatMeasure, intlLocale, isNum, metricDelta, type Lang, type Metric, type Point, type Tuple } from '@smartsell/ui';
 
 // Response of GET /views/social (apps/server/src/modules/workspace/views/social.ts). The server sends more
 // than the design contract (coverage, warnings, handle); every field is optional at the edges.
@@ -109,14 +109,14 @@ export function sortAccounts(accounts: readonly SocialAccount[]): SocialAccount[
 
 export const platformText: Record<string, Tuple> = {
   instagram: ['Instagram', 'Instagram'], tiktok: ['TikTok', 'TikTok'], facebook: ['Facebook', 'Facebook'], youtube: ['YouTube', 'YouTube'],
-  threads: ['Threads', 'Threads'], x: ['X', 'X'], twitter: ['X', 'X'], xiaohongshu: ['小紅書', 'Xiaohongshu'], line: ['LINE', 'LINE'],
-  pinterest: ['Pinterest', 'Pinterest'], linkedin: ['LinkedIn', 'LinkedIn'], shopee: ['蝦皮', 'Shopee'],
-  meta_ads: ['Meta 廣告', 'Meta Ads'], tiktok_ads: ['TikTok 廣告', 'TikTok Ads'], google_ads: ['Google 廣告', 'Google Ads'],
+  threads: ['Threads', 'Threads'], x: ['X', 'X'], twitter: ['X', 'X'], xiaohongshu: ['小紅書', 'Xiaohongshu', '小红书'], line: ['LINE', 'LINE'],
+  pinterest: ['Pinterest', 'Pinterest'], linkedin: ['LinkedIn', 'LinkedIn'], shopee: ['蝦皮', 'Shopee', '虾皮'],
+  meta_ads: ['Meta 廣告', 'Meta Ads', 'Meta 广告'], tiktok_ads: ['TikTok 廣告', 'TikTok Ads', 'TikTok 广告'], google_ads: ['Google 廣告', 'Google Ads', 'Google 广告'],
 };
 export function platformLabel(platform: string | null | undefined, lang: Lang) {
   if (!platform) return lang === 'en' ? 'Unknown platform' : '未知平台';
   const entry = platformText[platform];
-  return entry ? entry[lang === 'en' ? 1 : 0] : platform.replace(/_/g, ' ');
+  return pick(entry ?? platform.replace(/_/g, ' '), lang);
 }
 
 /** Account names for legends and lists; a name shared by two accounts gets its platform appended. */
@@ -132,14 +132,13 @@ export function accountNames(accounts: readonly SocialAccount[], lang: Lang): Ma
 
 /** Coverage warnings from the read model, in plain words. Unknown codes are passed through as-is. */
 export const warningText: Record<string, Tuple> = {
-  PARTIAL_COVERAGE: ['部分帳號或日期沒有採集到數據；合計只包含已採集的部分，實際數字可能更高。', 'Some accounts or days have no collected data; totals only include what was collected, so real numbers may be higher.'],
-  NON_ADDITIVE_ACROSS_PLATFORMS: ['各平台對「瀏覽」「互動」的計算方式不同，跨平台合計只能當作參考。', 'Platforms count views and engagements differently, so cross-platform totals are only indicative.'],
-  ACCOUNT_METRICS_FROM_POSTS: ['部分帳號沒有帳號層級的數據，改用其貼文數據加總。', 'Some accounts have no account-level data; their figures are summed from their posts.'],
-  SOURCE_USE_RESTRICTED: ['部分數據來源未授權在看板上顯示，已排除。', 'Some data sources are not allowed to be shown on the dashboard and were left out.'],
+  PARTIAL_COVERAGE: ['部分帳號或日期沒有採集到數據；合計只包含已採集的部分，實際數字可能更高。', 'Some accounts or days have no collected data; totals only include what was collected, so real numbers may be higher.', '部分账号或日期没有采集到数据；合计只包含已采集的部分，实际数字可能更高。'],
+  NON_ADDITIVE_ACROSS_PLATFORMS: ['各平台對「瀏覽」「互動」的計算方式不同，跨平台合計只能當作參考。', 'Platforms count views and engagements differently, so cross-platform totals are only indicative.', '各平台对「浏览」「交互」的计算方式不同，跨平台合计只能当作参考。'],
+  ACCOUNT_METRICS_FROM_POSTS: ['部分帳號沒有帳號層級的數據，改用其貼文數據加總。', 'Some accounts have no account-level data; their figures are summed from their posts.', '部分账号没有账号层级的数据，改用其帖子数据加总。'],
+  SOURCE_USE_RESTRICTED: ['部分數據來源未授權在看板上顯示，已排除。', 'Some data sources are not allowed to be shown on the dashboard and were left out.', '部分数据来源未授权在看板上显示，已排除。'],
 };
 
-const metricName: Record<SeriesMetric | 'followers', Tuple> = { views: ['瀏覽', 'views'], engagements: ['互動', 'engagements'], followers: ['粉絲', 'followers'] };
-const pick = (text: Tuple, lang: Lang) => text[lang === 'en' ? 1 : 0];
+const metricName: Record<SeriesMetric | 'followers', Tuple> = { views: ['瀏覽', 'views', '浏览'], engagements: ['互動', 'engagements', '交互'], followers: ['粉絲', 'followers', '粉丝'] };
 const percent = (ratio: number, lang: Lang) => new Intl.NumberFormat(intlLocale(lang), { style: 'percent', maximumFractionDigits: 1, signDisplay: 'exceptZero' }).format(ratio);
 const signed = (value: number, lang: Lang) => new Intl.NumberFormat(intlLocale(lang), { signDisplay: 'exceptZero', notation: Math.abs(value) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
 
@@ -155,18 +154,18 @@ export function socialHeadline(view: SocialData, lang: Lang, names?: Map<string,
   const en = lang === 'en';
   const views = view.totals?.views, engagements = view.totals?.engagements;
   const fans = followersTotal(view.accounts ?? []);
-  if (!hasAnyData(view)) return en ? `${periodText(view.period, lang)}: no social data has been collected yet.` : `${periodText(view.period, lang)}：還沒有採集到任何社媒數據。`;
+  if (!hasAnyData(view)) return en ? `${periodText(view.period, lang)}: no social data has been collected yet.` : lang === 'zh-Hans' ? `${periodText(view.period, lang)}：还没有采集到任何社媒数据。` : `${periodText(view.period, lang)}：還沒有採集到任何社媒數據。`;
   const part = (name: SeriesMetric, metric: Metric | undefined) => {
-    if (!metric || !isNum(metric.value)) return en ? `${pick(metricName[name], lang)} not collected` : `${pick(metricName[name], lang)}未採集`;
+    if (!metric || !isNum(metric.value)) return en ? `${pick(metricName[name], lang)} not collected` : lang === 'zh-Hans' ? `${pick(metricName[name], lang)}未采集` : `${pick(metricName[name], lang)}未採集`;
     const delta = metricDelta(metric);
     const value = formatMeasure(metric.value, 'count', null, lang, true);
-    const change = delta === null ? '' : en ? ` (${percent(delta, lang)} vs prior period)` : `（較前期 ${percent(delta, lang)}）`;
+    const change = delta === null ? '' : en ? ` (${percent(delta, lang)} vs prior period)` : lang === 'zh-Hans' ? `（较前期 ${percent(delta, lang)}）` : `（較前期 ${percent(delta, lang)}）`;
     return en ? `${value} ${pick(metricName[name], lang)}${change}` : `${pick(metricName[name], lang)} ${value}${change}`;
   };
   const parts = [part('views', views), part('engagements', engagements)];
-  if (fans.delta === 0) parts.push(en ? 'followers unchanged' : '粉絲持平');
-  else if (isNum(fans.delta)) parts.push(en ? `${signed(fans.delta, lang)} net followers` : `粉絲淨${fans.delta < 0 ? '減' : '增'} ${signed(Math.abs(fans.delta), lang).replace(/^\+/, '')}`);
-  else if (isNum(fans.value)) parts.push(en ? `${formatMeasure(fans.value, 'count', null, lang, true)} followers` : `粉絲 ${formatMeasure(fans.value, 'count', null, lang, true)}`);
+  if (fans.delta === 0) parts.push(en ? 'followers unchanged' : lang === 'zh-Hans' ? '粉丝持平' : '粉絲持平');
+  else if (isNum(fans.delta)) parts.push(en ? `${signed(fans.delta, lang)} net followers` : lang === 'zh-Hans' ? `粉丝净${fans.delta < 0 ? '减' : '增'} ${signed(Math.abs(fans.delta), lang).replace(/^\+/, '')}` : `粉絲淨${fans.delta < 0 ? '減' : '增'} ${signed(Math.abs(fans.delta), lang).replace(/^\+/, '')}`);
+  else if (isNum(fans.value)) parts.push(en ? `${formatMeasure(fans.value, 'count', null, lang, true)} followers` : lang === 'zh-Hans' ? `粉丝 ${formatMeasure(fans.value, 'count', null, lang, true)}` : `粉絲 ${formatMeasure(fans.value, 'count', null, lang, true)}`);
   let sentence = en ? `${periodText(view.period, lang)}: ${parts.join(', ')}.` : `${periodText(view.period, lang)}：${parts.join('，')}。`;
   const top = view.top_posts?.[0];
   const ranking = view.series?.metric === 'engagements' ? 'engagements' : 'views';
@@ -175,7 +174,7 @@ export function socialHeadline(view: SocialData, lang: Lang, names?: Map<string,
     const title = top.title?.trim() || (top.social_account_id && names?.get(top.social_account_id)) || platformLabel(top.platform, lang);
     const short = [...title].length > 24 ? `${[...title].slice(0, 24).join('')}…` : title;
     const amount = formatMeasure(topValue, 'count', null, lang, true);
-    sentence += en ? ` Top post: “${short}” (${amount} ${pick(metricName[ranking], lang)}).` : `表現最好的是「${short}」（${pick(metricName[ranking], lang)} ${amount}）。`;
+    sentence += en ? ` Top post: “${short}” (${amount} ${pick(metricName[ranking], lang)}).` : lang === 'zh-Hans' ? `表现最好的是「${short}」（${pick(metricName[ranking], lang)} ${amount}）。` : `表現最好的是「${short}」（${pick(metricName[ranking], lang)} ${amount}）。`;
   }
   return sentence;
 }

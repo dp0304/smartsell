@@ -1,3 +1,4 @@
+import { problemSummary } from './problem-copy';
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { asRecord, type RecordData } from '@smartsell/sdk';
@@ -7,8 +8,8 @@ import { useCopy } from './i18n';
 import { records, Status, Timestamp, useWorkflowRequest } from './workflow-view-ui';
 
 const templates = {
-  product_list: ['商品清單', 'Products'], inventory_list: ['庫存清單', 'Inventory'],
-  order_list: ['訂單清單', 'Orders'], refund_list: ['退款清單', 'Refunds'],
+  product_list: ['商品清單', 'Products', '商品清单'], inventory_list: ['庫存清單', 'Inventory', '库存清单'],
+  order_list: ['訂單清單', 'Orders', '订单清单'], refund_list: ['退款清單', 'Refunds', '退款清单'],
 } as const;
 type Template = keyof typeof templates;
 const importPath = '/stores/:id/imports';
@@ -18,7 +19,7 @@ const strings = (value: unknown) => Array.isArray(value) ? value.filter((entry):
 const templateName = (key: unknown) => templates[key as Template] ?? [stringValue(key), stringValue(key)] as const;
 
 export function CommerceImports({ storeId, onPick, onStores }: { storeId: string; onPick: (id: string, store?: string) => void; onStores: () => void }) {
-  const { t, label } = useCopy();
+  const { t, label, locale } = useCopy();
   const api = useApi();
   const stores = useRead('/stores');
   const schemas = useRead('/import-templates');
@@ -42,21 +43,21 @@ export function CommerceImports({ storeId, onPick, onStores }: { storeId: string
     if (request.pending || reading || !availableStores.some(store => store.id === selected)) return;
     const form = new FormData(event.currentTarget);
     const file = form.get('csv');
-    if (!(file instanceof File) || !file.size) { setInvalid(label(['請選擇非空白檔案。', 'Choose a non-empty file.'])); return; }
+    if (!(file instanceof File) || !file.size) { setInvalid(label(['請選擇非空白檔案。', 'Choose a non-empty file.', '请选择非空白文件。'])); return; }
     if (file.size > 1_000_000) { setInvalid(t('fileTooLarge')); return; }
     setInvalid('');
     setReading(true);
     try {
       const csv = await file.text();
-      if (!csv.trim()) { setInvalid(label(['檔案沒有資料。', 'The file has no data.'])); return; }
+      if (!csv.trim()) { setInvalid(label(['檔案沒有資料。', 'The file has no data.', '文件没有数据。'])); return; }
       const timezone = String(form.get('timezone') ?? '').trim();
       const response = await request.run('POST', importPath, [selected], { template_key: template, csv_text: csv, ...(timezone && { options: { timezone } }) });
       if (response?.id) onPick(stringValue(response.id), selected);
-    } catch { setInvalid(label(['無法讀取檔案。', 'Could not read the file.'])); }
+    } catch { setInvalid(label(['無法讀取檔案。', 'Could not read the file.', '无法读取文件。'])); }
     finally { setReading(false); }
   }
   return <>
-    {writable && <Panel><div className="panel-head"><h2>{label(['預覽店鋪 CSV', 'Preview a store CSV'])}</h2></div><div className="detail-body">
+    {writable && <Panel><div className="panel-head"><h2>{label(['預覽店鋪 CSV', 'Preview a store CSV', '预览店铺 CSV'])}</h2></div><div className="detail-body">
       <ReadState read={stores} />
       {stores.data && (availableStores.length ? <form className="fields" onSubmit={submit}>
         <fieldset disabled={reading || request.pending}>
@@ -64,16 +65,16 @@ export function CommerceImports({ storeId, onPick, onStores }: { storeId: string
             <option value="">{t('select')}</option>{availableStores.map(store => <option key={stringValue(store.id)} value={stringValue(store.id)}>{rowTitle(store)} · {stringValue(store.provider)}</option>)}
           </select></label>
           <label className="field">{t('template_key')}<select value={template} onChange={event => setTemplate(event.target.value as Template)}>{options.map(key => <option key={key} value={key}>{label(templates[key])}</option>)}</select></label>
-          {columns.length > 0 && <details><summary>{label(['可對應的欄位', 'Supported columns'])}</summary><p>{columns.join(', ')}</p></details>}
-          <label className="field">{label(['CSV 或 TSV 檔案', 'CSV or TSV file'])}<input required type="file" name="csv" accept=".csv,.tsv,text/csv,text/tab-separated-values" /></label>
-          {(template === 'order_list' || template === 'refund_list') && <label className="field">{label(['報告時區（IANA）', 'Report time zone (IANA)'])}<input name="timezone" defaultValue={Intl.DateTimeFormat().resolvedOptions().timeZone} /></label>}
-          <button className="primary" type="submit">{reading || request.pending ? t('saving') : label(['產生預覽', 'Generate preview'])}</button>
+          {columns.length > 0 && <details><summary>{label(['可對應的欄位', 'Supported columns', '可对应的字段'])}</summary><p>{columns.join(', ')}</p></details>}
+          <label className="field">{label(['CSV 或 TSV 檔案', 'CSV or TSV file', 'CSV 或 TSV 文件'])}<input required type="file" name="csv" accept=".csv,.tsv,text/csv,text/tab-separated-values" /></label>
+          {(template === 'order_list' || template === 'refund_list') && <label className="field">{label(['報告時區（IANA）', 'Report time zone (IANA)', '报告时区（IANA）'])}<input name="timezone" defaultValue={Intl.DateTimeFormat().resolvedOptions().timeZone} /></label>}
+          <button className="primary" type="submit">{reading || request.pending ? t('saving') : label(['產生預覽', 'Generate preview', '产生预览'])}</button>
         </fieldset>
         {invalid && <p role="alert" className="problem">{invalid}</p>}
         {request.error !== undefined && <ProblemNotice error={request.error} />}
-      </form> : <EmptyState title={label(['先建立可用的店鋪', 'Set up an import store first'])} action={<button onClick={onStores}>{t('resource.stores')}</button>} />)}
+      </form> : <EmptyState title={label(['先建立可用的店鋪', 'Set up an import store first', '先创建可用的店铺'])} action={<button onClick={onStores}>{t('resource.stores')}</button>} />)}
     </div></Panel>}
-    <Panel><div className="panel-head"><h2>{label(['店鋪匯入紀錄', 'Store import history'])}</h2></div>
+    <Panel><div className="panel-head"><h2>{label(['店鋪匯入紀錄', 'Store import history', '店铺导入记录'])}</h2></div>
       <ReadState read={history} />
       {history.data && (batches.length ? <EntityTable records={batches} rowKey={row => stringValue(row.id)} columns={[
         { label: t('template_key'), cell: row => <button className="text-button" onClick={() => onPick(stringValue(row.id), stringValue(row.store_id))}>{label(templateName(row.template_key))}</button> },
@@ -120,20 +121,20 @@ function CorrectedImport({ batch, id }: { batch: RecordData; id: string }) {
     finally { setReading(false); }
   }
   return <>
-    {typeof batch.supersedes_batch_id === 'string' && <p><Link to={{ search: `?${related(batch.supersedes_batch_id)}` }}>{label(['查看前一批與原始錯列', 'View previous batch and its errors'])}</Link></p>}
+    {typeof batch.supersedes_batch_id === 'string' && <p><Link to={{ search: `?${related(batch.supersedes_batch_id)}` }}>{label(['查看前一批與原始錯列', 'View previous batch and its errors', '查看前一批与原始错列'])}</Link></p>}
     <form className="fields" onSubmit={submit}>
       <fieldset disabled={reading || request.pending}>
-        <label className="field">{label(['修正後的報表', 'Corrected report'])}<input name="corrected-file" type="file" accept=".csv,.tsv,.xlsx" required /></label>
-        <button type="submit">{label(['預覽修正檔', 'Preview corrected report'])}</button>
+        <label className="field">{label(['修正後的報表', 'Corrected report', '修正后的报表'])}<input name="corrected-file" type="file" accept=".csv,.tsv,.xlsx" required /></label>
+        <button type="submit">{label(['預覽修正檔', 'Preview corrected report', '预览修正档'])}</button>
       </fieldset>
-      {readError && <p role="alert">{label(['無法讀取修正檔。', 'Could not read the corrected file.'])}</p>}
+      {readError && <p role="alert">{label(['無法讀取修正檔。', 'Could not read the corrected file.', '无法读取修正档。'])}</p>}
       {request.error !== undefined && <ProblemNotice error={request.error} />}
     </form>
   </>;
 }
 
 export function ImportReview({ batch, id }: { batch: RecordData; id: string }) {
-  const { t, label } = useCopy();
+  const { t, label, locale } = useCopy();
   const api = useApi();
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState('');
@@ -176,37 +177,37 @@ export function ImportReview({ batch, id }: { batch: RecordData; id: string }) {
   return <>
     <section className="detail-block">
       <h3>{label(templateName(batch.template_key))} · <Status value={batch.status} /></h3>
-      <p>{label(['預覽列數', 'Rows previewed'])} {stringValue(stats.rows) || '0'} · {label(['有效', 'Valid'])} {stringValue(stats.valid) || '0'} · {label(['無效', 'Invalid'])} {stringValue(stats.invalid) || '0'} · {label(['檔內重複', 'Duplicates'])} {stringValue(stats.dup_in_file) || '0'}</p>
-      {batch.checkpoint_row != null && <p>{label(['處理至第幾列', 'Processed through row'])} {stringValue(batch.checkpoint_row)} · {label(['已合併', 'Merged'])} {stringValue(batch.merged_rows) || '0'} · {label(['已略過', 'Skipped'])} {stringValue(batch.skipped_rows) || '0'} · {label(['失敗', 'Failed'])} {stringValue(batch.failed_rows) || '0'}</p>}
+      <p>{label(['預覽列數', 'Rows previewed', '预览列数'])} {stringValue(stats.rows) || '0'} · {label(['有效', 'Valid'])} {stringValue(stats.valid) || '0'} · {label(['無效', 'Invalid', '无效'])} {stringValue(stats.invalid) || '0'} · {label(['檔內重複', 'Duplicates', '档内重复'])} {stringValue(stats.dup_in_file) || '0'}</p>
+      {batch.checkpoint_row != null && <p>{label(['處理至第幾列', 'Processed through row', '处理至第几列'])} {stringValue(batch.checkpoint_row)} · {label(['已合併', 'Merged', '已合并'])} {stringValue(batch.merged_rows) || '0'} · {label(['已略過', 'Skipped', '已略过'])} {stringValue(batch.skipped_rows) || '0'} · {label(['失敗', 'Failed', '失败'])} {stringValue(batch.failed_rows) || '0'}</p>}
       <div className="action-row">
-        {confirm && <button className="primary" disabled={request.pending} onClick={() => setConfirmation('confirm')}>{merging ? label(['繼續合併', 'Continue merge']) : t('importConfirm')}</button>}
-        {cancel && <button disabled={request.pending} onClick={() => setConfirmation('cancel')}>{label(['取消批次', 'Cancel batch'])}</button>}
-        {findOperation(api, 'GET', `${batchPath}/error-file`) && <button disabled={request.pending} onClick={() => void download()}>{label(['下載錯誤 CSV', 'Download error CSV'])}</button>}
+        {confirm && <button className="primary" disabled={request.pending} onClick={() => setConfirmation('confirm')}>{merging ? label(['繼續合併', 'Continue merge', '继续合并']) : t('importConfirm')}</button>}
+        {cancel && <button disabled={request.pending} onClick={() => setConfirmation('cancel')}>{label(['取消批次', 'Cancel batch', '取消批量'])}</button>}
+        {findOperation(api, 'GET', `${batchPath}/error-file`) && <button disabled={request.pending} onClick={() => void download()}>{label(['下載錯誤 CSV', 'Download error CSV', '下载错误 CSV'])}</button>}
       </div>
       {findOperation(api, 'POST', '/imports') && <CorrectedImport batch={batch} id={id} />}
       {confirmation && <form className="fields" onSubmit={applyConfirmation} key={confirmation}>
         <fieldset disabled={request.pending}>
-          <label className="check"><input type="checkbox" required />{confirmation === 'confirm' ? label(['我已檢查預覽。合併會略過無效或重複列。', 'I reviewed the preview. Invalid and duplicate rows will be skipped.']) : label(['我確認捨棄此預覽。', 'I confirm that this preview can be discarded.'])}</label>
-          <div className="action-row"><button className="primary" type="submit">{request.pending ? t('saving') : confirmation === 'confirm' ? t('importConfirm') : label(['確認取消', 'Confirm cancellation'])}</button><button type="button" onClick={() => setConfirmation(undefined)}>{t('close')}</button></div>
+          <label className="check"><input type="checkbox" required />{confirmation === 'confirm' ? label(['我已檢查預覽。合併會略過無效或重複列。', 'I reviewed the preview. Invalid and duplicate rows will be skipped.', '我已检查预览。合并会略过无效或重复列。']) : label(['我確認捨棄此預覽。', 'I confirm that this preview can be discarded.', '我确认舍弃此预览。'])}</label>
+          <div className="action-row"><button className="primary" type="submit">{request.pending ? t('saving') : confirmation === 'confirm' ? t('importConfirm') : label(['確認取消', 'Confirm cancellation', '确认取消'])}</button><button type="button" onClick={() => setConfirmation(undefined)}>{t('close')}</button></div>
         </fieldset>
       </form>}
       {request.error !== undefined && <ProblemNotice error={request.error} />}
       {remap && <details><summary>{t('importMapping')}</summary><form className="fields" onSubmit={applyMapping} key={versionOf(batch)}><fieldset disabled={request.pending}>
         {strings(batch.header).map((header, index) => <label className="field" key={header}>{header}<select name={`mapping-${index}`} defaultValue={stringValue(mapping[header])}>
-          <option value="">{label(['略過此欄位', 'Ignore this column'])}</option>{columns.map(column => <option key={column}>{column}</option>)}
+          <option value="">{label(['略過此欄位', 'Ignore this column', '略过此字段'])}</option>{columns.map(column => <option key={column}>{column}</option>)}
         </select></label>)}
-        <button type="submit">{label(['重新產生預覽', 'Regenerate preview'])}</button>
+        <button type="submit">{label(['重新產生預覽', 'Regenerate preview', '重新产生预览'])}</button>
       </fieldset></form></details>}
     </section>
     <section className="detail-block"><div className="toolbar"><h3>{t('importRows')}</h3><select aria-label={t('status')} value={filter} onChange={event => { setFilter(event.target.value); setOffset(0); }}>
-      <option value="">{label(['所有結果', 'All results'])}</option>{outcomes.map(status => <option key={status} value={status}>{t(`state.${status}`, { defaultValue: status.replaceAll('_', ' ') })}</option>)}
+      <option value="">{label(['所有結果', 'All results', '所有结果'])}</option>{outcomes.map(status => <option key={status} value={status}>{t(`state.${status}`, { defaultValue: status.replaceAll('_', ' ') })}</option>)}
     </select></div>
       <ReadState read={read} />
       {read.data && (rows.length ? <EntityTable records={rows} rowKey={row => stringValue(row.row_no)} columns={[
-        { label: label(['檔案列', 'CSV row']), cell: row => stringValue(row.row_no) },
+        { label: label(['檔案列', 'CSV row', '文件列']), cell: row => stringValue(row.row_no) },
         { label: t('status'), cell: row => <Status value={row.status} /> },
-        { label: label(['欄位與問題', 'Fields and issues']), cell: row => <>
-          {records(row.issues).map((issue, index) => <p key={index}>{stringValue(issue.message ?? issue.code)}</p>)}
+        { label: label(['欄位與問題', 'Fields and issues', '字段与问题']), cell: row => <>
+          {records(row.issues).map((issue, index) => <p key={index}>{problemSummary(locale, stringValue(issue.code)) ?? stringValue(issue.message ?? issue.code)}</p>)}
           <details><summary>{t('details')}</summary><dl>{Object.entries(asRecord(row.normalized ?? row.raw)).map(([field, value]) => <div key={field}><dt>{field}</dt><dd>{stringValue(value) || '—'}</dd></div>)}</dl></details>
         </> },
       ]} /> : <EmptyState title={t('empty')} />)}

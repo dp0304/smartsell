@@ -209,11 +209,11 @@ export const goalPercent = (goal: Pick<PlanGoal, 'value' | 'target_value' | 'pro
   isNum(goal.progress_percent) ? goal.progress_percent : isNum(goal.value) && isNum(goal.target_value) && goal.target_value !== 0 ? goal.value / goal.target_value * 100 : null;
 
 const metricNames: Record<string, Tuple> = {
-  views: ['瀏覽', 'Views'], video_views: ['影片觀看', 'Video views'], impressions: ['曝光', 'Impressions'], reach: ['觸及', 'Reach'],
-  engagements: ['互動', 'Engagements'], engagement_rate: ['互動率', 'Engagement rate'], likes: ['按讚', 'Likes'], comments: ['留言', 'Comments'],
-  shares: ['分享', 'Shares'], saves: ['收藏', 'Saves'], followers: ['粉絲', 'Followers'], clicks: ['點擊', 'Clicks'], spend: ['花費', 'Spend'],
-  conversions: ['轉換', 'Conversions'], orders: ['訂單', 'Orders'], revenue: ['營收', 'Revenue'], watch_time_seconds: ['觀看時長', 'Watch time'],
-  redirects: ['短連結點擊', 'Link redirects'], clicks_filtered: ['有效點擊', 'Filtered clicks'],
+  views: ['瀏覽', 'Views', '浏览'], video_views: ['影片觀看', 'Video views', '视频观看'], impressions: ['曝光', 'Impressions'], reach: ['觸及', 'Reach', '触及'],
+  engagements: ['互動', 'Engagements', '交互'], engagement_rate: ['互動率', 'Engagement rate', '交互率'], likes: ['按讚', 'Likes', '按赞'], comments: ['留言', 'Comments'],
+  shares: ['分享', 'Shares'], saves: ['收藏', 'Saves'], followers: ['粉絲', 'Followers', '粉丝'], clicks: ['點擊', 'Clicks', '点击'], spend: ['花費', 'Spend', '花费'],
+  conversions: ['轉換', 'Conversions', '转换'], orders: ['訂單', 'Orders', '订单'], revenue: ['營收', 'Revenue', '营收'], watch_time_seconds: ['觀看時長', 'Watch time', '观看时长'],
+  redirects: ['短連結點擊', 'Link redirects', '短链接点击'], clicks_filtered: ['有效點擊', 'Filtered clicks', '有效点击'],
 };
 /** A metric key such as `norm.post.views` named by its last part; unknown keys keep their own name. */
 export function metricName(key: string): Tuple {
@@ -223,7 +223,7 @@ export function metricName(key: string): Tuple {
 
 const platformNames: Record<string, Tuple> = {
   instagram: ['Instagram', 'Instagram'], facebook: ['Facebook', 'Facebook'], threads: ['Threads', 'Threads'], tiktok: ['TikTok', 'TikTok'],
-  youtube: ['YouTube', 'YouTube'], douyin: ['抖音', 'Douyin'], xiaohongshu: ['小紅書', 'Xiaohongshu'], x: ['X', 'X'], twitter: ['X', 'X'],
+  youtube: ['YouTube', 'YouTube'], douyin: ['抖音', 'Douyin'], xiaohongshu: ['小紅書', 'Xiaohongshu', '小红书'], x: ['X', 'X'], twitter: ['X', 'X'],
   line: ['LINE', 'LINE'], generic: ['其他平台', 'Other platform'], meta: ['Meta', 'Meta'], google: ['Google', 'Google'],
 };
 /** Provider-prefixed keys (meta_instagram) fall back to the platform they name. */
@@ -272,20 +272,20 @@ export function matrixTotals(cells: readonly PlanCell[]) {
 export type SuggestionKey = 'plan_matrix' | 'fill_gaps' | 'fix_failed' | 'set_goals' | 'import_results' | 'set_budget' | 'add_products' | 'import_ad_spend' | 'follow_milestones'
   | 'produce_content' | 'schedule_content' | 'add_milestones' | 'draft_ads';
 const suggestionText: Record<SuggestionKey, Tuple> = {
-  plan_matrix: ['幫我為『{name}』規劃各平台、各帳號要發幾則內容', 'Plan how many posts “{name}” needs on each platform and account'],
-  fill_gaps: ['幫我把『{name}』還缺的 {n} 則內容做好並排程', 'Produce and schedule the {n} posts still missing from “{name}”'],
-  fix_failed: ['幫我查看『{name}』發布失敗的 {n} 則內容，修正後重新排程', 'Check the {n} failed posts in “{name}”, fix them and reschedule'],
-  set_goals: ['幫我為『{name}』設定目標，例如瀏覽數和互動數', 'Set goals for “{name}”, such as views and engagements'],
-  import_results: ['幫我匯入『{name}』相關貼文的最新成效數據', 'Import the latest performance data for the posts in “{name}”'],
-  set_budget: ['幫我登記『{name}』的預算和已發生的費用', 'Record the budget and costs so far for “{name}”'],
-  add_products: ['幫我把這次要推的商品加進『{name}』', 'Add the products this promotion pushes to “{name}”'],
-  import_ad_spend: ['幫我匯入『{name}』的投放花費', 'Import the ad spend for “{name}”'],
-  follow_milestones: ['幫我跟進『{name}』逾期或受阻的里程碑，並更新進度', 'Follow up on the overdue or blocked milestones in “{name}” and update them'],
+  plan_matrix: ['幫我為『{name}』規劃各平台、各帳號要發幾則內容', 'Plan how many posts “{name}” needs on each platform and account', '帮我为『{name}』规划各平台、各账号要发几则内容'],
+  fill_gaps: ['幫我把『{name}』還缺的 {n} 則內容做好並排程', 'Produce and schedule the {n} posts still missing from “{name}”', '帮我把『{name}』还缺的 {n} 则内容做好并调度'],
+  fix_failed: ['幫我查看『{name}』發布失敗的 {n} 則內容，修正後重新排程', 'Check the {n} failed posts in “{name}”, fix them and reschedule', '帮我查看『{name}』发布失败的 {n} 则内容，修正后重新调度'],
+  set_goals: ['幫我為『{name}』設定目標，例如瀏覽數和互動數', 'Set goals for “{name}”, such as views and engagements', '帮我为『{name}』设置目标，例如浏览数和交互数'],
+  import_results: ['幫我匯入『{name}』相關貼文的最新成效數據', 'Import the latest performance data for the posts in “{name}”', '帮我导入『{name}』相关帖子的最新成效数据'],
+  set_budget: ['幫我登記『{name}』的預算和已發生的費用', 'Record the budget and costs so far for “{name}”', '帮我登记『{name}』的预算和已发生的费用'],
+  add_products: ['幫我把這次要推的商品加進『{name}』', 'Add the products this promotion pushes to “{name}”', '帮我把这次要推的商品加进『{name}』'],
+  import_ad_spend: ['幫我匯入『{name}』的投放花費', 'Import the ad spend for “{name}”', '帮我导入『{name}』的投放花费'],
+  follow_milestones: ['幫我跟進『{name}』逾期或受阻的里程碑，並更新進度', 'Follow up on the overdue or blocked milestones in “{name}” and update them', '帮我跟进『{name}』逾期或受阻的里程碑，并更新进度'],
   // Empty-state prompts: offered where a section is empty, not ranked as next steps.
-  produce_content: ['幫我為『{name}』產出第一批內容草稿', 'Draft the first batch of content for “{name}”'],
-  schedule_content: ['幫我把『{name}』已完成的內容排進發布日程', 'Schedule the finished content of “{name}” for publishing'],
-  add_milestones: ['幫我為『{name}』設定製作里程碑和期限', 'Set production milestones and deadlines for “{name}”'],
-  draft_ads: ['幫我為『{name}』建一份投放方案，附預算與預估成效', 'Draft an ad proposal for “{name}” with a budget and estimated results'],
+  produce_content: ['幫我為『{name}』產出第一批內容草稿', 'Draft the first batch of content for “{name}”', '帮我为『{name}』产出第一批内容草稿'],
+  schedule_content: ['幫我把『{name}』已完成的內容排進發布日程', 'Schedule the finished content of “{name}” for publishing', '帮我把『{name}』已完成的内容排进发布日程'],
+  add_milestones: ['幫我為『{name}』設定製作里程碑和期限', 'Set production milestones and deadlines for “{name}”', '帮我为『{name}』设置制作里程碑和期限'],
+  draft_ads: ['幫我為『{name}』建一份投放方案，附預算與預估成效', 'Draft an ad proposal for “{name}” with a budget and estimated results', '帮我为『{name}』建一份投放方案，附预算与预估成效'],
 };
 export const suggestionPrompt = (key: SuggestionKey) => suggestionText[key];
 

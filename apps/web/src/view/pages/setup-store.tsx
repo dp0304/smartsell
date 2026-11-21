@@ -12,7 +12,7 @@ import { Field, WriteProblem } from './settings-parts';
 
 const providers = {
   shopify: ['Shopify', 'Shopify'], tiktok_shop: ['TikTok Shop', 'TikTok Shop'], amazon_sp: ['Amazon', 'Amazon'],
-  shopee: ['蝦皮購物', 'Shopee'], lazada: ['Lazada', 'Lazada'], other: ['其他商城', 'Other storefront'], file_import: ['檔案匯入', 'File import'],
+  shopee: ['蝦皮購物', 'Shopee', '虾皮购物'], lazada: ['Lazada', 'Lazada'], other: ['其他商城', 'Other storefront'], file_import: ['檔案匯入', 'File import', '文件导入'],
 } as const satisfies Record<string, Tuple>;
 const jobLabels: Record<string, Tuple> = {
   queued: text.queued, claimed: text.claimed, previewed: text.previewed, imported: text.imported,
@@ -52,7 +52,7 @@ function StoreForm({ brands, onCreated }: { brands: Row[]; onCreated: (store: St
     </div>
     <div className="vs-field-row">
       <Field label={l(text.currency)} required><input name="default_currency" required pattern="[A-Za-z]{3}" defaultValue="USD" /></Field>
-      <Field label={l(text.locale)} required><input name="default_locale" required maxLength={35} defaultValue={lang === 'en' ? 'en-US' : 'zh-TW'} /></Field>
+      <Field label={l(text.locale)} required><input name="default_locale" required maxLength={35} defaultValue={lang === 'en' ? 'en-US' : lang === 'zh-Hans' ? 'zh-CN' : 'zh-TW'} /></Field>
     </div>
     <SaveButton pending={action.pending} label={l(text.newStore)} />
   </fieldset>{action.error !== undefined && <WriteProblem error={action.error} />}</form>;

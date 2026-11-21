@@ -1,3 +1,5 @@
+import { problemSummary } from './problem-copy';
+import { localizedLabel } from '@smartsell/ui';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload } from 'lucide-react';
@@ -63,25 +65,27 @@ function uploadBytes(path: string, file: File, csrf: string, key: string, signal
 }
 
 const copy = {
-  heading: ['上傳素材', 'Upload media'], file: ['素材檔案', 'Media file'], brand: ['品牌', 'Brand'], title: ['素材名稱', 'Asset title'],
-  noBrands: ['請先在工作區設定中建立品牌。', 'Create a brand in Workspace settings before uploading.'],
-  invalidFile: ['請選擇支援的非空白檔案，大小上限為 512 MiB。', 'Choose a supported, non-empty file up to 512 MiB.'],
-  preparing: ['正在準備檔案…', 'Preparing file…'], uploading: ['正在上傳檔案…', 'Uploading file…'],
-  verifying: ['正在驗證檔案…', 'Verifying file…'], saving: ['正在儲存素材…', 'Saving asset…'],
-  saved: ['已新增至素材庫', 'Added to the asset library'], reset: ['選擇其他檔案', 'Choose another file'], retry: ['重試', 'Retry'],
-  preview: ['預覽', 'Preview'], download: ['下載檔案', 'Download file'],
-  previewError: ['無法顯示預覽。', 'The browser could not display the preview.'],
-  loading: ['載入中…', 'Loading…'], select: ['請選擇…', 'Select…'], error: ['操作失敗。', 'The request failed.'],
+  heading: ['上傳素材', 'Upload media', '上传素材'], file: ['素材檔案', 'Media file', '素材文件'], brand: ['品牌', 'Brand'], title: ['素材名稱', 'Asset title', '素材名称'],
+  noBrands: ['請先在工作區設定中建立品牌。', 'Create a brand in Workspace settings before uploading.', '请先在工作区设置中创建品牌。'],
+  invalidFile: ['請選擇支援的非空白檔案，大小上限為 512 MiB。', 'Choose a supported, non-empty file up to 512 MiB.', '请选择支持的非空白文件，大小上限为 512 MiB。'],
+  preparing: ['正在準備檔案…', 'Preparing file…', '正在准备文件…'], uploading: ['正在上傳檔案…', 'Uploading file…', '正在上传文件…'],
+  verifying: ['正在驗證檔案…', 'Verifying file…', '正在验证文件…'], saving: ['正在儲存素材…', 'Saving asset…', '正在保存素材…'],
+  saved: ['已新增至素材庫', 'Added to the asset library', '已添加至素材库'], reset: ['選擇其他檔案', 'Choose another file', '选择其他文件'], retry: ['重試', 'Retry', '重试'],
+  preview: ['預覽', 'Preview', '预览'], download: ['下載檔案', 'Download file', '下载文件'],
+  previewError: ['無法顯示預覽。', 'The browser could not display the preview.', '无法显示预览。'],
+  loading: ['載入中…', 'Loading…', '加载中…'], select: ['請選擇…', 'Select…', '请选择…'], error: ['操作失敗。', 'The request failed.', '操作失败。'],
 } as const;
 function useMediaCopy() {
   const { locale, t } = useFormat();
-  return { t, text: (key: keyof typeof copy) => copy[key][locale === 'en' ? 1 : 0] };
+  return { t, locale, text: (key: keyof typeof copy) => localizedLabel(copy[key], locale) };
 }
 
 function MediaFailure({ error, retry }: { error: unknown; retry?: () => void }) {
-  const { text } = useMediaCopy();
+  const { text, t, locale } = useMediaCopy();
+  const message = error instanceof ApiError ? problemSummary(locale, error.code, error.status) : undefined;
   return <div role="alert"><strong>{text('error')}</strong>
-    {error instanceof Error && error.message && <p>{error.message}</p>}
+    {message && <p>{message}</p>}
+    {error instanceof ApiError && error.message && error.message !== message && <details><summary>{t('ui.serverDetails')}</summary><p>{error.message}</p></details>}
     {retry && <button type="button" onClick={retry}>{text('retry')}</button>}
   </div>;
 }

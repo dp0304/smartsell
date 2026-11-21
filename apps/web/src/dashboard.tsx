@@ -10,7 +10,7 @@ import { setupLabel, setupStepNames, setupStepRoutes } from './workspace-onboard
 import { TermsRenewal } from './workspace-terms-renewal';
 import './dashboard-aurora.css';
 
-const destinations: Record<string, [string, string]> = {
+const destinations: Record<string, [string, string, string?]> = {
   work_item: ['settings/brands', 'work'], approval_request: ['approvals', 'approvals'], publish_target: ['calendar', 'targets'],
   execution_task: ['execution', 'tasks'], conversation: ['inbox', 'conversations'], notification: ['settings/brands', 'notifications'],
   data_source: ['data', 'sources'], connection: ['settings/accounts', 'connections'], connector_device: ['settings/accounts', 'devices'],
@@ -47,7 +47,7 @@ function SetupChecklist() {
   const finished = rows.filter(row => row.status === 'done' || row.status === 'skipped').length;
   if (!read.data || !rows.length || finished === rows.length) return null;
   const base = `/w/${encodeURIComponent(api.ws)}`;
-  return <Panel><div className="panel-head"><h2>{label(['開始使用 SmartSell', 'Get started with SmartSell'])}</h2>
+  return <Panel><div className="panel-head"><h2>{label(['開始使用 SmartSell', 'Get started with SmartSell', '开始使用 SmartSell'])}</h2>
     <span className="setup-progress"><meter min={0} max={rows.length} value={finished} />{label([`已完成 ${finished} / ${rows.length}`, `${finished} of ${rows.length} done`])}
       <Link to={`${base}/setup`}>{label(['查看全部', 'View all'])}</Link></span></div>
     <ol className="setup-steps">{rows.map(row => {
@@ -130,7 +130,7 @@ export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) 
         [ClipboardList, 'dashboardApprovals', countOf(['approval'], ['approval_request']), 'approvals'],
         [CircleAlert, 'dashboardPublishing', countOf(['missed_publish', 'outcome_unknown'], ['execution_task']), 'execution'],
         [Mail, 'dashboardReplies', countOf(['pending_reply', 'unassigned_conversation'], ['conversation']), 'inbox'],
-        [CheckCircle2, 'dashboardSources', unavailable.length ? label([`${unavailable.length} 個異常`, `${unavailable.length} need attention`]) : providers.length ? label(['全部正常', 'All healthy']) : '—', 'home?tab=health'],
+        [CheckCircle2, 'dashboardSources', unavailable.length ? label([`${unavailable.length} 個異常`, `${unavailable.length} need attention`, `${unavailable.length} 个异常`]) : providers.length ? label(['全部正常', 'All healthy']) : '—', 'home?tab=health'],
       ] as const).map(([Icon, key, value, href]) => <Link key={key} className="panel dashboard-stat" to={`${base}/${href}`}><Icon size={19} aria-hidden="true" /><div><span>{t(key)}</span><strong className={typeof value === 'string' ? 'stat-text' : undefined}>{typeof value === 'string' ? value : formatNumber(value)}</strong></div></Link>)}
     </div>}
   </>;

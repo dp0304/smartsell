@@ -1,7 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('connector', {
-  state: () => ipcRenderer.invoke('connector:state'),
+  state: (languages?: unknown) => ipcRenderer.invoke('connector:state', languages),
+  setLanguage: (preference: unknown) => ipcRenderer.invoke('connector:set-language', preference),
   setOrigin: (origin: unknown) => ipcRenderer.invoke('connector:set-origin', origin),
   claimCatalog: () => ipcRenderer.invoke('connector:catalog-claim'),
   catalogPortal: () => ipcRenderer.invoke('connector:catalog-portal'),

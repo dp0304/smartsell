@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash, createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { DesktopError, displayError } from '../../apps/connector-desktop/src/errors.ts';
+import { languageSettings } from '../../apps/connector-desktop/src/language-settings.ts';
+import { negotiateLanguage, translate } from '../../apps/connector-desktop/ui/i18n.mjs';
 import { DesktopConnector } from '../../apps/connector-desktop/src/controller.ts';
 import { deviceVault, type Pairing } from '../../apps/connector-desktop/src/vault.ts';
 import { parseReceipt } from '../../apps/connector-desktop/src/policy.ts';
@@ -381,4 +384,54 @@ test('vault only writes ciphertext and fails closed when OS storage is unavailab
     vault.clear();
     assert.equal(vault.load(), undefined);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+
+test('negotiates system and browser Chinese preferences with script and order precedence', () => {
+  assert.equal(negotiateLanguage('system', ['en-US', 'zh-SG', 'zh-TW']), 'zh-Hans');
+  assert.equal(negotiateLanguage('system', ['zh-MO', 'zh-CN']), 'zh-Hant');
+  assert.equal(negotiateLanguage('system', ['zh-Hans-TW']), 'zh-Hans');
+  assert.equal(negotiateLanguage('system', ['zh-Hant-CN']), 'zh-Hant');
+  assert.equal(negotiateLanguage('system', ['bad_tag?', 'zh_HK']), 'zh-Hant');
+  assert.equal(negotiateLanguage('system', ['en-US']), 'zh-Hans');
+  assert.equal(negotiateLanguage('zh-Hans', ['zh-TW']), 'zh-Hans');
+  assert.equal(negotiateLanguage('zh-Hant', ['zh-CN']), 'zh-Hant');
+});
+
+test('persists language selection and treats missing or invalid settings as automatic', () => {
+  const directory = mkdtempSync(join(import.meta.dirname, '.locale-'));
+  try {
+    const path = join(directory, 'language.txt');
+    const settings = languageSettings(path);
+    assert.equal(settings.load(), 'system');
+    for (const preference of ['zh-Hant', 'zh-Hans', 'system']) {
+      assert.equal(settings.save(preference), preference);
+      assert.equal(languageSettings(path).load(), preference);
+    }
+    assert.throws(() => settings.save('en-US'), /支持的界面语言/);
+    assert.equal(settings.load(), 'system');
+    writeFileSync(path, 'invalid');
+    assert.equal(settings.load(), 'system');
+    assert.throws(() => languageSettings(join(directory, 'missing', 'language.txt')).save('zh-Hant'), /无法保存语言设置/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('localizes application messages while retaining event, file, task and device values', async () => {
+  const device = '設備-工作台-{0}';
+  const error = DesktopError.create('无法保存配对。请在工作台撤销设备 {0} 后重新配对。', device);
+  assert.equal(displayError('zh-Hans', 'pair', error), `无法保存配对。请在工作台撤销设备 ${device} 后重新配对。`);
+  assert.equal(displayError('zh-Hant', 'pair', error), `無法保存配對。請在工作臺撤銷設備 ${device} 後重新配對。`);
+  assert.match(displayError('zh-Hans', 'finish', new Error('Unexpected error with user data')), /作品 ID、证据和任务状态/);
+  const file = '商品表-简体中文-{1}.csv';
+  assert.equal(translate('zh-Hant', '已选择 {0}（{1} KB）', file, 1), `已選擇 ${file}（1 KB）`);
+  const f = fixture();
+  await f.prepare();
+  const hans = f.client.snapshot('zh-Hans');
+  const hant = f.client.snapshot('zh-Hant');
+  assert.deepEqual(hant.task, hans.task);
+  assert.equal(hant.device, hans.device);
+  assert.equal(hant.activity[0].id, hans.activity[0].id);
+  assert.equal(hant.activity[0].result, '已讀取 1 個本機檔案的 SHA-256');
+  assert.equal(hans.activity[0].result, '已读取 1 个本机文件的 SHA-256');
+  assert.match(hant.message, /請在專用瀏覽器設定中核對帳號/);
 });

@@ -451,3 +451,23 @@ test.describe('custom portal hosts', () => {
     await expect(page.getByRole('heading', { name: report.title })).toBeVisible();
   });
 });
+
+
+test('isolated portal switches language without discarding search or translating records', async ({ page, localPortal }) => {
+  const title = '繁體共享資料';
+  const id = '7a22de7f-9b8e-4b8e-a704-cac36c06db2c';
+  await page.route('**/api/v1/portal/shares?*', route => route.fulfill({ json: { data: [
+    { id, title, kind: 'report', expires_at: '2030-05-01T00:00:00.000Z' },
+  ] } }));
+  await page.goto(`${localPortal.portalOrigin}/?lang=zh-Hans-TW&q=資料`);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans');
+  await expect(page.getByRole('heading', { name: '与您共享的项目' })).toBeVisible();
+  await expect(page.getByRole('link', { name: title })).toHaveAttribute('href', `/s/${id}`);
+  await page.getByRole('searchbox').fill('尚未提交的資料');
+  await page.locator('#language').selectOption('en');
+  await expect(page.getByLabel('Search shared titles')).toHaveValue('尚未提交的資料');
+  await expect(page.getByText(/^Report · Expires/)).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('q')).toBe('資料');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Shared with you' })).toBeVisible();
+});

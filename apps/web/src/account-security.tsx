@@ -85,7 +85,7 @@ export function AccountSecurity({ csrf, userId }: { csrf: string; userId: string
     {status.isError && <ProblemNotice error={status.error} retry={() => void status.refetch()} />}
     {status.data && <p role="status">{t(enabled ? 'security.enabled' : 'security.disabled')}</p>}
     {status.data && !status.data.canManage && <p>{t('security.federated')}</p>}
-    {recoveryRevoked && enabled && <p role="status">{label(['復原碼已撤銷。', 'Recovery codes revoked.'])}</p>}
+    {recoveryRevoked && enabled && <p role="status">{label(['復原碼已撤銷。', 'Recovery codes revoked.', '复原码已撤销。'])}</p>}
     {codes && <div><p>{t('security.saveCodes')}</p><ul aria-label={t('security.recoveryCodes')}>{codes.map(code => <li key={code}><code>{code}</code></li>)}</ul><button type="button" onClick={() => setCodes(undefined)}>{t('close')}</button></div>}
     {status.data?.canManage && !codes && <>
       {enrollment && <label className="field">{t('security.setupKey')}<input readOnly value={new URL(enrollment.uri).searchParams.get('secret') ?? ''} onFocus={event => event.currentTarget.select()} /></label>}
@@ -93,7 +93,7 @@ export function AccountSecurity({ csrf, userId }: { csrf: string; userId: string
         <label className="field">{t('password')}<input name="password" type="password" required autoComplete="current-password" /></label>
         {step !== 'enroll' && <FactorFields totpOnly={step === 'confirm'} />}
         <button type="submit" className="primary">{t(pending ? 'saving' : `security.${step}`)}</button>
-        {step === 'revoke' && status.data.passwordRecheck === true && <button type="submit" value="revoke-recovery">{label(['撤銷復原碼', 'Revoke recovery codes'])}</button>}
+        {step === 'revoke' && status.data.passwordRecheck === true && <button type="submit" value="revoke-recovery">{label(['撤銷復原碼', 'Revoke recovery codes', '撤销复原码'])}</button>}
         {enrollment && <button type="button" onClick={() => { setEnrollment(undefined); setError(undefined); }}>{t('cancel')}</button>}
       </fieldset></form>
     </>}

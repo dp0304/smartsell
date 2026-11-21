@@ -31,7 +31,7 @@ export function DecisionsPage() {
       {kinds.map(key => <button key={key} type="button" aria-pressed={kind === key} onClick={() => choose(key)}>{kindLabel(key)}{isNum(counts[key]) && <span className="vs-count"> {counts[key]}</span>}</button>)}
     </div>}
     {campaign && <div className="vs-filter-row"><button type="button" aria-pressed="true" onClick={clearCampaign}>
-      {l(['只看這個推廣計劃', 'This promotion plan only'])} ×</button></div>}
+      {l(['只看這個推廣計劃', 'This promotion plan only', '只看这个推广计划'])} ×</button></div>}
     <UnfinishedDecisions />
     <Loaded read={read}>{items => {
       const list = Array.isArray(items) ? items : [];

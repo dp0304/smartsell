@@ -1,8 +1,10 @@
+import { localizedLabel } from '@smartsell/ui';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { CircleAlert, CircleCheck, CircleDot, Inbox, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ApiError, type Entity } from './workbench-api';
 import { titleCase } from './catalog';
+import { problemSummary } from './problem-copy';
 
 export const statusOf = (record: Entity) => String(record.data.status ?? record.data.state ?? record.data.production_stage ?? '');
 export const recordName = (record: Entity) => String(record.data.title ?? record.data.name ?? record.data.subject ?? record.data.display_name ?? record.data.email ?? record.data.sku ?? record.data.slug ?? record.id);
@@ -16,15 +18,16 @@ export function useFormat() {
       const date = new Date(value);
       return Number.isNaN(date.valueOf()) ? '—' : new Intl.DateTimeFormat(locale, { dateStyle: 'medium', ...(includeTime ? { timeStyle: 'short' } : {}) }).format(date);
     },
-    label: (prefix: string, key: string, copy?: readonly [string, string]) => copy ? copy[locale === 'en' ? 1 : 0] : t(`${prefix}.${key}`, { defaultValue: titleCase(key.split('.').at(-1) ?? key) }),
+    label: (prefix: string, key: string, copy?: readonly [string, string, string?]) => copy ? localizedLabel(copy, locale) : t(`${prefix}.${key}`, { defaultValue: titleCase(key.split('.').at(-1) ?? key) }),
   };
 }
 export function Failure({ error, retry }: { error: unknown; retry?: () => void }) {
-  const { t } = useTranslation();
+  const { t, locale } = useFormat();
   const apiError = error instanceof ApiError ? error : undefined;
+  const message = problemSummary(locale, apiError?.code, apiError?.status);
   const forbidden = apiError?.status === 403;
   const missing = apiError?.status === 404;
-  return <div className="wb-error" role="alert"><CircleAlert size={18} /><div><strong>{t(forbidden ? 'ui.forbidden' : missing ? 'ui.endpointUnavailable' : 'ui.error')}</strong>{apiError?.message && <p>{apiError.message}</p>}</div>{retry && <button onClick={retry}>{t('ui.retry')}</button>}</div>;
+  return <div className="wb-error" role="alert"><CircleAlert size={18} /><div><strong>{t(forbidden ? 'ui.forbidden' : missing ? 'ui.endpointUnavailable' : 'ui.error')}</strong>{message && <p>{message}</p>}{apiError?.message && apiError.message !== message && <details><summary>{t('ui.serverDetails')}</summary><p>{apiError.message}</p></details>}</div>{retry && <button onClick={retry}>{t('ui.retry')}</button>}</div>;
 }
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="wb-empty"><Inbox size={22} aria-hidden="true" /><p>{children}</p></div>;

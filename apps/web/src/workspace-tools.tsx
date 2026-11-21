@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Bell, Search, Wrench } from 'lucide-react';
 import { I18nextProvider } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -7,15 +7,10 @@ import { SearchPanel } from './search-panel';
 import { has } from './workbench-data';
 import i18n from './workbench-i18n';
 import { Dialog, Failure, useFormat } from './workbench-ui';
-import { useCopy } from './i18n';
 import { useDeveloperMode } from './preferences';
 import './workbench.css';
 
 export function CommandLanguage({ children }: { children: ReactNode }) {
-  const { locale } = useCopy();
-  useEffect(() => {
-    if (i18n.resolvedLanguage !== locale) void i18n.changeLanguage(locale);
-  }, [locale]);
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }
 

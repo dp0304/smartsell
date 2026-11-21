@@ -93,7 +93,7 @@ test('goal bars draw only known values, clamped to the target', () => {
   assert.equal(goalShare({ value: null, target_value: 100, progress_percent: null }), null);
   assert.equal(goalShare({ value: 500, target_value: 1000, progress_percent: 50 }), 0.5);
   assert.equal(goalShare({ value: 1500, target_value: 1000, progress_percent: null }), 1);
-  assert.deepEqual(metricName('norm.post.views'), ['瀏覽', 'Views']);
+  assert.deepEqual(metricName('norm.post.views'), ['瀏覽', 'Views', '浏览']);
   assert.deepEqual(metricName('custom.repeat_buyers'), ['repeat buyers', 'repeat buyers']);
   assert.deepEqual(platformName('meta_instagram'), ['Instagram', 'Instagram']);
   assert.deepEqual(platformName('mastodon'), ['mastodon', 'mastodon']);

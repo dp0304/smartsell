@@ -88,8 +88,8 @@ test('initials, images and links accept only safe values', () => {
 });
 
 test('attention texts are localized by kind and keep the SKU of a change', () => {
-  assert.deepEqual(attentionText({ kind: 'change_event', severity: 'high', title: 'stock_low · TEE-R', change_type: 'stock_low' }), ['庫存跌破門檻 · TEE-R', 'Stock crossed the low threshold · TEE-R']);
-  assert.deepEqual(attentionText({ kind: 'fact_pending', severity: 'normal', count: 2 }), ['2 項商品資訊草稿待審核', '2 product fact drafts await review']);
+  assert.deepEqual(attentionText({ kind: 'change_event', severity: 'high', title: 'stock_low · 繁體-TEE-R', change_type: 'stock_low' }), ['庫存跌破門檻 · 繁體-TEE-R', 'Stock crossed the low threshold · 繁體-TEE-R', '库存跌破门槛 · 繁體-TEE-R']);
+  assert.deepEqual(attentionText({ kind: 'fact_pending', severity: 'normal', count: 2 }), ['2 項商品資訊草稿待審核', '2 product fact drafts await review', '2 项商品信息草稿待审核']);
   assert.deepEqual(attentionText({ kind: 'price_unpublishable', severity: 'normal', count: 1 })[1], 'Price can\'t be used for publishing in 1 market');
   assert.deepEqual(attentionText({ kind: 'new_kind', severity: 'normal', title: 'Server text' }), ['Server text', 'Server text']);
 });

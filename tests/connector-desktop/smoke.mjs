@@ -7,10 +7,15 @@ const source = resolve(import.meta.dirname, '../../apps/connector-desktop');
 const directory = process.env.SMARTSELL_CONNECTOR_SMOKE_APP || source;
 const executablePath = join(source, 'node_modules/electron/dist', process.platform === 'darwin' ? 'Electron.app/Contents/MacOS/Electron' : 'electron.exe');
 const profile = await mkdtemp(join(import.meta.dirname, '.smoke-'));
+const launch = () => _electron.launch({ executablePath,
+  args: [directory, `--user-data-dir=${profile}`, '--disable-background-networking', '--no-proxy-server'], timeout: 20_000 });
 let electron;
 try {
-  electron = await _electron.launch({ executablePath, args: [directory, `--user-data-dir=${profile}`, '--disable-background-networking', '--no-proxy-server'], timeout: 20_000 });
-  const page = await electron.firstWindow();
+  electron = await launch();
+  let page = await electron.firstWindow();
+  await expect(page.locator('#language')).toBeEnabled();
+  await page.locator('#language').selectOption('zh-Hans');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans');
   await page.getByText('正式服务未配置').waitFor();
   assert.equal(page.url(), 'connector://desktop/index.html');
   await expect(page.locator('#connection')).toHaveText(/离线/);
@@ -37,6 +42,32 @@ try {
   await expect(stopped.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
   await page.screenshot({ path: join(directory, 'dist', 'smoke.png'), fullPage: true });
   console.log('Offline Electron window, sandbox, popup block and emergency stop verified');
+
+  await page.locator('#service-settings summary').click();
+  const serviceInput = page.locator('#service-form input');
+  await serviceInput.fill('http://example.com/');
+  await page.getByRole('button', { name: '保存服务地址' }).click();
+  await expect(page.locator('#error')).toContainText('请填写工作台显示的 HTTPS 服务地址');
+  await serviceInput.fill('用户输入-原样保留');
+  await page.locator('#language').selectOption('zh-Hant');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
+  await expect(page.locator('#service-form input')).toHaveValue('用户输入-原样保留');
+  await expect(page.locator('#activity-list')).toContainText('本機操作已停止');
+  await expect(page.locator('ul.platforms')).toHaveAttribute('aria-label', '桌面端支援的社媒');
+  assert.equal(await electron.evaluate(({ Menu }) => Menu.getApplicationMenu().items[1].label), '編輯');
+  await page.getByRole('button', { name: '保存服務地址' }).click();
+  await expect.poll(() => serviceInput.evaluate(input => input.validationMessage)).toBe('請填寫有效的網址。');
+  await serviceInput.fill('http://example.com/');
+  await page.getByRole('button', { name: '保存服務地址' }).click();
+  await expect(page.locator('#error')).toContainText('請填寫工作臺顯示的 HTTPS 服務地址');
+  await electron.close();
+  electron = await launch();
+  page = await electron.firstWindow();
+  await expect(page.locator('#language')).toHaveValue('zh-Hant');
+  await expect(page.locator('#origin')).toHaveText('正式服務未設定');
+  await page.locator('#language').selectOption('zh-Hans');
+  await expect(page.locator('#origin')).toHaveText('正式服务未配置');
+  console.log('Desktop language switching, localized errors and menus, intact input and restart persistence verified');
 
   // Exercise renderer states through the real preload with local fixtures only.
   await electron.evaluate(({ ipcMain }) => {

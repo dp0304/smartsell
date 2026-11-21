@@ -1,3 +1,4 @@
+import { languages } from '../locale';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { BarChart3, Bot, BriefcaseBusiness, CalendarDays, Globe, LayoutDashboard, ListChecks, LogOut, Megaphone, Menu, Package, Settings, SlidersHorizontal, Target, Wrench, X, Zap } from 'lucide-react';
@@ -75,7 +76,7 @@ function Language() {
   const { locale, setLanguage } = useCopy();
   const { l } = useText();
   return <label className="vs-select vs-language"><Globe size={15} aria-hidden="true" /><span className="vs-sr">{l(copy.shell.language)}</span>
-    <select value={locale} onChange={event => setLanguage(event.target.value)}><option value="zh-Hant">繁體中文</option><option value="en">English</option></select></label>;
+    <select value={locale} onChange={event => setLanguage(event.target.value)}>{languages.map(({ code, name }) => <option key={code} value={code} lang={code}>{name}</option>)}</select></label>;
 }
 
 function SignOut() {

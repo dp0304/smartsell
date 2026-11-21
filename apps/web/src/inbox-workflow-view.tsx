@@ -19,7 +19,7 @@ export function InboxThread({ record }: { record: RecordData }) {
       <b>{stringValue(message.author_name ?? message.sender_display ?? message.direction)}</b>
       <p>{stringValue(asRecord(message.untrusted_content).body_text ?? message.body_text) || '—'}</p>
       {records(message.translations).map(translation => <details key={stringValue(translation.id)}>
-        <summary>{label(['查看人工翻譯', 'Show human translation'])} · {stringValue(translation.target_lang)}</summary>
+        <summary>{label(['查看人工翻譯', 'Show human translation', '查看人工翻译'])} · {stringValue(translation.target_lang)}</summary>
         <p>{stringValue(translation.text)}</p>
       </details>)}
       <small><Timestamp value={message.platform_created_at ?? message.created_at} /></small>
@@ -35,21 +35,21 @@ export function InboxActivity({ record }: { record: RecordData }) {
   const { label } = useCopy();
   const activity = records(record.activity).filter(row => ['assigned', 'status_changed', 'reopened'].includes(stringValue(row.type)))
     .sort((a, b) => stringValue(b.created_at).localeCompare(stringValue(a.created_at)));
-  return <section className="detail-block" aria-label={label(['對話活動', 'Conversation activity'])}>
-    <h3>{label(['對話活動', 'Conversation activity'])}</h3>
+  return <section className="detail-block" aria-label={label(['對話活動', 'Conversation activity', '对话活动'])}>
+    <h3>{label(['對話活動', 'Conversation activity', '对话活动'])}</h3>
     {activity.length ? <ol>{activity.map(row => {
       const assignment = row.type === 'assigned';
       const value = (entry: unknown) => assignment ? stringValue(entry) || label(['未指派', 'Unassigned']) : <Status value={entry} />;
       return <li className="message" key={stringValue(row.id)}>
-        <strong>{assignment ? label(['指派變更', 'Assignment changed']) : label(['狀態變更', 'Status changed'])}</strong>
+        <strong>{assignment ? label(['指派變更', 'Assignment changed', '指派变更']) : label(['狀態變更', 'Status changed', '状态变更'])}</strong>
         <dl>
           <dt>{label(['操作者', 'Actor'])}</dt><dd>{stringValue(row.actor_id) || '—'}</dd>
-          <dt>{label(['變更前', 'Before'])}</dt><dd>{value(row.from_value)}</dd>
-          <dt>{label(['變更後', 'After'])}</dt><dd>{value(row.to_value)}</dd>
+          <dt>{label(['變更前', 'Before', '变更前'])}</dt><dd>{value(row.from_value)}</dd>
+          <dt>{label(['變更後', 'After', '变更后'])}</dt><dd>{value(row.to_value)}</dd>
         </dl>
         <Timestamp value={row.created_at} />
       </li>;
-    })}</ol> : <p>{label(['尚無指派或狀態變更。', 'No assignment or status changes yet.'])}</p>}
+    })}</ol> : <p>{label(['尚無指派或狀態變更。', 'No assignment or status changes yet.', '尚无指派或状态变更。'])}</p>}
   </section>;
 }
 
@@ -63,14 +63,14 @@ export function InboxContext({ record, hasSelection, onOpenDraft }: { record: Re
     {!hasSelection ? <EmptyState title={t('selectRecord')} /> : <div className="detail-body">
       <p><Status value={record.status} /> · <Status value={record.priority} /></p>
       <p>{t('platform')} · {stringValue(record.platform ?? record.provider) || '—'}</p>
-      <p>{label(['負責人', 'Assignee'])} · {stringValue(record.assignee_user_id) || label(['未指派', 'Unassigned'])}</p>
-      {lease.holder_id != null && Date.parse(stringValue(lease.lease_expires_at)) > Date.now() && <p>{ownLease ? label(['你的處理權有效至', 'Your lease expires at']) : label(['其他成員處理中，租約有效至', 'Another operator holds the lease until'])} <Timestamp value={lease.lease_expires_at} /></p>}
-      {sla.id != null && <section className="detail-block"><h3>{label(['服務時限', 'Service deadlines'])}</h3>
-        <p>{label(['首次回覆', 'First response'])} · <Timestamp value={sla.first_response_due_at} /></p>
-        <p>{label(['解決', 'Resolution'])} · <Timestamp value={sla.resolution_due_at} /></p>
+      <p>{label(['負責人', 'Assignee', '负责人'])} · {stringValue(record.assignee_user_id) || label(['未指派', 'Unassigned'])}</p>
+      {lease.holder_id != null && Date.parse(stringValue(lease.lease_expires_at)) > Date.now() && <p>{ownLease ? label(['你的處理權有效至', 'Your lease expires at', '你的处理权有效至']) : label(['其他成員處理中，租約有效至', 'Another operator holds the lease until', '其他成员处理中，租约有效至'])} <Timestamp value={lease.lease_expires_at} /></p>}
+      {sla.id != null && <section className="detail-block"><h3>{label(['服務時限', 'Service deadlines', '服务时限'])}</h3>
+        <p>{label(['首次回覆', 'First response', '首次回复'])} · <Timestamp value={sla.first_response_due_at} /></p>
+        <p>{label(['解決', 'Resolution', '解决'])} · <Timestamp value={sla.resolution_due_at} /></p>
       </section>}
       {findOperation(api, 'GET', '/reply-drafts/:id') && records(record.reply_drafts).length > 0 && <section className="detail-block">
-        <h3>{label(['回覆草稿', 'Reply drafts'])}</h3>
+        <h3>{label(['回覆草稿', 'Reply drafts', '回复草稿'])}</h3>
         <ul>{records(record.reply_drafts).map(draft => <li key={stringValue(draft.id)}>
           <button className="text-button" onClick={() => onOpenDraft(stringValue(draft.id))}>{stringValue(draft.body_text)}</button> · <Status value={draft.status} />
         </li>)}</ul>
@@ -79,7 +79,7 @@ export function InboxContext({ record, hasSelection, onOpenDraft }: { record: Re
         event.preventDefault();
         const id = String(new FormData(event.currentTarget).get('draft') ?? '').trim();
         if (id && id !== '.' && id !== '..' && !/[/\\]/.test(id)) onOpenDraft(id);
-      }}><label className="field">{label(['回覆草稿 ID', 'Reply draft ID'])}<input name="draft" required /></label><button>{label(['開啟草稿', 'Open draft'])}</button></form>}
+      }}><label className="field">{label(['回覆草稿 ID', 'Reply draft ID', '回复草稿 ID'])}<input name="draft" required /></label><button>{label(['開啟草稿', 'Open draft', '打开草稿'])}</button></form>}
     </div>}
   </Panel>;
 }
@@ -95,7 +95,7 @@ export function InboxDraft({ draft, conversation, onSubmitted }: { draft: Record
     draft.based_on_inbound_revision === conversation.inbound_revision && conversation.status !== 'resolved');
   const path = '/reply-drafts/:id';
   const next = draft.status === 'editing' ? 'submit-approval' : draft.status === 'pending_approval' ? 'approve' : draft.status === 'approved' ? 'send' : undefined;
-  const copy = { 'submit-approval': ['提交回覆審批', 'Submit reply for approval'], approve: ['核准回覆', 'Approve reply'], send: ['準備人工回覆', 'Stage manual reply'] } as const;
+  const copy = { 'submit-approval': ['提交回覆審批', 'Submit reply for approval', '提交回复审批'], approve: ['核准回覆', 'Approve reply', '核准回复'], send: ['準備人工回覆', 'Stage manual reply', '准备人工回复'] } as const;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!intent || intent !== next || (intent === 'send' && !canSend)) return;
@@ -105,10 +105,10 @@ export function InboxDraft({ draft, conversation, onSubmitted }: { draft: Record
       if (intent === 'send' && data.id) onSubmitted(stringValue(data.id));
     }
   }
-  if (draft.conversation_id !== conversation.id) return <p role="alert" className="problem">{label(['這份草稿不屬於此對話。', 'This draft belongs to a different conversation.'])}</p>;
-  return <section className="detail-block"><h3>{label(['回覆草稿', 'Reply draft'])} · <Status value={draft.status} /></h3>
+  if (draft.conversation_id !== conversation.id) return <p role="alert" className="problem">{label(['這份草稿不屬於此對話。', 'This draft belongs to a different conversation.', '这份草稿不属于此对话。'])}</p>;
+  return <section className="detail-block"><h3>{label(['回覆草稿', 'Reply draft', '回复草稿'])} · <Status value={draft.status} /></h3>
     <article className="message"><p>{stringValue(draft.body_text)}</p></article>
-    {next && findOperation(api, 'POST', `${path}/${next}`) && (next === 'send' && !canSend ? <p className="notice">{label(['回到對話取得回覆處理權，並確認草稿仍適用於最新訊息。', 'Return to the conversation to acquire a reply lease and check that the draft still matches the latest message.'])}</p> :
+    {next && findOperation(api, 'POST', `${path}/${next}`) && (next === 'send' && !canSend ? <p className="notice">{label(['回到對話取得回覆處理權，並確認草稿仍適用於最新訊息。', 'Return to the conversation to acquire a reply lease and check that the draft still matches the latest message.', '回到对话取得回复处理权，并确认草稿仍适用于最新消息。'])}</p> :
       intent === next ? <form className="fields" onSubmit={submit}><fieldset disabled={request.pending}><label className="check"><input type="checkbox" required />{t('confirmAction')}</label><div className="action-row"><button className="primary" type="submit">{request.pending ? t('saving') : label(copy[next])}</button><button type="button" onClick={() => setIntent(undefined)}>{t('cancel')}</button></div></fieldset></form> : <button className="primary" onClick={() => setIntent(next)}>{label(copy[next])}</button>)}
     {request.error !== undefined && <ProblemNotice error={request.error} />}
   </section>;
@@ -131,21 +131,21 @@ export function InboxDelivery({ delivery, conversation }: { delivery: RecordData
     const url = safeUrl(new FormData(event.currentTarget).get('link'));
     if (url && ownLease) await request.run('POST', `${path}/manual-complete`, [stringValue(reply.id)], { platform_url: url, fencing_token: lease.fencing_token }, reply);
   }
-  if (reply.conversation_id !== conversation.id) return <p className="problem" role="alert">{label(['此回覆不屬於這個對話。', 'This delivery belongs to a different conversation.'])}</p>;
-  return <section className="detail-block"><h3>{label(['回覆傳送狀態', 'Delivery status'])} · <Status value={reply.status} /></h3>
+  if (reply.conversation_id !== conversation.id) return <p className="problem" role="alert">{label(['此回覆不屬於這個對話。', 'This delivery belongs to a different conversation.', '此回复不属于这个对话。'])}</p>;
+  return <section className="detail-block"><h3>{label(['回覆傳送狀態', 'Delivery status', '回复发送状态'])} · <Status value={reply.status} /></h3>
     {reply.status === 'manual' && <>
-      <p>{label(['在正確的平台帳號人工回覆，再用平台連結登記送達。', 'Reply from the correct platform account, then record the delivery with its platform link.'])}</p>
+      <p>{label(['在正確的平台帳號人工回覆，再用平台連結登記送達。', 'Reply from the correct platform account, then record the delivery with its platform link.', '在正确的平台账号人工回复，再用平台链接登记送达。'])}</p>
       {draft.data && <article className="message"><p>{stringValue(asRecord(draft.data.data).body_text)}</p></article>}
     </>}
-    {uncertain && <p className="notice">{label(['先核實傳送結果，以免重複回覆。', 'Verify delivery before attempting another reply.'])}</p>}
-    {canReconcile && <button disabled={request.pending} onClick={() => void request.run('POST', `${path}/reconcile`, [stringValue(reply.id)], {})}>{label(['核實送達狀態', 'Verify delivery'])}</button>}
-    {canRecord && (ownLease ? <details><summary>{label(['登記已確認的送達', 'Record confirmed delivery'])}</summary><form className="fields" onSubmit={recordDelivery}>
+    {uncertain && <p className="notice">{label(['先核實傳送結果，以免重複回覆。', 'Verify delivery before attempting another reply.', '先核实发送结果，以免重复回复。'])}</p>}
+    {canReconcile && <button disabled={request.pending} onClick={() => void request.run('POST', `${path}/reconcile`, [stringValue(reply.id)], {})}>{label(['核實送達狀態', 'Verify delivery', '核实送达状态'])}</button>}
+    {canRecord && (ownLease ? <details><summary>{label(['登記已確認的送達', 'Record confirmed delivery', '登记已确认的送达'])}</summary><form className="fields" onSubmit={recordDelivery}>
       <fieldset disabled={request.pending}>
-        <label className="field">{label(['平台回覆連結', 'Platform reply link'])}<input name="link" type="url" pattern="https?://.+" required /></label>
-        <label className="check"><input type="checkbox" required />{label(['我已在平台核實此回覆。', 'I verified this reply on the platform.'])}</label>
+        <label className="field">{label(['平台回覆連結', 'Platform reply link', '平台回复链接'])}<input name="link" type="url" pattern="https?://.+" required /></label>
+        <label className="check"><input type="checkbox" required />{label(['我已在平台核實此回覆。', 'I verified this reply on the platform.', '我已在平台核实此回复。'])}</label>
         <button type="submit">{request.pending ? t('saving') : t('save')}</button>
       </fieldset>
-    </form></details> : <p>{label(['登記送達前，請先取得回覆處理權。', 'Acquire a reply lease to record delivery.'])}</p>)}
+    </form></details> : <p>{label(['登記送達前，請先取得回覆處理權。', 'Acquire a reply lease to record delivery.', '登记送达前，请先取得回复处理权。'])}</p>)}
     {records(delivery.attempts).map(attempt => <p key={stringValue(attempt.id)}><Status value={attempt.outcome} /> · <Timestamp value={attempt.finished_at ?? attempt.started_at} /></p>)}
     {request.error !== undefined && <ProblemNotice error={request.error} />}
   </section>;

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ApiError, asRecord, bindPath, operationKey, operationPath, parameterNames, request, requestCompatibilityOperation, workspacePath, type Method, type Operation, type RecordData, type Session } from '@smartsell/sdk';
 import { Busy, EmptyState } from '@smartsell/ui';
 import { useCopy } from './i18n';
+import { problemSummary } from './problem-copy';
 
 export interface WorkspaceApi { ws: string; session: Session; catalog: Operation[]; brandId?: string; compatibility?: boolean }
 export const ApiContext = createContext<WorkspaceApi>(null!);
@@ -64,12 +65,15 @@ export function versionOf(record: RecordData) {
 }
 
 export function ProblemNotice({ error, retry }: { error: unknown; retry?: () => void }) {
-  const { t } = useCopy();
+  const { t, locale } = useCopy();
   const problem = error instanceof ApiError ? error : undefined;
-  const message = problem?.status === 412 ? t('conflict') : problem?.problem.code === 'INVALID_RESPONSE' ? t('invalidResponse') :
-    problem?.status === 502 && !Object.keys(problem.problem).length ? t('offline') : problem?.message ?? (error instanceof TypeError ? t('offline') : t('error'));
+  const code = stringValue(problem?.problem.code);
+  const offline = error instanceof TypeError || problem?.status === 502 && !Object.keys(problem.problem).length;
+  const detail = problem && (stringValue(problem.problem.detail) || stringValue(problem.problem.message));
+  const message = offline ? t('offline') : problemSummary(locale, code, problem?.status) ?? (detail || t('error'));
   return <div className="problem" role="alert"><strong>{t('error')}{problem ? ` · ${problem.status}` : ''}</strong><p>{message}</p>
-    {problem?.problem.code ? <small>{String(problem.problem.code)}</small> : null}{retry && <button type="button" onClick={retry}>{t('retry')}</button>}</div>;
+    {detail && detail !== message && <details><summary>{t('serverDetails')}</summary><p>{detail}</p></details>}
+    {code && <small>{code}</small>}{retry && <button type="button" onClick={retry}>{t('retry')}</button>}</div>;
 }
 
 export function ReadState({ read }: { read: Pick<ReturnType<typeof useRead>, 'op' | 'isPending' | 'isError' | 'error'> & { refetch: () => Promise<unknown> } }) {

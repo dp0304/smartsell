@@ -133,8 +133,8 @@ test('change sets and agent job reviews map to the agent module decision endpoin
   const items = await f.list();
   const change = find(items, 'change_set');
   assert.equal(change.requested_by.type, 'agent');
-  assert.deepEqual(change.preview.fields, [{ label: ['Old title · 標題', 'Old title · Title'], before: 'Old title', after: 'New title' }]);
-  assert.deepEqual(action(change, 'reject'), { key: 'reject', label: ['拒絕', 'Reject'], method: 'POST', path: `/change-sets/${change.resource.id}/reject`, version: change.resource.version, body: {}, requires_reason: true, reason_field: 'reason', tone: 'danger' });
+  assert.deepEqual(change.preview.fields, [{ label: ['Old title · 標題', 'Old title · Title', 'Old title · 标题'], before: 'Old title', after: 'New title' }]);
+  assert.deepEqual(action(change, 'reject'), { key: 'reject', label: ['拒絕', 'Reject', '拒绝'], method: 'POST', path: `/change-sets/${change.resource.id}/reject`, version: change.resource.version, body: {}, requires_reason: true, reason_field: 'reason', tone: 'danger' });
   await send(agentOperations, action(change, 'apply'));
   assert.equal(ctx.get('work_item', task.id).title, 'New title');
 

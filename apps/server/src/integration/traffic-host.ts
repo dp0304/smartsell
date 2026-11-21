@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { Problem } from '@smartsell/contracts';
 import type { Store as KernelStore } from '@smartsell/db';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { createPublicTrafficHandler } from '../../../public/src/traffic.js';
+import { createPublicTrafficHandler, trafficError } from '../../../public/src/traffic.js';
 import { makeContext } from '../context.js';
 import type { Workspace } from '../identity.js';
 import { resolveShortLink, submitLandingPage, trafficPublicBridge, viewLandingPage,
@@ -73,8 +73,9 @@ async function legacyPage(ctx: CommandContext, slug: string): Promise<Extract<Pu
     blocks: [
       { type: 'text', title: '', text: page.description },
       { type: 'form', title: '', formId: slug, formVersionId: page.version_id, choices, fields: [
-        { key: 'name', label: '姓名', required: false }, { key: 'email', label: '電子郵件', required: false },
-        { key: 'phone', label: '電話', required: false }, { key: 'message', label: '留言', required: false },
+        // Legacy forms use the renderer's default field labels.
+        { key: 'name', label: '', required: false }, { key: 'email', label: '', required: false },
+        { key: 'phone', label: '', required: false }, { key: 'message', label: '', required: false },
       ] },
     ],
   };
@@ -165,35 +166,48 @@ function trafficHost(config: TrafficHostConfig, dispatch: Dispatch, enabled: boo
     const consentForm = Boolean(consent && /^\/p\//i.test(path) && request.method === 'POST');
     const form = consentForm || /^\/f\//i.test(publicPath);
     const expected = form ? 'POST' : 'GET';
-    if (request.method !== expected) return reply.code(405).header('allow', expected).send();
-    if (form) {
-      if (request.headers.origin !== domain.origin || request.headers['sec-fetch-site'] === 'cross-site') return reply.code(403).send();
-      if (!limit(`${authority}/${request.ip}`)) return reply.code(429).header('retry-after', '60').send();
-    }
     const headers = new Headers();
-    for (const name of ['content-type', 'origin', 'user-agent', 'sec-purpose', 'purpose', 'sec-fetch-mode', 'sec-fetch-user']) {
+    for (const name of ['content-type', 'origin', 'user-agent', 'sec-purpose', 'purpose', 'sec-fetch-mode', 'sec-fetch-user', 'accept-language', 'cookie']) {
       const value = request.headers[name];
       if (typeof value === 'string') headers.set(name, value);
     }
+    const publicUrl = `${domain.origin}${publicPath}${raw.slice(path.length)}`;
+    const send = async (response: Response) => {
+      for (const [name, value] of response.headers) if (name !== 'set-cookie') reply.header(name, value);
+      for (const cookie of response.headers.getSetCookie()) reply.header('set-cookie', cookie);
+      return reply.code(response.status).send(response.body ? Buffer.from(await response.arrayBuffer()) : undefined);
+    };
+    const fail = (status: number) => send(trafficError(new Request(publicUrl, { method: request.method === 'GET' ? 'GET' : 'POST', headers }), status));
+    if (request.method !== expected) {
+      reply.header('allow', expected);
+      return fail(405);
+    }
+    if (form) {
+      if (request.headers.origin !== domain.origin || request.headers['sec-fetch-site'] === 'cross-site') return fail(403);
+      if (!limit(`${authority}/${request.ip}`)) {
+        reply.header('retry-after', '60');
+        return fail(429);
+      }
+    }
     let body: Uint8Array<ArrayBuffer> | undefined;
     if (form && /^application\/x-www-form-urlencoded(?:;|$)/i.test(headers.get('content-type') ?? '')) {
-      if (Number(request.headers['content-length']) > maxBody) return reply.code(413).send();
+      if (Number(request.headers['content-length']) > maxBody) return fail(413);
       const chunks: Buffer[] = [];
       let size = 0;
       for await (const chunk of request.raw.iterator({ destroyOnReturn: false }) as AsyncIterable<Buffer>) {
         size += chunk.length;
-        if (size > maxBody) { request.raw.resume(); return reply.code(413).send(); }
+        if (size > maxBody) { request.raw.resume(); return fail(413); }
         chunks.push(chunk);
       }
       body = new Uint8Array(Buffer.concat(chunks, size));
     }
     if (consentForm && consent) {
-      if (!body) return reply.code(415).send();
+      if (!body) return fail(415);
       const values = new URLSearchParams(new TextDecoder().decode(body)).getAll('analytics');
       const [value] = values;
-      if (values.length !== 1 || (value !== 'allow' && value !== 'deny')) return reply.code(422).send();
+      if (values.length !== 1 || (value !== 'allow' && value !== 'deny')) return fail(422);
       return reply.header('cache-control', 'no-store').header('set-cookie', consent.write(analyticsChoice(value === 'allow', choice)))
-        .code(303).header('location', publicPath).send();
+        .code(303).header('location', `${publicPath}${new URL(publicUrl).search}`).send();
     }
     const pageNavigation = headers.get('sec-fetch-mode') === 'navigate' && !headers.has('sec-purpose') && !headers.has('purpose');
     const visitor = choice?.consent ? { consent: true as const, sessionRef: choice.sessionRef,
@@ -212,9 +226,7 @@ function trafficHost(config: TrafficHostConfig, dispatch: Dispatch, enabled: boo
       }
       return result;
     }, () => visitor, consent ? () => choice?.consent : undefined);
-    const response = await handle(new Request(`${domain.origin}${publicPath}${raw.slice(path.length)}`, { method: expected, headers, body }));
-    if (!response) return reply.code(404).send();
-    for (const [name, value] of response.headers) reply.header(name, value);
-    return reply.code(response.status).send(response.body ? Buffer.from(await response.arrayBuffer()) : undefined);
+    const response = await handle(new Request(publicUrl, { method: expected, headers, body }));
+    return response ? send(response) : reply.code(404).send();
   };
 }

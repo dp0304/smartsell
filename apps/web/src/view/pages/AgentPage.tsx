@@ -112,7 +112,7 @@ function Connections() {
       const state = connectionState(item);
       return <li key={item.id}>
         <div className="vs-grow"><div className="vs-row-head"><strong>{item.label}</strong><StatusChip status={state === 'active' ? 'connected' : state} label={copy.agent[state]} /></div>
-          <small className="muted">{clients.find(([value]) => value === item.client)?.[1][lang === 'en' ? 1 : 0] ?? item.client} · {l(copy.agent.lastUsed)}: {item.last_used_at
+          <small className="muted">{l(clients.find(([value]) => value === item.client)?.[1] ?? [item.client, item.client])} · {l(copy.agent.lastUsed)}: {item.last_used_at
             ? <time dateTime={item.last_used_at} title={formatDateTime(item.last_used_at, lang)}>{relativeTime(item.last_used_at, lang)}</time> : l(copy.agent.neverUsed)}
             {item.expires_at && <> · {l(copy.agent.expiresAt)} {formatDateTime(item.expires_at, lang)}</>}</small></div>
         {state === 'active' && (confirming === item.id ? <span className="vs-actions">

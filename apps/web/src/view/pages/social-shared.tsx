@@ -11,7 +11,7 @@ import './social.css';
 // Building blocks shared by the social and ads pages (page-local; not part of the shared view kit).
 
 const text = {
-  noBaseline: ['無前期可比', 'No prior period'], vsPrevious: ['較前期', 'vs prior period'], tellAgent: ['請你的 Agent：', 'Tell your agent:'],
+  noBaseline: ['無前期可比', 'No prior period', '无前期可比'], vsPrevious: ['較前期', 'vs prior period', '较前期'], tellAgent: ['請你的 Agent：', 'Tell your agent:', '请你的 Agent：'],
 } satisfies Record<string, Tuple>;
 
 /**

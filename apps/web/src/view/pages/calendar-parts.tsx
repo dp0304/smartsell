@@ -1,5 +1,5 @@
 import { Lock } from 'lucide-react';
-import { Glyph, isDay, type CalendarEvent, type Lang } from '@smartsell/ui';
+import { Glyph, isDay, pick, type CalendarEvent, type Lang } from '@smartsell/ui';
 import { RouterLink, useText } from '../parts';
 import { calendarKinds, decisionHref, isOverdue, periodProgress, type AgendaItem, type AgendaRole, type DayItem, type DayRole } from './calendar-logic';
 import { clock, eventStatus, fill, kindLabel, needsText, platformLabel, shortDay, t } from './calendar-text';
@@ -17,8 +17,8 @@ export function eventName(event: CalendarEvent, lang: Lang, timeZone?: string, r
   const time = isAllDay(event) ? '' : clock(event.starts_at, lang, timeZone);
   const status = eventStatus(event.kind, event.status, lang);
   const marker = role === 'start' ? t.starts : role === 'end' ? t.ends : null;
-  const needs = event.needs_human ? (needsText[event.needs_human] ?? t.needsMarker)[lang === 'en' ? 1 : 0] : null;
-  return [kindLabel(event.kind, lang), marker && marker[lang === 'en' ? 1 : 0], time, event.title, platformLabel(event.platform, lang), status?.label,
+  const needs = event.needs_human ? pick(needsText[event.needs_human] ?? t.needsMarker, lang) : null;
+  return [kindLabel(event.kind, lang), marker && pick(marker, lang), time, event.title, platformLabel(event.platform, lang), status?.label,
     needs !== status?.label && needs].filter(Boolean).join(' · ');
 }
 
@@ -27,7 +27,7 @@ export function StatusTag({ event, besideNeeds = false }: { event: CalendarEvent
   const { lang } = useText();
   const status = eventStatus(event.kind, event.status, lang);
   if (!status) return null;
-  if (besideNeeds && event.needs_human && needsText[event.needs_human]?.[lang === 'en' ? 1 : 0] === status.label) return null;
+  if (besideNeeds && event.needs_human && pick(needsText[event.needs_human], lang) === status.label) return null;
   const glyph = { good: 'check', warning: 'warning', serious: 'serious', critical: 'critical', neutral: 'neutral', info: 'info' }[status.tone];
   return <span className={`vs-chip tone-${status.tone}`} data-status={event.status ?? undefined}><Glyph name={glyph} size={12} />{status.label}</span>;
 }
@@ -66,7 +66,7 @@ export function EventChip({ event, timeZone, onOpen, rich = false }: { event: Ca
   </button>;
 }
 
-const roleText: Record<DayRole, readonly [string, string] | null> = { start: t.starts, end: t.ends, single: t.oneDay, during: t.continues, point: null };
+const roleText: Record<DayRole, readonly [string, string, string?] | null> = { start: t.starts, end: t.ends, single: t.oneDay, during: t.continues, point: null };
 /** One row of the agenda (list view, narrow week, day panel). */
 export function AgendaRow({ item, timeZone, onOpen, base, today }: { item: AgendaItem | DayItem; timeZone?: string; onOpen: OpenEvent; base: string; today?: string }) {
   const { l, lang } = useText();

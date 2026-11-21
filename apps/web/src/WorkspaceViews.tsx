@@ -47,8 +47,8 @@ import { optionLabel } from './option-labels';
 const visibleTabCount = 6;
 
 const workflowActions = { tasks: executionWorkspaceActions, targets: targetWorkspaceActions, conversations: conversationWorkspaceActions } as Record<string, Action[]>;
-const commerceImportTab: Resource = { key: 'store-imports', label: ['CSV 匯入', 'CSV imports'], path: '/imports' };
-const markNotificationRead: Action = { path: '/notifications/read', label: ['標記為已讀', 'Mark as read'] };
+const commerceImportTab: Resource = { key: 'store-imports', label: ['CSV 匯入', 'CSV imports', 'CSV 导入'], path: '/imports' };
+const markNotificationRead: Action = { path: '/notifications/read', label: ['標記為已讀', 'Mark as read', '标记为已读'] };
 
 function NotificationTable({ rows, open }: { rows: RecordData[]; open: Open }) {
   const api = useApi();
@@ -61,17 +61,17 @@ function NotificationTable({ rows, open }: { rows: RecordData[]; open: Open }) {
         {item.type === 'mentioned' ? label(['有人提及你', 'You were mentioned']) : stringValue(item.title)}
       </li>)}</ul>
     </> : stringValue(row.title) },
-    { label: t('status'), cell: row => <Pill>{row.read_at ? label(['已讀', 'Read']) : label(['未讀', 'Unread'])}</Pill> },
+    { label: t('status'), cell: row => <Pill>{row.read_at ? label(['已讀', 'Read', '已读']) : label(['未讀', 'Unread', '未读'])}</Pill> },
     { label: t('created_at'), cell: row => <Timestamp value={row.created_at} /> },
     { label: label(['操作', 'Action']), cell: row => mayMarkRead && !row.read_at &&
       <button onClick={() => open(markNotificationRead.path, markNotificationRead, [], {}, { ids: [rowId(row)] })}>{label(markNotificationRead.label)}</button> },
   ]} />;
 }
-const optionNames: Record<string, readonly [string, string]> = {
-  manual: ['人工處理', 'Manual tasks'],
-  pending: ['待我審批', 'Pending my review'], submitted: ['我提交的', 'Submitted by me'], expired: ['已過期或失效', 'Expired or invalidated'],
-  all: ['全部', 'All'], mine: ['指派給我', 'Assigned to me'], unassigned: ['未指派', 'Unassigned'], open: ['開啟', 'Open'],
-  waiting: ['等候顧客', 'Waiting for customer'], snoozed: ['已暫緩', 'Snoozed'], resolved: ['已解決', 'Resolved'], exceptions: ['僅顯示例外', 'Exceptions only'],
+const optionNames: Record<string, readonly [string, string, string?]> = {
+  manual: ['人工處理', 'Manual tasks', '人工处理'],
+  pending: ['待我審批', 'Pending my review', '待我审批'], submitted: ['我提交的', 'Submitted by me'], expired: ['已過期或失效', 'Expired or invalidated', '已过期或失效'],
+  all: ['全部', 'All'], mine: ['指派給我', 'Assigned to me', '指派给我'], unassigned: ['未指派', 'Unassigned'], open: ['開啟', 'Open', '打开'],
+  waiting: ['等候顧客', 'Waiting for customer', '等候顾客'], snoozed: ['已暫緩', 'Snoozed', '已暂缓'], resolved: ['已解決', 'Resolved', '已解决'], exceptions: ['僅顯示例外', 'Exceptions only', '仅显示例外'],
 };
 const rowId = (row: RecordData) => stringValue(row.id ?? row.key ?? row.target_id ?? row.publish_target_id);
 type Open = (path: string, action: Action, ids?: string[], record?: RecordData, seed?: RecordData) => void;
@@ -130,14 +130,14 @@ function LinkedDetails({ group, record, open, onRelated }: { group: string; reco
     return <section className="detail-block"><h3>{label(['平台版本', 'Platform versions'])}</h3>
       {variants.length ? <div className="action-row">{variants.map(variant => <button key={rowId(variant)} onClick={() => onRelated('variant', rowId(variant))}>
         {[variant.platform, variant.locale, variant.format].map(stringValue).filter(Boolean).map(value => optionLabel(value, locale)).join(' · ') || rowTitle(variant)}</button>)}</div>
-        : <p className="next-step">{label(['下一步：按「新增內容變體」，為每個要發布的平台寫一個版本。', 'Next: choose Create variant to write a version for each platform.'])}</p>}</section>;
+        : <p className="next-step">{label(['下一步：按「新增內容變體」，為每個要發布的平台寫一個版本。', 'Next: choose Create variant to write a version for each platform.', '下一步：按「添加内容变体」，为每个要发布的平台写一个版本。'])}</p>}</section>;
   }
   if (group === 'variants') return <><ContentFactWorkbench key={id} record={record} />
     <p className="next-step">{label(record.current_revision_id
-      ? ['文案確定後，在下方版本清單按「用第 N 版建立排期」。修改文案後要再「儲存修訂」才會產生新版本。', 'When the copy is final, choose Schedule revision below. Save a new revision after editing the copy.']
-      : ['下一步：確認文案後按「儲存修訂」。只有儲存過的版本才能排期，排期後內容不會再變動。', 'Next: save a revision once the copy is final. Only saved revisions can be scheduled, and they stay fixed.'])}</p>
+      ? ['文案確定後，在下方版本清單按「用第 N 版建立排期」。修改文案後要再「儲存修訂」才會產生新版本。', 'When the copy is final, choose Schedule revision below. Save a new revision after editing the copy.', '文案确定后，在下方版本清单按「用第 N 版创建排期」。修改文案后要再「保存修订」才会产生新版本。']
+      : ['下一步：確認文案後按「儲存修訂」。只有儲存過的版本才能排期，排期後內容不會再變動。', 'Next: save a revision once the copy is final. Only saved revisions can be scheduled, and they stay fixed.', '下一步：确认文案后按「保存修订」。只有保存过的版本才能排期，排期后内容不会再变动。'])}</p>
     <DataBlock path="/content-variants/:id/revisions" ids={[id]} title={t('revisions')}
-    pickLabel={revision => label([`用第 ${stringValue(revision.revision_no)} 版建立排期`, `Schedule revision ${stringValue(revision.revision_no)}`])}
+    pickLabel={revision => label([`用第 ${stringValue(revision.revision_no)} 版建立排期`, `Schedule revision ${stringValue(revision.revision_no)}`, `用第 ${stringValue(revision.revision_no)} 版创建排期`])}
     onPick={revision => {
       const action = createActions.targets;
       open(action.path, action, [], {}, { brand_id: record.brand_id, campaign_id: record.campaign_id, content_item_id: record.content_item_id, content_variant_id: id, variant_revision_id: rowId(revision), content_format: scheduleFormats[stringValue(record.format)] ?? record.format });
@@ -189,14 +189,14 @@ function BackfillProgress({ record }: { record: RecordData }) {
   const runs = recordRows(record.runs) ?? [];
   const gaps = recordRows(record.gaps) ?? [];
   return <section className="message">
-    <h3>{label(['回補進度', 'Backfill progress'])}</h3>
+    <h3>{label(['回補進度', 'Backfill progress', '回补进度'])}</h3>
     <p>{label(['已完成分片', 'Completed shards'])} {String(progress.complete ?? 0)} / {String(progress.total ?? 0)}</p>
     <EntityTable records={[...runs, ...gaps]} rowKey={rowId} columns={[
-      { label: label(['資源', 'Resource']), cell: row => stringValue(row.resource) },
-      { label: label(['開始', 'From']), cell: row => <Timestamp value={row.window_from ?? row.from} /> },
-      { label: label(['結束', 'To']), cell: row => <Timestamp value={row.window_to ?? row.to} /> },
-      { label: label(['狀態', 'Status']), cell: row => ['unrecoverable', 'unavailable'].includes(String(row.status))
-        ? label(['超出保留期 · 不可恢復', 'Beyond retention · Unrecoverable']) : <Status value={row.executor_status?.toString().startsWith('budget_') ? row.executor_status : row.status} /> },
+      { label: label(['資源', 'Resource', '资源']), cell: row => stringValue(row.resource) },
+      { label: label(['開始', 'From', '开始']), cell: row => <Timestamp value={row.window_from ?? row.from} /> },
+      { label: label(['結束', 'To', '结束']), cell: row => <Timestamp value={row.window_to ?? row.to} /> },
+      { label: label(['狀態', 'Status', '状态']), cell: row => ['unrecoverable', 'unavailable'].includes(String(row.status))
+        ? label(['超出保留期 · 不可恢復', 'Beyond retention · Unrecoverable', '超出保留期 · 不可恢复']) : <Status value={row.executor_status?.toString().startsWith('budget_') ? row.executor_status : row.status} /> },
     ]} />
   </section>;
 }
@@ -207,9 +207,9 @@ function SourceBudget({ sourceId }: { sourceId: string }) {
   const state = asRecord(recordRows(read.data?.data)?.find(row => row.data_source_id === sourceId)?.collection_budget);
   if (!state.policy) return null;
   return <section className="message" role="status">
-    <p>{state.policy === 'pause' ? label(['已達採集預算，採集已暫停。', 'Collection paused because the budget was reached.'])
-      : label(['已達採集預算，採集已降頻。', 'Collection slowed because the budget was reached.'])}</p>
-    {Boolean(state.blocked && state.next_request_at) && <p>{label(['下次可採集時間', 'Next eligible request'])} <Timestamp value={state.next_request_at} /></p>}
+    <p>{state.policy === 'pause' ? label(['已達採集預算，採集已暫停。', 'Collection paused because the budget was reached.', '已达采集预算，采集已暂停。'])
+      : label(['已達採集預算，採集已降頻。', 'Collection slowed because the budget was reached.', '已达采集预算，采集已降频。'])}</p>
+    {Boolean(state.blocked && state.next_request_at) && <p>{label(['下次可採集時間', 'Next eligible request', '下次可采集时间'])} <Timestamp value={state.next_request_at} /></p>}
   </section>;
 }
 
@@ -330,9 +330,9 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
     else onRelated(kind, id);
   }
   // Explain where records come from: something the user creates here, or something the system fills in.
-  const emptyHint = isProducts ? t('importHint') : isInbox ? label(['連接社群帳號並開啟留言／私訊同步後，對話會出現在這裡。', 'Conversations appear here once a social account is connected and comment or message sync is on.'])
-    : availableCreate && create ? label([`按右上角「${create.label[0]}」新增第一筆。`, `Choose “${create.label[1]}” at the top right to add the first one.`])
-    : label(['目前還沒有資料。相關流程執行後會自動出現在這裡。', 'Nothing here yet. Records appear once the related workflow runs.']);
+  const emptyHint = isProducts ? t('importHint') : isInbox ? label(['連接社群帳號並開啟留言／私訊同步後，對話會出現在這裡。', 'Conversations appear here once a social account is connected and comment or message sync is on.', '连接社交媒体账号并打开留言／私讯同步后，对话会出现在这里。'])
+    : availableCreate && create ? label([`按右上角「${create.label[0]}」新增第一筆。`, `Choose “${create.label[1]}” at the top right to add the first one.`, `按右上角「${create.label[0]}」添加第一笔。`])
+    : label(['目前還沒有資料。相關流程執行後會自動出現在這裡。', 'Nothing here yet. Records appear once the related workflow runs.', '目前还没有数据。相关流程运行后会自动出现在这里。']);
   const emptyRecords = <EmptyState title={t(filter || Object.values(dimensions).some(Boolean) ? 'noMatches' : 'empty')}
     detail={!filter ? emptyHint : undefined}
     action={!filter && !availableCreate && isProducts && <button onClick={() => setParams({ tab: 'stores' })}>{t('resource.stores')} <ArrowRight size={15} /></button>} />;
@@ -342,7 +342,7 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
       {developer && (module.key === 'commerce' || module.key === 'ingest') && findOperation(api, 'GET', '/imports/:id') && <form className="inline-form" onSubmit={event => { event.preventDefault(); const id = String(new FormData(event.currentTarget).get('batch') ?? '').trim(); if (id && !/[/\\]/.test(id) && id !== '.' && id !== '..') onRelated('import', id); }}><input name="batch" required aria-label={t('batchId')} placeholder={t('batchId')} /><button>{t('importOpen')}</button></form>}
       {module.key === 'creator' && resource.key === 'live' && <CreatorPlanButton open={open} />}
       {module.key === 'commerce' && resource.key === 'promotions' && <PromotionCreate onCreated={id => { setFilter(''); choose(id, 'promotions'); }} />}
-      {availableCreate && <button className="primary" onClick={() => isProducts ? setCreatingProduct(true) : create && open(create.path, { ...create, follow: create.follow ?? 'record' })}><Plus size={16} />{isProducts ? label(['新增商品', 'Create product']) : create && label(create.label)}</button>}
+      {availableCreate && <button className="primary" onClick={() => isProducts ? setCreatingProduct(true) : create && open(create.path, { ...create, follow: create.follow ?? 'record' })}><Plus size={16} />{isProducts ? label(['新增商品', 'Create product', '添加商品']) : create && label(create.label)}</button>}
     </div></header>
     {(() => {
       const selectedIndex = tabs.findIndex(tab => tab.key === resource.key);
@@ -381,8 +381,8 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
             resourceType={`${module.key}.${resource.key}`} storageKey={`smartsell.filters:${api.ws}:${api.session.user.id}:${module.key}:${resource.key}`}
             rows={page.map(filterRecord)} filters={dimensions} change={setDimensions} names={referenceNames} /></CommandLanguage>}
           {!read.op && resource.listUnavailable ? <EmptyState title={t('noAccess')} detail={label(resource.listUnavailable === 'unmounted'
-            ? ['此部署未在工作區目錄提供租戶管理端點。', 'This deployment does not expose the tenant administration endpoint in the workspace catalog.']
-            : ['目前的 API 尚未提供此讀取端點。', 'This read endpoint is not yet available in the API.'])} /> : <ReadState read={read} />}
+            ? ['此部署未在工作區目錄提供租戶管理端點。', 'This deployment does not expose the tenant administration endpoint in the workspace catalog.', '此部署未在工作区目录提供租户管理端点。']
+            : ['目前的 API 尚未提供此讀取端點。', 'This read endpoint is not yet available in the API.', '目前的 API 尚未提供此读取端点。'])} /> : <ReadState read={read} />}
           {batchAvailable && selectedApprovals.length > 0 && <div className="panel-head"><button onClick={() => setBatch(selectedApprovals)}>{t('approvalBatchPreview')} · {new Intl.NumberFormat(locale).format(selectedApprovals.length)}</button></div>}
           {isProducts && read.data && <ProductCatalogSync key={productStore} storeId={productStore}
             emptyState={rows?.length === 0 && productQuery === filter.trim() ? emptyRecords : undefined} />}
@@ -394,9 +394,9 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
                   setChecked(current => selected ? [...current, id] : current.filter(item => item !== id));
                 }} />;
               } }] : []),
-              { label: label(['發布目標', 'Publish target']), cell: row => <button className="text-button" onClick={() => choose(stringValue(row.resource_id ?? row.target_id ?? row.publish_target_id))}>{stringValue(row.title ?? row.resource_id ?? row.target_id)}</button> },
+              { label: label(['發布目標', 'Publish target', '发布目标']), cell: row => <button className="text-button" onClick={() => choose(stringValue(row.resource_id ?? row.target_id ?? row.publish_target_id))}>{stringValue(row.title ?? row.resource_id ?? row.target_id)}</button> },
               { label: t('status'), cell: row => <Status value={row.status} /> },
-              { label: label(['步驟', 'Step']), cell: row => stringValue(row.current_step) },
+              { label: label(['步驟', 'Step', '步骤']), cell: row => stringValue(row.current_step) },
               { label: t('due_at'), cell: row => <Timestamp value={row.due_at} /> },
             ]} /> : resource.key === 'notifications' ? <NotificationTable rows={rows} open={open} /> : resource.key === 'content' && board ? <ProductionBoard rows={rows} onPick={row => choose(rowId(row))} /> : resource.key === 'changes' ? <CommerceChangesTable rows={rows} onPick={row => choose(rowId(row))} /> : <ResourceTable rows={rows} resource={resource} onPick={row => choose(rowId(row))} compact={isInbox || Boolean(selected || relatedInfo)} /> :
             isProducts ? null : emptyRecords) : <Json value={read.data.data} />)}
@@ -420,7 +420,7 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
               {module.key === 'ingest' && group === 'backfills' && <BackfillProgress record={record} />}
               {module.key === 'ingest' && group === 'sources' && <SourceBudget sourceId={selected} />}
               {module.key === 'workspace' && group === 'work' && record.resource_type === 'quality_issue' &&
-                <Link to={`/w/${encodeURIComponent(api.ws)}/data/health/issues?tab=quality&id=${encodeURIComponent(stringValue(record.resource_id))}`}>{label(['查看品質問題', 'View quality issue'])}</Link>}
+                <Link to={`/w/${encodeURIComponent(api.ws)}/data/health/issues?tab=quality&id=${encodeURIComponent(stringValue(record.resource_id))}`}>{label(['查看品質問題', 'View quality issue', '查看品质问题'])}</Link>}
               {group === 'pauses' && <PauseWithdrawals record={record} />}
               {group === 'tasks' && <ExecutionReview task={record} />}
               {group === 'posts' && (() => {
@@ -439,7 +439,7 @@ export function ModulePage({ module, initialTab, initialId, initialVersion, init
               {group === 'variants' && <section className="message"><h3>{t('draftPreview')}</h3><p>{stringValue(asRecord(record.draft_doc).body ?? asRecord(asRecord(record.draft_doc).rendered).text) || '—'}</p></section>}
               {group === 'imports' && <ImportReview key={ids.at(-1)} batch={record} id={ids.at(-1)!} />}
               {module.key === 'commerce' && group === 'stores' && rowId(record) && <StoreSyncCenter key={selected} store={record} />}
-              {group === 'stores' && findOperation(api, 'POST', '/stores/:id/imports') && <button className="primary" onClick={() => importTab(undefined, selected)}>{label(['匯入店鋪 CSV', 'Import store CSV'])}</button>}
+              {group === 'stores' && findOperation(api, 'POST', '/stores/:id/imports') && <button className="primary" onClick={() => importTab(undefined, selected)}>{label(['匯入店鋪 CSV', 'Import store CSV', '导入店铺 CSV'])}</button>}
               {group === 'conversations' && <><InboxThread key={selected} record={record} /><InboxActivity record={record} /></>}
               {group === 'replies' && conversation.data && <InboxDraft key={relatedId} draft={record} conversation={thread} onSubmitted={id => onRelated('delivery', id)} />}
               {group === 'deliveries' && conversation.data && <InboxDelivery delivery={record} conversation={thread} />}

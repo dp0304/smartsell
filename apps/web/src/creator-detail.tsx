@@ -12,15 +12,15 @@ export function CreatorAttribution({ id }: { id: string }) {
   const read = useRead('/collaborations/:id/attribution-reconciliation', [id]);
   if (!read.op) return null;
   const rows = recordRows(read.data?.data) ?? [];
-  const unknown = label(['未回報', 'Not reported']);
-  return <section className="detail-block" aria-label={label(['創作者歸因對帳', 'Creator attribution reconciliation'])}>
-    <h3>{label(['創作者歸因對帳', 'Creator attribution reconciliation'])}</h3>
-    <p>{label(['平台觀測以訂單為單位。兩欄分開對帳。', 'Platform observations are order-level. Reconcile the two columns separately.'])}</p>
+  const unknown = label(['未回報', 'Not reported', '未回报']);
+  return <section className="detail-block" aria-label={label(['創作者歸因對帳', 'Creator attribution reconciliation', '创作者归因对帐'])}>
+    <h3>{label(['創作者歸因對帳', 'Creator attribution reconciliation', '创作者归因对帐'])}</h3>
+    <p>{label(['平台觀測以訂單為單位。兩欄分開對帳。', 'Platform observations are order-level. Reconcile the two columns separately.', '平台观测以订单为单位。两栏分开对帐。'])}</p>
     <ReadState read={read} />
     {read.data && <EntityTable records={rows} rowKey={row => stringValue(row.order_id)} columns={[
-      { label: label(['訂單', 'Order']), cell: row => stringValue(row.external_order_id || row.order_id) },
+      { label: label(['訂單', 'Order', '订单']), cell: row => stringValue(row.external_order_id || row.order_id) },
       ...(['ledger_entries', 'order_level_reports'] as const).map((key, index) => ({
-        label: index === 0 ? label(['訂單衍生佣金', 'Order-derived commission']) : label(['平台回報佣金', 'Platform-reported commission']),
+        label: index === 0 ? label(['訂單衍生佣金', 'Order-derived commission', '订单衍生佣金']) : label(['平台回報佣金', 'Platform-reported commission', '平台回报佣金']),
         cell: (row: typeof rows[number]) => {
           const entries = recordRows(row[key]);
           return entries?.length ? <ul>{entries.map(entry => <li key={stringValue(entry.id)}>
@@ -29,7 +29,7 @@ export function CreatorAttribution({ id }: { id: string }) {
         },
       })),
     ]} />}
-    {read.data && rows.length === 0 && <p>{label(['尚無可對帳的訂單。', 'No orders to reconcile yet.'])}</p>}
+    {read.data && rows.length === 0 && <p>{label(['尚無可對帳的訂單。', 'No orders to reconcile yet.', '尚无可对帐的订单。'])}</p>}
   </section>;
 }
 
@@ -40,8 +40,8 @@ export function CreatorAccounts({ accounts, commands, open }: {
   const zh = locale.startsWith('zh');
   const rows = values(accounts).flatMap(value => asEntity(value, 'creator', 'creator_account') ?? []);
   const verify = commands.find(command => command.module === 'creator' && command.action === 'creators_verify_account');
-  const levels: Record<string, readonly [string, string]> = {
-    self_reported: ['自行填報', 'Self-reported'], public_profile: ['公開檔案', 'Public profile'], manually_verified: ['人工核實', 'Manually verified'],
+  const levels: Record<string, readonly [string, string, string?]> = {
+    self_reported: ['自行填報', 'Self-reported', '自行填报'], public_profile: ['公開檔案', 'Public profile', '公开文件'], manually_verified: ['人工核實', 'Manually verified', '人工核实'],
   };
   return <section>
     <h3>{zh ? '平台帳號' : 'Platform accounts'}</h3>
@@ -61,8 +61,8 @@ export function CreatorAudience({ profile }: { profile: Entity }) {
   const zh = locale.startsWith('zh');
   const rows = Array.isArray(profile.data.audience_markets) ? profile.data.audience_markets as Payload[] : [];
   const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 2 });
-  const source: Record<string, readonly [string, string]> = {
-    self_reported: ['創作者自報', 'Self-reported'], public: ['公開資料', 'Public data'], manual: ['人工記錄', 'Manual record'],
+  const source: Record<string, readonly [string, string, string?]> = {
+    self_reported: ['創作者自報', 'Self-reported', '创作者自报'], public: ['公開資料', 'Public data', '公开数据'], manual: ['人工記錄', 'Manual record', '人工记录'],
   };
   return <section>
     <h3>{zh ? '受眾市場' : 'Audience markets'}</h3>
@@ -107,8 +107,8 @@ export function CreatorEvaluations({ wid, campaignId, commands, open }: CreatorP
   const override = commands.find(command => command.module === 'creator' && command.action === 'creators_override_evaluation');
   const rows = values(read.data).flatMap(value => asEntity(value, 'creator', 'evaluation') ?? []);
   const fields = [
-    ['brand_fit', '品牌契合', 'Brand fit'], ['market_fit', '市場契合', 'Market fit'], ['content_quality', '內容品質', 'Content quality'],
-    ['audience_evidence', '受眾依據', 'Audience evidence'], ['cost_fit', '費用契合', 'Cost fit'],
+    ['brand_fit', '品牌契合', 'Brand fit'], ['market_fit', '市場契合', 'Market fit', '市场契合'], ['content_quality', '內容品質', 'Content quality', '内容品质'],
+    ['audience_evidence', '受眾依據', 'Audience evidence', '受众依据'], ['cost_fit', '費用契合', 'Cost fit', '费用契合'],
   ];
   const score = (value: unknown) => typeof value === 'number' ? number(value) : (zh ? '未知' : 'Unknown');
   const dimensions = (values: Payload | undefined) => <ul>{fields.map(([key, name, english]) => {
@@ -171,8 +171,8 @@ export function CreatorTermsComparison({ revisions }: { revisions: unknown }) {
   const before = rows.find(row => row.id === beforeId) ?? rows[1];
   const after = rows.find(row => row.id === afterId) ?? rows[0];
   const fields = [
-    ['fee', '費用', 'Fee'], ['commission_rule', '佣金規則', 'Commission rule'],
-    ['deliverable_requirements', '交付要求', 'Deliverable requirements'], ['usage_rights_required', '使用授權', 'Usage rights'],
+    ['fee', '費用', 'Fee', '费用'], ['commission_rule', '佣金規則', 'Commission rule', '佣金规则'],
+    ['deliverable_requirements', '交付要求', 'Deliverable requirements'], ['usage_rights_required', '使用授權', 'Usage rights', '使用授权'],
     ['deadline', '期限', 'Deadline'], ['attachment_ids', '附件', 'Attachments'],
   ];
   const formatValue = (value: unknown) => value == null ? '—' : typeof value === 'object' ? <pre>{JSON.stringify(value, null, 2)}</pre> : String(value);

@@ -17,32 +17,32 @@ import { AnyStatus, AttentionChips, CreatedVia, Fact, MetricValue, PriceFlags, P
 import './products.css';
 
 const text = {
-  back: ['← 全部商品', '← All products'], notFound: ['找不到這個商品', 'Product not found'],
-  notFoundDetail: ['它可能已被刪除，或不在你目前能看到的品牌裡。', 'It may have been deleted, or it belongs to a brand you cannot see.'],
-  markets: ['市場', 'Markets'], marketsHint: ['缺貨 {a} · 庫存偏低 {b}', '{a} out of stock · {b} low'], variants: ['變體', 'Variants'],
-  variantsHint: ['{a} 個販售中', '{a} active'], live: ['推廣中的計劃', 'Live plans'], liveNone: ['沒有', 'None'], upcoming: ['另有 {n} 個即將開始', '{n} more starting soon'],
-  next: ['下一則發布', 'Next post'], notScheduled: ['未排定', 'Nothing scheduled'], next7: ['7 天內 {n} 則', '{n} in the next 7 days'],
-  views: ['近 30 天瀏覽', 'Views, 30 days'], engagements: ['近 30 天互動', 'Engagements, 30 days'], orders: ['近 30 天訂單', 'Orders, 30 days'],
-  noPosts: ['近 30 天沒有發布', 'No posts in 30 days'], ordersNote: ['含此商品、已記錄在 SmartSell 的訂單', 'Orders recorded in SmartSell that include this product'],
-  attention: ['需注意', 'Needs attention'], review: ['去審核', 'Review'], seePrices: ['看下方的市場價格', 'See market prices below'],
-  stockOut: ['{m}：缺貨', '{m}: out of stock'], stockLow: ['{m}：庫存偏低', '{m}: low stock'],
-  attentionHint: ['價格與庫存的變動由同步偵測；商品資訊與在地化草稿要由你審核後才會生效。', 'Price and stock changes are detected by sync; fact and localization drafts take effect only after you review them.'],
-  pricing: ['市場價格與庫存', 'Market prices and stock'], allVariants: ['全部變體', 'All variants'], variant: ['變體', 'Variant'],
-  lastRead: ['最後讀取 {t}', 'Last read {t}'], noPrice: ['價格未提供', 'No price'], legend: ['標記說明', 'What the marks mean'],
-  notCollectedLong: ['還沒有讀到這個變體在此市場的價格或庫存，不代表 0。', 'No price or stock has been read for this variant in this market yet; it is not zero.'],
-  timeline: ['推廣時間線', 'Promotion timeline'], noTimeline: ['還沒有推廣計劃、排期或貼文', 'No plans, schedules or posts yet'], asTimeline: ['時間線', 'Timeline'], asList: ['列表', 'List'],
-  hiddenEntries: ['另有 {n} 筆在半年以外，請看列表', '{n} more are over six months away; see the list'],
-  undated: ['{n} 個計劃還沒有日期，未畫在時間線上', '{n} plans have no dates yet and are not drawn'],
-  showAll: ['顯示全部 {n} 筆', 'Show all {n}'], showLess: ['收合', 'Show less'],
-  posts: ['相關貼文成效', 'Related post performance'], noPostsYet: ['還沒有帶到這個商品的貼文', 'No posts feature this product yet'], topViews: ['相關貼文瀏覽（已採集的前 {n} 則）', 'Related post views (top {n} collected)'],
-  unranked: ['{n} 則貼文的瀏覽未採集，未參與排名（不當作 0）。', '{n} posts have no collected views and are not ranked (not treated as zero).'],
-  untitledPost: ['未命名的貼文', 'Untitled post'], openPost: ['在平台上查看', 'View on platform'], postViews: ['瀏覽', 'Views'], postEngagements: ['互動', 'Engagements'],
-  plans: ['推廣計劃', 'Promotion plans'], role: ['此商品：{r}', 'This product: {r}'], dayOf: ['第 {a} / {b} 天', 'Day {a} of {b}'],
-  completeness: ['內容完成度', 'Content completeness'], completenessUnknown: ['完成度未知', 'Completeness unknown'],
-  matrix: ['已發布 {a} · 已排程 {b} · 缺 {c}', '{a} published · {b} scheduled · {c} missing'], nextPub: ['下一則：{t}', 'Next: {t}'],
-  decide: ['{n} 項待你決定', '{n} waiting for you'], undatedPlan: ['尚未排定日期', 'No dates yet'],
-  ask: ['請 Agent 幫忙', 'Ask your agent'],
-  kind: { plan: ['推廣計劃', 'Plan'], publish: ['發布排期', 'Scheduled post'], post: ['已發布貼文', 'Published post'], change: ['商品變動', 'Product change'], fact: ['商品資訊修訂', 'Fact revision'] },
+  back: ['← 全部商品', '← All products'], notFound: ['找不到這個商品', 'Product not found', '找不到这个商品'],
+  notFoundDetail: ['它可能已被刪除，或不在你目前能看到的品牌裡。', 'It may have been deleted, or it belongs to a brand you cannot see.', '它可能已被删除，或不在你目前能看到的品牌里。'],
+  markets: ['市場', 'Markets', '市场'], marketsHint: ['缺貨 {a} · 庫存偏低 {b}', '{a} out of stock · {b} low', '缺货 {a} · 库存偏低 {b}'], variants: ['變體', 'Variants', '变体'],
+  variantsHint: ['{a} 個販售中', '{a} active', '{a} 个销售中'], live: ['推廣中的計劃', 'Live plans', '推广中的计划'], liveNone: ['沒有', 'None', '没有'], upcoming: ['另有 {n} 個即將開始', '{n} more starting soon', '另有 {n} 个即将开始'],
+  next: ['下一則發布', 'Next post', '下一则发布'], notScheduled: ['未排定', 'Nothing scheduled'], next7: ['7 天內 {n} 則', '{n} in the next 7 days', '7 天内 {n} 则'],
+  views: ['近 30 天瀏覽', 'Views, 30 days', '近 30 天浏览'], engagements: ['近 30 天互動', 'Engagements, 30 days', '近 30 天交互'], orders: ['近 30 天訂單', 'Orders, 30 days', '近 30 天订单'],
+  noPosts: ['近 30 天沒有發布', 'No posts in 30 days', '近 30 天没有发布'], ordersNote: ['含此商品、已記錄在 SmartSell 的訂單', 'Orders recorded in SmartSell that include this product', '含此商品、已记录在 SmartSell 的订单'],
+  attention: ['需注意', 'Needs attention'], review: ['去審核', 'Review', '去审核'], seePrices: ['看下方的市場價格', 'See market prices below', '看下方的市场价格'],
+  stockOut: ['{m}：缺貨', '{m}: out of stock', '{m}：缺货'], stockLow: ['{m}：庫存偏低', '{m}: low stock', '{m}：库存偏低'],
+  attentionHint: ['價格與庫存的變動由同步偵測；商品資訊與在地化草稿要由你審核後才會生效。', 'Price and stock changes are detected by sync; fact and localization drafts take effect only after you review them.', '价格与库存的变动由同步侦测；商品信息与本地化草稿要由你审核后才会生效。'],
+  pricing: ['市場價格與庫存', 'Market prices and stock', '市场价格与库存'], allVariants: ['全部變體', 'All variants', '全部变体'], variant: ['變體', 'Variant', '变体'],
+  lastRead: ['最後讀取 {t}', 'Last read {t}', '最后读取 {t}'], noPrice: ['價格未提供', 'No price', '价格未提供'], legend: ['標記說明', 'What the marks mean', '标记说明'],
+  notCollectedLong: ['還沒有讀到這個變體在此市場的價格或庫存，不代表 0。', 'No price or stock has been read for this variant in this market yet; it is not zero.', '还没有读到这个变体在此市场的价格或库存，不代表 0。'],
+  timeline: ['推廣時間線', 'Promotion timeline', '推广时间线'], noTimeline: ['還沒有推廣計劃、排期或貼文', 'No plans, schedules or posts yet', '还没有推广计划、排期或帖子'], asTimeline: ['時間線', 'Timeline', '时间线'], asList: ['列表', 'List'],
+  hiddenEntries: ['另有 {n} 筆在半年以外，請看列表', '{n} more are over six months away; see the list', '另有 {n} 笔在半年以外，请看列表'],
+  undated: ['{n} 個計劃還沒有日期，未畫在時間線上', '{n} plans have no dates yet and are not drawn', '{n} 个计划还没有日期，未画在时间在线'],
+  showAll: ['顯示全部 {n} 筆', 'Show all {n}', '显示全部 {n} 条'], showLess: ['收合', 'Show less'],
+  posts: ['相關貼文成效', 'Related post performance', '相关帖子成效'], noPostsYet: ['還沒有帶到這個商品的貼文', 'No posts feature this product yet', '还没有带到这个商品的帖子'], topViews: ['相關貼文瀏覽（已採集的前 {n} 則）', 'Related post views (top {n} collected)', '相关帖子浏览（已采集的前 {n} 则）'],
+  unranked: ['{n} 則貼文的瀏覽未採集，未參與排名（不當作 0）。', '{n} posts have no collected views and are not ranked (not treated as zero).', '{n} 则帖子的浏览未采集，未参与排名（不当作 0）。'],
+  untitledPost: ['未命名的貼文', 'Untitled post', '未命名的帖子'], openPost: ['在平台上查看', 'View on platform'], postViews: ['瀏覽', 'Views', '浏览'], postEngagements: ['互動', 'Engagements', '交互'],
+  plans: ['推廣計劃', 'Promotion plans', '推广计划'], role: ['此商品：{r}', 'This product: {r}'], dayOf: ['第 {a} / {b} 天', 'Day {a} of {b}'],
+  completeness: ['內容完成度', 'Content completeness', '内容完成度'], completenessUnknown: ['完成度未知', 'Completeness unknown'],
+  matrix: ['已發布 {a} · 已排程 {b} · 缺 {c}', '{a} published · {b} scheduled · {c} missing', '已发布 {a} · 已调度 {b} · 缺 {c}'], nextPub: ['下一則：{t}', 'Next: {t}', '下一则：{t}'],
+  decide: ['{n} 項待你決定', '{n} waiting for you', '{n} 项待你决定'], undatedPlan: ['尚未排定日期', 'No dates yet'],
+  ask: ['請 Agent 幫忙', 'Ask your agent', '请 Agent 帮忙'],
+  kind: { plan: ['推廣計劃', 'Plan', '推广计划'], publish: ['發布排期', 'Scheduled post', '发布排期'], post: ['已發布貼文', 'Published post', '已发布帖子'], change: ['商品變動', 'Product change', '商品变动'], fact: ['商品資訊修訂', 'Fact revision', '商品信息修订'] },
 } as const;
 
 const LIVE = ['active', 'paused', 'wrapping'];
@@ -162,7 +162,7 @@ function ProductBody({ product, asOf }: { product: ProductDetailView; asOf: stri
       <Section title={l(text.posts)}>
         {!posts.length ? prompt('posts', l(text.noPostsYet)) : <>
           {ranked.length > 0 && <BarChart title={fill(l(text.topViews), { n: Math.min(8, ranked.length) })} unit="count"
-            bars={ranked.slice(0, 8).map(post => ({ key: post.platform_post_id, label: post.title ?? `${platformLabel(post.platform)} ${post.published_at ? formatDay(dayIn(post.published_at, zone), lang) : ''}`.trim(),
+            bars={ranked.slice(0, 8).map(post => ({ key: post.platform_post_id, label: post.title ?? `${platformLabel(post.platform, lang)} ${post.published_at ? formatDay(dayIn(post.published_at, zone), lang) : ''}`.trim(),
               value: post.metrics!.views!.value, availability: post.metrics!.views!.availability }))} />}
           {unranked > 0 && <p className="muted"><small>{fill(l(text.unranked), { n: unranked })}</small></p>}
           {!ranked.length && prompt('metrics')}
@@ -277,7 +277,7 @@ function PostList({ posts, plans }: { posts: ProductPost[]; plans: ProductPlan[]
       const label = post.title ?? l(text.untitledPost);
       return <li key={post.platform_post_id}>
         <div className="pp-post-head">
-          {post.platform && <span className="pp-platform">{platformLabel(post.platform)}</span>}
+          {post.platform && <span className="pp-platform">{platformLabel(post.platform, lang)}</span>}
           <span className="vs-grow">{link ? <a href={link} target="_blank" rel="noreferrer noopener" title={l(text.openPost)}>{label}</a> : label}</span>
           {post.published_at && <time className="muted" dateTime={post.published_at} title={formatDateTime(post.published_at, lang, zone)}>{relativeTime(post.published_at, lang)}</time>}
         </div>

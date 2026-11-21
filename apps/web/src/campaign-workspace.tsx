@@ -30,10 +30,10 @@ function CampaignProducts({ campaign, id }: { campaign: RecordData; id: string }
   const candidates = records((query ? matches : catalog).data?.data).filter(row => !attached.some(link => link.product_id === row.id));
   const roles = [
     ['hero', ['主打', 'Hero']], ['supporting', ['搭配', 'Supporting']],
-    ['bundle', ['組合', 'Bundle']], ['gift', ['贈品', 'Gift']],
+    ['bundle', ['組合', 'Bundle', '组合']], ['gift', ['贈品', 'Gift', '赠品']],
   ] as const;
   return <section className="detail-block">
-    <h3>{label(['活動商品', 'Campaign products'])}</h3>
+    <h3>{label(['活動商品', 'Campaign products', '活动商品'])}</h3>
     {attached.length > 0 && <ul>{attached.map(link => {
       const product = records(catalog.data?.data).find(row => row.id === link.product_id);
       const role = roles.find(([key]) => key === link.role);
@@ -58,7 +58,7 @@ function CampaignProducts({ campaign, id }: { campaign: RecordData; id: string }
       <label className="field">{label(['商品角色', 'Product role'])}<select name="role" defaultValue="hero">
         {roles.map(([key, copy]) => <option key={key} value={key}>{label(copy)}</option>)}
       </select></label>
-      <button disabled={save.pending || !productId}>{label(['加入活動商品', 'Add campaign product'])}</button>
+      <button disabled={save.pending || !productId}>{label(['加入活動商品', 'Add campaign product', '加入活动商品'])}</button>
       {save.error != null && <ProblemNotice error={save.error} />}
     </form>}
   </section>;
@@ -80,20 +80,20 @@ function Goals({ campaign, id }: { campaign: RecordData; id: string }) {
   const marketName = (marketId: unknown) => rowTitle(available.find(row => row.id === marketId) ?? {}) || stringValue(marketId);
   const remaining = available.filter(row => row.status !== 'archived' && !attached.some(link => link.market_id === row.id));
   return <section className="detail-block">
-    <h3>{label(['市場目標', 'Market goals'])}</h3>
+    <h3>{label(['市場目標', 'Market goals', '市场目标'])}</h3>
     <ReadState read={goals} />
     {goals.data && <EntityTable records={records(goals.data.data)} rowKey={idOf} columns={[
-      { label: label(['市場', 'Market']), cell: goal => goal.campaign_market_id ? marketName(attached.find(link => link.id === goal.campaign_market_id)?.market_id) : label(['整體活動', 'Whole campaign']) },
-      { label: label(['指標鍵', 'Metric key']), cell: goal => stringValue(goal.metric_key) },
-      { label: label(['單位', 'Unit']), cell: goal => stringValue(goal.unit) },
-      { label: label(['幣別', 'Currency']), cell: goal => stringValue(goal.currency) || '—' },
-      { label: label(['基準值', 'Baseline value']), cell: goal => stringValue(goal.baseline_value) },
-      { label: label(['目標值', 'Target value']), cell: goal => stringValue(goal.target_value) },
-      { label: label(['到期時間', 'Due at']), cell: goal => <Timestamp value={goal.due_at} /> },
+      { label: label(['市場', 'Market', '市场']), cell: goal => goal.campaign_market_id ? marketName(attached.find(link => link.id === goal.campaign_market_id)?.market_id) : label(['整體活動', 'Whole campaign', '整体活动']) },
+      { label: label(['指標鍵', 'Metric key', '指标键']), cell: goal => stringValue(goal.metric_key) },
+      { label: label(['單位', 'Unit', '单位']), cell: goal => stringValue(goal.unit) },
+      { label: label(['幣別', 'Currency', '币别']), cell: goal => stringValue(goal.currency) || '—' },
+      { label: label(['基準值', 'Baseline value', '基准值']), cell: goal => stringValue(goal.baseline_value) },
+      { label: label(['目標值', 'Target value', '目标值']), cell: goal => stringValue(goal.target_value) },
+      { label: label(['到期時間', 'Due at', '到期时间']), cell: goal => <Timestamp value={goal.due_at} /> },
       { label: t('status'), cell: goal => <Status value={goal.status} /> },
     ]} />}
     {editable(campaign) && remaining.length > 0 && findOperation(api, 'PUT', `${campaignPath}/markets`, 'campaign') && <details>
-      <summary>{label(['新增活動市場', 'Add campaign market'])}</summary>
+      <summary>{label(['新增活動市場', 'Add campaign market', '添加活动市场'])}</summary>
       <form className="fields" onSubmit={async event => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -106,8 +106,8 @@ function Goals({ campaign, id }: { campaign: RecordData; id: string }) {
         ] }, campaign);
         if (result) form.reset();
       }}>
-        <label className="field">{label(['可用市場', 'Available market'])}<select name="market_id" defaultValue="" required><option value="">—</option>{remaining.map(row => <option key={idOf(row)} value={idOf(row)}>{rowTitle(row)}</option>)}</select></label>
-        <button disabled={attach.pending}>{label(['加入市場', 'Attach market'])}</button>
+        <label className="field">{label(['可用市場', 'Available market', '可用市场'])}<select name="market_id" defaultValue="" required><option value="">—</option>{remaining.map(row => <option key={idOf(row)} value={idOf(row)}>{rowTitle(row)}</option>)}</select></label>
+        <button disabled={attach.pending}>{label(['加入市場', 'Attach market', '加入市场'])}</button>
         {attach.error != null && <ProblemNotice error={attach.error} />}
       </form>
     </details>}
@@ -124,16 +124,16 @@ function Goals({ campaign, id }: { campaign: RecordData; id: string }) {
       });
       if (result) form.reset();
     }}>
-      <label className="field">{label(['市場', 'Market'])}<select name="campaign_market_id" aria-label={label(['市場', 'Market'])} defaultValue=""><option value="">{label(['整體活動', 'Whole campaign'])}</option>{attached.map(row => <option key={idOf(row)} value={idOf(row)}>{marketName(row.market_id)}</option>)}</select></label>
-      <label className="field">{label(['指標鍵', 'Metric key'])}<input name="metric_key" list={metricList} required /></label>
+      <label className="field">{label(['市場', 'Market', '市场'])}<select name="campaign_market_id" aria-label={label(['市場', 'Market', '市场'])} defaultValue=""><option value="">{label(['整體活動', 'Whole campaign', '整体活动'])}</option>{attached.map(row => <option key={idOf(row)} value={idOf(row)}>{marketName(row.market_id)}</option>)}</select></label>
+      <label className="field">{label(['指標鍵', 'Metric key', '指标键'])}<input name="metric_key" list={metricList} required /></label>
       <datalist id={metricList}>{metrics.map(metric => <option key={stringValue(metric.key)} value={stringValue(metric.key)} label={stringValue(metric.display_name)} />)}</datalist>
-      <label className="field">{label(['單位', 'Unit'])}<select name="unit" aria-label={label(['單位', 'Unit'])} defaultValue="" required><option value="">—</option>{['count', 'currency', 'percent', 'seconds'].map(unit => <option key={unit}>{unit}</option>)}</select></label>
-      <label className="field">{label(['幣別', 'Currency'])}<input name="currency" pattern="[A-Za-z]{3}" maxLength={3} placeholder="USD" /></label>
-      <label className="field">{label(['基準值', 'Baseline value'])}<input name="baseline_value" type="number" step="any" required /></label>
-      <label className="field">{label(['基準來源', 'Baseline source'])}<input name="baseline_source" defaultValue="manual" required /></label>
-      <label className="field">{label(['目標值', 'Target value'])}<input name="target_value" type="number" step="any" required /></label>
-      <label className="field">{label(['到期時間', 'Due at'])}<input name="due_at" type="datetime-local" required /></label>
-      <button disabled={create.pending}>{label(['儲存目標', 'Save goal'])}</button>
+      <label className="field">{label(['單位', 'Unit', '单位'])}<select name="unit" aria-label={label(['單位', 'Unit', '单位'])} defaultValue="" required><option value="">—</option>{['count', 'currency', 'percent', 'seconds'].map(unit => <option key={unit}>{unit}</option>)}</select></label>
+      <label className="field">{label(['幣別', 'Currency', '币别'])}<input name="currency" pattern="[A-Za-z]{3}" maxLength={3} placeholder="USD" /></label>
+      <label className="field">{label(['基準值', 'Baseline value', '基准值'])}<input name="baseline_value" type="number" step="any" required /></label>
+      <label className="field">{label(['基準來源', 'Baseline source', '基准来源'])}<input name="baseline_source" defaultValue="manual" required /></label>
+      <label className="field">{label(['目標值', 'Target value', '目标值'])}<input name="target_value" type="number" step="any" required /></label>
+      <label className="field">{label(['到期時間', 'Due at', '到期时间'])}<input name="due_at" type="datetime-local" required /></label>
+      <button disabled={create.pending}>{label(['儲存目標', 'Save goal', '保存目标'])}</button>
       {create.error != null && <ProblemNotice error={create.error} />}
     </form>}
   </section>;
@@ -158,7 +158,7 @@ function BriefHistory({ id }: { id: string }) {
   const { label, t } = useCopy();
   const read = useRead(`${campaignPath}/briefs`, [id], {}, 'campaign');
   const briefs = records(read.data?.data);
-  return <section className="detail-block"><h3>{label(['簡報修訂歷史', 'Brief history'])}</h3>
+  return <section className="detail-block"><h3>{label(['簡報修訂歷史', 'Brief history', '演示文稿修订历史'])}</h3>
     <ReadState read={read} />{briefs.map(brief => <BriefRevisions key={idOf(brief)} brief={brief} />)}
     {read.data && !briefs.length && <EmptyState title={t('empty')} />}
   </section>;
@@ -174,19 +174,19 @@ function Milestones({ campaign, id }: { campaign: RecordData; id: string }) {
   const canComplete = findOperation(api, 'POST', completePath, 'workspace');
   const taskPath = '/work-items/:id';
   const canStart = findOperation(api, 'PATCH', taskPath, 'workspace');
-  return <section className="detail-block"><h3>{label(['製作里程碑', 'Production milestones'])}</h3>
+  return <section className="detail-block"><h3>{label(['製作里程碑', 'Production milestones', '制作里程碑'])}</h3>
     <ReadState read={read} />
     {read.data && <EntityTable records={milestones} rowKey={idOf} columns={[
-      { label: label(['工作項目', 'Work item']), cell: rowTitle },
-      { label: label(['製作期限', 'Production due']), cell: row => <Timestamp value={row.due_at} /> },
+      { label: label(['工作項目', 'Work item', '工作项目']), cell: rowTitle },
+      { label: label(['製作期限', 'Production due', '制作期限']), cell: row => <Timestamp value={row.due_at} /> },
       { label: t('status'), cell: row => <><Status value={row.status} />
         {row.blocked === true && <p>{label(['前置工作未完成', 'Blocked by predecessor'])}</p>}
         {row.status === 'done' && asRecord(row.payload).gate === 'ready_for_scheduling' && <p>{label(['可排期', 'Ready for scheduling'])}</p>}</> },
-      { label: label(['動作', 'Actions']), cell: row => editable(campaign) && row.blocked !== true && <>
+      { label: label(['動作', 'Actions', '动作']), cell: row => editable(campaign) && row.blocked !== true && <>
         {row.status === 'open' && canStart && <button disabled={complete.pending}
-          onClick={() => void complete.run('PATCH', taskPath, [idOf(row)], { status: 'in_progress' }, row)}>{label(['開始工作項目', 'Start work item'])}</button>}
+          onClick={() => void complete.run('PATCH', taskPath, [idOf(row)], { status: 'in_progress' }, row)}>{label(['開始工作項目', 'Start work item', '开始工作项目'])}</button>}
         {row.status === 'in_progress' && canComplete && <button disabled={complete.pending}
-          onClick={() => void complete.run('POST', completePath, [idOf(row)], {}, row)}>{label(['完成工作項目', 'Complete work item'])}</button>}
+          onClick={() => void complete.run('POST', completePath, [idOf(row)], {}, row)}>{label(['完成工作項目', 'Complete work item', '完成工作项目'])}</button>}
       </> },
     ]} />}{complete.error != null && <ProblemNotice error={complete.error} />}
   </section>;
@@ -203,24 +203,24 @@ function ChannelMatrix({ id }: { id: string }) {
     ...records(matrix.unplanned_items).map(row => ({ ...row, content_item_id: row.id, unplanned: true, status: 'in_production' }))];
   const titleOf = (readData: unknown, id: unknown) => rowTitle(records(readData).find(row => row.id === id) ?? {}) || stringValue(id) || '—';
   const accountName = (id: unknown) => titleOf(accounts.data?.data, id);
-  return <section className="detail-block"><h3>{label(['渠道矩陣', 'Channel matrix'])}</h3><ReadState read={read} />
+  return <section className="detail-block"><h3>{label(['渠道矩陣', 'Channel matrix', '渠道矩阵'])}</h3><ReadState read={read} />
     {read.data && <><EntityTable records={cells} rowKey={idOf} columns={[
       { label: t('platform'), cell: row => stringValue(asRecord(row.slot).platform) },
-      { label: label(['帳號', 'Account']), cell: row => accountName(asRecord(row.slot).social_account_id) },
-      { label: label(['階段', 'Stage']), cell: row => stringValue(asRecord(row.slot).stage) },
-      { label: label(['計畫', 'Planned']), cell: row => stringValue(asRecord(row.slot).planned_count) },
-      ...([['in_production', '製作中', 'In production'], ['scheduled', '已排期', 'Scheduled'], ['published', '已發布', 'Published'], ['failed', '失敗', 'Failed']] as const).map(([key, zh, en]) => ({
+      { label: label(['帳號', 'Account', '账号']), cell: row => accountName(asRecord(row.slot).social_account_id) },
+      { label: label(['階段', 'Stage', '阶段']), cell: row => stringValue(asRecord(row.slot).stage) },
+      { label: label(['計畫', 'Planned', '计划']), cell: row => stringValue(asRecord(row.slot).planned_count) },
+      ...([['in_production', '製作中', 'In production', '制作中'], ['scheduled', '已排期', 'Scheduled'], ['published', '已發布', 'Published', '已发布'], ['failed', '失敗', 'Failed', '失败']] as const).map(([key, zh, en]) => ({
         label: label([zh, en]), cell: (row: RecordData) => stringValue(asRecord(row.counts)[key]),
       })),
       { label: label(['缺口', 'Gap']), cell: row => stringValue(row.gap) },
     ]} />
     <EntityTable records={actuals} rowKey={row => stringValue(row.publish_target_id ?? row.content_variant_id ?? row.content_item_id)} columns={[
-      { label: label(['帳號', 'Account']), cell: row => accountName(row.social_account_id) },
-      { label: label(['內容變體', 'Content variant']), cell: row => <>{titleOf(content.data?.data, row.content_item_id)}{row.content_variant_id != null && <div><small>{stringValue(row.content_variant_id)}</small></div>}</> },
-      { label: label(['發布目標', 'Publishing target']), cell: row => stringValue(row.publish_target_id) || '—' },
-      { label: label(['發布時間', 'Publish time']), cell: row => row.scheduled_at ? <Timestamp value={row.scheduled_at} /> : label(['未排期', 'Unscheduled']) },
+      { label: label(['帳號', 'Account', '账号']), cell: row => accountName(row.social_account_id) },
+      { label: label(['內容變體', 'Content variant', '内容变体']), cell: row => <>{titleOf(content.data?.data, row.content_item_id)}{row.content_variant_id != null && <div><small>{stringValue(row.content_variant_id)}</small></div>}</> },
+      { label: label(['發布目標', 'Publishing target', '发布目标']), cell: row => stringValue(row.publish_target_id) || '—' },
+      { label: label(['發布時間', 'Publish time', '发布时间']), cell: row => row.scheduled_at ? <Timestamp value={row.scheduled_at} /> : label(['未排期', 'Unscheduled']) },
       { label: t('status'), cell: row => <Status value={row.status} /> },
-      { label: label(['計畫歸屬', 'Plan']), cell: row => row.unplanned ? label(['計畫外', 'Unplanned']) : label(['計畫內', 'Planned']) },
+      { label: label(['計畫歸屬', 'Plan', '计划归属']), cell: row => row.unplanned ? label(['計畫外', 'Unplanned', '计划外']) : label(['計畫內', 'Planned', '计划内']) },
     ]} /></>}
   </section>;
 }
@@ -231,9 +231,9 @@ function BudgetLedger({ title, id, endpoint }: { title: string; id: string; endp
   const format = new Intl.NumberFormat(locale);
   if (!read.op) return null;
   return <><h4>{title}</h4><ReadState read={read} />{read.data && <EntityTable records={records(read.data.data)} rowKey={idOf} columns={[
-    { label: label(['金額', 'Amount']), cell: row => format.format(Number(row.amount_minor)) },
-    { label: label(['幣別', 'Currency']), cell: row => stringValue(row.currency) },
-    { label: label(['換算日', 'FX date']), cell: row => stringValue(row.fx_date) || '—' },
+    { label: label(['金額', 'Amount', '金额']), cell: row => format.format(Number(row.amount_minor)) },
+    { label: label(['幣別', 'Currency', '币别']), cell: row => stringValue(row.currency) },
+    { label: label(['換算日', 'FX date', '换算日']), cell: row => stringValue(row.fx_date) || '—' },
     { label: t('status'), cell: row => <Status value={row.voided_at ? 'voided' : row.status ?? 'recorded'} /> },
   ]} />}</>;
 }
@@ -243,20 +243,20 @@ function Budget({ id }: { id: string }) {
   const read = useRead(`${campaignPath}/budget-summary`, [id], {}, 'campaign');
   const lines = records(asRecord(read.data?.data).lines);
   const format = new Intl.NumberFormat(locale);
-  return <section className="detail-block"><h3>{label(['活動預算', 'Campaign budget'])}</h3><ReadState read={read} />
+  return <section className="detail-block"><h3>{label(['活動預算', 'Campaign budget', '活动预算'])}</h3><ReadState read={read} />
     {read.data && <>
-      <p>{label(['所有金額以原幣最小單位列示。', 'Amounts are in minor units of the original currency.'])}</p>
-      {lines.some(row => Number(row.overrun_minor) > 0) && <p role="status">{label(['有預算項目超額，請檢視審批。', 'Budget overrun detected. Review the approval request.'])}</p>}
+      <p>{label(['所有金額以原幣最小單位列示。', 'Amounts are in minor units of the original currency.', '所有金额以原币最小单位列示。'])}</p>
+      {lines.some(row => Number(row.overrun_minor) > 0) && <p role="status">{label(['有預算項目超額，請檢視審批。', 'Budget overrun detected. Review the approval request.', '有预算项目超额，请查看审批。'])}</p>}
       <EntityTable records={lines} rowKey={row => stringValue(row.budget_line_id)} columns={[
-        { label: label(['類別', 'Category']), cell: row => stringValue(row.category) },
-        { label: label(['幣別', 'Currency']), cell: row => stringValue(row.currency) },
-        { label: label(['換算日', 'FX date']), cell: row => stringValue(row.fx_date) },
-        ...([['budget_minor', '計畫', 'Planned'], ['committed_minor', '承諾', 'Committed'], ['open_commitment_minor', '未執行承諾', 'Outstanding commitments'], ['actual_minor', '已花', 'Spent'], ['overrun_minor', '超額', 'Overrun']] as const).map(([key, zh, en]) => ({
+        { label: label(['類別', 'Category', '类别']), cell: row => stringValue(row.category) },
+        { label: label(['幣別', 'Currency', '币别']), cell: row => stringValue(row.currency) },
+        { label: label(['換算日', 'FX date', '换算日']), cell: row => stringValue(row.fx_date) },
+        ...([['budget_minor', '計畫', 'Planned', '计划'], ['committed_minor', '承諾', 'Committed', '承诺'], ['open_commitment_minor', '未執行承諾', 'Outstanding commitments', '未运行承诺'], ['actual_minor', '已花', 'Spent'], ['overrun_minor', '超額', 'Overrun', '超额']] as const).map(([key, zh, en]) => ({
           label: label([zh, en]), cell: (row: RecordData) => format.format(Number(row[key])),
         })),
       ]} />
-      <BudgetLedger id={id} endpoint="cost-commitments" title={label(['承諾明細', 'Commitment entries'])} />
-      <BudgetLedger id={id} endpoint="cost-entries" title={label(['實際成本明細', 'Actual cost entries'])} />
+      <BudgetLedger id={id} endpoint="cost-commitments" title={label(['承諾明細', 'Commitment entries', '承诺明细'])} />
+      <BudgetLedger id={id} endpoint="cost-entries" title={label(['實際成本明細', 'Actual cost entries', '实际成本明细'])} />
     </>}
   </section>;
 }
@@ -281,5 +281,5 @@ export function CampaignBacklink({ record }: { record: RecordData }) {
   const read = useRead(campaignPath, [id], {}, 'campaign');
   if (!id || !read.op) return null;
   const campaign = asRecord(read.data?.data);
-  return <><ReadState read={read} />{read.data && <p>{label(['所屬活動', 'Campaign'])} <Link to={`/w/${encodeURIComponent(api.ws)}/campaigns/${encodeURIComponent(id)}`}>{rowTitle(campaign)}</Link></p>}</>;
+  return <><ReadState read={read} />{read.data && <p>{label(['所屬活動', 'Campaign', '所属活动'])} <Link to={`/w/${encodeURIComponent(api.ws)}/campaigns/${encodeURIComponent(id)}`}>{rowTitle(campaign)}</Link></p>}</>;
 }

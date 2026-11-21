@@ -1,3 +1,4 @@
+import { defaultLanguage, translate, type DesktopLanguage } from '../ui/i18n.mjs';
 import { autoUpdater } from 'electron';
 import { NsisUpdater } from 'electron-updater';
 
@@ -49,7 +50,7 @@ export function desktopUpdates(platform: string, config: UpdateConfig | undefine
   }
   const enabled = status !== '签名更新未配置';
   return {
-    snapshot: () => ({ enabled, status, busy, ready }),
+    snapshot: (language: DesktopLanguage = defaultLanguage) => ({ enabled, status: translate(language, status), busy, ready }),
     async check() {
       if (!enabled || busy || ready) return;
       busy = true;

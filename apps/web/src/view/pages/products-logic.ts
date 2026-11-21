@@ -48,9 +48,9 @@ export interface PlanGoal {
   value: number | null; progress_percent: number | null; coverage_status?: string | null;
 }
 const goalText: Record<string, Tuple> = {
-  'norm.post.views': ['瀏覽', 'Views'], 'norm.post.engagements': ['互動', 'Engagements'], 'norm.post.reach': ['觸及', 'Reach'],
-  'norm.account.followers': ['粉絲', 'Followers'], 'norm.account.follower_delta': ['新增粉絲', 'New followers'],
-  'commerce.orders': ['訂單', 'Orders'], 'commerce.revenue': ['營收', 'Revenue'], 'ads.spend': ['投放花費', 'Ad spend'],
+  'norm.post.views': ['瀏覽', 'Views', '浏览'], 'norm.post.engagements': ['互動', 'Engagements', '交互'], 'norm.post.reach': ['觸及', 'Reach', '触及'],
+  'norm.account.followers': ['粉絲', 'Followers', '粉丝'], 'norm.account.follower_delta': ['新增粉絲', 'New followers', '添加粉丝'],
+  'commerce.orders': ['訂單', 'Orders', '订单'], 'commerce.revenue': ['營收', 'Revenue', '营收'], 'ads.spend': ['投放花費', 'Ad spend', '投放花费'],
 };
 /** Goal metric name; unknown keys show their last segment rather than the raw key. */
 export const goalLabel = (key: string): Tuple => goalText[key] ?? (name => [name, name] as const)((key.split('.').at(-1) ?? key).replace(/_/g, ' '));
@@ -179,10 +179,10 @@ export function safeImage(url: unknown): string | null {
 export const safeLink = (url: unknown): string | null => typeof url === 'string' && /^https?:\/\/\S+$/i.test(url.trim()) ? url.trim() : null;
 
 export const changeTypeText: Record<string, Tuple> = {
-  price_changed: ['價格變動', 'Price changed'], stock_low: ['庫存跌破門檻', 'Stock crossed the low threshold'], out_of_stock: ['缺貨', 'Out of stock'],
-  became_unavailable: ['已停止販售', 'No longer available for sale'], became_available: ['恢復販售', 'Available for sale again'],
-  localization_stale: ['在地化內容已過時', 'Localization is stale'], product_removed: ['商品已在店鋪下架', 'Removed at the store'],
-  fact_revised: ['商品資訊已修訂', 'Product fact revised'], fact_retracted: ['商品資訊已撤回', 'Product fact retracted'],
+  price_changed: ['價格變動', 'Price changed', '价格变动'], stock_low: ['庫存跌破門檻', 'Stock crossed the low threshold', '库存跌破门槛'], out_of_stock: ['缺貨', 'Out of stock', '缺货'],
+  became_unavailable: ['已停止販售', 'No longer available for sale', '已停止销售'], became_available: ['恢復販售', 'Available for sale again', '恢复销售'],
+  localization_stale: ['在地化內容已過時', 'Localization is stale', '本地化内容已过时'], product_removed: ['商品已在店鋪下架', 'Removed at the store', '商品已在店铺下架'],
+  fact_revised: ['商品資訊已修訂', 'Product fact revised', '商品信息已修订'], fact_retracted: ['商品資訊已撤回', 'Product fact retracted', '商品信息已撤回'],
 };
 
 /** Localized attention text; the server's English title is the fallback for kinds the dashboard does not know yet. */
@@ -192,39 +192,39 @@ export function attentionText(item: AttentionItem): Tuple {
     case 'change_event': {
       const type = item.change_type ?? item.title?.split(' · ')[0] ?? '';
       const sku = item.title?.split(' · ').slice(1).join(' · ');
-      const base = changeTypeText[type] ?? [type.replace(/_/g, ' ') || '商品變動', type.replace(/_/g, ' ') || 'Product change'];
-      return sku ? [`${base[0]} · ${sku}`, `${base[1]} · ${sku}`] : base;
+      const base = changeTypeText[type] ?? [type.replace(/_/g, ' ') || '商品變動', type.replace(/_/g, ' ') || 'Product change', type.replace(/_/g, ' ') || '商品变动'];
+      return sku ? [`${base[0]} · ${sku}`, `${base[1]} · ${sku}`, `${base[2] ?? base[0]} · ${sku}`] : base;
     }
-    case 'fact_pending': return [`${n} 項商品資訊草稿待審核`, `${n} product fact draft${n === 1 ? '' : 's'} await review`];
-    case 'localization_stale': return [`${n} 項在地化內容已過時`, `${n} localization${n === 1 ? ' is' : 's are'} stale`];
-    case 'price_unpublishable': return [`${n} 個市場的價格目前不能用於發布`, `Price can't be used for publishing in ${n} market${n === 1 ? '' : 's'}`];
+    case 'fact_pending': return [`${n} 項商品資訊草稿待審核`, `${n} product fact draft${n === 1 ? '' : 's'} await review`, `${n} 项商品信息草稿待审核`];
+    case 'localization_stale': return [`${n} 項在地化內容已過時`, `${n} localization${n === 1 ? ' is' : 's are'} stale`, `${n} 项本地化内容已过时`];
+    case 'price_unpublishable': return [`${n} 個市場的價格目前不能用於發布`, `Price can't be used for publishing in ${n} market${n === 1 ? '' : 's'}`, `${n} 个市场的价格目前不能用于发布`];
     default: return [item.title ?? item.kind, item.title ?? item.kind];
   }
 }
 export const severityTone = (severity: string) => severity === 'blocker' ? 'critical' : severity === 'high' ? 'serious' : 'warning';
 
-export const productStatusText: Record<string, [tone: 'good' | 'neutral' | 'serious', zh: string, en: string]> = {
-  active: ['good', '販售中', 'On sale'], draft: ['neutral', '草稿', 'Draft'], archived: ['neutral', '已封存', 'Archived'],
-  removed_at_source: ['serious', '店鋪已下架', 'Removed at the store'],
+export const productStatusText: Record<string, [tone: 'good' | 'neutral' | 'serious', zh: string, en: string, hans?: string]> = {
+  active: ['good', '販售中', 'On sale', '销售中'], draft: ['neutral', '草稿', 'Draft'], archived: ['neutral', '已封存', 'Archived'],
+  removed_at_source: ['serious', '店鋪已下架', 'Removed at the store', '店铺已下架'],
 };
 export const stockText: Record<string, Tuple> = {
-  in_stock: ['有庫存', 'In stock'], low: ['庫存偏低', 'Low stock'], out_of_stock: ['缺貨', 'Out of stock'],
-  unknown: ['庫存未採集', 'Stock not collected'], not_tracked: ['未追蹤庫存', 'Stock not tracked'],
+  in_stock: ['有庫存', 'In stock', '有库存'], low: ['庫存偏低', 'Low stock', '库存偏低'], out_of_stock: ['缺貨', 'Out of stock', '缺货'],
+  unknown: ['庫存未採集', 'Stock not collected', '库存未采集'], not_tracked: ['未追蹤庫存', 'Stock not tracked', '未追踪库存'],
 };
 /** Statuses the shared chip does not know, as they appear on publications, posts, changes and fact revisions. */
-export const extraStatusText: Record<string, [tone: 'good' | 'info' | 'warning' | 'serious' | 'neutral', zh: string, en: string]> = {
-  executing: ['info', '發布中', 'Publishing'], cancel_requested: ['neutral', '取消中', 'Cancelling'], ready: ['info', '已排程', 'Scheduled'],
-  resolved: ['neutral', '已處理', 'Resolved'], dismissed: ['neutral', '已略過', 'Dismissed'], deleted: ['serious', '已刪除', 'Deleted'],
-  removed_by_platform: ['serious', '被平台移除', 'Removed by the platform'], system_verified: ['good', '已核實', 'Verified'],
-  platform_readback: ['good', '平台回讀', 'Read back from platform'], manual_confirmed: ['good', '人工確認', 'Confirmed by a person'],
-  manual_evidence: ['good', '人工佐證', 'Manual evidence'], manual: ['neutral', '人工登記', 'Registered by hand'], agent_reported: ['info', 'Agent 回報', 'Reported by agent'],
+export const extraStatusText: Record<string, [tone: 'good' | 'info' | 'warning' | 'serious' | 'neutral', zh: string, en: string, hans?: string]> = {
+  executing: ['info', '發布中', 'Publishing', '发布中'], cancel_requested: ['neutral', '取消中', 'Cancelling'], ready: ['info', '已排程', 'Scheduled', '已调度'],
+  resolved: ['neutral', '已處理', 'Resolved', '已处理'], dismissed: ['neutral', '已略過', 'Dismissed', '已略过'], deleted: ['serious', '已刪除', 'Deleted', '已删除'],
+  removed_by_platform: ['serious', '被平台移除', 'Removed by the platform'], system_verified: ['good', '已核實', 'Verified', '已核实'],
+  platform_readback: ['good', '平台回讀', 'Read back from platform', '平台回读'], manual_confirmed: ['good', '人工確認', 'Confirmed by a person', '人工确认'],
+  manual_evidence: ['good', '人工佐證', 'Manual evidence', '人工佐证'], manual: ['neutral', '人工登記', 'Registered by hand', '人工登记'], agent_reported: ['info', 'Agent 回報', 'Reported by agent', 'Agent 回报'],
 };
-export const roleText: Record<string, Tuple> = { hero: ['主打', 'Hero'], supporting: ['搭配', 'Supporting'], bundle: ['組合', 'Bundle'], gift: ['贈品', 'Gift'] };
-export const providerText: Record<string, string> = {
-  shopify: 'Shopify', tiktok_shop: 'TikTok Shop', amazon_sp: 'Amazon', shopee: 'Shopee', file_import: '檔案匯入 / File import',
+export const roleText: Record<string, Tuple> = { hero: ['主打', 'Hero'], supporting: ['搭配', 'Supporting'], bundle: ['組合', 'Bundle', '组合'], gift: ['贈品', 'Gift', '赠品'] };
+export const providerText: Record<string, string | Tuple> = {
+  shopify: 'Shopify', tiktok_shop: 'TikTok Shop', amazon_sp: 'Amazon', shopee: 'Shopee', file_import: ['檔案匯入', 'File import', '文件导入'],
 };
 export const channelText: Record<string, Tuple> = {
-  online_store: ['官網', 'Online store'], tiktok_shop: ['TikTok Shop', 'TikTok Shop'], marketplace: ['電商平台', 'Marketplace'], other: ['其他通路', 'Other channel'],
+  online_store: ['官網', 'Online store', '官网'], tiktok_shop: ['TikTok Shop', 'TikTok Shop'], marketplace: ['電商平台', 'Marketplace', '电商平台'], other: ['其他通路', 'Other channel'],
 };
 export const platformText: Record<string, string> = {
   instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', threads: 'Threads', youtube: 'YouTube', x: 'X', twitter: 'X', line: 'LINE',
@@ -241,9 +241,10 @@ export function providerLabel(provider: string | null | undefined, lang: Lang) {
   if (!provider) return '';
   const text = providerText[provider];
   if (!text) return provider.replace(/_/g, ' ');
-  return text.includes(' / ') ? text.split(' / ')[lang === 'en' ? 1 : 0]! : text;
+  return pick(text, lang);
 }
-export const platformLabel = (platform: string | null | undefined) => platform ? platformText[platform] ?? platform.replace(/_/g, ' ') : '';
+export const platformLabel = (platform: string | null | undefined, lang?: Lang) =>
+  platform === 'xiaohongshu' && lang === 'zh-Hans' ? '小红书' : platform ? platformText[platform] ?? platform.replace(/_/g, ' ') : '';
 
 /** "NT$1,000 – NT$1,200", one amount when every variant costs the same, null when it cannot be shown honestly. */
 export function priceRange(price: Pick<MarketPrice, 'min_minor' | 'max_minor' | 'currency'> | null | undefined, lang: Lang, compact = false): string | null {
@@ -258,8 +259,8 @@ export function priceRange(price: Pick<MarketPrice, 'min_minor' | 'max_minor' | 
 export function salesLines(sales: Sales | null | undefined, lang: Lang): string[] {
   if (!sales?.visible) return [];
   return (sales.currencies ?? []).filter(row => isNum(row.orders) && row.orders > 0).map(row => {
-    const count = lang === 'en' ? `${row.orders} order${row.orders === 1 ? '' : 's'}` : `${row.orders} 筆`;
-    return `${count} · ${formatMinor(row.net_minor, row.currency, lang, true) ?? pick([`${row.currency} 金額未知`, `${row.currency} amount unknown`], lang)}`;
+    const count = lang === 'en' ? `${row.orders} order${row.orders === 1 ? '' : 's'}` : lang === 'zh-Hans' ? `${row.orders} 笔` : `${row.orders} 筆`;
+    return `${count} · ${formatMinor(row.net_minor, row.currency, lang, true) ?? pick([`${row.currency} 金額未知`, `${row.currency} amount unknown`, `${row.currency} 金额未知`], lang)}`;
   });
 }
 
@@ -322,13 +323,13 @@ export function timelineWindow(today: string, spans: readonly { start: string; e
 }
 
 const laneText = {
-  publish: ['發布排期', 'Scheduled posts'], post: ['已發布貼文', 'Published posts'], change: ['商品變動', 'Product changes'], fact: ['商品資訊修訂', 'Fact revisions'],
+  publish: ['發布排期', 'Scheduled posts', '发布排期'], post: ['已發布貼文', 'Published posts', '已发布帖子'], change: ['商品變動', 'Product changes', '商品变动'], fact: ['商品資訊修訂', 'Fact revisions', '商品信息修订'],
 } satisfies Record<string, Tuple>;
 
 export function timelineEntryLabel(entry: TimelineEntry, lang: Lang): string {
-  if (entry.kind === 'change') return pick(changeTypeText[entry.title ?? ''] ?? [entry.title ?? '商品變動', entry.title ?? 'Product change'], lang);
+  if (entry.kind === 'change') return pick(changeTypeText[entry.title ?? ''] ?? [entry.title ?? '商品變動', entry.title ?? 'Product change', entry.title ?? '商品变动'], lang);
   if (entry.title) return entry.title;
-  return pick(entry.kind === 'publish' ? ['未命名的發布', 'Untitled publication'] : entry.kind === 'post' ? ['未命名的貼文', 'Untitled post'] : ['未命名', 'Untitled'], lang);
+  return pick(entry.kind === 'publish' ? ['未命名的發布', 'Untitled publication', '未命名的发布'] : entry.kind === 'post' ? ['未命名的貼文', 'Untitled post', '未命名的帖子'] : ['未命名', 'Untitled'], lang);
 }
 
 /**
@@ -345,7 +346,7 @@ export function timelineLanes(detail: ProductDetailView, { lang, timeZone, planH
   let undatedPlans = 0;
   for (const plan of plans) {
     if (!plan.starts_at || !day(plan.starts_at)) { undatedPlans++; continue; }
-    const label = plan.name ?? pick(['未命名的計劃', 'Untitled plan'], lang);
+    const label = plan.name ?? pick(['未命名的計劃', 'Untitled plan', '未命名的计划'], lang);
     spans.push({ start: day(plan.starts_at), end: plan.ends_at ? day(plan.ends_at) : null });
     lanes.push({ id: `plan:${plan.id}`, label, href: planHref(plan.id),
       items: [{ id: plan.id, label, start: plan.starts_at, end: plan.ends_at, status: plan.status, href: planHref(plan.id) }] });
@@ -391,12 +392,13 @@ export function detailPrompts(detail: ProductDetailView): PromptKey[] {
 export function promptText(key: PromptKey, title: string): { heading: Tuple; prompt: Tuple } {
   const name = title.trim() || '這個商品';
   const en = title.trim() || 'this product';
+  const hans = title.trim() || '这个商品';
   switch (key) {
-    case 'plan': return { heading: ['規劃下一波推廣', 'Plan the next promotion'], prompt: [`幫「${name}」建立下個月的推廣計劃`, `Create next month’s promotion plan for “${en}”`] };
-    case 'prices': return { heading: ['還沒有各市場的價格與庫存', 'No market prices or stock yet'], prompt: [`幫我把「${name}」在各市場的價格和庫存同步進 SmartSell`, `Sync the prices and stock of “${en}” in each market into SmartSell`] };
-    case 'resync': return { heading: ['部分價格已過時', 'Some prices are stale'], prompt: [`幫我重新同步「${name}」各市場的價格和庫存`, `Re-sync the prices and stock of “${en}” in every market`] };
-    case 'posts': return { heading: ['接下來 7 天沒有排定貼文', 'Nothing scheduled in the next 7 days'], prompt: [`幫「${name}」規劃並排好接下來兩週的社群貼文`, `Plan and schedule social posts for “${en}” for the next two weeks`] };
-    case 'metrics': return { heading: ['部分貼文還沒有成效數據', 'Some posts have no performance data'], prompt: [`幫我匯入「${name}」相關貼文的最新成效`, `Import the latest performance for posts featuring “${en}”`] };
-    case 'localize': return { heading: ['在地化內容已過時', 'Localizations are stale'], prompt: [`幫我更新「${name}」已過時的在地化內容，送給我審核`, `Update the stale localizations of “${en}” and send them to me for review`] };
+    case 'plan': return { heading: ['規劃下一波推廣', 'Plan the next promotion', '规划下一波推广'], prompt: [`幫「${name}」建立下個月的推廣計劃`, `Create next month’s promotion plan for “${en}”`, `帮「${hans}」创建下个月的推广计划`] };
+    case 'prices': return { heading: ['還沒有各市場的價格與庫存', 'No market prices or stock yet', '还没有各市场的价格与库存'], prompt: [`幫我把「${name}」在各市場的價格和庫存同步進 SmartSell`, `Sync the prices and stock of “${en}” in each market into SmartSell`, `帮我把「${hans}」在各市场的价格和库存同步进 SmartSell`] };
+    case 'resync': return { heading: ['部分價格已過時', 'Some prices are stale', '部分价格已过时'], prompt: [`幫我重新同步「${name}」各市場的價格和庫存`, `Re-sync the prices and stock of “${en}” in every market`, `帮我重新同步「${hans}」各市场的价格和库存`] };
+    case 'posts': return { heading: ['接下來 7 天沒有排定貼文', 'Nothing scheduled in the next 7 days', '接下来 7 天没有排定帖子'], prompt: [`幫「${name}」規劃並排好接下來兩週的社群貼文`, `Plan and schedule social posts for “${en}” for the next two weeks`, `帮「${hans}」规划并排好接下来两周的社交媒体帖子`] };
+    case 'metrics': return { heading: ['部分貼文還沒有成效數據', 'Some posts have no performance data', '部分帖子还没有成效数据'], prompt: [`幫我匯入「${name}」相關貼文的最新成效`, `Import the latest performance for posts featuring “${en}”`, `帮我导入「${hans}」相关帖子的最新成效`] };
+    case 'localize': return { heading: ['在地化內容已過時', 'Localizations are stale', '本地化内容已过时'], prompt: [`幫我更新「${name}」已過時的在地化內容，送給我審核`, `Update the stale localizations of “${en}” and send them to me for review`, `帮我更新「${hans}」已过时的本地化内容，送给我审核`] };
   }
 }

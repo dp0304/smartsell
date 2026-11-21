@@ -9,29 +9,29 @@ import { records, safeUrl, Status, Timestamp, useWorkflowRequest } from './workf
 const candidatePath = '/product-candidates/:id';
 const mentionPath = '/mentions/:id';
 const dimensions = {
-  demand_evidence: ['需求證據', 'Demand evidence'],
-  competition: ['競爭情況', 'Competition'],
-  product_fit: ['商品適配度', 'Product fit'],
-  supply_feasibility: ['供應可行性', 'Supply feasibility'],
+  demand_evidence: ['需求證據', 'Demand evidence', '需求证据'],
+  competition: ['競爭情況', 'Competition', '竞争情况'],
+  product_fit: ['商品適配度', 'Product fit', '商品适配度'],
+  supply_feasibility: ['供應可行性', 'Supply feasibility', '供应可行性'],
 } as const;
 type Dimension = keyof typeof dimensions;
 const transitions: Record<string, string[]> = {
   proposed: ['researching'], researching: ['validating', 'parked'], validating: ['accepted', 'rejected'],
   parked: ['researching'], rejected: ['researching'],
 };
-const transitionNames: Record<string, readonly [string, string]> = {
-  researching: ['開始研究', 'Start research'], validating: ['送交驗證', 'Move to validation'],
-  parked: ['暫擱候選商品', 'Park candidate'], accepted: ['採納候選商品', 'Accept candidate'], rejected: ['淘汰候選商品', 'Reject candidate'],
+const transitionNames: Record<string, readonly [string, string, string?]> = {
+  researching: ['開始研究', 'Start research', '开始研究'], validating: ['送交驗證', 'Move to validation', '送交验证'],
+  parked: ['暫擱候選商品', 'Park candidate', '暂搁候选商品'], accepted: ['採納候選商品', 'Accept candidate', '采纳候选商品'], rejected: ['淘汰候選商品', 'Reject candidate', '淘汰候选商品'],
 };
 const estimatedCost = ['估算成本', 'Estimated cost'] as const;
-const actualQuote = ['實際報價', 'Actual quote'] as const;
-const decisionReason = ['決策理由', 'Decision reason'] as const;
-const supplyNotes = ['供應備註', 'Supply notes'] as const;
-const evidence = ['研究證據', 'Research evidence'] as const;
-const watchTargetLabel = ['監測目標', 'Watch target'] as const;
-const sourceLabel = ['來源', 'Source'] as const;
-const sampleLabel = ['樣本數', 'Sample size'] as const;
-const coverageLabel = ['覆蓋說明', 'Coverage'] as const;
+const actualQuote = ['實際報價', 'Actual quote', '实际报价'] as const;
+const decisionReason = ['決策理由', 'Decision reason', '决策理由'] as const;
+const supplyNotes = ['供應備註', 'Supply notes', '供应备注'] as const;
+const evidence = ['研究證據', 'Research evidence', '研究证据'] as const;
+const watchTargetLabel = ['監測目標', 'Watch target', '监测目标'] as const;
+const sourceLabel = ['來源', 'Source', '来源'] as const;
+const sampleLabel = ['樣本數', 'Sample size', '样本数'] as const;
+const coverageLabel = ['覆蓋說明', 'Coverage', '覆盖说明'] as const;
 const manualLabel = ['人工', 'Manual'] as const;
 const dash = '—';
 
@@ -68,13 +68,13 @@ function MoneyFields({ name, legend, min, max }: { name: string; legend: string;
   const money = asRecord(min);
   return <div className="message" role="group" aria-label={legend}>
     <strong>{legend}</strong>
-    <label className="field">{max ? label(['最低金額（最小貨幣單位）', 'Minimum amount (minor units)']) : label(['金額（最小貨幣單位）', 'Amount (minor units)'])}
+    <label className="field">{max ? label(['最低金額（最小貨幣單位）', 'Minimum amount (minor units)', '最低金额（最小货币单位）']) : label(['金額（最小貨幣單位）', 'Amount (minor units)', '金额（最小货币单位）'])}
       <input name={`${name}_min`} type="number" min="0" step="1" defaultValue={stringValue(money.amount_minor)} />
     </label>
-    {max && <label className="field">{label(['最高金額（最小貨幣單位）', 'Maximum amount (minor units)'])}
+    {max && <label className="field">{label(['最高金額（最小貨幣單位）', 'Maximum amount (minor units)', '最高金额（最小货币单位）'])}
       <input name={`${name}_max`} type="number" min="0" step="1" defaultValue={stringValue(max.amount_minor)} />
     </label>}
-    <label className="field">{label(['貨幣代碼', 'Currency code'])}
+    <label className="field">{label(['貨幣代碼', 'Currency code', '货币代码'])}
       <input name={`${name}_currency`} maxLength={3} pattern="[A-Za-z]{3}" placeholder="USD" defaultValue={stringValue(money.currency)} />
     </label>
   </div>;
@@ -112,13 +112,13 @@ function CandidateEdit({ record, close }: { record: RecordData; close: () => voi
   }
   return <form className="fields" onSubmit={submit}>
     <fieldset disabled={request.pending}>
-      <label className="field">{label(['候選商品名稱', 'Candidate name'])}<input name="name" required maxLength={250} defaultValue={stringValue(versioned.name)} /></label>
-      <label className="field">{label(['市場 ID（以逗號分隔）', 'Market IDs (comma-separated)'])}<input name="market_ids" defaultValue={list(versioned.market_ids).join(', ')} /></label>
+      <label className="field">{label(['候選商品名稱', 'Candidate name', '候选商品名称'])}<input name="name" required maxLength={250} defaultValue={stringValue(versioned.name)} /></label>
+      <label className="field">{label(['市場 ID（以逗號分隔）', 'Market IDs (comma-separated)', '市场 ID（以逗号分隔）'])}<input name="market_ids" defaultValue={list(versioned.market_ids).join(', ')} /></label>
       <label className="field">{label(supplyNotes)}<textarea name="supply_notes" maxLength={4000} defaultValue={stringValue(versioned.supply_notes)} /></label>
-      <MoneyFields name="price_range" legend={label(['價格區間', 'Price range'])} min={range.min} max={asRecord(range.max)} />
+      <MoneyFields name="price_range" legend={label(['價格區間', 'Price range', '价格区间'])} min={range.min} max={asRecord(range.max)} />
       <MoneyFields name="estimated_cost" legend={label(estimatedCost)} min={versioned.estimated_cost} />
       <MoneyFields name="actual_quote" legend={label(actualQuote)} min={versioned.actual_quote} />
-      {invalidMoney && <p className="problem" role="alert">{label(['請填寫各組金額及貨幣代碼，並確認區間由低至高。清除金額時請將該組欄位留空。', 'Enter each amount with its currency code and check that ranges are in ascending order. Leave all fields in a group blank to clear it.'])}</p>}
+      {invalidMoney && <p className="problem" role="alert">{label(['請填寫各組金額及貨幣代碼，並確認區間由低至高。清除金額時請將該組欄位留空。', 'Enter each amount with its currency code and check that ranges are in ascending order. Leave all fields in a group blank to clear it.', '请填写各组金额及货币代码，并确认区间由低至高。清除金额时请将该组字段留空。'])}</p>}
       <Actions pending={request.pending} close={close} />
     </fieldset>
     {request.error != null && <ProblemNotice error={request.error} />}
@@ -140,10 +140,10 @@ function ScoreEdit({ record, dimension, score, close }: { record: RecordData; di
   return <form className="fields" onSubmit={submit}>
     <fieldset disabled={request.pending}>
       <legend>{label(dimensions[dimension])}</legend>
-      <label className="field">{label(['分數（0–100）', 'Score (0–100)'])}<input name="score" type="number" step="any" min="0" max="100" required defaultValue={stringValue(score.score)} /></label>
-      <label className="field">{label(['不確定性（0–1）', 'Uncertainty (0–1)'])}<input name="uncertainty" type="number" step="any" min="0" max="1" required defaultValue={stringValue(score.uncertainty)} /></label>
-      <label className="field">{label(['研究項目 ID（每行一筆）', 'Research item IDs (one per line)'])}<textarea name="evidence_item_ids" defaultValue={list(score.evidence_item_ids).join('\n')} /></label>
-      <label className="check"><input name="is_estimate" type="checkbox" defaultChecked={score.is_estimate === true} />{label(['估算評分', 'Estimated score'])}</label>
+      <label className="field">{label(['分數（0–100）', 'Score (0–100)', '分数（0–100）'])}<input name="score" type="number" step="any" min="0" max="100" required defaultValue={stringValue(score.score)} /></label>
+      <label className="field">{label(['不確定性（0–1）', 'Uncertainty (0–1)', '不确定性（0–1）'])}<input name="uncertainty" type="number" step="any" min="0" max="1" required defaultValue={stringValue(score.uncertainty)} /></label>
+      <label className="field">{label(['研究項目 ID（每行一筆）', 'Research item IDs (one per line)', '研究项目 ID（每行一笔）'])}<textarea name="evidence_item_ids" defaultValue={list(score.evidence_item_ids).join('\n')} /></label>
+      <label className="check"><input name="is_estimate" type="checkbox" defaultChecked={score.is_estimate === true} />{label(['估算評分', 'Estimated score', '估算评分'])}</label>
       <Actions pending={request.pending} close={close} />
     </fieldset>
     {request.error != null && <ProblemNotice error={request.error} />}
@@ -157,13 +157,13 @@ function AcceptProductFields({ record, createDraft }: { record: RecordData; crea
   const options = records(read.data?.data).filter(row => (!brand || row.brand_id === brand) && (createDraft || ['active', 'draft'].includes(stringValue(row.status))));
   return <>
     <ReadState read={read} />
-    <label className="field">{createDraft ? label(['草稿店鋪', 'Draft store']) : label(['現有商品', 'Existing product'])}
+    <label className="field">{createDraft ? label(['草稿店鋪', 'Draft store', '草稿店铺']) : label(['現有商品', 'Existing product', '现有商品'])}
       <select name={createDraft ? 'store_id' : 'linked_product_id'} required defaultValue="">
-        <option value="">{read.data && options.length === 0 ? label(['沒有符合條件的選項', 'No eligible options']) : t('select')}</option>
+        <option value="">{read.data && options.length === 0 ? label(['沒有符合條件的選項', 'No eligible options', '没有符合条件的选项']) : t('select')}</option>
         {options.map(row => <option key={stringValue(row.id)} value={stringValue(row.id)}>{rowTitle(row)}</option>)}
       </select>
     </label>
-    {createDraft && <label className="field">{label(['草稿商品名稱', 'Product draft title'])}<input name="draft_title" defaultValue={stringValue(record.name)} maxLength={250} required /></label>}
+    {createDraft && <label className="field">{label(['草稿商品名稱', 'Product draft title', '草稿商品名称'])}<input name="draft_title" defaultValue={stringValue(record.name)} maxLength={250} required /></label>}
   </>;
 }
 
@@ -175,7 +175,7 @@ function CandidateTransition({ record, next, close }: { record: RecordData; next
   const [createDraft, setCreateDraft] = useState(false);
   const final = next === 'accepted' || next === 'rejected';
   const reopening = versioned.status === 'rejected';
-  const action = reopening ? label(['重新開啟研究', 'Reopen research']) : label(transitionNames[next]!);
+  const action = reopening ? label(['重新開啟研究', 'Reopen research', '重新打开研究']) : label(transitionNames[next]!);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = formData(event);
@@ -192,12 +192,12 @@ function CandidateTransition({ record, next, close }: { record: RecordData; next
     <fieldset disabled={request.pending}>
       <legend>{action}</legend>
       <label className="field">{label(decisionReason)}<textarea name="decision_reason" required={final} maxLength={4000} /></label>
-      {reopening && <label className="field">{label(['新增研究項目 ID（每行一筆）', 'New research item IDs (one per line)'])}<textarea name="evidence_item_ids" required /></label>}
+      {reopening && <label className="field">{label(['新增研究項目 ID（每行一筆）', 'New research item IDs (one per line)', '添加研究项目 ID（每行一笔）'])}<textarea name="evidence_item_ids" required /></label>}
       {next === 'accepted' && <>
-        {findOperation(api, 'POST', '/products', 'commerce') && <label className="field">{label(['商品連結方式', 'Product link method'])}
+        {findOperation(api, 'POST', '/products', 'commerce') && <label className="field">{label(['商品連結方式', 'Product link method', '商品链接方式'])}
           <select value={createDraft ? 'draft' : 'existing'} onChange={event => setCreateDraft(event.target.value === 'draft')}>
-            <option value="existing">{label(['連結現有商品', 'Link existing product'])}</option>
-            <option value="draft">{label(['建立商品草稿', 'Create product draft'])}</option>
+            <option value="existing">{label(['連結現有商品', 'Link existing product', '链接现有商品'])}</option>
+            <option value="draft">{label(['建立商品草稿', 'Create product draft', '创建商品草稿'])}</option>
           </select>
         </label>}
         <AcceptProductFields key={String(createDraft)} record={versioned} createDraft={createDraft} />
@@ -230,20 +230,20 @@ function CandidateDetail({ record }: { record: RecordData }) {
   const range = asRecord(record.price_range);
   return <>
     <section className="detail-block">
-      <h3>{label(['成本與供應', 'Costs and supply'])} · <Status value={status} /></h3>
-      <Table title={label(['候選商品成本', 'Candidate costs'])} headings={[label(estimatedCost), label(actualQuote), label(['價格區間', 'Price range'])]}>
+      <h3>{label(['成本與供應', 'Costs and supply', '成本与供应'])} · <Status value={status} /></h3>
+      <Table title={label(['候選商品成本', 'Candidate costs', '候选商品成本'])} headings={[label(estimatedCost), label(actualQuote), label(['價格區間', 'Price range', '价格区间'])]}>
         <tr><td><Money value={record.estimated_cost} /></td><td><Money value={record.actual_quote} /></td><td>{range.min && range.max ? <><Money value={range.min} /> – <Money value={range.max} /></> : dash}</td></tr>
       </Table>
       <dl>
         <dt>{label(supplyNotes)}</dt><dd>{stringValue(record.supply_notes) || dash}</dd>
-        <dt>{label(['市場', 'Markets'])}</dt><dd>{list(record.market_ids).join(', ') || dash}</dd>
+        <dt>{label(['市場', 'Markets', '市场'])}</dt><dd>{list(record.market_ids).join(', ') || dash}</dd>
       </dl>
       {edit && (form?.kind === 'edit' ? <CandidateEdit record={record} close={close} /> :
-        <button type="button" disabled={!!form} onClick={() => setForm({ kind: 'edit' })}>{label(['編輯候選商品', 'Edit candidate'])}</button>)}
+        <button type="button" disabled={!!form} onClick={() => setForm({ kind: 'edit' })}>{label(['編輯候選商品', 'Edit candidate', '编辑候选商品'])}</button>)}
     </section>
     <section className="detail-block">
-      <h3>{label(['四維評分', 'Candidate scores'])}</h3>
-      <Table title={label(['四維評分', 'Candidate scores'])} headings={[label(['評分維度', 'Dimension']), label(['分數', 'Score']), label(['不確定性', 'Uncertainty']), label(evidence), ...(score ? [t('operation')] : [])]}>
+      <h3>{label(['四維評分', 'Candidate scores', '四维评分'])}</h3>
+      <Table title={label(['四維評分', 'Candidate scores', '四维评分'])} headings={[label(['評分維度', 'Dimension', '评分维度']), label(['分數', 'Score', '分数']), label(['不確定性', 'Uncertainty', '不确定性']), label(evidence), ...(score ? [t('operation')] : [])]}>
         {(Object.keys(dimensions) as Dimension[]).map(dimension => {
           const value = scores.find(row => row.dimension === dimension) ?? {};
           const name = label(dimensions[dimension]);
@@ -257,31 +257,31 @@ function CandidateDetail({ record }: { record: RecordData }) {
       {form?.kind === 'score' && <ScoreEdit key={form.dimension} record={record} dimension={form.dimension} score={scores.find(item => item.dimension === form.dimension) ?? {}} close={close} />}
     </section>
     <section className="detail-block">
-      <h3>{label(['候選商品決策', 'Candidate decision'])}</h3>
+      <h3>{label(['候選商品決策', 'Candidate decision', '候选商品决策'])}</h3>
       <dl>
         <dt>{label(decisionReason)}</dt><dd>{stringValue(record.decision_reason) || dash}</dd>
-        <dt>{label(['決策時間', 'Decision date'])}</dt><dd><Timestamp value={record.decided_at} /></dd>
-        <dt>{label(['已連結商品', 'Linked product'])}</dt><dd>{productId ? <Link to={`/w/${encodeURIComponent(api.ws)}/commerce/products/${encodeURIComponent(productId)}`}>{productId}</Link> : dash}</dd>
+        <dt>{label(['決策時間', 'Decision date', '决策时间'])}</dt><dd><Timestamp value={record.decided_at} /></dd>
+        <dt>{label(['已連結商品', 'Linked product', '已链接商品'])}</dt><dd>{productId ? <Link to={`/w/${encodeURIComponent(api.ws)}/commerce/products/${encodeURIComponent(productId)}`}>{productId}</Link> : dash}</dd>
       </dl>
-      {nextStatuses.includes('validating') && scoredDimensions.size < 2 && <p className="notice">{label(['須有至少兩個維度附研究證據，才能送交驗證。', 'Add research evidence to at least two score dimensions to move to validation.'])}</p>}
+      {nextStatuses.includes('validating') && scoredDimensions.size < 2 && <p className="notice">{label(['須有至少兩個維度附研究證據，才能送交驗證。', 'Add research evidence to at least two score dimensions to move to validation.', '须有至少两个维度附研究证据，才能送交验证。'])}</p>}
       {form?.kind === 'transition' ? <CandidateTransition key={form.next} record={record} next={form.next} close={close} /> :
         <div className="action-row">{nextStatuses.map(next => <button type="button" key={next} disabled={!!form || (next === 'validating' && scoredDimensions.size < 2)} onClick={() => setForm({ kind: 'transition', next })}>
-          {status === 'rejected' ? label(['重新開啟研究', 'Reopen research']) : label(transitionNames[next]!)}
+          {status === 'rejected' ? label(['重新開啟研究', 'Reopen research', '重新打开研究']) : label(transitionNames[next]!)}
         </button>)}</div>}
     </section>
   </>;
 }
 
 const labelTypes = {
-  sentiment: ['情緒', 'Sentiment'], intent: ['意圖', 'Intent'], topic: ['主題', 'Topic'],
+  sentiment: ['情緒', 'Sentiment', '情绪'], intent: ['意圖', 'Intent', '意图'], topic: ['主題', 'Topic', '主题'],
 } as const;
 type LabelType = keyof typeof labelTypes;
 const sentiments = {
-  positive: ['正面', 'Positive'], negative: ['負面', 'Negative'], neutral: ['中立', 'Neutral'],
-  mixed: ['混合', 'Mixed'], uncertain: ['不確定', 'Uncertain'],
+  positive: ['正面', 'Positive'], negative: ['負面', 'Negative', '负面'], neutral: ['中立', 'Neutral'],
+  mixed: ['混合', 'Mixed'], uncertain: ['不確定', 'Uncertain', '不确定'],
 } as const;
-const labelHistoryTitle = ['標註歷史', 'Label history'] as const;
-const voiceTitle = ['聲量占比', 'Share of voice'] as const;
+const labelHistoryTitle = ['標註歷史', 'Label history', '标注历史'] as const;
+const voiceTitle = ['聲量占比', 'Share of voice', '声量占比'] as const;
 
 function labelValue(row: RecordData, label: ReturnType<typeof useCopy>['label'], field = 'value') {
   const value = stringValue(row[field]);
@@ -298,18 +298,18 @@ function LabelHistory({ id }: { id: string }) {
   return <>
     <ReadState read={read} />
     {read.data && (labels.length ? <Table title={label(labelHistoryTitle)} headings={[
-      label(['類型', 'Type']), label(['標註值', 'Label value']), label(['原始模型值', 'Raw model value']),
-      label(['作者', 'Author']), label(['信心', 'Confidence']), label(['狀態', 'Status']), label(['時間', 'Time']),
+      label(['類型', 'Type', '类型']), label(['標註值', 'Label value', '标注值']), label(['原始模型值', 'Raw model value']),
+      label(['作者', 'Author']), label(['信心', 'Confidence']), label(['狀態', 'Status', '状态']), label(['時間', 'Time', '时间']),
     ]}>
       {labels.map(row => <tr key={stringValue(row.id)}>
         <th scope="row">{label(labelTypes[row.label_type as LabelType] ?? labelTypes.topic)}</th>
         <td>{labelValue(row, label)}</td><td>{labelValue(row, label, 'raw_value')}</td>
         <td>{row.labeled_by === 'model' ? label(['模型', 'Model']) : label(manualLabel)}{row.model_ref != null && <><br />{stringValue(row.model_ref)}</>}</td>
         <td>{typeof row.confidence === 'number' ? percent.format(row.confidence) : dash}</td>
-        <td>{superseded.has(row.id) ? label(['已被取代', 'Superseded']) : label(['目前標註', 'Current'])}</td>
+        <td>{superseded.has(row.id) ? label(['已被取代', 'Superseded']) : label(['目前標註', 'Current', '目前标注'])}</td>
         <td><Timestamp value={row.created_at} /></td>
       </tr>)}
-    </Table> : <p>{label(['尚無標註。', 'No labels yet.'])}</p>)}
+    </Table> : <p>{label(['尚無標註。', 'No labels yet.', '尚无标注。'])}</p>)}
   </>;
 }
 
@@ -331,16 +331,16 @@ function MentionLabelForm({ row, close }: { row: RecordData; close: () => void }
   }
   return <form className="fields" onSubmit={submit}>
     <fieldset disabled={request.pending}>
-      <legend>{label(['人工標註', 'Manual label'])}</legend>
-      <label className="field">{label(['標註類型', 'Label type'])}<select value={type} onChange={event => setType(event.target.value as LabelType)}>
+      <legend>{label(['人工標註', 'Manual label', '人工标注'])}</legend>
+      <label className="field">{label(['標註類型', 'Label type', '标注类型'])}<select value={type} onChange={event => setType(event.target.value as LabelType)}>
         {(Object.keys(labelTypes) as LabelType[]).map(key => <option key={key} value={key}>{label(labelTypes[key])}</option>)}
       </select></label>
-      <label className="field">{label(['標註值', 'Label value'])}{type === 'sentiment' ? <select name="value" defaultValue={stringValue(previous?.value) || 'uncertain'}>
+      <label className="field">{label(['標註值', 'Label value', '标注值'])}{type === 'sentiment' ? <select name="value" defaultValue={stringValue(previous?.value) || 'uncertain'}>
         {(Object.keys(sentiments) as Array<keyof typeof sentiments>).map(key => <option key={key} value={key}>{label(sentiments[key])}</option>)}
       </select> : <input key={type} name="value" defaultValue={stringValue(previous?.value)} required maxLength={200} />}</label>
-      <label className="field">{label(['信心（0–1，選填）', 'Confidence (0–1, optional)'])}<input type="number" name="confidence" min="0" max="1" step="any" /></label>
-      {previous && <p>{label(['這次標註將取代目前值，原標註會保留在歷史中。', 'This label replaces the current value and keeps it in the history.'])}</p>}
-      <Actions pending={request.pending} submit={label(['儲存標註', 'Save label'])} close={close} />
+      <label className="field">{label(['信心（0–1，選填）', 'Confidence (0–1, optional)', '信心（0–1，选填）'])}<input type="number" name="confidence" min="0" max="1" step="any" /></label>
+      {previous && <p>{label(['這次標註將取代目前值，原標註會保留在歷史中。', 'This label replaces the current value and keeps it in the history.', '这次标注将取代目前值，原标注会保留在历史中。'])}</p>}
+      <Actions pending={request.pending} submit={label(['儲存標註', 'Save label', '保存标注'])} close={close} />
     </fieldset>
     {request.error != null && <ProblemNotice error={request.error} />}
   </form>;
@@ -359,10 +359,10 @@ function MentionEscalation({ row, close }: { row: RecordData; close: () => void 
   }
   return <form className="fields" onSubmit={submit}>
     <fieldset disabled={request.pending}>
-      <legend>{label(['建立後續工作項目', 'Create follow-up work item'])}</legend>
-      <label className="field">{label(['工作項目標題', 'Work item title'])}<input name="title" required maxLength={200} defaultValue={label(['檢視品牌提及', 'Review monitored brand mention'])} /></label>
-      <label className="field">{label(['負責人 ID（選填）', 'Assignee ID (optional)'])}<input name="assignee_id" maxLength={200} /></label>
-      <Actions pending={request.pending} submit={label(['建立工作項目', 'Create work item'])} close={close} />
+      <legend>{label(['建立後續工作項目', 'Create follow-up work item', '创建后续工作项目'])}</legend>
+      <label className="field">{label(['工作項目標題', 'Work item title', '工作项目标题'])}<input name="title" required maxLength={200} defaultValue={label(['檢視品牌提及', 'Review monitored brand mention', '查看品牌提及'])} /></label>
+      <label className="field">{label(['負責人 ID（選填）', 'Assignee ID (optional)', '负责人 ID（选填）'])}<input name="assignee_id" maxLength={200} /></label>
+      <Actions pending={request.pending} submit={label(['建立工作項目', 'Create work item', '创建工作项目'])} close={close} />
     </fieldset>
     {request.error != null && <ProblemNotice error={request.error} />}
   </form>;
@@ -385,22 +385,22 @@ function MentionRow({ row, target }: { row: RecordData; target: string }) {
   const close = () => setForm(undefined);
   return <article className="message" id={`mention-${id}`} aria-label={`${label(['提及', 'Mention'])} ${id}`}>
     <strong>{target || stringValue(row.platform)}</strong> · <Timestamp value={row.observed_at} />
-    <p>{excerpt || label(['沒有可顯示的摘錄。', 'No excerpt available.'])}</p>
+    <p>{excerpt || label(['沒有可顯示的摘錄。', 'No excerpt available.', '没有可显示的摘录。'])}</p>
     <p>{label(sourceLabel)} · {stringValue(row.platform) || dash} / {stringValue(asRecord(row.source).data_source_id) || label(manualLabel)}</p>
-    {link && <a href={link} target="_blank" rel="noopener noreferrer">{label(['開啟原文', 'Open source post'])}</a>}
-    {labels.length > 0 && <ul aria-label={label(['目前標註', 'Current labels'])}>{labels.map(item => <li key={stringValue(item.id)}>
+    {link && <a href={link} target="_blank" rel="noopener noreferrer">{label(['開啟原文', 'Open source post', '打开原文'])}</a>}
+    {labels.length > 0 && <ul aria-label={label(['目前標註', 'Current labels', '目前标注'])}>{labels.map(item => <li key={stringValue(item.id)}>
       {label(labelTypes[item.label_type as LabelType] ?? labelTypes.topic)} · {labelValue(item, label)}
     </li>)}</ul>}
-    {escalated && <p>{label(['已升級為', 'Escalated to'])} <Link to={`/w/${encodeURIComponent(api.ws)}/settings/brands?${new URLSearchParams({ tab: 'work', id: escalated })}`}>{label(['後續工作項目', 'Follow-up work item'])}</Link></p>}
+    {escalated && <p>{label(['已升級為', 'Escalated to', '已升级为'])} <Link to={`/w/${encodeURIComponent(api.ws)}/settings/brands?${new URLSearchParams({ tab: 'work', id: escalated })}`}>{label(['後續工作項目', 'Follow-up work item', '后续工作项目'])}</Link></p>}
     <div className="action-row">
-      {findOperation(api, 'PATCH', `${mentionPath}/labels`, 'intel') && <button type="button" disabled={!!form || request.pending} onClick={() => setForm('label')}>{label(['人工標註', 'Manual label'])}</button>}
-      {!escalated && findOperation(api, 'POST', `${mentionPath}/escalate`, 'intel') && <button type="button" disabled={!!form || request.pending} onClick={() => setForm('escalate')}>{label(['升級提及', 'Escalate mention'])}</button>}
+      {findOperation(api, 'PATCH', `${mentionPath}/labels`, 'intel') && <button type="button" disabled={!!form || request.pending} onClick={() => setForm('label')}>{label(['人工標註', 'Manual label', '人工标注'])}</button>}
+      {!escalated && findOperation(api, 'POST', `${mentionPath}/escalate`, 'intel') && <button type="button" disabled={!!form || request.pending} onClick={() => setForm('escalate')}>{label(['升級提及', 'Escalate mention', '升级提及'])}</button>}
       {showClassification && !queued && <button type="button" disabled={!!form || request.pending} onClick={async () => {
         const result = await request.run('POST', `${mentionPath}/classify`, [id], {}, row);
         if (result) { setQueued(true); setHistory(true); }
-      }}>{request.pending ? t('saving') : label(['使用模型分類', 'Classify with model'])}</button>}
+      }}>{request.pending ? t('saving') : label(['使用模型分類', 'Classify with model', '使用模型分类'])}</button>}
     </div>
-    {queued && !labels.some(item => item.label_type === 'sentiment') && <p role="status">{label(['分類已排入佇列。請重新整理提及以查看結果。', 'Classification queued. Refresh mentions to see the result.'])}</p>}
+    {queued && !labels.some(item => item.label_type === 'sentiment') && <p role="status">{label(['分類已排入佇列。請重新整理提及以查看結果。', 'Classification queued. Refresh mentions to see the result.', '分类已排入队列。请刷新提及以查看结果。'])}</p>}
     {request.error != null && <ProblemNotice error={request.error} />}
     {form === 'label' && <MentionLabelForm row={row} close={() => { close(); setHistory(true); }} />}
     {form === 'escalate' && <MentionEscalation row={row} close={close} />}
@@ -439,29 +439,29 @@ function ListeningQuery({ voice, targets, sources, apply }: { voice?: boolean; t
   }
   return <form className="fields" onSubmit={submit}>
     <fieldset>
-      <label className="field">{voice ? label(['監測目標（可複選）', 'Watch targets (multiple)']) : label(watchTargetLabel)}
+      <label className="field">{voice ? label(['監測目標（可複選）', 'Watch targets (multiple)', '监测目标（可复选）']) : label(watchTargetLabel)}
         <select name="watch_target_ids" multiple={voice} required={voice} defaultValue={voice ? [] : ''}>
-          {!voice && <option value="">{label(['所有監測目標', 'All watch targets'])}</option>}
+          {!voice && <option value="">{label(['所有監測目標', 'All watch targets', '所有监测目标'])}</option>}
           {targets.map(target => <option key={target.id} value={target.id}>{target.title}</option>)}
         </select>
       </label>
-      <label className="field">{voice ? label(['來源（可複選）', 'Sources (multiple)']) : label(sourceLabel)}
+      <label className="field">{voice ? label(['來源（可複選）', 'Sources (multiple)', '来源（可复选）']) : label(sourceLabel)}
         <select name="sources" multiple={voice} required={voice} defaultValue={voice ? ['manual'] : ''}>
-          {!voice && <option value="">{label(['所有可用來源', 'All available sources'])}</option>}
+          {!voice && <option value="">{label(['所有可用來源', 'All available sources', '所有可用来源'])}</option>}
           {sources.map(source => <option key={source.id} value={source.id}>{source.title}</option>)}
         </select>
       </label>
-      <label className="field">{label(['觀測起點（含）', 'Observed from (inclusive)'])}<input name="from" type="datetime-local" step="1" required={voice} /></label>
-      <label className="field">{label(['觀測終點（不含）', 'Observed to (exclusive)'])}<input name="to" type="datetime-local" step="1" required={voice} /></label>
-      <label className="field">{label(['關鍵字', 'Keyword'])}<input name="keyword" type="search" maxLength={200} /></label>
+      <label className="field">{label(['觀測起點（含）', 'Observed from (inclusive)', '观测起点（含）'])}<input name="from" type="datetime-local" step="1" required={voice} /></label>
+      <label className="field">{label(['觀測終點（不含）', 'Observed to (exclusive)', '观测终点（不含）'])}<input name="to" type="datetime-local" step="1" required={voice} /></label>
+      <label className="field">{label(['關鍵字', 'Keyword', '关键字'])}<input name="keyword" type="search" maxLength={200} /></label>
       {!voice && <>
         <label className="field">{label(['平台', 'Platform'])}<input name="platform" maxLength={100} /></label>
-        <label className="field">{label(['目前標註值', 'Current label value'])}<input name="label" maxLength={200} placeholder="negative" /></label>
+        <label className="field">{label(['目前標註值', 'Current label value', '目前标注值'])}<input name="label" maxLength={200} placeholder="negative" /></label>
       </>}
-      {badPeriod && <p className="problem" role="alert">{label(['觀測終點須晚於起點。', 'The end of the observation period must follow the start.'])}</p>}
+      {badPeriod && <p className="problem" role="alert">{label(['觀測終點須晚於起點。', 'The end of the observation period must follow the start.', '观测终点须晚于起点。'])}</p>}
       <div className="action-row">
-        <button className="primary" type="submit">{voice ? label(['計算聲量占比', 'Compute share of voice']) : label(['查詢提及', 'Query mentions'])}</button>
-        {!voice && <button type="reset" onClick={() => { setBadPeriod(false); apply({}); }}>{label(['清除篩選', 'Clear filters'])}</button>}
+        <button className="primary" type="submit">{voice ? label(['計算聲量占比', 'Compute share of voice', '计算声量占比']) : label(['查詢提及', 'Query mentions', '查找提及'])}</button>
+        {!voice && <button type="reset" onClick={() => { setBadPeriod(false); apply({}); }}>{label(['清除篩選', 'Clear filters', '清除筛选'])}</button>}
       </div>
     </fieldset>
   </form>;
@@ -474,14 +474,14 @@ function QueryDefinition({ value, targets, sources }: { value: unknown; targets:
   const targetName = (id: string) => targets.find(option => option.id === id)?.title || id;
   const specified = (key: string, options: Options) => list(definition[key]).map(id => options.find(option => option.id === id)?.title || id).join(', ');
   return <details>
-    <summary>{label(['查詢定義', 'Query definition'])}</summary>
+    <summary>{label(['查詢定義', 'Query definition', '查找定义'])}</summary>
     <dl>
-      <dt>{label(['觀測期間', 'Observation period'])}</dt><dd><Timestamp value={period.from} /> – <Timestamp value={period.to} /></dd>
-      <dt>{label(watchTargetLabel)}</dt><dd>{specified('watch_target_ids', targets) || label(['所有監測目標', 'All watch targets'])}</dd>
-      <dt>{label(sourceLabel)}</dt><dd>{specified('sources', sources) || label(['所有可用來源', 'All available sources'])}</dd>
-      <dt>{label(['關鍵字', 'Keyword'])}</dt><dd>{stringValue(definition.keyword) || dash}</dd>
+      <dt>{label(['觀測期間', 'Observation period', '观测期间'])}</dt><dd><Timestamp value={period.from} /> – <Timestamp value={period.to} /></dd>
+      <dt>{label(watchTargetLabel)}</dt><dd>{specified('watch_target_ids', targets) || label(['所有監測目標', 'All watch targets', '所有监测目标'])}</dd>
+      <dt>{label(sourceLabel)}</dt><dd>{specified('sources', sources) || label(['所有可用來源', 'All available sources', '所有可用来源'])}</dd>
+      <dt>{label(['關鍵字', 'Keyword', '关键字'])}</dt><dd>{stringValue(definition.keyword) || dash}</dd>
       {Object.hasOwn(definition, 'platform') && <><dt>{label(['平台', 'Platform'])}</dt><dd>{stringValue(definition.platform) || dash}</dd></>}
-      {Object.hasOwn(definition, 'label') && <><dt>{label(['目前標註值', 'Current label value'])}</dt><dd>{stringValue(definition.label) || dash}</dd></>}
+      {Object.hasOwn(definition, 'label') && <><dt>{label(['目前標註值', 'Current label value', '目前标注值'])}</dt><dd>{stringValue(definition.label) || dash}</dd></>}
     </dl>
     {records(definition.queries).map(row => <section key={stringValue(row.id)}>
       <strong>{targetName(stringValue(row.id))} · {label(['版本', 'Version'])} {stringValue(row.version)}</strong>
@@ -502,16 +502,16 @@ function ShareOfVoice({ query, targets, sources, brands }: { query: Record<strin
     {read.data && <>
       <p><strong>{label(sampleLabel)}</strong> · {stringValue(data.sample_size) || dash}</p>
       <p><strong>{label(coverageLabel)}</strong> · {stringValue(data.coverage_note) || dash}</p>
-      <p><strong>{label(['計算時間', 'As of'])}</strong> · <Timestamp value={data.as_of} /></p>
+      <p><strong>{label(['計算時間', 'As of', '计算时间'])}</strong> · <Timestamp value={data.as_of} /></p>
       <QueryDefinition value={data.query_definition} targets={targets} sources={sources} />
-      <Table title={label(voiceTitle)} headings={[label(['品牌', 'Brand']), label(['樣本筆數', 'Sample count']), label(['占比', 'Share'])]}>
+      <Table title={label(voiceTitle)} headings={[label(['品牌', 'Brand']), label(['樣本筆數', 'Sample count', '样本笔数']), label(['占比', 'Share'])]}>
         {Object.entries(asRecord(data.brand_counts)).map(([id, count]) => <tr key={id}>
           <th scope="row">{brands.find(brand => brand.id === id)?.title || id}</th><td>{stringValue(count)}</td>
           <td>{typeof shares[id] === 'number' ? percent.format(shares[id]) : dash}</td>
         </tr>)}
       </Table>
-      <details><summary>{label(['佐證提及 ID', 'Evidence mention IDs'])} ({ids.length})</summary>
-        {ids.length ? <ul>{ids.map(id => <li key={id}>{id}</li>)}</ul> : <p>{label(['此樣本沒有提及。', 'No mentions in this sample.'])}</p>}
+      <details><summary>{label(['佐證提及 ID', 'Evidence mention IDs', '佐证提及 ID'])} ({ids.length})</summary>
+        {ids.length ? <ul>{ids.map(id => <li key={id}>{id}</li>)}</ul> : <p>{label(['此樣本沒有提及。', 'No mentions in this sample.', '此样本没有提及。'])}</p>}
       </details>
     </>}
   </>;
@@ -542,7 +542,7 @@ export function IntelListening() {
   const sourceOptions = Array.from(sources, ([id, title]) => ({ id, title }));
   return <div className="record-layout">
     <Panel>
-      <div className="panel-head"><h2>{label(['提及查詢', 'Mention search'])}</h2>
+      <div className="panel-head"><h2>{label(['提及查詢', 'Mention search', '提及查找'])}</h2>
         {mentions.op && <button type="button" onClick={() => void mentions.refetch()} disabled={mentions.isFetching}>{t('refresh')}</button>}
       </div>
       <div className="detail-body">
@@ -551,12 +551,12 @@ export function IntelListening() {
         <ReadState read={mentions} />
         {mentions.data && <section className="detail-block">
           <p><strong>{label(sampleLabel)}</strong> · {stringValue(data.sample_size) || dash}</p>
-          <p><strong>{label(['樣本來源', 'Sample sources'])}</strong> · {list(data.sample_sources).map(id => sources.get(id) ?? id).join(', ') || dash}</p>
+          <p><strong>{label(['樣本來源', 'Sample sources', '样本来源'])}</strong> · {list(data.sample_sources).map(id => sources.get(id) ?? id).join(', ') || dash}</p>
           <p><strong>{label(coverageLabel)}</strong> · {stringValue(data.coverage_note) || dash}</p>
           <QueryDefinition value={data.query_definition} targets={targets} sources={sourceOptions} />
-          {typeof data.sample_size === 'number' && data.sample_size > rows.length && <p>{label(['僅顯示前', 'Showing the first'])} {rows.length} {label(['筆提及。', 'mentions.'])}</p>}
+          {typeof data.sample_size === 'number' && data.sample_size > rows.length && <p>{label(['僅顯示前', 'Showing the first', '仅显示前'])} {rows.length} {label(['筆提及。', 'mentions.', '笔提及。'])}</p>}
           {rows.length ? rows.map(row => <MentionRow row={row} target={targets.find(target => target.id === row.watch_target_id)?.title ?? ''} key={stringValue(row.id)} />) :
-            <EmptyState title={label(['沒有符合條件的提及', 'No matching mentions'])} />}
+            <EmptyState title={label(['沒有符合條件的提及', 'No matching mentions', '没有符合条件的提及'])} />}
         </section>}
       </div>
     </Panel>

@@ -24,7 +24,7 @@ function walk(dir) {
 function runnerFor(path) {
   const imports = ts.preProcessFile(readFileSync(path, 'utf8'), true, true).importedFiles.map(({ fileName }) => fileName);
   if (imports.some(name => name === 'node:test' || name === 'node:test/reporters')) return 'node';
-  if (imports.some(name => name === '@playwright/test')) return 'playwright';
+  if (testName.test(path) && imports.some(name => name === '@playwright/test')) return 'playwright';
   if (testName.test(path)) return 'vitest';
 }
 

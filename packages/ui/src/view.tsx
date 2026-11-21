@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 
 // Read-model types shared by the agent-first dashboard (docs/agent-first-design.md §3).
-export type Tuple = readonly [zh: string, en: string];
+export type Tuple = readonly [zh: string, en: string, hans?: string];
 export type Text = Tuple | string;
-export type Lang = 'zh' | 'en';
+export type Lang = 'zh' | 'zh-Hans' | 'en';
 export type Availability = 'observed' | 'estimated' | 'not_collected' | 'no_permission' | 'source_not_provided' | 'sync_failed' | 'not_applicable';
 export interface Metric { value: number | null; availability: Availability | string; previous_value?: number | null; change_ratio?: number | null }
 export interface Point { date: string; value: number | null; availability?: Availability | string }
@@ -42,15 +42,20 @@ export function ViewLang({ lang, children }: { lang: Lang; children: ReactNode }
   return <LangContext.Provider value={lang}>{children}</LangContext.Provider>;
 }
 export const useLang = () => useContext(LangContext);
+// Only use this for catalog labels, not record fields or interpolated text.
+export function localizedLabel([hant, en, hans]: Tuple, lang: string): string {
+  return lang === 'en' ? en : lang === 'zh-Hans' ? hans ?? hant : hant;
+}
+
 export function pick(text: Text | null | undefined, lang: Lang): string {
   if (text == null) return '';
-  return typeof text === 'string' ? text : text[lang === 'en' ? 1 : 0];
+  return typeof text === 'string' ? text : localizedLabel(text, lang);
 }
 export function useT() {
   const lang = useLang();
   return (text: Text | null | undefined) => pick(text, lang);
 }
-export const intlLocale = (lang: Lang) => lang === 'en' ? 'en' : 'zh-Hant';
+export const intlLocale = (lang: Lang) => lang === 'zh' ? 'zh-Hant' : lang;
 
 type LinkProps = { to: string; className?: string; children: ReactNode; title?: string };
 const DefaultLink = ({ to, className, children, title }: LinkProps) => <a href={to} className={className} title={title}>{children}</a>;
@@ -65,26 +70,26 @@ export function ViewLink(props: LinkProps) {
 }
 
 const ui = {
-  notCollected: ['未採集', 'Not collected'], noBaseline: ['無前期可比', 'No prior period'], vsPrevious: ['較前期', 'vs prior period'],
-  table: ['表格', 'Table'], chart: ['圖表', 'Chart'], date: ['日期', 'Date'], noData: ['此期間沒有已採集的數據', 'No collected data in this period'],
-  copy: ['複製', 'Copy'], copied: ['已複製', 'Copied'], copyFailed: ['無法複製，請手動選取', 'Copy failed; select it manually'],
-  tellAgent: ['請你的 Agent：', 'Tell your agent:'], openAgent: ['前往 Agent 頁', 'Open the Agent page'],
-  asOf: ['資料時間', 'Data as of'], asOfUnknown: ['資料時間未知', 'Data time unknown'], more: ['還有', 'more'],
-  reason: ['理由', 'Reason'], reasonOptional: ['加上理由（選填）', 'Add a reason (optional)'], reasonRequired: ['此決定需要填寫理由', 'This decision needs a reason'],
-  confirm: ['確認', 'Confirm'], cancel: ['取消', 'Cancel'], noActions: ['你目前沒有可用的決定動作', 'No decision actions are available to you'],
-  due: ['期限', 'Due'], requestedBy: ['提出', 'Requested by'], notSet: ['未設定', 'Not set'], before: ['原本', 'Before'], after: ['提議', 'Proposed'],
-  agent: ['Agent', 'Agent'], human: ['人', 'Person'], rule: ['規則', 'Rule'], showMore: ['展開', 'Show more'], showLess: ['收合', 'Show less'],
-  today: ['今天', 'Today'], needsHuman: ['需要你處理', 'Needs you'], hiddenSeries: ['其餘系列請看表格', 'More series in the table view'],
-  minorUnits: ['（最小貨幣單位，幣別未提供）', '(minor units, currency missing)'],
+  notCollected: ['未採集', 'Not collected', '未采集'], noBaseline: ['無前期可比', 'No prior period', '无前期可比'], vsPrevious: ['較前期', 'vs prior period', '较前期'],
+  table: ['表格', 'Table'], chart: ['圖表', 'Chart', '图表'], date: ['日期', 'Date'], noData: ['此期間沒有已採集的數據', 'No collected data in this period', '此期间没有已采集的数据'],
+  copy: ['複製', 'Copy', '拷贝'], copied: ['已複製', 'Copied', '已拷贝'], copyFailed: ['無法複製，請手動選取', 'Copy failed; select it manually', '无法拷贝，请手动选取'],
+  tellAgent: ['請你的 Agent：', 'Tell your agent:', '请你的 Agent：'], openAgent: ['前往 Agent 頁', 'Open the Agent page', '前往 Agent 页'],
+  asOf: ['資料時間', 'Data as of', '数据时间'], asOfUnknown: ['資料時間未知', 'Data time unknown', '数据时间未知'], more: ['還有', 'more', '还有'],
+  reason: ['理由', 'Reason'], reasonOptional: ['加上理由（選填）', 'Add a reason (optional)', '加上理由（选填）'], reasonRequired: ['此決定需要填寫理由', 'This decision needs a reason', '此决定需要填写理由'],
+  confirm: ['確認', 'Confirm', '确认'], cancel: ['取消', 'Cancel'], noActions: ['你目前沒有可用的決定動作', 'No decision actions are available to you', '你目前没有可用的决定动作'],
+  due: ['期限', 'Due'], requestedBy: ['提出', 'Requested by'], notSet: ['未設定', 'Not set', '未设置'], before: ['原本', 'Before'], after: ['提議', 'Proposed', '提议'],
+  agent: ['Agent', 'Agent'], human: ['人', 'Person'], rule: ['規則', 'Rule', '规则'], showMore: ['展開', 'Show more', '展开'], showLess: ['收合', 'Show less'],
+  today: ['今天', 'Today'], needsHuman: ['需要你處理', 'Needs you', '需要你处理'], hiddenSeries: ['其餘系列請看表格', 'More series in the table view', '其余系列请看表格'],
+  minorUnits: ['（最小貨幣單位，幣別未提供）', '(minor units, currency missing)', '（最小货币单位，币别未提供）'],
 } satisfies Record<string, Tuple>;
 
 export const availabilityText: Record<string, Tuple> = {
-  observed: ['已觀測', 'Observed'], estimated: ['估算', 'Estimated'], not_collected: ['未採集', 'Not collected'],
-  no_permission: ['無權限查看', 'No permission'], source_not_provided: ['來源未提供', 'Source does not provide'],
-  sync_failed: ['同步失敗', 'Sync failed'], not_applicable: ['不適用', 'Not applicable'],
+  observed: ['已觀測', 'Observed', '已观测'], estimated: ['估算', 'Estimated'], not_collected: ['未採集', 'Not collected', '未采集'],
+  no_permission: ['無權限查看', 'No permission', '无权限查看'], source_not_provided: ['來源未提供', 'Source does not provide', '来源未提供'],
+  sync_failed: ['同步失敗', 'Sync failed', '同步失败'], not_applicable: ['不適用', 'Not applicable', '不适用'],
 };
 export const availabilityLabel = (availability: string | null | undefined, lang: Lang) =>
-  pick(availabilityText[availability ?? 'not_collected'] ?? ['未知狀態', 'Unknown state'], lang);
+  pick(availabilityText[availability ?? 'not_collected'] ?? ['未知狀態', 'Unknown state', '未知状态'], lang);
 
 export const isNum = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -252,28 +257,28 @@ export function Glyph({ name, size = 14 }: { name: keyof typeof glyphs | string;
 }
 const toneGlyph: Record<Tone, string> = { good: 'check', warning: 'warning', serious: 'serious', critical: 'critical', neutral: 'neutral', info: 'info' };
 
-export const statusText: Record<string, [Tone, string, string]> = {
-  draft: ['neutral', '草稿', 'Draft'], planned: ['neutral', '已規劃', 'Planned'], active: ['good', '進行中', 'Active'], live: ['good', '進行中', 'Live'],
-  running: ['info', '執行中', 'Running'], scheduled: ['info', '已排程', 'Scheduled'], queued: ['info', '排隊中', 'Queued'], open: ['info', '待領取', 'Open'],
-  claimed: ['info', '已領取', 'Claimed'], in_progress: ['info', '進行中', 'In progress'], in_production: ['info', '製作中', 'In production'], wrapping: ['info', '結案中', 'Wrapping up'],
-  pending: ['warning', '待處理', 'Pending'], pending_approval: ['warning', '待審批', 'Pending approval'], awaiting_approval: ['warning', '待審批', 'Awaiting approval'],
-  in_review: ['warning', '審核中', 'In review'], submitted: ['warning', '待驗收', 'Submitted'], paused: ['warning', '已暫停', 'Paused'], partial: ['warning', '部分完成', 'Partial'],
-  stale: ['warning', '已過時', 'Stale'], delayed: ['warning', '延遲', 'Delayed'], low: ['warning', '庫存偏低', 'Low stock'],
-  approved: ['good', '已核准', 'Approved'], accepted: ['good', '已接受', 'Accepted'], published: ['good', '已發布', 'Published'], completed: ['good', '已完成', 'Completed'],
-  done: ['good', '已完成', 'Done'], succeeded: ['good', '成功', 'Succeeded'], applied: ['good', '已套用', 'Applied'], verified: ['good', '已核實', 'Verified'],
-  in_stock: ['good', '有庫存', 'In stock'], connected: ['good', '已連線', 'Connected'],
-  changes_requested: ['serious', '需修改', 'Changes requested'], returned: ['serious', '已退回', 'Returned'], rejected: ['serious', '已拒絕', 'Rejected'],
-  lease_expired: ['serious', '租約逾時', 'Lease expired'], outcome_unknown: ['serious', '結果待核實', 'Outcome unknown'], expired: ['serious', '已過期', 'Expired'],
-  failed: ['critical', '失敗', 'Failed'], blocked: ['critical', '受阻', 'Blocked'], out_of_stock: ['critical', '缺貨', 'Out of stock'], sync_failed: ['critical', '同步失敗', 'Sync failed'],
-  revoked: ['neutral', '已撤銷', 'Revoked'], cancelled: ['neutral', '已取消', 'Cancelled'], closed: ['neutral', '已結案', 'Closed'], ended: ['neutral', '已結束', 'Ended'],
-  archived: ['neutral', '已封存', 'Archived'], superseded: ['neutral', '已被取代', 'Superseded'], unknown: ['neutral', '未知', 'Unknown'], not_tracked: ['neutral', '未追蹤', 'Not tracked'],
-  approval: ['warning', '待審批', 'Needs approval'], late_decision: ['warning', '逾時待決定', 'Late, needs a decision'],
-  blocker: ['critical', '阻擋', 'Blocker'], high: ['serious', '高優先', 'High'], normal: ['neutral', '一般', 'Normal'],
+export const statusText: Record<string, [Tone, string, string, string?]> = {
+  draft: ['neutral', '草稿', 'Draft'], planned: ['neutral', '已規劃', 'Planned', '已规划'], active: ['good', '進行中', 'Active', '进行中'], live: ['good', '進行中', 'Live', '进行中'],
+  running: ['info', '執行中', 'Running', '运行中'], scheduled: ['info', '已排程', 'Scheduled', '已调度'], queued: ['info', '排隊中', 'Queued', '排队中'], open: ['info', '待領取', 'Open', '待领取'],
+  claimed: ['info', '已領取', 'Claimed', '已领取'], in_progress: ['info', '進行中', 'In progress', '进行中'], in_production: ['info', '製作中', 'In production', '制作中'], wrapping: ['info', '結案中', 'Wrapping up', '结案中'],
+  pending: ['warning', '待處理', 'Pending', '待处理'], pending_approval: ['warning', '待審批', 'Pending approval', '待审批'], awaiting_approval: ['warning', '待審批', 'Awaiting approval', '待审批'],
+  in_review: ['warning', '審核中', 'In review', '审核中'], submitted: ['warning', '待驗收', 'Submitted', '待验收'], paused: ['warning', '已暫停', 'Paused', '已暂停'], partial: ['warning', '部分完成', 'Partial'],
+  stale: ['warning', '已過時', 'Stale', '已过时'], delayed: ['warning', '延遲', 'Delayed', '延迟'], low: ['warning', '庫存偏低', 'Low stock', '库存偏低'],
+  approved: ['good', '已核准', 'Approved'], accepted: ['good', '已接受', 'Accepted'], published: ['good', '已發布', 'Published', '已发布'], completed: ['good', '已完成', 'Completed'],
+  done: ['good', '已完成', 'Done'], succeeded: ['good', '成功', 'Succeeded'], applied: ['good', '已套用', 'Applied'], verified: ['good', '已核實', 'Verified', '已核实'],
+  in_stock: ['good', '有庫存', 'In stock', '有库存'], connected: ['good', '已連線', 'Connected', '已连接'],
+  changes_requested: ['serious', '需修改', 'Changes requested'], returned: ['serious', '已退回', 'Returned'], rejected: ['serious', '已拒絕', 'Rejected', '已拒绝'],
+  lease_expired: ['serious', '租約逾時', 'Lease expired', '租约逾时'], outcome_unknown: ['serious', '結果待核實', 'Outcome unknown', '结果待核实'], expired: ['serious', '已過期', 'Expired', '已过期'],
+  failed: ['critical', '失敗', 'Failed', '失败'], blocked: ['critical', '受阻', 'Blocked'], out_of_stock: ['critical', '缺貨', 'Out of stock', '缺货'], sync_failed: ['critical', '同步失敗', 'Sync failed', '同步失败'],
+  revoked: ['neutral', '已撤銷', 'Revoked', '已撤销'], cancelled: ['neutral', '已取消', 'Cancelled'], closed: ['neutral', '已結案', 'Closed', '已结案'], ended: ['neutral', '已結束', 'Ended', '已结束'],
+  archived: ['neutral', '已封存', 'Archived'], superseded: ['neutral', '已被取代', 'Superseded'], unknown: ['neutral', '未知', 'Unknown'], not_tracked: ['neutral', '未追蹤', 'Not tracked', '未追踪'],
+  approval: ['warning', '待審批', 'Needs approval', '待审批'], late_decision: ['warning', '逾時待決定', 'Late, needs a decision', '逾时待决定'],
+  blocker: ['critical', '阻擋', 'Blocker', '阻挡'], high: ['serious', '高優先', 'High', '高优先'], normal: ['neutral', '一般', 'Normal'],
 };
 export function statusInfo(status: string | null | undefined, lang: Lang): { tone: Tone; label: string } {
   const key = status ?? 'unknown';
   const known = statusText[key];
-  if (known) return { tone: known[0], label: known[lang === 'en' ? 2 : 1] };
+  if (known) return { tone: known[0], label: pick([known[1], known[2], known[3]], lang) };
   return { tone: 'neutral', label: key.replace(/_/g, ' ') };
 }
 
@@ -537,9 +542,9 @@ export function Timeline({ lanes, from, to, today, timeZone }: { lanes: readonly
 }
 
 export const eventKindText: Record<string, Tuple> = {
-  publish: ['發布排期', 'Scheduled post'], post: ['已發布', 'Published post'], plan: ['推廣期間', 'Plan period'], milestone: ['里程碑', 'Milestone'],
-  production_due: ['製作期限', 'Production due'], deliverable_due: ['達人交付', 'Creator deliverable'], live: ['直播', 'Live stream'],
-  ad_flight: ['投放檔期', 'Ad flight'], promotion: ['促銷', 'Promotion'],
+  publish: ['發布排期', 'Scheduled post', '发布排期'], post: ['已發布', 'Published post', '已发布'], plan: ['推廣期間', 'Plan period', '推广期间'], milestone: ['里程碑', 'Milestone'],
+  production_due: ['製作期限', 'Production due', '制作期限'], deliverable_due: ['達人交付', 'Creator deliverable', '达人交付'], live: ['直播', 'Live stream'],
+  ad_flight: ['投放檔期', 'Ad flight', '投放档期'], promotion: ['促銷', 'Promotion', '促销'],
 };
 // Plan periods are context bands, so they stay neutral and the eight series hues go to the point events.
 const kindColor: Record<string, string> = {
@@ -640,10 +645,10 @@ export function Freshness({ asOf, availability, timeZone }: { asOf?: string | nu
 }
 
 export const decisionKindText: Record<string, Tuple> = {
-  publish_approval: ['發布審批', 'Publish approval'], change_set: ['變更集', 'Change set'], agent_job_review: ['Agent 工作驗收', 'Agent job review'],
-  reply_draft: ['回覆草稿', 'Reply draft'], ad_proposal: ['投放方案', 'Ad proposal'], brief_revision: ['簡報修訂', 'Brief revision'],
-  budget_approval: ['預算審批', 'Budget approval'], fact_revision: ['商品事實', 'Product fact'], knowledge_revision: ['品牌知識', 'Brand knowledge'],
-  localization: ['在地化', 'Localization'], late_decision: ['逾時發布', 'Late publication'],
+  publish_approval: ['發布審批', 'Publish approval', '发布审批'], change_set: ['變更集', 'Change set', '变更集'], agent_job_review: ['Agent 工作驗收', 'Agent job review', 'Agent 工作验收'],
+  reply_draft: ['回覆草稿', 'Reply draft', '回复草稿'], ad_proposal: ['投放方案', 'Ad proposal'], brief_revision: ['簡報修訂', 'Brief revision', '演示文稿修订'],
+  budget_approval: ['預算審批', 'Budget approval', '预算审批'], fact_revision: ['商品事實', 'Product fact', '商品事实'], knowledge_revision: ['品牌知識', 'Brand knowledge', '品牌知识'],
+  localization: ['本地化', 'Localization'], late_decision: ['逾時發布', 'Late publication', '逾时发布'],
 };
 const severityTone: Record<string, Tone> = { blocker: 'critical', high: 'serious', normal: 'neutral' };
 
@@ -652,12 +657,16 @@ const platformNames: Record<string, string> = {
   meta_instagram: 'Instagram', instagram: 'Instagram', meta_facebook: 'Facebook', facebook: 'Facebook', tiktok: 'TikTok',
   youtube: 'YouTube', douyin: '抖音', xiaohongshu: '小紅書', shopify: 'Shopify', tiktok_shop: 'TikTok Shop', amazon_sp: 'Amazon', shopee: 'Shopee',
 };
-export const platformName = (value: string | null | undefined) => (value && platformNames[value.toLowerCase()]) || value || '';
+export const platformName = (value: string | null | undefined, lang?: Lang) => {
+  const key = value?.toLowerCase() ?? '';
+  if (key === 'xiaohongshu' && lang === 'zh-Hans') return '小红书';
+  return (Object.hasOwn(platformNames, key) && platformNames[key]) || value || '';
+};
 const enumText: Record<string, Tuple> = {
-  OUTCOME_SALES: ['銷售轉換', 'Sales'], OUTCOME_TRAFFIC: ['導流', 'Traffic'], OUTCOME_AWARENESS: ['品牌知名度', 'Awareness'],
-  OUTCOME_ENGAGEMENT: ['互動', 'Engagement'], OUTCOME_LEADS: ['名單', 'Leads'], OUTCOME_APP_PROMOTION: ['App 推廣', 'App promotion'],
-  daily: ['每日', 'Daily'], lifetime: ['總額', 'Lifetime'], pause: ['暫停', 'Pause'], resume: ['恢復', 'Resume'], create: ['新建', 'Create'],
-  public: ['公開', 'Public'], private: ['私人', 'Private'], unlisted: ['不公開', 'Unlisted'], followers: ['僅追蹤者', 'Followers only'],
+  OUTCOME_SALES: ['銷售轉換', 'Sales', '销售转换'], OUTCOME_TRAFFIC: ['導流', 'Traffic', '导流'], OUTCOME_AWARENESS: ['品牌知名度', 'Awareness'],
+  OUTCOME_ENGAGEMENT: ['互動', 'Engagement', '交互'], OUTCOME_LEADS: ['名單', 'Leads', '名单'], OUTCOME_APP_PROMOTION: ['App 推廣', 'App promotion', 'App 推广'],
+  daily: ['每日', 'Daily'], lifetime: ['總額', 'Lifetime', '总额'], pause: ['暫停', 'Pause', '暂停'], resume: ['恢復', 'Resume', '恢复'], create: ['新建', 'Create'],
+  public: ['公開', 'Public', '公开'], private: ['私人', 'Private'], unlisted: ['不公開', 'Unlisted', '不公开'], followers: ['僅追蹤者', 'Followers only', '仅追踪者'],
 };
 const isoInstant = /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:\d\d)$/;
 const localMinute = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)$/;
@@ -670,7 +679,7 @@ export function readableValue(value: unknown, lang: Lang, timeZone?: string, uni
   if (isoInstant.test(value)) return formatDateTime(value, lang, timeZone);
   const local = localMinute.exec(value);
   if (local) return `${Number(local[2])}/${Number(local[3])} ${local[4]}:${local[5]}`;
-  if (platformNames[value.toLowerCase()]) return platformNames[value.toLowerCase()]!;
+  if (Object.hasOwn(platformNames, value.toLowerCase())) return platformName(value, lang);
   if (enumText[value]) return pick(enumText[value], lang);
   return value;
 }

@@ -26,6 +26,9 @@ test('capability requests omit cookies and send proof only via the authorization
   assert.deepEqual(result, { id: 'share_1' });
 });
 
-test('both portal locales provide the same string keys', () => {
-  assert.deepEqual(Object.keys(messages.en).sort(), Object.keys(messages['zh-Hant']).sort());
+test('all portal locales provide the same string keys', () => {
+  assert.deepEqual(Object.keys(messages).sort(), ['en', 'zh-Hans', 'zh-Hant']);
+  for (const catalog of Object.values(messages)) {
+    assert.deepEqual(Object.keys(catalog).sort(), Object.keys(messages.en).sort());
+  }
 });

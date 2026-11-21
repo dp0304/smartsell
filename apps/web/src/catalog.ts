@@ -28,7 +28,7 @@ export type Section = typeof sections[number];
 
 export interface Field {
   name: string;
-  label?: readonly [string, string];
+  label?: readonly [string, string, string?];
   type?: 'textarea' | 'number' | 'datetime-local' | 'date' | 'url' | 'email' | 'checkbox' | 'select' | 'json' | 'csv' | 'lines';
   optional?: boolean;
   choices?: readonly string[];
@@ -49,7 +49,7 @@ export interface Action {
   targetModule?: string;
   targetField?: string;
   tab?: string;
-  label?: readonly [string, string];
+  label?: readonly [string, string, string?];
   validate?: (body: Record<string, unknown>) => string | undefined;
 }
 export { actions } from './action-index';

@@ -14,7 +14,7 @@ export function TermsRenewal({ renewal, title }: { renewal: RecordData; title: s
   const operation = findOperation(api, 'POST', enable, 'account');
   const account = stringValue(renewal.social_account_id);
   return <div>{title}{operation && account && <>
-    <button type="button" aria-expanded={open} onClick={() => show(!open)}>{open ? t('cancel') : label(['檢視新條款', 'Review updated terms'])}</button>
+    <button type="button" aria-expanded={open} onClick={() => show(!open)}>{open ? t('cancel') : label(['檢視新條款', 'Review updated terms', '查看新条款'])}</button>
     {open && <RenewalForm account={account} limits={asRecord(renewal.limits)} />}
   </>}</div>;
 }
@@ -31,7 +31,7 @@ function RenewalForm({ account, limits }: { account: string; limits: RecordData 
   const mutation = useMutation({ mutationFn: () => callOperation(api, operation!, [account], {
     body: { ...limits, terms_version: version, risk_acknowledged: true },
   }), onSuccess: () => client.invalidateQueries({ queryKey: wsKey(api.ws) }) });
-  if (!version || !text || !operation) return <><ReadState read={read} />{read.data && <p>{label(['目前無法取得可確認的條款', 'There are no terms available to confirm'])}</p>}</>;
+  if (!version || !text || !operation) return <><ReadState read={read} />{read.data && <p>{label(['目前無法取得可確認的條款', 'There are no terms available to confirm', '目前无法取得可确认的条款'])}</p>}</>;
   const configured = [limits.max_per_hour, limits.min_interval_seconds, limits.daily_cap].every(Number.isInteger) && Array.isArray(limits.allowed_windows) && limits.allowed_windows.length > 0;
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,9 +39,9 @@ function RenewalForm({ account, limits }: { account: string; limits: RecordData 
   }
   return <form key={version} className="fields" onSubmit={submit}>
     <p>{version} · {text}</p>
-    {configured ? <><label><input name="acknowledge" type="checkbox" required /> {label(['我已閱讀條款並確認自動模式風險', 'I have read the terms and acknowledge the risks of automatic mode'])}</label>
-      <button type="submit" disabled={mutation.isPending}>{label(['確認條款並重新開啟', 'Confirm terms and re-enable'])}</button></> :
-      <p>{label(['重新開啟前須先設定自動模式的時段與限額', 'Configure automatic mode limits and time windows before re-enabling'])}</p>}
+    {configured ? <><label><input name="acknowledge" type="checkbox" required /> {label(['我已閱讀條款並確認自動模式風險', 'I have read the terms and acknowledge the risks of automatic mode', '我已阅读条款并确认自动模式风险'])}</label>
+      <button type="submit" disabled={mutation.isPending}>{label(['確認條款並重新開啟', 'Confirm terms and re-enable', '确认条款并重新打开'])}</button></> :
+      <p>{label(['重新開啟前須先設定自動模式的時段與限額', 'Configure automatic mode limits and time windows before re-enabling', '重新打开前须先设置自动模式的时段与限额'])}</p>}
     {mutation.isError && <ProblemNotice error={mutation.error} />}
   </form>;
 }

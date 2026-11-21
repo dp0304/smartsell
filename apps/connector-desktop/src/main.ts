@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, protocol, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, protocol, safeStorage, session, shell, type MenuItemConstructorOptions } from 'electron';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, readFile } from 'node:fs/promises';
@@ -9,6 +9,9 @@ import { catalogExtensions, readCatalogFile } from './catalog-file.ts';
 import { serviceSettings, workbenchOrigin } from './service-settings.ts';
 import { desktopUpdates, type UpdateConfig } from './updates.ts';
 import { deviceVault } from './vault.ts';
+import { DesktopError, displayError } from './errors.ts';
+import { languageSettings } from './language-settings.ts';
+import { defaultLanguage, negotiateLanguage, translate, type LanguagePreference } from '../ui/i18n.mjs';
 
 const page = 'connector://desktop/index.html';
 const csp = "default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; object-src 'none'";
@@ -20,24 +23,26 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'connector', privileges: { stand
 let win: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let quit = false;
+function systemLanguages() { return [...app.getPreferredSystemLanguages(), app.getLocale()]; }
+let startupLanguage = defaultLanguage;
 
 async function hashMedia(path: string, signal: AbortSignal) {
-  if (!mediaExtensions.includes(extname(path).slice(1).toLowerCase())) throw new Error('请选择受支持的图片或视频。');
+  if (!mediaExtensions.includes(extname(path).slice(1).toLowerCase())) throw DesktopError.create('请选择受支持的图片或视频。');
   const file = await open(path, constants.O_RDONLY | constants.O_NONBLOCK);
   try {
     const info = await file.stat();
-    if (!info.isFile() || info.size < 1 || info.size > 512 * 1024 * 1024) throw new Error('请选择 512 MiB 以内的普通媒体文件。');
+    if (!info.isFile() || info.size < 1 || info.size > 512 * 1024 * 1024) throw DesktopError.create('请选择 512 MiB 以内的普通媒体文件。');
     const hash = createHash('sha256');
     const buffer = Buffer.alloc(256 * 1024);
     for (let offset = 0; offset < info.size;) {
       signal.throwIfAborted();
       const { bytesRead } = await file.read(buffer, 0, Math.min(buffer.length, info.size - offset), offset);
-      if (!bytesRead) throw new Error('文件在读取期间发生变化。');
+      if (!bytesRead) throw DesktopError.create('文件在读取期间发生变化。');
       offset += bytesRead;
       hash.update(buffer.subarray(0, bytesRead));
     }
     const after = await file.stat();
-    if (after.size !== info.size || after.mtimeMs !== info.mtimeMs) throw new Error('文件在读取期间发生变化。');
+    if (after.size !== info.size || after.mtimeMs !== info.mtimeMs) throw DesktopError.create('文件在读取期间发生变化。');
     return { name: basename(path), hash: hash.digest('hex') };
   } finally { await file.close(); }
 }
@@ -47,7 +52,22 @@ function show() { if (win?.isMinimized()) win.restore(); win?.show(); win?.focus
 async function run() {
   const platform = process.platform;
   if (platform !== 'darwin' && platform !== 'win32') { app.quit(); return; }
+  startupLanguage = negotiateLanguage('system', systemLanguages());
   const userData = app.getPath('userData');
+  const localeSettings = languageSettings(join(userData, 'language.txt'));
+  let languagePreference = localeSettings.load();
+  let browserLanguages: string[] = [];
+  const resolveLanguage = (preference: LanguagePreference) => negotiateLanguage(preference,
+    [...app.getPreferredSystemLanguages(), ...browserLanguages, app.getLocale()]);
+  let language = startupLanguage = resolveLanguage(languagePreference);
+  const t = (key: string) => translate(language, key);
+  function refreshLanguage() {
+    const next = resolveLanguage(languagePreference);
+    if (language !== next) {
+      language = next;
+      updateMenus();
+    }
+  }
   const defaultOrigin = httpsOrigin(RELEASE.api);
   const defaultWorkbench = workbenchOrigin(httpsOrigin(RELEASE.workbench));
   const settings = serviceSettings(join(userData, 'service-origin.txt'));
@@ -58,22 +78,24 @@ async function run() {
     platform, version: app.getVersion(), vault: deviceVault(join(userData, 'pairing.enc'), safeStorage, platform),
     openExternal: url => shell.openExternal(url),
     async pickCatalog(signal) {
-      const selection = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: '商品导出表', extensions: catalogExtensions }] });
+      const selection = await dialog.showOpenDialog(win!, { title: t('选择商品导出表'), buttonLabel: t('打开'),
+        properties: ['openFile'], filters: [{ name: t('商品导出表'), extensions: catalogExtensions }] });
       signal.throwIfAborted();
       if (!selection.canceled && selection.filePaths.length === 1) {
         try { return await readCatalogFile(selection.filePaths[0], signal); }
         catch (error) {
           signal.throwIfAborted();
-          if (error instanceof Error && 'code' in error) throw new Error('无法读取选中的商品导出表。请检查文件权限后重试。');
+          if (error instanceof Error && 'code' in error) throw DesktopError.create('无法读取选中的商品导出表。请检查文件权限后重试。');
           throw error;
         }
       }
     },
     async pickMedia(signal) {
-      const selection = await dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], filters: [{ name: '图片与视频', extensions: mediaExtensions }] });
+      const selection = await dialog.showOpenDialog(win!, { title: t('选取本机媒体'), buttonLabel: t('打开'),
+        properties: ['openFile', 'multiSelections'], filters: [{ name: t('图片与视频'), extensions: mediaExtensions }] });
       signal.throwIfAborted();
       if (selection.canceled) return;
-      if (selection.filePaths.length > 20) throw new Error('一次最多选取 20 个媒体文件。');
+      if (selection.filePaths.length > 20) throw DesktopError.create('一次最多选取 20 个媒体文件。');
       const media = [];
       for (const path of selection.filePaths) media.push(await hashMedia(path, signal));
       return media;
@@ -96,7 +118,7 @@ async function run() {
     return new Response(Uint8Array.from(bytes), { headers: { 'Content-Type': mime, 'Content-Security-Policy': csp, 'X-Content-Type-Options': 'nosniff' } });
   });
   win = new BrowserWindow({
-    title: 'SmartSell Connector', width: 840, height: 760, minWidth: 640, minHeight: 520, backgroundColor: '#f4f3ef', show: false,
+    title: t('SmartSell 桌面连接器'), width: 840, height: 760, minWidth: 640, minHeight: 520, backgroundColor: '#f4f3ef', show: false,
     webPreferences: { session: isolated, preload: join(__dirname, 'preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false,
       webSecurity: true, webviewTag: false, devTools: false, spellcheck: false, navigateOnDragDrop: false },
   });
@@ -110,21 +132,29 @@ async function run() {
     return origin === defaultOrigin && defaultWorkbench ? defaultWorkbench : workbenchOrigin(origin);
   }
   function state() {
-    const snapshot = controller.snapshot();
-    return { ...snapshot, updates: updates.snapshot(), workbench: workbench(snapshot.origin, snapshot.serviceMatches) };
+    const snapshot = controller.snapshot(language);
+    return { ...snapshot, language, languagePreference, updates: updates.snapshot(language), workbench: workbench(snapshot.origin, snapshot.serviceMatches) };
   }
   function register(name: string, action: (body: unknown) => unknown) {
     ipcMain.handle(`connector:${name}`, async (event, body) => {
       const frame = event.senderFrame;
-      if (!win || event.sender !== win.webContents || !frame || frame.parent || frame.url !== page) return { error: '请求来源无效。' };
+      if (!win || event.sender !== win.webContents || !frame || frame.parent || frame.url !== page) return { error: t('请求来源无效。') };
       try { await action(body); return { state: state() }; }
       catch (error) {
-        const text = error instanceof Error && /[㐀-鿿]/.test(error.message) ? error.message : '操作失败。请检查输入、服务状态或任务租约。';
-        return { error: text, state: state() };
+        return { error: displayError(language, name, error), state: state() };
       }
     });
   }
-  register('state', () => {});
+  register('state', body => {
+    if (Array.isArray(body)) {
+      browserLanguages = body.slice(0, 32).filter((tag): tag is string => typeof tag === 'string' && tag.length <= 64);
+      refreshLanguage();
+    }
+  });
+  register('set-language', preference => {
+    languagePreference = localeSettings.save(preference);
+    refreshLanguage();
+  });
   register('set-origin', origin => controller.setOrigin(origin));
   register('catalog-claim', () => controller.claimCatalog());
   register('catalog-portal', () => controller.openCatalogPortal());
@@ -135,8 +165,8 @@ async function run() {
   register('stop', () => controller.stop());
   register('disconnect', () => controller.disconnect());
   register('forget', async () => {
-    const { response } = await dialog.showMessageBox(win!, { type: 'warning', buttons: ['取消', '注销本机配对'], defaultId: 0, cancelId: 0,
-      message: '删除本机配对密钥？', detail: '请先回填当前任务。服务端设备仍需在工作台撤销。' });
+    const { response } = await dialog.showMessageBox(win!, { type: 'warning', buttons: [t('取消'), t('注销本机配对')], defaultId: 0, cancelId: 0,
+      message: t('删除本机配对密钥？'), detail: t('请先回填当前任务。服务端设备仍需在工作台撤销。') });
     if (response === 1) controller.forget();
   });
   register('claim', () => controller.claim());
@@ -165,13 +195,17 @@ async function run() {
   const icon = nativeImage.createFromBitmap(trayPixels(), { width: 18, height: 18 });
   icon.setTemplateImage(true);
   tray = new Tray(icon);
-  tray.setToolTip('SmartSell Connector');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '显示连接器', click: show },
-    { label: '紧急停止', click: () => { controller.stop(); show(); } },
-    { label: '断开', click: () => { controller.disconnect(); show(); } },
-    { label: '退出', click: () => app.quit() },
-  ]));
+  function updateMenus() {
+    tray?.setToolTip(t('SmartSell 桌面连接器'));
+    tray?.setContextMenu(Menu.buildFromTemplate([
+      { label: t('显示连接器'), click: show },
+      { label: t('紧急停止'), click: () => { controller.stop(); show(); } },
+      { label: t('断开'), click: () => { controller.disconnect(); show(); } },
+      { label: t('退出'), click: () => app.quit() },
+    ]));
+    Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenu(platform, t)));
+  }
+  updateMenus();
   tray.on('click', show);
   const heartbeat = setInterval(() => { void controller.tick(); }, 15_000);
   app.on('before-quit', () => { quit = true; clearInterval(heartbeat); controller.stop(); tray?.destroy(); tray = undefined; });
@@ -179,6 +213,32 @@ async function run() {
   app.on('second-instance', show);
   await win.loadURL(page);
   show();
+}
+
+function applicationMenu(platform: NodeJS.Platform, t: (key: string) => string): MenuItemConstructorOptions[] {
+  const mac = platform === 'darwin';
+  const item = (role: NonNullable<MenuItemConstructorOptions['role']>, label: string): MenuItemConstructorOptions => ({ role, label: t(label) });
+  const separator = { type: 'separator' } as const;
+  return [
+    mac ? { label: t('SmartSell 桌面连接器'), submenu: [
+      item('about', '关于连接器'), separator, item('services', '服务'), separator,
+      item('hide', '隐藏连接器'), item('hideOthers', '隐藏其他应用'), item('unhide', '显示所有应用'), separator, item('quit', '退出'),
+    ] } : { label: t('文件'), submenu: [item('quit', '退出')] },
+    { label: t('编辑'), submenu: [
+      item('undo', '撤销'), item('redo', '重做'), separator, item('cut', '剪切'), item('copy', '复制'), item('paste', '粘贴'),
+      ...(mac ? [item('pasteAndMatchStyle', '粘贴并匹配样式')] : []), item('delete', '删除'), item('selectAll', '全选'),
+      ...(mac ? [separator, { label: t('朗读'), submenu: [item('startSpeaking', '开始朗读'), item('stopSpeaking', '停止朗读')] }] : []),
+    ] },
+    { label: t('视图'), submenu: [
+      item('reload', '重新加载'), item('forceReload', '强制重新加载'), separator,
+      item('resetZoom', '实际大小'), item('zoomIn', '放大'), item('zoomOut', '缩小'), separator, item('togglefullscreen', '切换全屏'),
+    ] },
+    { label: t('窗口'), role: 'windowMenu', submenu: [
+      item('minimize', '最小化'), item('zoom', '缩放'),
+      ...(mac ? [separator, item('front', '全部置于前台')] : [item('close', '关闭')]),
+    ] },
+    { label: t('帮助'), role: 'help', submenu: [] },
+  ];
 }
 
 function trayPixels() {
@@ -193,6 +253,6 @@ function trayPixels() {
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else void app.whenReady().then(run).catch(() => {
-  dialog.showErrorBox('SmartSell Connector', '无法启动连接器。请检查部署配置。');
+  dialog.showErrorBox(translate(startupLanguage, 'SmartSell 桌面连接器'), translate(startupLanguage, '无法启动连接器。请检查部署配置。'));
   app.quit();
 });

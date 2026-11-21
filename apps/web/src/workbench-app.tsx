@@ -1,3 +1,4 @@
+import { languages, setLanguage } from './locale';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Boxes, Globe2, LogOut, Monitor, Search, Wrench } from 'lucide-react';
@@ -5,7 +6,6 @@ import { Link, Navigate, NavLink, Outlet, Route, Routes, useOutletContext, useHr
 import { api, ApiError, type Command, type Entity, type Session } from './workbench-api';
 import { sections } from './catalog';
 import { CommandPanel, useCommands } from './command-panel';
-import i18n from './workbench-i18n';
 import { Dialog, Empty, Failure, useFormat } from './workbench-ui';
 import { ModulePage } from './workbench-views';
 import { Overview } from './overview-page';
@@ -19,7 +19,7 @@ const sessionKey = ['workbench-session'];
 const base = (id: string) => `/w/${encodeURIComponent(id)}`;
 function Language() {
   const { locale, t } = useFormat();
-  return <label className="wb-language"><Globe2 size={16} /><select aria-label={t('ui.language')} value={locale} onChange={event => void i18n.changeLanguage(event.target.value)}><option value="zh-Hant">繁體中文</option><option value="en">English</option></select></label>;
+  return <label className="wb-language"><Globe2 size={16} /><select aria-label={t('ui.language')} value={locale} onChange={event => setLanguage(event.target.value)}>{languages.map(({ code, name }) => <option key={code} value={code} lang={code}>{name}</option>)}</select></label>;
 }
 function Brand() {
   return <div className="wb-brand"><span><Boxes size={22} /></span><strong>SmartSell</strong></div>;
@@ -105,7 +105,7 @@ export function Workbench() {
   const next = returnTo?.startsWith('/w/') ? returnTo : undefined;
   const ws = session.data?.workspaces[0]?.id;
   const home = ws ? `${base(ws)}/home` : '/w/-/home';
-  return <><div className="wb-narrow" role="status"><Monitor size={16} />{t('ui.desktop')}</div>{session.isPending ? <div className="wb-boot" role="status">{t('ui.loading')}</div> : session.isError ? <div className="wb-boot"><Failure error={session.error} retry={() => void session.refetch()} /><Link to="/login">{t('ui.signin')}</Link></div> : <Routes>
+  return <><div className="wb-narrow" role="status"><Monitor size={16} />{t('ui.desktop')}</div>{session.isPending ? <div className="wb-boot" role="status">{t('ui.loading')}</div> : session.isError ? <div className="wb-boot"><Failure error={session.error} retry={() => void session.refetch()} /><Link to="/login">{t('ui.signin')}</Link><Language /></div> : <Routes>
     <Route path="/login" element={session.data ? <Navigate to={next ?? home} replace /> : <Authentication setupPath={false} registerToMain={!next} />} />
     <Route path="/setup" element={session.data ? <Navigate to={next ?? home} replace /> : <Authentication setupPath registerToMain={!next} />} />
     {session.data ? <><Route path="/w/:wid" element={<Shell session={session.data} />}><Route index element={<Navigate to="home" replace />} /><Route path="home/*" element={<OverviewRoute />} />{sections.filter(section => 'module' in section).map(section => <Route key={section.path} path={`${section.path}/*`} element={<ModuleRoute section={section} />} />)}<Route path="settings/members/*" element={<ModuleRoute section={sections.find(section => section.path === 'access')!} />} /><Route path="posts/*" element={<ModuleRoute section={sections.find(section => section.path === 'execution')!} />} /><Route path="*" element={<Navigate to="home" replace />} /></Route><Route path="/admin/*" element={<AdminRoute session={session.data} />} /><Route path="*" element={<Navigate to={home} replace />} /></> : <Route path="*" element={<Navigate to={`/login${location.pathname.startsWith('/w/') ? `?next=${encodeURIComponent(location.pathname + location.search + location.hash)}` : ''}`} replace />} />}
