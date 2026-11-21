@@ -24,6 +24,10 @@ jobs:
         id: install
         run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - run: pnpm verify
       - name: Validate Compose and pull the pinned PostgreSQL image
         id: postgres
