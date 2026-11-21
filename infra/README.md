@@ -1,6 +1,6 @@
 # SmartSell deployment
 
-This runbook uses a single host with Node.js 24, pnpm 10.11.0, Docker Compose v2, and a TLS reverse proxy. The API and PostgreSQL publish to host loopback. The reverse proxy serves the static Web build and is the public listener. `infra/compose.yaml` provisions PostgreSQL with `infra/postgres/01-roles.sh`. The optional `server` profile runs the workspace migrations and API in containers.
+This runbook uses a single host with Node.js 24, pnpm 10.11.0, Docker Compose v2, and a TLS reverse proxy. The API and PostgreSQL publish to host loopback. The reverse proxy serves the static Web build and is the public listener. `infra/compose.yaml` provisions PostgreSQL with `infra/postgres/01-roles.sh`. The optional `server` profile runs the workspace migrations, API and Web service in containers.
 
 ## Build and provision PostgreSQL 17
 
@@ -52,10 +52,10 @@ Build with `pnpm build` and expose the same `apps/web/dist/` used by `pnpm previ
 
 ## Run the API in Compose
 
-Instead of launching the API on the host, export the three database passwords as hex strings and export `PUBLIC_ORIGIN`, `APP_SECRET`, and the optional first-run `SETUP_TOKEN`. The profile uses the hex passwords directly in its internal connection URLs. Build the image and start all services from the repository root.
+To run the API and Web service in Compose, export `POSTGRES_PASSWORD`, `SMARTSELL_MIGRATION_PASSWORD` and `SMARTSELL_RUNTIME_PASSWORD` as separate hex strings. Also export `SMARTSELL_BACKGROUND_PASSWORD` for the default `ROLE=all` deployment. The profile uses the hex passwords directly in its internal connection URLs. Set `PUBLIC_ORIGIN`, `APP_SECRET` and the first-run `SETUP_TOKEN`. Set `PORTAL_ORIGIN` if you use the portal. From the repository root, build the images and wait for the services to become healthy.
 
 ```sh
-docker compose --project-name smartsell -f infra/compose.yaml --profile server up --detach --build
+docker compose --project-name smartsell -f infra/compose.yaml --profile server up --detach --build --wait
 curl --fail --show-error http://127.0.0.1:3401/readyz
 ```
 

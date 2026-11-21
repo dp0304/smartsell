@@ -12,7 +12,26 @@ import { stdin, stdout } from 'node:process';
 import { createFixture, FixturePermitClient } from './fixture.ts';
 import { ConnectorRun } from './workflow.ts';
 
-const usage = `Usage: connector fixture <browser|android|ios|tiktok> <assist|auto>
+const terminalCopy = {
+  en: {
+    usage: 'Usage',
+    help: '',
+    failed: 'Connector operation could not complete. For a signed gateway session, check the attempt in AC/EX before retrying.',
+  },
+  'zh-Hans': {
+    usage: '用法',
+    help: '\n\nfixture 和 replay 运行离线演示。check 验证本地交接。keygen 生成密钥，pair 配对桌面设备，identity 和 phone 核验设备身份，run 处理一次人工交接。',
+    failed: '连接器操作未能完成。如果使用的是签名网关会话，请先在 AC/EX 中检查该次尝试，再重试。',
+  },
+  'zh-Hant': {
+    usage: '用法',
+    help: '\n\nfixture 和 replay 執行離線示範。check 驗證本機交接。keygen 產生金鑰，pair 配對桌面裝置，identity 和 phone 驗證裝置身分，run 處理一次人工交接。',
+    failed: '連接器操作未能完成。如果使用的是簽章閘道工作階段，請先在 AC/EX 中檢查該次嘗試，再重試。',
+  },
+};
+const language = process.env.SMARTSELL_CLI_LANGUAGE;
+const copy = terminalCopy[language === 'zh-Hans' || language === 'zh-Hant' ? language : 'en'];
+const usage = `${copy.usage}: connector fixture <browser|android|ios|tiktok> <assist|auto>
        connector replay <browser|android|ios|tiktok>
        connector check <trusted-local-context.json> <signed-lease.txt>
        connector keygen <private-key.pem>
@@ -204,7 +223,7 @@ async function main(args: string[]): Promise<number> {
   if (args[0] === 'replay') return replay(args);
   if (['keygen', 'pair', 'phone', 'identity', 'run'].includes(args[0])) return gateway(args);
   if (args.length === 1 && args[0] === '--help') {
-    console.log(usage);
+    console.log(usage + copy.help);
     return 0;
   }
   if (args.length !== 3 || args[0] !== 'check') {
@@ -232,6 +251,6 @@ async function main(args: string[]): Promise<number> {
 try {
   process.exitCode = await main(process.argv.slice(2));
 } catch {
-  console.error('Connector operation could not complete. For a signed gateway session, check the attempt in AC/EX before retrying.');
+  console.error(copy.failed);
   process.exitCode = 1;
 }

@@ -10,6 +10,8 @@ SmartSell 是品牌團隊的社群電商營運工作區。從一則貼文，可�
 
 ![從活動需求、草稿與人工審核，到登記發布成效](docs/manual/assets/workflow.webp)
 
+![光研示範工作區的商品看板，呈現各市場的價格與庫存異常](docs/manual/assets/zh-Hant-products.png)
+
 ## 從第一個推廣計劃開始
 
 1. 登記品牌自有的社群帳號，確認店鋪與市場。匯入商品規格後，在「商品」查看目標市場的價格與庫存紀錄。
@@ -55,7 +57,18 @@ NODE_ENV=production pnpm start
 
 在另一個終端執行 `curl --fail --show-error http://127.0.0.1:3401/readyz` 確認就緒。由 HTTPS 站台提供 `apps/web/dist`，依指南將 `/api`、`/mcp`、OAuth 探索與轉址路徑交給 API，網頁路徑則使用單頁應用程式的回退規則。透過 HTTPS 建立第一位擁有者後，移除 `SETUP_TOKEN` 並重新啟動 API。請一併備份 PostgreSQL 和私有媒體。
 
-**容器映像的已知限制。** 專案也提供 Compose `server` 設定。本次驗證時，映像內的試算表報告模組無法載入 `yazl`，API 未能就緒。上述指令使用主機已安裝的依賴。
+### 使用 Compose 部署完整服務
+
+依照 [Compose 部署指南](infra/README.md#run-the-api-in-compose)設定四個資料庫密碼、`PUBLIC_ORIGIN`、`APP_SECRET` 與首次設定用的 `SETUP_TOKEN`。若要啟用入口網站，也請設定 `PORTAL_ORIGIN` 並依指南配置路由。
+
+```sh
+docker compose --project-name smartsell -f infra/compose.yaml --profile server up --detach --build --wait
+curl --fail --show-error http://127.0.0.1:3401/readyz
+```
+
+Compose 先執行資料庫遷移，再啟動 Commands API 與 Web 服務。反向代理將公開的 HTTPS 站台轉送至 Web 服務，預設使用回送位址的 8080 連接埠。完成首次設定後，移除 `SETUP_TOKEN` 並重建 `server` 容器。請一併備份資料庫與媒體磁碟區。
+
+連接器命令列與快照指令碼支援透過 `SMARTSELL_CLI_LANGUAGE` 設定說明和部分終端機訊息的語言，可選 `en`、`zh-Hans` 或 `zh-Hant`。例如，執行 `SMARTSELL_CLI_LANGUAGE=zh-Hant pnpm --filter @smartsell/connector start --help` 或 `SMARTSELL_CLI_LANGUAGE=zh-Hant bash infra/ops-snapshot.sh --help`。
 
 ## 延伸閱讀
 

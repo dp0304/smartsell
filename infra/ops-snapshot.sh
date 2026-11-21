@@ -3,8 +3,19 @@ set -euo pipefail
 umask 077
 cd -- "$(dirname -- "$0")/.."
 
+usage() {
+  local label=Usage
+  case ${SMARTSELL_CLI_LANGUAGE:-en} in
+    zh-Hans|zh-Hant) label=用法 ;;
+  esac
+  printf '%s: %s [backup|restore] smartsell-PROJECT ABSOLUTE_ENV_FILE ABSOLUTE_SNAPSHOT_DIR\n' "$label" "$0"
+}
+if [[ $# == 1 && $1 == --help ]]; then
+  usage
+  exit 0
+fi
 if [[ $# != 4 || ! $2 =~ ^smartsell-[a-z0-9][a-z0-9-]*$ || $3 != /* || $4 != /* ]]; then
-  printf 'Usage: %s [backup|restore] smartsell-PROJECT ABSOLUTE_ENV_FILE ABSOLUTE_SNAPSHOT_DIR\n' "$0" >&2
+  usage >&2
   exit 2
 fi
 mode=$1 project=$2 env_file=$3 snapshot=$4
@@ -67,7 +78,11 @@ ON CONFLICT (tenant_id, workspace_id, module, kind, id) DO UPDATE
 SET data = excluded.data, version = ss.entities.version + 1, updated_at = now();
 COMMIT;
 SQL
-    printf 'Target snapshot restored with workspace safe mode enabled. Start via compose.recovery.yaml.\n'
+    case ${SMARTSELL_CLI_LANGUAGE:-en} in
+      zh-Hans) printf '目标快照已恢复，工作区安全模式已启用。请通过 compose.recovery.yaml 启动。\n' ;;
+      zh-Hant) printf '目標快照已還原，工作區安全模式已啟用。請透過 compose.recovery.yaml 啟動。\n' ;;
+      *) printf 'Target snapshot restored with workspace safe mode enabled. Start via compose.recovery.yaml.\n' ;;
+    esac
     ;;
   *) exit 2 ;;
 esac

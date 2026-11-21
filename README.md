@@ -10,6 +10,8 @@ SmartSell is a social commerce workspace for brand teams. Trace a post from the 
 
 ![From a campaign brief through drafting and human approval to recorded results](docs/manual/assets/workflow.webp)
 
+![Products dashboard with market prices and stock exceptions for the Glow Lab demo](docs/manual/assets/en-products.png)
+
 ## A first campaign
 
 1. Register the brand's social account and identify the store and market. Import product variants and inspect the price and stock observations for the market you intend to promote.
@@ -55,7 +57,18 @@ NODE_ENV=production pnpm start
 
 In a second terminal, check `curl --fail --show-error http://127.0.0.1:3401/readyz`. Serve `apps/web/dist` at the public HTTPS origin. Follow the runbook's proxy rules for `/api`, `/mcp`, OAuth discovery and redirects, and use the SPA fallback for web routes. Create the first owner over HTTPS, remove `SETUP_TOKEN` and restart the API. Back up PostgreSQL and private media together.
 
-**Container image limitation.** The repository also defines a Compose `server` profile. During release verification the image failed to load `yazl` from the spreadsheet-report module and the API stayed unhealthy. The commands above use the host's installed dependencies.
+### Deploy the full stack with Compose
+
+Set the four database passwords, `PUBLIC_ORIGIN`, `APP_SECRET` and the first-run `SETUP_TOKEN` as described in the [Compose runbook](infra/README.md#run-the-api-in-compose). For a portal, also set `PORTAL_ORIGIN` and follow the runbook's routing instructions.
+
+```sh
+docker compose --project-name smartsell -f infra/compose.yaml --profile server up --detach --build --wait
+curl --fail --show-error http://127.0.0.1:3401/readyz
+```
+
+Compose runs migrations before starting Commands and the Web service. Route the public HTTPS origin to the Web service on loopback port 8080 by default. After first setup, remove `SETUP_TOKEN` and recreate `server`. Back up the database and media volumes together.
+
+The connector CLI and snapshot script accept `SMARTSELL_CLI_LANGUAGE=en`, `zh-Hans` or `zh-Hant` for help and selected terminal messages. For example, run `SMARTSELL_CLI_LANGUAGE=zh-Hans pnpm --filter @smartsell/connector start --help` or `SMARTSELL_CLI_LANGUAGE=zh-Hans bash infra/ops-snapshot.sh --help`.
 
 ## Further reading
 

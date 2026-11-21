@@ -4,6 +4,8 @@
 
 Use this walkthrough to take one market-specific promotion from a catalog observation to a reviewed post and a daily report. The screenshots show **Glow Lab 光研**, a synthetic brand created by `pnpm seed:demo`. Its product names and campaign copy stay in their original language when you switch interface languages.
 
+On the sign-in page, use **Interface language** to switch among English, Simplified Chinese and Traditional Chinese. In the signed-in dashboard, use **Language** in the top bar. The dashboard and advanced workbench share the browser’s saved preference.
+
 ## 1. Open the workspace and connect your agent
 
 Sign in at the address provided by your administrator. For a disposable workspace on your computer, follow the [local setup and demo instructions](../../README.md). On the dashboard (`/app/:ws`), start with **Get started**. An owner or administrator can set up the main agent, a desktop worker, social accounts and stores. You can return to Overview and finish setup later.
