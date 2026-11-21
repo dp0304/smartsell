@@ -17,3 +17,5 @@ SmartSell 是一个支持自部署的社群电商运营工作台。
 将电子表格报告运行时使用的 `yazl` 移到服务器生产依赖。用独立的 Compose 项目、全新 PostgreSQL 数据卷和回环 TLS 代理验证了 Commands 部署及 Operations 叠加配置。
 
 连接器与快照脚本支持通过 `SMARTSELL_CLI_LANGUAGE` 切换帮助和部分操作提示。连接器 JSON 输出、退出状态及底层诊断保留原样。
+
+桌面连接器在复制界面文件前创建 `dist/ui`，使没有构建缓存的全新检出也能完成构建。
