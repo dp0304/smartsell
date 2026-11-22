@@ -18,6 +18,14 @@ SmartSell is a social commerce workspace for brand teams. Trace a post from the 
 2. Give the agent a campaign brief with a goal, timezone, dates and products. It can draft platform variants, commit revisions and submit scheduled posts for review. The advanced workbench also supports manual entry.
 3. Review the target account, revision and timing in **Decisions**. After publication, record the platform post and import its daily metrics. **Social** shows which periods have observations.
 
+## Manage social publishing for one product
+
+Organize each channel’s copy and media versions by product and target market. Choose the publishing account and time zone for each post, then send the selected version and schedule to an operator for approval.
+
+Douyin and Xiaohongshu videos can go through the manual handoff workflow for review. After approval, the assigned operator checks the account and approved version in the platform’s creator dashboard, publishes the video, and records its HTTPS permalink and platform post ID, if available. Official integrations for platforms such as Facebook, Instagram and YouTube can submit posts when enabled in the deployment, provided the account is authorized and the content format is supported.
+
+If a platform accepts or schedules a post, check that the post is live on the platform before marking it as published. If a disconnection leaves the outcome unknown, check the platform against the original task and retry only after confirming the original submission did not go live and can no longer publish. See [publishing execution and verification](apps/server/src/modules/execution/README.md).
+
 ## Try it locally
 
 From the repository root use Node.js 24 and pnpm 10.11.0. With no production database settings, local development uses SQLite at `.local/smartsell.sqlite`.
