@@ -1,0 +1,127 @@
+{
+  "at": "2026-11-21T16:24:44.738Z",
+  "nativeSummary": {
+    "01-video": {
+      "turns": [
+        {
+          "turn": 1,
+          "status": "success",
+          "reply": true
+        },
+        {
+          "turn": 2,
+          "status": "success",
+          "reply": true
+        }
+      ],
+      "calls": [
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_claim",
+        "mcp__smartsell_lab__workspace_brand_get",
+        "mcp__smartsell_lab__account_list_social_accounts",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "content_create_variant",
+        "content_autosave_variant",
+        "content_commit_revision",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__content_list",
+        "mcp__smartsell_lab__content_create_item",
+        "mcp__smartsell_lab__content_create_variant",
+        "mcp__smartsell_lab__content_create_variant",
+        "mcp__smartsell_lab__content_autosave_variant",
+        "mcp__smartsell_lab__content_commit_revision",
+        "mcp__smartsell_lab__publishing_create_target",
+        "mcp__smartsell_lab__publishing_request_approval",
+        "mcp__smartsell_lab__publishing_get_target",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_submit_result",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__publishing_get_target"
+      ]
+    },
+    "02-shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "status": "success",
+          "reply": true
+        },
+        {
+          "turn": 2,
+          "status": "success",
+          "reply": true
+        }
+      ],
+      "calls": [
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_claim",
+        "mcp__smartsell_lab__commerce_store_list",
+        "commerce.product.create",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__catalog_search",
+        "commerce_product_create",
+        "commerce_store_import",
+        "import_confirm",
+        "mcp__smartsell_lab__import_template_list",
+        "mcp__smartsell_lab__commerce_product_create",
+        "mcp__smartsell_lab__commerce_product_create",
+        "mcp__smartsell_lab__commerce_store_import",
+        "mcp__smartsell_lab__catalog_get_product",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_submit_result",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "import_list",
+        "mcp__smartsell_lab__catalog_get_product"
+      ]
+    },
+    "03-collect": {
+      "turns": [
+        {
+          "turn": 1,
+          "status": "success",
+          "reply": true
+        },
+        {
+          "turn": 2,
+          "status": "success",
+          "reply": true
+        }
+      ],
+      "calls": [
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_claim",
+        "research_board_get",
+        "research_add_item",
+        "research_board_get",
+        "mcp__smartsell_lab__agent_jobs_submit_result",
+        "research_board_get",
+        "mcp__smartsell_lab__agent_jobs_get"
+      ]
+    }
+  },
+  "jobs": {
+    "01-video": {
+      "id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+      "status": "submitted",
+      "result": {
+        "note": "棱镜桌灯 Facebook 视频已排期并送审。内容 0a692114-5bf4-41fe-baad-86ee4749ed58，变体 ba22edc7-0a53-4953-98f3-6cbe8fc99d71，首版 0ec270a7-9840-4d63-8dc3-6471bc947e53，素材版本 dfc4a53b-0ef0-466d-807e-0fa49872f32d，目标 8181bfa3-3167-4311-8cb7-f03bca32d7ef，审批 b955ba4c-de66-4ada-99c7-63923fc97ac7，预检 de bc3eb3-e489-4f37-b7ba-0e9c3edc7e07，预检项 d20cbc25-6fc1-4b97-8c75-5bc4b29febd5。回读目标 v3，排期 2026-11-21T17:23:19.668Z（Asia/Shanghai 2026-11-22 01:23:19.668），assist，awaiting_approval，审批 pending，文案及素材版本一致。预检 risk、manual，账号能力未经验证。NO_AUTHORIZED_SOCIAL_SANDBOX：账号 21ce6d3f-b4c8-4088-aa34-986986f2fdcd 仅本地测试、无远端授权；执行记录、平台帖子 ID、发布时间及验证均为空，无真实发布回执。"
+      }
+    },
+    "02-shop": {
+      "id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+      "status": "submitted",
+      "result": {
+        "note": "已建立并回读内部商品「棱镜暖光桌灯 · 内建草稿」，商品 ID ff86811b-2ab0-4264-b2d8-de3243c53289，版本 1，状态 draft，来源 manual，变体和上架记录均为空。测试店 ID 68208918-2b8b-4a8f-a2b0-a549cb57dda7，回读为 file_import / import_only，connection_id 为空。CSV 样品 PRISM-IMPORT-21 的 product_list 批次创建因当前会话未获准调用 commerce_store_import 而阻塞，未取得批次 ID，行核对、预览、确认及导入回读待完成。NO_AUTHORIZED_STORE_SANDBOX：测试店没有已授权的可写远端沙箱，远端上架未执行。"
+      }
+    },
+    "03-collect": {
+      "id": "bccfdcde-be30-488c-9786-bc3514af55da",
+      "status": "submitted",
+      "result": {
+        "note": "研究看板 b3846274-c5b0-482e-9f6e-a906e2f832a7 已写入链接条目 8cb05afb-d7df-4a6f-a15f-880ed8384274（版本 1）。通过 research_board_get 回读核对标题、标签「授权样页」、来源 http://127.0.0.1:46433/catalog/desk-lamp 和采集 JSON。商品为棱镜暖光桌灯，SKU PRISM-QA-21，price_minor 12900，币种 CNY，库存状态有货，实际采集时间 2026-11-21T16:23:19.528Z。HTTP 200、SHA-256 和授权说明均已保留。要求字段齐全。样页仅提供库存状态，具体库存数量未采集。"
+      }
+    }
+  },
+  "posts": 0
+}

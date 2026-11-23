@@ -1,0 +1,6 @@
+{
+  "02-shop": [
+    "把桌灯备到测试店：先建 SmartSell 内部商品「棱镜暖光桌灯 · 内建草稿」，再导入另一个 CSV 样品。只有已授权可写远端沙箱才上架。平台任务 9ddd532c-bd89-4aa2-aa9c-55dab1e79210。请读任务，claim，然后完成业务并调用 agent_jobs_submit_result，带最新版本与原 fencing_token；result_ref.note 写业务 ID、回读及缺口。每次写带幂等键。租约字段只传工具，不要向用户复述。\nstore_id=d44aaa57-8d4f-4ee0-941a-95594b8aa45e，只有 file_import，没有远端授权。用具名 import_create（body.template_key=product_list、body.store_id=上述店铺 ID，body.csv_text=下方 CSV）创建批次，或用同作用域的 commerce_store_import；调用 import_rows，确认无错误后用 import_confirm 本地合并，最后用 import_get 读回。注意 CSV synthetic external_product_id 只是导入来源键，不是远端商品 ID。CSV 输入如下：\nexternal_product_id,external_variant_id,title,sku,currency,price,available,market_id\nprism-import-01,prism-import-v1,棱镜桌灯 · CSV 样品,PRISM-IMPORT-21,CNY,129.00,true,5f6e5c96-1b54-4a1e-95fd-e435eb43e39c\n持久化 NO_AUTHORIZED_STORE_SANDBOX。",
+    "重新读任务和导入批次。分别说内部商品 ID、导入批次及状态、远端商品 ID／上架回执有哪些；不要再写。"
+  ]
+}

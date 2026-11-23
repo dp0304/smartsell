@@ -1,0 +1,23 @@
+{
+  "run": "2026-11-21T16-26-46.652Z",
+  "cwd": "./agent-ops-lab/scenarios",
+  "workspace": "693397a5-dc9b-4db4-94ac-95d907062156",
+  "brand": "f9b6afc3-16fd-45b5-baa9-eb07031d4847",
+  "market": "5f6e5c96-1b54-4a1e-95fd-e435eb43e39c",
+  "account": "0a96af53-e8bf-4318-a062-9b0098bade01",
+  "store": "d44aaa57-8d4f-4ee0-941a-95594b8aa45e",
+  "board": "277b6085-8cb1-4667-8512-d6b68b93119a",
+  "asset": "69e04964-4169-4445-8563-14c2436d40d2",
+  "assetVersion": "107e9b8b-b243-4051-84e3-04dfdbdc78c7",
+  "sha256": "5f77f2ddc506c6f59a6bdae13f660e741f03ad6057dfcf636cd1baa9bd1180a7",
+  "bytes": 134426,
+  "agentConnection": "01368918-cd2f-4ae9-9496-7e756907d0f2",
+  "deviceId": null,
+  "deviceReason": "HTTP MCP，未绑定 Connector 设备；本地 Chrome 仅用于读取页面。",
+  "jobs": {
+    "02-shop": {
+      "id": "9ddd532c-bd89-4aa2-aa9c-55dab1e79210",
+      "workItem": "41107897-a323-480f-86a4-8acc1ab80591"
+    }
+  }
+}

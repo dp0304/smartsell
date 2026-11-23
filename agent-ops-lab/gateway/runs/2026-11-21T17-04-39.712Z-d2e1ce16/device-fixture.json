@@ -1,0 +1,8 @@
+{
+  "deviceId": "75915cfb-01f8-443e-9cb4-15a264f4927d",
+  "pairing": "real registered public key, ephemeral synthetic client",
+  "online": false,
+  "signedHeartbeat": true,
+  "issuedRemoteAction": false,
+  "queuedTask": "3f31e865-0711-4038-8150-7818d6e326f4"
+}

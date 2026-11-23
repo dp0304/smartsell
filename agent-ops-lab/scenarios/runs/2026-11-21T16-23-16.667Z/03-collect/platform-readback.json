@@ -1,0 +1,127 @@
+{
+  "at": "2026-11-21T16:24:44.745Z",
+  "deviceId": null,
+  "job": {
+    "title": "授权公开样页采集与回读",
+    "kind": "custom",
+    "due_at": null,
+    "status": "submitted",
+    "fencing_token": "[REDACTED]",
+    "work_item_id": "c7e22700-d874-4033-88a9-b2923736f6d5",
+    "input_scope": {
+      "brand_ids": [
+        "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      ],
+      "campaign_id": null,
+      "resource_refs": [],
+      "constraints": "仅隔离测试；保持人工审核；不得发布到任何真实社媒或店铺。"
+    },
+    "expected_output": {
+      "type": "note"
+    },
+    "created_by": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+    "assignee_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+    "assignee_type": "agent_client",
+    "source_rule_run_id": null,
+    "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e",
+    "campaign_id": null,
+    "created_via": "human",
+    "id": "bccfdcde-be30-488c-9786-bc3514af55da",
+    "version": 3,
+    "created_at": "2026-11-21T16:23:19.666Z",
+    "updated_at": "2026-11-21T16:23:48.551Z",
+    "lease_owner_id": null,
+    "lease_expires_at": null,
+    "result_ref": {
+      "note": "研究看板 b3846274-c5b0-482e-9f6e-a906e2f832a7 已写入链接条目 8cb05afb-d7df-4a6f-a15f-880ed8384274（版本 1）。通过 research_board_get 回读核对标题、标签「授权样页」、来源 http://127.0.0.1:46433/catalog/desk-lamp 和采集 JSON。商品为棱镜暖光桌灯，SKU PRISM-QA-21，price_minor 12900，币种 CNY，库存状态有货，实际采集时间 2026-11-21T16:23:19.528Z。HTTP 200、SHA-256 和授权说明均已保留。要求字段齐全。样页仅提供库存状态，具体库存数量未采集。"
+    },
+    "events": [
+      {
+        "agent_job_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "type": "created",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "occurred_at": "2026-11-21T16:23:19.666Z",
+        "created_via": "human",
+        "id": "13f39a43-8f6b-4475-9107-e2e1838a408c",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.666Z",
+        "updated_at": "2026-11-21T16:23:19.666Z"
+      },
+      {
+        "agent_job_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "type": "claimed",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:28.877Z",
+        "created_via": "agent",
+        "id": "a742ff96-b027-4843-8e24-f806410e009d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:28.877Z",
+        "updated_at": "2026-11-21T16:23:28.877Z"
+      },
+      {
+        "agent_job_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "type": "submitted",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:48.551Z",
+        "created_via": "agent",
+        "id": "7638ffdb-5d4b-433a-8c02-4ed8484fecd3",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:48.551Z",
+        "updated_at": "2026-11-21T16:23:48.551Z"
+      }
+    ]
+  },
+  "board": {
+    "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e",
+    "campaign_id": null,
+    "kind": "research",
+    "title": "授权样页采集记录",
+    "description": null,
+    "status": "active",
+    "created_via": "human",
+    "id": "b3846274-c5b0-482e-9f6e-a906e2f832a7",
+    "version": 1,
+    "created_at": "2026-11-21T16:23:19.166Z",
+    "updated_at": "2026-11-21T16:23:19.166Z",
+    "items": [
+      {
+        "board_id": "b3846274-c5b0-482e-9f6e-a906e2f832a7",
+        "item_type": "link",
+        "url": "http://127.0.0.1:46433/catalog/desk-lamp",
+        "body": "{\"source_url\":\"http://127.0.0.1:46433/catalog/desk-lamp\",\"observed_at\":\"2026-11-21T16:23:19.528Z\",\"http_status\":200,\"sha256\":\"657cf3761d365e0392b55535ba3009f7c85eaacf911db683924de1ce8633386a\",\"fields\":{\"name\":\"棱镜暖光桌灯\",\"sku\":\"PRISM-QA-21\",\"price_minor\":12900,\"currency\":\"CNY\",\"availability\":\"有货\"},\"authorization\":\"本轮自建的回环公开页面、无登录；授权读取、入库与模型处理。\"}",
+        "ref_id": null,
+        "title": "棱镜暖光桌灯",
+        "stance": null,
+        "evidence_refs": [],
+        "ai_generated": true,
+        "authorship": "agent",
+        "labels": [
+          "授权样页"
+        ],
+        "lane": null,
+        "position": 0,
+        "created_via": "agent",
+        "id": "8cb05afb-d7df-4a6f-a15f-880ed8384274",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:38.799Z",
+        "updated_at": "2026-11-21T16:23:38.799Z"
+      }
+    ]
+  },
+  "capture": {
+    "source_url": "http://127.0.0.1:46433/catalog/desk-lamp",
+    "observed_at": "2026-11-21T16:23:19.528Z",
+    "http_status": 200,
+    "sha256": "657cf3761d365e0392b55535ba3009f7c85eaacf911db683924de1ce8633386a",
+    "fields": {
+      "name": "棱镜暖光桌灯",
+      "sku": "PRISM-QA-21",
+      "price_minor": 12900,
+      "currency": "CNY",
+      "availability": "有货"
+    },
+    "authorization": "[REDACTED]"
+  }
+}

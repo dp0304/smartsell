@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "smartsell": {
+      "type": "http",
+      "url": "${SMARTSELL_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${SMARTSELL_TOKEN}"
+      }
+    }
+  }
+}

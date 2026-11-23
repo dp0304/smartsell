@@ -1,0 +1,224 @@
+{
+  "schema": 1,
+  "run": "native-offline",
+  "started_at": "2026-11-23T08:23:03.638Z",
+  "checks": [
+    {
+      "name": "server_discovery",
+      "unauthenticated_http": 401,
+      "initialize_http": 200,
+      "list_http": 200,
+      "named": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ],
+      "missing": [],
+      "workspace": "id-4",
+      "connection": "id-5"
+    },
+    {
+      "name": "no_worker",
+      "error": {
+        "code": "SOCIAL_STATUS_WORKER_UNPAIRED",
+        "message": "[redacted]"
+      }
+    },
+    {
+      "name": "read_only_permission",
+      "http": 200,
+      "outcome": {
+        "error": {
+          "code": "[redacted]"
+        }
+      },
+      "request_listed": false
+    },
+    {
+      "name": "legacy_worker",
+      "error": {
+        "code": "SOCIAL_STATUS_WORKER_UNSUPPORTED",
+        "message": "[redacted]"
+      }
+    },
+    {
+      "name": "native_configured",
+      "executable": "codex",
+      "node": "v24.21.0",
+      "empty_project": true,
+      "install": [
+        {
+          "server": "smartsell",
+          "exit": 1,
+          "signal": null,
+          "expired": false,
+          "stderr": {
+            "kind": "operation not permitted",
+            "diagnostic": [
+              "[redacted]"
+            ]
+          }
+        },
+        {
+          "server": "local_canary",
+          "exit": 1,
+          "signal": null,
+          "expired": false,
+          "stderr": {
+            "kind": "operation not permitted",
+            "diagnostic": [
+              "[redacted]"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "failure",
+      "type": "AssertionError",
+      "stage": "native_configured",
+      "detail": {
+        "kind": "unclassified"
+      },
+      "source": [
+        "accept.mjs:210:3",
+        "accept.mjs:278:15"
+      ],
+      "message": "Native MCP registration failed"
+    }
+  ],
+  "events": [],
+  "protocol": [
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 401,
+      "request_id": "id-1"
+    },
+    {
+      "route": "mcp",
+      "method": "initialize",
+      "http": 200,
+      "request_id": "id-2",
+      "worker_instructions": true
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 200,
+      "request_id": "id-3",
+      "named_tools": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-6"
+      },
+      "http": 200,
+      "request_id": "id-7",
+      "result": {
+        "error": {
+          "code": "SOCIAL_STATUS_WORKER_UNPAIRED",
+          "message": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 200,
+      "request_id": "id-8",
+      "named_tools": [
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-9"
+      },
+      "http": 200,
+      "request_id": "id-10",
+      "result": {
+        "error": {
+          "code": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-11",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]"
+      },
+      "response": {
+        "status": "online"
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-13"
+      },
+      "http": 200,
+      "request_id": "id-14",
+      "result": {
+        "error": {
+          "code": "SOCIAL_STATUS_WORKER_UNSUPPORTED",
+          "message": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-15",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]",
+        "include_bindings": true,
+        "include_browser_work": true,
+        "social_status_version": 1
+      },
+      "response": {
+        "status": "online",
+        "social_status_version": 1,
+        "bindings": {
+          "social": {},
+          "commerce": {}
+        },
+        "browser_work": {
+          "pending_identity": []
+        }
+      }
+    }
+  ],
+  "canary": {
+    "tools": [
+      "local_browser_open",
+      "local_web_search"
+    ],
+    "self_test": false,
+    "native": []
+  },
+  "model": [],
+  "outcome": "failed",
+  "finished_at": "2026-11-23T08:23:04.482Z"
+}

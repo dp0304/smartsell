@@ -1,0 +1,8 @@
+{
+  "driver": "MCP TypeScript SDK / Streamable HTTP",
+  "origin": "http://127.0.0.1:61573",
+  "workspace": "6a5a3c53-7697-4097-bfd6-0742784a78c4",
+  "credentialId": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+  "src": ".",
+  "startedAt": "2026-11-21T17:15:09.234Z"
+}

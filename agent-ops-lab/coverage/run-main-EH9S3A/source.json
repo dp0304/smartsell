@@ -1,0 +1,5 @@
+{
+  "kind": "main",
+  "path": ".",
+  "webAuditRoute": "/mcp-tool-calls"
+}

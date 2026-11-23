@@ -1,0 +1,14 @@
+Evidence directory: ./agent-ops-lab/audit/run-oFearG
+(node:7399) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"level":30,"time":1795280393172,"pid":7399,"hostname":"worker-mac.local","msg":"Server listening at http://127.0.0.1:59457"}
+{"level":30,"time":1795280393173,"pid":7399,"hostname":"worker-mac.local","modules":19,"extensions":["collaboration","enterprise-identity","mcp-agent-catalog","mcp-commands","mcp-sse","mcp-streamable","mcp-tools","mcp","media-files","platforms"],"operations":985,"msg":"Workspace routes loaded"}
+(node:7399) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+{"level":30,"time":1795280394775,"pid":7399,"hostname":"worker-mac.local","msg":"Server listening at http://127.0.0.1:59534"}
+{"level":30,"time":1795280394775,"pid":7399,"hostname":"worker-mac.local","modules":19,"extensions":["collaboration","enterprise-identity","mcp-agent-catalog","mcp-commands","mcp-sse","mcp-streamable","mcp-tools","mcp","media-files","platforms"],"operations":985,"msg":"Workspace routes loaded"}
+commands: focused=true, 96 advertised matrix tools
+{"level":30,"time":1795280406281,"pid":7399,"hostname":"worker-mac.local","msg":"Server listening at http://127.0.0.1:60719"}
+{"level":30,"time":1795280406281,"pid":7399,"hostname":"worker-mac.local","roles":["api","mcp"],"modules":19,"operations":984,"msg":"SmartSell ready"}
+{"level":30,"time":1795280408469,"pid":7399,"hostname":"worker-mac.local","msg":"Server listening at http://127.0.0.1:60848"}
+{"level":30,"time":1795280408469,"pid":7399,"hostname":"worker-mac.local","roles":["api","mcp"],"modules":19,"operations":984,"msg":"SmartSell ready"}
+operations: focused=true, 42 advertised matrix tools

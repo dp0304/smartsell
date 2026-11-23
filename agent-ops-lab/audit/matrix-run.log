@@ -1,0 +1,9 @@
+Evidence directory: ./agent-ops-lab/audit/run-Aaa2yV
+(node:97848) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"level":30,"time":1795280065972,"pid":97848,"hostname":"worker-mac.local","msg":"Server listening at http://127.0.0.1:52791"}
+{"level":30,"time":1795280065972,"pid":97848,"hostname":"worker-mac.local","modules":19,"extensions":["collaboration","enterprise-identity","mcp-agent-catalog","mcp-commands","mcp-sse","mcp-streamable","mcp-tools","mcp","media-files","platforms"],"operations":985,"msg":"Workspace routes loaded"}
+commands: focused=true, 96 advertised matrix tools
+{"level":30,"time":1795280130241,"pid":97848,"hostname":"worker-mac.local","msg":"Server listening at http://127.0.0.1:53459"}
+{"level":30,"time":1795280130241,"pid":97848,"hostname":"worker-mac.local","roles":["api","mcp"],"modules":19,"operations":984,"msg":"SmartSell ready"}
+operations: focused=true, 42 advertised matrix tools

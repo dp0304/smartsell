@@ -1,0 +1,98 @@
+{
+  "01-video": {
+    "jobId": "e5b05423-694e-473e-b825-1632df4f5bb4",
+    "workItemId": "cef3a224-9635-422e-b475-731e52ed17c4",
+    "jobStatus": "submitted",
+    "deviceId": null,
+    "platformAudit": [
+      {
+        "id": "db349ea4-ed3d-48db-a595-bada665ffcf5",
+        "type": "created",
+        "at": "2026-11-21T16:23:19.657Z"
+      },
+      {
+        "id": "0c800a26-99dc-43b1-98a9-18113da3abf2",
+        "type": "claimed",
+        "at": "2026-11-21T16:23:29.112Z"
+      },
+      {
+        "id": "03026ff6-349a-4af6-b42f-44cd7aeb8e72",
+        "type": "submitted",
+        "at": "2026-11-21T16:24:25.010Z"
+      }
+    ],
+    "targetId": "8181bfa3-3167-4311-8cb7-f03bca32d7ef",
+    "contentId": "0a692114-5bf4-41fe-baad-86ee4749ed58",
+    "revisionId": "0ec270a7-9840-4d63-8dc3-6471bc947e53",
+    "scheduledAt": "2026-11-21T17:23:19.668Z",
+    "zone": "Asia/Shanghai",
+    "state": "awaiting_approval",
+    "externalReceipt": null,
+    "block": "NO_AUTHORIZED_SOCIAL_SANDBOX"
+  },
+  "02-shop": {
+    "jobId": "0dd69b44-19dd-4dd3-9b2b-e04d30b30eac",
+    "workItemId": "51b0c325-2baa-4e12-8c87-1049f7e1ad69",
+    "jobStatus": "submitted",
+    "deviceId": null,
+    "platformAudit": [
+      {
+        "id": "e62656fc-95a9-444a-9723-de5fea17ed9d",
+        "type": "created",
+        "at": "2026-11-21T16:31:06.865Z"
+      },
+      {
+        "id": "e5abc593-fab4-4caa-add0-69e4995920be",
+        "type": "claimed",
+        "at": "2026-11-21T16:31:14.359Z"
+      },
+      {
+        "id": "b3e5d60d-dcb9-43f8-8e60-68450111a84d",
+        "type": "submitted",
+        "at": "2026-11-21T16:31:57.567Z"
+      }
+    ],
+    "internalProductId": "0d5dc23a-1809-4b08-a761-da28eb7a29d3",
+    "importedProductId": "d489d917-752b-435d-bd1c-8ee2ef4bba39",
+    "importExternalKey": "prism-import-01",
+    "importBatchId": "8cf39d86-8073-4cc7-a5c9-814f2a799999",
+    "importStatus": "merged",
+    "mergedRows": 1,
+    "remoteProductId": null,
+    "externalReceipt": null,
+    "block": "NO_AUTHORIZED_STORE_SANDBOX"
+  },
+  "03-collect": {
+    "jobId": "bccfdcde-be30-488c-9786-bc3514af55da",
+    "workItemId": "c7e22700-d874-4033-88a9-b2923736f6d5",
+    "jobStatus": "submitted",
+    "deviceId": null,
+    "platformAudit": [
+      {
+        "id": "13f39a43-8f6b-4475-9107-e2e1838a408c",
+        "type": "created",
+        "at": "2026-11-21T16:23:19.666Z"
+      },
+      {
+        "id": "a742ff96-b027-4843-8e24-f806410e009d",
+        "type": "claimed",
+        "at": "2026-11-21T16:23:28.877Z"
+      },
+      {
+        "id": "7638ffdb-5d4b-433a-8c02-4ed8484fecd3",
+        "type": "submitted",
+        "at": "2026-11-21T16:23:48.551Z"
+      }
+    ],
+    "itemId": "8cb05afb-d7df-4a6f-a15f-880ed8384274",
+    "sourceUrl": "http://127.0.0.1:46433/catalog/desk-lamp",
+    "observedAt": "2026-11-21T16:23:19.528Z",
+    "fields": {
+      "name": "棱镜暖光桌灯",
+      "sku": "PRISM-QA-21",
+      "price_minor": 12900,
+      "currency": "CNY",
+      "availability": "有货"
+    }
+  }
+}

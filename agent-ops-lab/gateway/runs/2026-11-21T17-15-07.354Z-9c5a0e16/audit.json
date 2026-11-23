@@ -1,0 +1,3637 @@
+[
+  {
+    "key": "audit/e80313e9-709c-4114-8ba6-1864ffd15fbd",
+    "row": {
+      "id": "e80313e9-709c-4114-8ba6-1864ffd15fbd",
+      "action": "workspace_brand_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "d4ec121f-4bdf-4c7e-8a60-5b6579621b05",
+      "occurred_at": "2026-11-21T17:15:09.344Z",
+      "resource_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "row/activity_event/01ee37e5-e428-43a5-9f10-dc3af87cfa45",
+    "row": {
+      "id": "01ee37e5-e428-43a5-9f10-dc3af87cfa45",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.344Z",
+      "updated_at": "2026-11-21T17:15:09.344Z",
+      "occurred_at": "2026-11-21T17:15:09.344Z",
+      "action": "workspace_brand_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "d4ec121f-4bdf-4c7e-8a60-5b6579621b05",
+      "resource_id": "e494897f-0379-44f0-9d18-b767c3309fd5",
+      "resource_type": "brand",
+      "resource_title": "Gateway desk lamp",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/2626be49-dd8f-421c-b879-f9cf83f19a04",
+    "row": {
+      "id": "2626be49-dd8f-421c-b879-f9cf83f19a04",
+      "action": "workspace_market_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "541e2a2e-ff67-4a93-834b-341b7281e542",
+      "occurred_at": "2026-11-21T17:15:09.372Z",
+      "resource_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "row/activity_event/2fe60021-9ba8-4035-8750-69d97aed4d7a",
+    "row": {
+      "id": "2fe60021-9ba8-4035-8750-69d97aed4d7a",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.372Z",
+      "updated_at": "2026-11-21T17:15:09.372Z",
+      "occurred_at": "2026-11-21T17:15:09.372Z",
+      "action": "workspace_market_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "541e2a2e-ff67-4a93-834b-341b7281e542",
+      "resource_id": "4982aa54-3b7c-4aac-9b1d-1c4628ff65f8",
+      "resource_type": "market",
+      "resource_title": "Gateway CN",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/c858cbe1-3c05-44b3-b4a4-4e05d61462ac",
+    "row": {
+      "id": "c858cbe1-3c05-44b3-b4a4-4e05d61462ac",
+      "action": "account_update_social_account",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "d67a3a32-e64c-46c7-824a-3c215370ca62",
+      "occurred_at": "2026-11-21T17:15:09.397Z",
+      "resource_id": "985e35e8-1109-47e9-a409-18a41a9beb90"
+    }
+  },
+  {
+    "key": "row/activity_event/e7efaa93-ee04-4769-a9d8-3a997f533514",
+    "row": {
+      "id": "e7efaa93-ee04-4769-a9d8-3a997f533514",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.397Z",
+      "updated_at": "2026-11-21T17:15:09.397Z",
+      "occurred_at": "2026-11-21T17:15:09.397Z",
+      "action": "account_update_social_account",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "d67a3a32-e64c-46c7-824a-3c215370ca62",
+      "resource_id": "985e35e8-1109-47e9-a409-18a41a9beb90",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/88385e13-289f-49cb-9608-23ab16680305",
+    "row": {
+      "id": "88385e13-289f-49cb-9608-23ab16680305",
+      "action": "file_begin_upload",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "aa556fc4-ae94-40f1-8a63-f9e4f4d0b1c2",
+      "occurred_at": "2026-11-21T17:15:09.516Z",
+      "resource_id": "b4a3a8f5-54dc-4ca6-a798-48326519de96"
+    }
+  },
+  {
+    "key": "row/activity_event/c76fbc9c-d267-44e5-abc3-a964f2be2f08",
+    "row": {
+      "id": "c76fbc9c-d267-44e5-abc3-a964f2be2f08",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.516Z",
+      "updated_at": "2026-11-21T17:15:09.516Z",
+      "occurred_at": "2026-11-21T17:15:09.516Z",
+      "action": "file_begin_upload",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "aa556fc4-ae94-40f1-8a63-f9e4f4d0b1c2",
+      "resource_id": "b4a3a8f5-54dc-4ca6-a798-48326519de96",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/48423556-e991-4dd4-b989-5bc31158c929",
+    "row": {
+      "id": "48423556-e991-4dd4-b989-5bc31158c929",
+      "action": "file_complete_upload",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "5930eef3-0aa4-420e-b346-045b9128c9f5",
+      "occurred_at": "2026-11-21T17:15:09.522Z",
+      "resource_id": "b4a3a8f5-54dc-4ca6-a798-48326519de96"
+    }
+  },
+  {
+    "key": "row/activity_event/505c1cfd-c21a-44b7-af38-c42ed390311a",
+    "row": {
+      "id": "505c1cfd-c21a-44b7-af38-c42ed390311a",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.522Z",
+      "updated_at": "2026-11-21T17:15:09.522Z",
+      "occurred_at": "2026-11-21T17:15:09.522Z",
+      "action": "file_complete_upload",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "5930eef3-0aa4-420e-b346-045b9128c9f5",
+      "resource_id": "73374506-d9c2-49c9-bc79-4ea93e1294cf",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/8b7ab361-aa52-42cd-b092-950d73c17ceb",
+    "row": {
+      "id": "8b7ab361-aa52-42cd-b092-950d73c17ceb",
+      "action": "asset_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3bd6e912-42ea-42b3-b339-851865b8b21b",
+      "occurred_at": "2026-11-21T17:15:09.578Z",
+      "resource_id": "2102e4a6-4c6e-44cd-bbea-6ce606da3992"
+    }
+  },
+  {
+    "key": "row/activity_event/6abd7503-dbde-463e-aa2e-62f8a515ab9b",
+    "row": {
+      "id": "6abd7503-dbde-463e-aa2e-62f8a515ab9b",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.578Z",
+      "updated_at": "2026-11-21T17:15:09.578Z",
+      "occurred_at": "2026-11-21T17:15:09.578Z",
+      "action": "asset_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3bd6e912-42ea-42b3-b339-851865b8b21b",
+      "resource_id": "2102e4a6-4c6e-44cd-bbea-6ce606da3992",
+      "resource_type": "video",
+      "resource_title": "Gateway test video",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/a27e2868-5ad8-4fb0-9a95-3a4f529babec",
+    "row": {
+      "id": "a27e2868-5ad8-4fb0-9a95-3a4f529babec",
+      "action": "asset_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "e6e274cf-d5cd-4693-b3be-938af085b833",
+      "occurred_at": "2026-11-21T17:15:09.594Z",
+      "resource_id": "2102e4a6-4c6e-44cd-bbea-6ce606da3992"
+    }
+  },
+  {
+    "key": "row/activity_event/044931b9-4c18-46de-9ab0-428d28e58865",
+    "row": {
+      "id": "044931b9-4c18-46de-9ab0-428d28e58865",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.594Z",
+      "updated_at": "2026-11-21T17:15:09.594Z",
+      "occurred_at": "2026-11-21T17:15:09.594Z",
+      "action": "asset_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "e6e274cf-d5cd-4693-b3be-938af085b833",
+      "resource_id": "2102e4a6-4c6e-44cd-bbea-6ce606da3992",
+      "resource_type": "video",
+      "resource_title": "Gateway test video",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/901c0b71-a80c-484e-83cd-4794d9506188",
+    "row": {
+      "id": "901c0b71-a80c-484e-83cd-4794d9506188",
+      "action": "asset_request_rendition",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "f2be538c-841a-4836-ae4e-6d5e7b38709c",
+      "occurred_at": "2026-11-21T17:15:09.611Z",
+      "resource_id": "afc167e3-106a-4d42-83cc-c9e9f22254d8"
+    }
+  },
+  {
+    "key": "row/activity_event/dc006842-7ce7-4c28-8bdc-af712589a840",
+    "row": {
+      "id": "dc006842-7ce7-4c28-8bdc-af712589a840",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.611Z",
+      "updated_at": "2026-11-21T17:15:09.611Z",
+      "occurred_at": "2026-11-21T17:15:09.611Z",
+      "action": "asset_request_rendition",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "f2be538c-841a-4836-ae4e-6d5e7b38709c",
+      "resource_id": "fee6e86a-c395-4fc5-aba6-b4a22ddbfa4b",
+      "resource_type": "cover",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/40edb4da-f6d4-485b-8309-728be3c6d944",
+    "row": {
+      "id": "40edb4da-f6d4-485b-8309-728be3c6d944",
+      "action": "content_create_item",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "9c60c5dd-1e5b-4b23-896c-9e723fbb76ca",
+      "occurred_at": "2026-11-21T17:15:09.625Z"
+    }
+  },
+  {
+    "key": "row/activity_event/37e92e23-c13f-4e3b-91a4-e9e625a1e4f8",
+    "row": {
+      "id": "37e92e23-c13f-4e3b-91a4-e9e625a1e4f8",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.625Z",
+      "updated_at": "2026-11-21T17:15:09.625Z",
+      "occurred_at": "2026-11-21T17:15:09.625Z",
+      "action": "content_create_item",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "9c60c5dd-1e5b-4b23-896c-9e723fbb76ca",
+      "resource_id": "b8db74bd-a85a-4540-99a2-2fb294deed4f",
+      "resource_type": "content_item",
+      "resource_title": "Gateway video content",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/27cd13ba-1b84-481f-bb6b-ed7f7e260610",
+    "row": {
+      "id": "27cd13ba-1b84-481f-bb6b-ed7f7e260610",
+      "action": "content_create_variant",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "79fd38be-bd60-4f48-8e68-fb39972f1658",
+      "occurred_at": "2026-11-21T17:15:09.633Z",
+      "resource_id": "b8db74bd-a85a-4540-99a2-2fb294deed4f"
+    }
+  },
+  {
+    "key": "row/activity_event/10b846fe-b97b-47e8-bef7-8bc00d6eced8",
+    "row": {
+      "id": "10b846fe-b97b-47e8-bef7-8bc00d6eced8",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.633Z",
+      "updated_at": "2026-11-21T17:15:09.633Z",
+      "occurred_at": "2026-11-21T17:15:09.633Z",
+      "action": "content_create_variant",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "79fd38be-bd60-4f48-8e68-fb39972f1658",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321",
+      "resource_type": "content_variant",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/a24de10c-a7d5-416f-adcb-d3be7ce61185",
+    "row": {
+      "id": "a24de10c-a7d5-416f-adcb-d3be7ce61185",
+      "action": "content_autosave_variant",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "dca3dda9-f20d-4f8f-b737-0bdf8226f238",
+      "occurred_at": "2026-11-21T17:15:09.644Z",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321"
+    }
+  },
+  {
+    "key": "row/activity_event/8215a7c6-c7b3-4589-8177-25c3395f4c64",
+    "row": {
+      "id": "8215a7c6-c7b3-4589-8177-25c3395f4c64",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.644Z",
+      "updated_at": "2026-11-21T17:15:09.644Z",
+      "occurred_at": "2026-11-21T17:15:09.644Z",
+      "action": "content_autosave_variant",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "dca3dda9-f20d-4f8f-b737-0bdf8226f238",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321",
+      "resource_type": "content_variant",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/71349932-4890-45ae-8c8b-3fcfe961e280",
+    "row": {
+      "id": "71349932-4890-45ae-8c8b-3fcfe961e280",
+      "action": "content_commit_revision",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "53c3b330-acba-4984-9e27-b4a28a9ccc4c",
+      "occurred_at": "2026-11-21T17:15:09.653Z",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321"
+    }
+  },
+  {
+    "key": "row/activity_event/714f5651-84dd-4eb2-80a7-4c7245a9d0be",
+    "row": {
+      "id": "714f5651-84dd-4eb2-80a7-4c7245a9d0be",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.653Z",
+      "updated_at": "2026-11-21T17:15:09.653Z",
+      "occurred_at": "2026-11-21T17:15:09.653Z",
+      "action": "content_commit_revision",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "53c3b330-acba-4984-9e27-b4a28a9ccc4c",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321",
+      "resource_type": "content_revision",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/c0bb7d58-4877-4065-bdba-622801549f10",
+    "row": {
+      "id": "c0bb7d58-4877-4065-bdba-622801549f10",
+      "action": "publishing_create_target",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "abe60929-14ef-47be-aa09-2a5c85d3db22",
+      "occurred_at": "2026-11-21T17:15:09.686Z",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085"
+    }
+  },
+  {
+    "key": "row/activity_event/53e5bfed-2760-421d-87c1-df2ff4dd0b3f",
+    "row": {
+      "id": "53e5bfed-2760-421d-87c1-df2ff4dd0b3f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.686Z",
+      "updated_at": "2026-11-21T17:15:09.686Z",
+      "occurred_at": "2026-11-21T17:15:09.686Z",
+      "action": "publishing_create_target",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "abe60929-14ef-47be-aa09-2a5c85d3db22",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085",
+      "resource_type": "publish_target",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/bb622519-e234-4e3c-afc9-8d6563fe8b2d",
+    "row": {
+      "id": "bb622519-e234-4e3c-afc9-8d6563fe8b2d",
+      "action": "publishing_update_target",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "c65832c7-5123-4fd7-9eb5-f7a59ea9d744",
+      "occurred_at": "2026-11-21T17:15:09.694Z",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085"
+    }
+  },
+  {
+    "key": "row/activity_event/cc5f64a1-7b68-4d10-819f-b3e58696b5d7",
+    "row": {
+      "id": "cc5f64a1-7b68-4d10-819f-b3e58696b5d7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.694Z",
+      "updated_at": "2026-11-21T17:15:09.694Z",
+      "occurred_at": "2026-11-21T17:15:09.694Z",
+      "action": "publishing_update_target",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "c65832c7-5123-4fd7-9eb5-f7a59ea9d744",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085",
+      "resource_type": "publish_target",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/fff5a4bd-f6db-40cf-83fe-2acdde84e419",
+    "row": {
+      "id": "fff5a4bd-f6db-40cf-83fe-2acdde84e419",
+      "action": "publishing_run_precheck",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "7bf3bc88-c9ec-4b8a-9599-90d1add0ff6e",
+      "occurred_at": "2026-11-21T17:15:09.705Z",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085"
+    }
+  },
+  {
+    "key": "row/activity_event/dcd320c3-8a7c-4f77-8280-518dfb6b4595",
+    "row": {
+      "id": "dcd320c3-8a7c-4f77-8280-518dfb6b4595",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.705Z",
+      "updated_at": "2026-11-21T17:15:09.705Z",
+      "occurred_at": "2026-11-21T17:15:09.705Z",
+      "action": "publishing_run_precheck",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "7bf3bc88-c9ec-4b8a-9599-90d1add0ff6e",
+      "resource_id": "9d8b6d36-58a8-4552-95c9-88b31de3adaa",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/af0b5384-c1b4-4975-b4d3-e5abafe6c42f",
+    "row": {
+      "id": "af0b5384-c1b4-4975-b4d3-e5abafe6c42f",
+      "action": "publishing_reschedule",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "08926b65-2941-449d-98bf-86f70c69e8d9",
+      "occurred_at": "2026-11-21T17:15:09.716Z",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085"
+    }
+  },
+  {
+    "key": "row/activity_event/202d60fa-4aad-4552-9df4-d45d6d7294c7",
+    "row": {
+      "id": "202d60fa-4aad-4552-9df4-d45d6d7294c7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.716Z",
+      "updated_at": "2026-11-21T17:15:09.716Z",
+      "occurred_at": "2026-11-21T17:15:09.716Z",
+      "action": "publishing_reschedule",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "08926b65-2941-449d-98bf-86f70c69e8d9",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/fe9d4c36-cf27-438d-a471-4a9b9af5bfe7",
+    "row": {
+      "id": "fe9d4c36-cf27-438d-a471-4a9b9af5bfe7",
+      "action": "publishing_request_approval",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "c61089a1-4044-44df-b627-58e99b9c2f09",
+      "occurred_at": "2026-11-21T17:15:09.725Z",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085"
+    }
+  },
+  {
+    "key": "row/activity_event/2216cd67-2f29-486e-89f6-26a654e07ab9",
+    "row": {
+      "id": "2216cd67-2f29-486e-89f6-26a654e07ab9",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.725Z",
+      "updated_at": "2026-11-21T17:15:09.725Z",
+      "occurred_at": "2026-11-21T17:15:09.725Z",
+      "action": "publishing_request_approval",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "c61089a1-4044-44df-b627-58e99b9c2f09",
+      "resource_id": "10fc1f96-89b8-46e3-8fbd-54ab59c18085",
+      "resource_type": "publish_target",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/6cbbe8dd-a468-47ee-a054-4248869ab3c4",
+    "row": {
+      "id": "6cbbe8dd-a468-47ee-a054-4248869ab3c4",
+      "action": "publishing_preview_plan_items",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "9a021b7a-1a7a-47d1-8da1-b2cfbda6c97e",
+      "occurred_at": "2026-11-21T17:15:09.770Z"
+    }
+  },
+  {
+    "key": "row/activity_event/4fc554e1-52b1-4449-b714-01120b5b7ee0",
+    "row": {
+      "id": "4fc554e1-52b1-4449-b714-01120b5b7ee0",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.770Z",
+      "updated_at": "2026-11-21T17:15:09.770Z",
+      "occurred_at": "2026-11-21T17:15:09.770Z",
+      "action": "publishing_preview_plan_items",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "9a021b7a-1a7a-47d1-8da1-b2cfbda6c97e",
+      "resource_id": null,
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/812cafc6-2558-43e6-be48-efde05d0156c",
+    "row": {
+      "id": "812cafc6-2558-43e6-be48-efde05d0156c",
+      "action": "publishing_create_plan",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "0a74aa5f-2a58-468b-ad8d-0ee50358e15d",
+      "occurred_at": "2026-11-21T17:15:09.780Z",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c"
+    }
+  },
+  {
+    "key": "row/activity_event/8684f6d6-e662-415e-9e2f-c07513ed0ffc",
+    "row": {
+      "id": "8684f6d6-e662-415e-9e2f-c07513ed0ffc",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.780Z",
+      "updated_at": "2026-11-21T17:15:09.780Z",
+      "occurred_at": "2026-11-21T17:15:09.780Z",
+      "action": "publishing_create_plan",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "0a74aa5f-2a58-468b-ad8d-0ee50358e15d",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c",
+      "resource_type": null,
+      "resource_title": "Gateway one-item review plan",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/2a57a1d2-6c6f-4c56-b365-d073ca84c6c7",
+    "row": {
+      "id": "2a57a1d2-6c6f-4c56-b365-d073ca84c6c7",
+      "action": "publishing_update_plan",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "cbd09387-97a7-4f66-8a4b-921496ac7a5c",
+      "occurred_at": "2026-11-21T17:15:09.789Z",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c"
+    }
+  },
+  {
+    "key": "row/activity_event/a0648973-6237-4ad5-bf33-9558da553b5f",
+    "row": {
+      "id": "a0648973-6237-4ad5-bf33-9558da553b5f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.789Z",
+      "updated_at": "2026-11-21T17:15:09.789Z",
+      "occurred_at": "2026-11-21T17:15:09.789Z",
+      "action": "publishing_update_plan",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "cbd09387-97a7-4f66-8a4b-921496ac7a5c",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c",
+      "resource_type": null,
+      "resource_title": "Gateway reviewed plan",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/1c0623c7-ae55-4b26-908e-ba22dace6401",
+    "row": {
+      "id": "1c0623c7-ae55-4b26-908e-ba22dace6401",
+      "action": "publishing_preview_plan",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "1ed31d2d-8d96-4b0c-b34e-35d98d0a8f0d",
+      "occurred_at": "2026-11-21T17:15:09.798Z",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c"
+    }
+  },
+  {
+    "key": "row/activity_event/9bfb095c-c7c9-411b-8cb4-26a2c3c94f65",
+    "row": {
+      "id": "9bfb095c-c7c9-411b-8cb4-26a2c3c94f65",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.798Z",
+      "updated_at": "2026-11-21T17:15:09.798Z",
+      "occurred_at": "2026-11-21T17:15:09.798Z",
+      "action": "publishing_preview_plan",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "1ed31d2d-8d96-4b0c-b34e-35d98d0a8f0d",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/10565e1b-0d12-418e-9df9-c7c5a8aa5760",
+    "row": {
+      "id": "10565e1b-0d12-418e-9df9-c7c5a8aa5760",
+      "action": "publishing_schedule",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b956030a-40b7-4dfd-ad5f-6f8ab2582e1f",
+      "occurred_at": "2026-11-21T17:15:09.809Z",
+      "resource_id": "88ab862e-f972-4860-aa9e-2c5920c4c87c"
+    }
+  },
+  {
+    "key": "row/activity_event/53859d1c-7937-46e9-8c79-af1a84dec19c",
+    "row": {
+      "id": "53859d1c-7937-46e9-8c79-af1a84dec19c",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.809Z",
+      "updated_at": "2026-11-21T17:15:09.809Z",
+      "occurred_at": "2026-11-21T17:15:09.809Z",
+      "action": "publishing_schedule",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b956030a-40b7-4dfd-ad5f-6f8ab2582e1f",
+      "resource_id": "79e11ec0-0b1d-4aef-89ca-409c70dcdba4",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/9a350692-1f9c-4aee-b99a-4629b784d416",
+    "row": {
+      "id": "9a350692-1f9c-4aee-b99a-4629b784d416",
+      "action": "publishing_cancel",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "155c45bf-b24e-4d15-8cbb-9af4a969309b",
+      "occurred_at": "2026-11-21T17:15:09.831Z",
+      "resource_id": "a601051a-9354-49f0-aa98-3536dc60149d"
+    }
+  },
+  {
+    "key": "row/activity_event/1f506b64-fd0c-48d2-aea7-d90155c0c3ad",
+    "row": {
+      "id": "1f506b64-fd0c-48d2-aea7-d90155c0c3ad",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.831Z",
+      "updated_at": "2026-11-21T17:15:09.831Z",
+      "occurred_at": "2026-11-21T17:15:09.831Z",
+      "action": "publishing_cancel",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "155c45bf-b24e-4d15-8cbb-9af4a969309b",
+      "resource_id": "a601051a-9354-49f0-aa98-3536dc60149d",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/9b3965e5-c5eb-45c0-87e1-44a083e886b5",
+    "row": {
+      "id": "9b3965e5-c5eb-45c0-87e1-44a083e886b5",
+      "action": "content_update_variant",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "99ea017e-c041-4405-bdd7-f18661d1a451",
+      "occurred_at": "2026-11-21T17:15:09.843Z",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321"
+    }
+  },
+  {
+    "key": "row/activity_event/b2f1961c-2e04-400b-a591-91fed19cbcdc",
+    "row": {
+      "id": "b2f1961c-2e04-400b-a591-91fed19cbcdc",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.843Z",
+      "updated_at": "2026-11-21T17:15:09.843Z",
+      "occurred_at": "2026-11-21T17:15:09.843Z",
+      "action": "content_update_variant",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "99ea017e-c041-4405-bdd7-f18661d1a451",
+      "resource_id": "998dc707-2d9c-4cea-a369-16469ad55321",
+      "resource_type": "content_variant",
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/06939ac6-688f-4292-b406-1b0033f1669f",
+    "row": {
+      "id": "06939ac6-688f-4292-b406-1b0033f1669f",
+      "action": "commerce_store_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "da414de9-5bb3-4c95-811b-4e149849c8e7",
+      "occurred_at": "2026-11-21T17:15:09.870Z",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2"
+    }
+  },
+  {
+    "key": "row/activity_event/fa9c5153-b265-47d7-9135-edba65b1084c",
+    "row": {
+      "id": "fa9c5153-b265-47d7-9135-edba65b1084c",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.870Z",
+      "updated_at": "2026-11-21T17:15:09.870Z",
+      "occurred_at": "2026-11-21T17:15:09.870Z",
+      "action": "commerce_store_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "da414de9-5bb3-4c95-811b-4e149849c8e7",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2",
+      "resource_type": "store",
+      "resource_title": "Gateway CSV local store",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/6cb9c775-8893-4d33-8fba-0fbb07d46398",
+    "row": {
+      "id": "6cb9c775-8893-4d33-8fba-0fbb07d46398",
+      "action": "commerce_store_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "f933b3b2-d20b-4945-a194-ed429379f342",
+      "occurred_at": "2026-11-21T17:15:09.882Z",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2"
+    }
+  },
+  {
+    "key": "row/activity_event/8dfe055e-ef0a-4259-857f-33054d68ba9f",
+    "row": {
+      "id": "8dfe055e-ef0a-4259-857f-33054d68ba9f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.882Z",
+      "updated_at": "2026-11-21T17:15:09.882Z",
+      "occurred_at": "2026-11-21T17:15:09.882Z",
+      "action": "commerce_store_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "f933b3b2-d20b-4945-a194-ed429379f342",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2",
+      "resource_type": "store",
+      "resource_title": "Gateway local CSV catalog",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/23d0ce80-36ed-4eab-922c-5c79434ce695",
+    "row": {
+      "id": "23d0ce80-36ed-4eab-922c-5c79434ce695",
+      "action": "commerce_store_market_configure",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b1969434-d74c-46ca-a9dd-453451da82c3",
+      "occurred_at": "2026-11-21T17:15:09.910Z",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2"
+    }
+  },
+  {
+    "key": "row/activity_event/a417aeea-d9c4-4b1b-8930-0cc3369a5eaa",
+    "row": {
+      "id": "a417aeea-d9c4-4b1b-8930-0cc3369a5eaa",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:09.910Z",
+      "updated_at": "2026-11-21T17:15:09.910Z",
+      "occurred_at": "2026-11-21T17:15:09.910Z",
+      "action": "commerce_store_market_configure",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b1969434-d74c-46ca-a9dd-453451da82c3",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2",
+      "resource_type": "store",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/04e704b7-ed11-4f0b-8cc3-0f26908aa613",
+    "row": {
+      "id": "04e704b7-ed11-4f0b-8cc3-0f26908aa613",
+      "action": "commerce_product_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3998fd3e-c1b2-4afa-b757-e575e83d2b23",
+      "occurred_at": "2026-11-21T17:15:10.023Z",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9"
+    }
+  },
+  {
+    "key": "row/activity_event/f6610650-9019-4033-8dcf-e88a02bc3634",
+    "row": {
+      "id": "f6610650-9019-4033-8dcf-e88a02bc3634",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.023Z",
+      "updated_at": "2026-11-21T17:15:10.023Z",
+      "occurred_at": "2026-11-21T17:15:10.023Z",
+      "action": "commerce_product_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3998fd3e-c1b2-4afa-b757-e575e83d2b23",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9",
+      "resource_type": "product",
+      "resource_title": "Gateway lamp draft",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/5112e5f8-4132-46b6-969d-e7cd6b6487b9",
+    "row": {
+      "id": "5112e5f8-4132-46b6-969d-e7cd6b6487b9",
+      "action": "commerce_product_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "f0ed4b92-a4ec-43d2-b0eb-87ceaa77b169",
+      "occurred_at": "2026-11-21T17:15:10.034Z",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9"
+    }
+  },
+  {
+    "key": "row/activity_event/11abc93c-a32a-40e9-a9d6-218a16d1cdc2",
+    "row": {
+      "id": "11abc93c-a32a-40e9-a9d6-218a16d1cdc2",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.034Z",
+      "updated_at": "2026-11-21T17:15:10.034Z",
+      "occurred_at": "2026-11-21T17:15:10.034Z",
+      "action": "commerce_product_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "f0ed4b92-a4ec-43d2-b0eb-87ceaa77b169",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9",
+      "resource_type": "product",
+      "resource_title": "Gateway lamp revised",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/3f34e714-66f0-4df0-80ab-dae48a55588e",
+    "row": {
+      "id": "3f34e714-66f0-4df0-80ab-dae48a55588e",
+      "action": "commerce_variant_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "da6fae39-297a-48b1-800c-730c8da59718",
+      "occurred_at": "2026-11-21T17:15:10.049Z",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9"
+    }
+  },
+  {
+    "key": "row/activity_event/81f3c4ff-3cdb-4e53-bda1-41758150ec55",
+    "row": {
+      "id": "81f3c4ff-3cdb-4e53-bda1-41758150ec55",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.049Z",
+      "updated_at": "2026-11-21T17:15:10.049Z",
+      "occurred_at": "2026-11-21T17:15:10.049Z",
+      "action": "commerce_variant_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "da6fae39-297a-48b1-800c-730c8da59718",
+      "resource_id": "02095d29-bb6c-41ae-be3f-c3465268c59c",
+      "resource_type": "product_variant",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c9465bff-7299-44f5-96ca-d73300c6d2a8",
+    "row": {
+      "id": "c9465bff-7299-44f5-96ca-d73300c6d2a8",
+      "action": "commerce_variant_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "e1a20f05-d6e1-4f98-bcaf-9f01edf1b38b",
+      "occurred_at": "2026-11-21T17:15:10.064Z",
+      "resource_id": "02095d29-bb6c-41ae-be3f-c3465268c59c"
+    }
+  },
+  {
+    "key": "row/activity_event/da110c98-3405-4396-a5b6-a2a086c1de85",
+    "row": {
+      "id": "da110c98-3405-4396-a5b6-a2a086c1de85",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.064Z",
+      "updated_at": "2026-11-21T17:15:10.064Z",
+      "occurred_at": "2026-11-21T17:15:10.064Z",
+      "action": "commerce_variant_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "e1a20f05-d6e1-4f98-bcaf-9f01edf1b38b",
+      "resource_id": "02095d29-bb6c-41ae-be3f-c3465268c59c",
+      "resource_type": "product_variant",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/e6cc7484-f854-4d18-98dd-e4bcf4508977",
+    "row": {
+      "id": "e6cc7484-f854-4d18-98dd-e4bcf4508977",
+      "action": "commerce_record_listing",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "12b096af-b18e-4cd0-a466-d45b02add191",
+      "occurred_at": "2026-11-21T17:15:10.079Z",
+      "resource_id": "02095d29-bb6c-41ae-be3f-c3465268c59c"
+    }
+  },
+  {
+    "key": "row/activity_event/f0bf5a69-a93e-4297-8c40-bc5cda82c759",
+    "row": {
+      "id": "f0bf5a69-a93e-4297-8c40-bc5cda82c759",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.079Z",
+      "updated_at": "2026-11-21T17:15:10.079Z",
+      "occurred_at": "2026-11-21T17:15:10.079Z",
+      "action": "commerce_record_listing",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "12b096af-b18e-4cd0-a466-d45b02add191",
+      "resource_id": "5656eff3-5dfb-47d5-af3b-75734bb8e192",
+      "resource_type": "listing_snapshot",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/59f3a7da-2cef-447b-a8ef-b18832e2d537",
+    "row": {
+      "id": "59f3a7da-2cef-447b-a8ef-b18832e2d537",
+      "action": "commerce_variant_group_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3cfd538b-3539-4084-a84b-1ec66d681510",
+      "occurred_at": "2026-11-21T17:15:10.109Z",
+      "resource_id": "1d29645a-e8c5-4b9a-bc08-abdfe7d90bbd"
+    }
+  },
+  {
+    "key": "row/activity_event/bf1292d7-6866-414f-8f88-c1b5f1d71595",
+    "row": {
+      "id": "bf1292d7-6866-414f-8f88-c1b5f1d71595",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.109Z",
+      "updated_at": "2026-11-21T17:15:10.109Z",
+      "occurred_at": "2026-11-21T17:15:10.109Z",
+      "action": "commerce_variant_group_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3cfd538b-3539-4084-a84b-1ec66d681510",
+      "resource_id": "1d29645a-e8c5-4b9a-bc08-abdfe7d90bbd",
+      "resource_type": "product_variant",
+      "resource_title": "Gateway variant group",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/9f41b78d-35e4-42d0-9a18-6436553b1102",
+    "row": {
+      "id": "9f41b78d-35e4-42d0-9a18-6436553b1102",
+      "action": "commerce_variant_group_link",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "c81b7c36-1d9d-4c43-a9ee-a86674dfab59",
+      "occurred_at": "2026-11-21T17:15:10.123Z",
+      "resource_id": "1d29645a-e8c5-4b9a-bc08-abdfe7d90bbd"
+    }
+  },
+  {
+    "key": "row/activity_event/0ecf6a62-ae9a-420c-ac47-84ea6d2e5273",
+    "row": {
+      "id": "0ecf6a62-ae9a-420c-ac47-84ea6d2e5273",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.123Z",
+      "updated_at": "2026-11-21T17:15:10.123Z",
+      "occurred_at": "2026-11-21T17:15:10.123Z",
+      "action": "commerce_variant_group_link",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "c81b7c36-1d9d-4c43-a9ee-a86674dfab59",
+      "resource_id": "03afc222-682e-44d1-8b81-2c2a1199bd58",
+      "resource_type": "product_variant",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/487bceab-05c4-4f39-bc5b-d30a1bfe4a4a",
+    "row": {
+      "id": "487bceab-05c4-4f39-bc5b-d30a1bfe4a4a",
+      "action": "commerce_variant_group_unlink",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b6488bb2-fa93-45c9-8971-dbfcb8b3ac59",
+      "occurred_at": "2026-11-21T17:15:10.147Z",
+      "resource_id": "1d29645a-e8c5-4b9a-bc08-abdfe7d90bbd"
+    }
+  },
+  {
+    "key": "row/activity_event/72e3453e-4417-44e0-8dd3-2044bbeb0071",
+    "row": {
+      "id": "72e3453e-4417-44e0-8dd3-2044bbeb0071",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.147Z",
+      "updated_at": "2026-11-21T17:15:10.147Z",
+      "occurred_at": "2026-11-21T17:15:10.147Z",
+      "action": "commerce_variant_group_unlink",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b6488bb2-fa93-45c9-8971-dbfcb8b3ac59",
+      "resource_id": "03afc222-682e-44d1-8b81-2c2a1199bd58",
+      "resource_type": "product_variant",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/d06a3fcf-5836-436e-ab3b-a6c2d2994247",
+    "row": {
+      "id": "d06a3fcf-5836-436e-ab3b-a6c2d2994247",
+      "action": "commerce_variant_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "15c8adae-f432-4e00-95db-28d763802953",
+      "occurred_at": "2026-11-21T17:15:10.160Z",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9"
+    }
+  },
+  {
+    "key": "row/activity_event/12542f8e-4f22-49c6-8d61-312c98899aa0",
+    "row": {
+      "id": "12542f8e-4f22-49c6-8d61-312c98899aa0",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.160Z",
+      "updated_at": "2026-11-21T17:15:10.160Z",
+      "occurred_at": "2026-11-21T17:15:10.160Z",
+      "action": "commerce_variant_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "15c8adae-f432-4e00-95db-28d763802953",
+      "resource_id": "5acad055-03be-43c7-bef9-b3c801d7931e",
+      "resource_type": "product_variant",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/efc3f46f-6fe0-47f3-aff3-065b274fabc2",
+    "row": {
+      "id": "efc3f46f-6fe0-47f3-aff3-065b274fabc2",
+      "action": "commerce_variant_group_link_batch",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "d542e49f-de34-4bdf-bd65-b27902553c68",
+      "occurred_at": "2026-11-21T17:15:10.174Z",
+      "resource_id": "1d29645a-e8c5-4b9a-bc08-abdfe7d90bbd"
+    }
+  },
+  {
+    "key": "row/activity_event/bde491a1-6808-4baa-9c68-0739258cef14",
+    "row": {
+      "id": "bde491a1-6808-4baa-9c68-0739258cef14",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.174Z",
+      "updated_at": "2026-11-21T17:15:10.174Z",
+      "occurred_at": "2026-11-21T17:15:10.174Z",
+      "action": "commerce_variant_group_link_batch",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "d542e49f-de34-4bdf-bd65-b27902553c68",
+      "resource_id": "1d29645a-e8c5-4b9a-bc08-abdfe7d90bbd",
+      "resource_type": "product_variant",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/fe877788-3072-46a0-bcfd-712a9f8a464e",
+    "row": {
+      "id": "fe877788-3072-46a0-bcfd-712a9f8a464e",
+      "action": "catalog_propose_fact",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "8076a2d5-9da1-405a-b612-4b246c729f33",
+      "occurred_at": "2026-11-21T17:15:10.189Z",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9"
+    }
+  },
+  {
+    "key": "row/activity_event/587978e9-4a43-4937-8a19-ea4504e95ea8",
+    "row": {
+      "id": "587978e9-4a43-4937-8a19-ea4504e95ea8",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.189Z",
+      "updated_at": "2026-11-21T17:15:10.189Z",
+      "occurred_at": "2026-11-21T17:15:10.189Z",
+      "action": "catalog_propose_fact",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "8076a2d5-9da1-405a-b612-4b246c729f33",
+      "resource_id": "8a477568-8633-4adc-a738-c092052ab604",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/b1174cc5-f797-4cee-b221-f625c5d1004a",
+    "row": {
+      "id": "b1174cc5-f797-4cee-b221-f625c5d1004a",
+      "action": "commerce_fact_revise",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "398ceed4-3381-4c4b-b7c3-8a429cec94ba",
+      "occurred_at": "2026-11-21T17:15:10.203Z",
+      "resource_id": "8a477568-8633-4adc-a738-c092052ab604"
+    }
+  },
+  {
+    "key": "row/activity_event/f16b5b2d-05ea-4b3e-9185-6facd50e633d",
+    "row": {
+      "id": "f16b5b2d-05ea-4b3e-9185-6facd50e633d",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.203Z",
+      "updated_at": "2026-11-21T17:15:10.203Z",
+      "occurred_at": "2026-11-21T17:15:10.203Z",
+      "action": "commerce_fact_revise",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "398ceed4-3381-4c4b-b7c3-8a429cec94ba",
+      "resource_id": "8a477568-8633-4adc-a738-c092052ab604",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/3f2542c6-4385-40ec-a3fb-8d39b42b7066",
+    "row": {
+      "id": "3f2542c6-4385-40ec-a3fb-8d39b42b7066",
+      "action": "catalog_update_localization",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "091c58b8-4901-4dd3-8d15-83589a459f4c",
+      "occurred_at": "2026-11-21T17:15:10.216Z",
+      "resource_id": "a32a38fe-6362-4f26-a110-b57f268994d9"
+    }
+  },
+  {
+    "key": "row/activity_event/d2b65876-b411-457e-b27d-f6ee8e847987",
+    "row": {
+      "id": "d2b65876-b411-457e-b27d-f6ee8e847987",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.216Z",
+      "updated_at": "2026-11-21T17:15:10.216Z",
+      "occurred_at": "2026-11-21T17:15:10.216Z",
+      "action": "catalog_update_localization",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "091c58b8-4901-4dd3-8d15-83589a459f4c",
+      "resource_id": "b2675fcf-dc04-4dc1-a109-efa8fa5c04f7",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/542f7b9b-fbd8-45e5-8679-7965b92e1a9c",
+    "row": {
+      "id": "542f7b9b-fbd8-45e5-8679-7965b92e1a9c",
+      "action": "commerce_localization_submit",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "0cd398b7-61ef-4e01-a649-6b4c1f52cfa4",
+      "occurred_at": "2026-11-21T17:15:10.231Z",
+      "resource_id": "b2675fcf-dc04-4dc1-a109-efa8fa5c04f7"
+    }
+  },
+  {
+    "key": "row/activity_event/f8aa2d5a-413e-4e44-8599-14fac7a71560",
+    "row": {
+      "id": "f8aa2d5a-413e-4e44-8599-14fac7a71560",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.231Z",
+      "updated_at": "2026-11-21T17:15:10.231Z",
+      "occurred_at": "2026-11-21T17:15:10.231Z",
+      "action": "commerce_localization_submit",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "0cd398b7-61ef-4e01-a649-6b4c1f52cfa4",
+      "resource_id": "b2675fcf-dc04-4dc1-a109-efa8fa5c04f7",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/d26481be-00dc-47ef-bb98-495d72bb5c2b",
+    "row": {
+      "id": "d26481be-00dc-47ef-bb98-495d72bb5c2b",
+      "action": "import_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "c0ee6870-4887-47c2-9ff7-8cbcfae6f403",
+      "occurred_at": "2026-11-21T17:15:10.311Z",
+      "resource_id": "ad00b7fe-a6bd-4126-a2dc-3671f4337288"
+    }
+  },
+  {
+    "key": "row/activity_event/22d51577-9f4d-4c11-8f7b-cfa9ed71a51c",
+    "row": {
+      "id": "22d51577-9f4d-4c11-8f7b-cfa9ed71a51c",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.311Z",
+      "updated_at": "2026-11-21T17:15:10.311Z",
+      "occurred_at": "2026-11-21T17:15:10.311Z",
+      "action": "import_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "c0ee6870-4887-47c2-9ff7-8cbcfae6f403",
+      "resource_id": "ad00b7fe-a6bd-4126-a2dc-3671f4337288",
+      "resource_type": "import_batch",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/694feb95-202c-4b1c-a8e2-bdf8003586c9",
+    "row": {
+      "id": "694feb95-202c-4b1c-a8e2-bdf8003586c9",
+      "action": "import_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "0e5fc703-671b-4ed1-a1fb-c3e7c5cb36dd",
+      "occurred_at": "2026-11-21T17:15:10.334Z",
+      "resource_id": "020e01c1-12c1-49e7-ba83-c5fc67a97e3b"
+    }
+  },
+  {
+    "key": "row/activity_event/9ced261a-ba27-441a-b3dd-1ddbe2a5f5d7",
+    "row": {
+      "id": "9ced261a-ba27-441a-b3dd-1ddbe2a5f5d7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.334Z",
+      "updated_at": "2026-11-21T17:15:10.334Z",
+      "occurred_at": "2026-11-21T17:15:10.334Z",
+      "action": "import_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "0e5fc703-671b-4ed1-a1fb-c3e7c5cb36dd",
+      "resource_id": "020e01c1-12c1-49e7-ba83-c5fc67a97e3b",
+      "resource_type": "import_batch",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/d1edde24-61ca-40ba-acff-58f06743f570",
+    "row": {
+      "id": "d1edde24-61ca-40ba-acff-58f06743f570",
+      "action": "import_preview",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "65f7557d-7b77-483b-b51e-8f631fa72c15",
+      "occurred_at": "2026-11-21T17:15:10.352Z",
+      "resource_id": "020e01c1-12c1-49e7-ba83-c5fc67a97e3b"
+    }
+  },
+  {
+    "key": "row/activity_event/79459fbc-635b-43d0-b028-81b323be432e",
+    "row": {
+      "id": "79459fbc-635b-43d0-b028-81b323be432e",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.352Z",
+      "updated_at": "2026-11-21T17:15:10.352Z",
+      "occurred_at": "2026-11-21T17:15:10.352Z",
+      "action": "import_preview",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "65f7557d-7b77-483b-b51e-8f631fa72c15",
+      "resource_id": "020e01c1-12c1-49e7-ba83-c5fc67a97e3b",
+      "resource_type": "import_batch",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/a50d37fd-60dd-4ca4-b009-847ecb29bb9a",
+    "row": {
+      "id": "a50d37fd-60dd-4ca4-b009-847ecb29bb9a",
+      "action": "import_mapping_preset_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "fd82ac6f-b5a1-4c87-84e5-8c8253fb2ccf",
+      "occurred_at": "2026-11-21T17:15:10.369Z",
+      "resource_id": "93ba2c7e-9455-4053-ad2a-00755aeda45c"
+    }
+  },
+  {
+    "key": "row/activity_event/7aebe654-ee88-417f-9c6e-9c6414b1b050",
+    "row": {
+      "id": "7aebe654-ee88-417f-9c6e-9c6414b1b050",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.369Z",
+      "updated_at": "2026-11-21T17:15:10.369Z",
+      "occurred_at": "2026-11-21T17:15:10.369Z",
+      "action": "import_mapping_preset_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "fd82ac6f-b5a1-4c87-84e5-8c8253fb2ccf",
+      "resource_id": "93ba2c7e-9455-4053-ad2a-00755aeda45c",
+      "resource_type": "import_batch",
+      "resource_title": "Gateway reviewed CSV headings",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c255b029-c3e2-424b-b05e-a29783245d8e",
+    "row": {
+      "id": "c255b029-c3e2-424b-b05e-a29783245d8e",
+      "action": "commerce_store_import",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "38c36237-1bff-4f50-b3f4-bdadf6d500a0",
+      "occurred_at": "2026-11-21T17:15:10.400Z",
+      "resource_id": "536cc961-5417-42a1-aa95-c71d43e0a6f2"
+    }
+  },
+  {
+    "key": "row/activity_event/8f31bec0-3be2-4a2b-8069-fd2f7d58c516",
+    "row": {
+      "id": "8f31bec0-3be2-4a2b-8069-fd2f7d58c516",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.400Z",
+      "updated_at": "2026-11-21T17:15:10.400Z",
+      "occurred_at": "2026-11-21T17:15:10.400Z",
+      "action": "commerce_store_import",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "38c36237-1bff-4f50-b3f4-bdadf6d500a0",
+      "resource_id": "107c04a0-a2d1-46e8-b26c-a4ca9391b7e5",
+      "resource_type": "import_batch",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/32e41bbc-c2a5-4a6f-8dbd-8e16655af7e0",
+    "row": {
+      "id": "32e41bbc-c2a5-4a6f-8dbd-8e16655af7e0",
+      "action": "import_confirm",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "fc7186da-03e0-4e17-930b-eebffe1ffd6f",
+      "occurred_at": "2026-11-21T17:15:10.434Z",
+      "resource_id": "ad00b7fe-a6bd-4126-a2dc-3671f4337288"
+    }
+  },
+  {
+    "key": "row/activity_event/40f41b3b-74a7-492b-86cb-44a287ca56a7",
+    "row": {
+      "id": "40f41b3b-74a7-492b-86cb-44a287ca56a7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.434Z",
+      "updated_at": "2026-11-21T17:15:10.434Z",
+      "occurred_at": "2026-11-21T17:15:10.434Z",
+      "action": "import_confirm",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "fc7186da-03e0-4e17-930b-eebffe1ffd6f",
+      "resource_id": "ad00b7fe-a6bd-4126-a2dc-3671f4337288",
+      "resource_type": "import_batch",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/6a35d6bc-ebf9-42d4-95ba-dedc51a2ba50",
+    "row": {
+      "id": "6a35d6bc-ebf9-42d4-95ba-dedc51a2ba50",
+      "action": "research_board_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "5f64595b-a886-43d0-8345-1c5ae44124cc",
+      "occurred_at": "2026-11-21T17:15:10.475Z",
+      "resource_id": "dbf5acff-fd02-4e84-af72-7eb92dac66c8"
+    }
+  },
+  {
+    "key": "row/activity_event/c9cf48e4-7633-4a13-a227-bc68ed9b769d",
+    "row": {
+      "id": "c9cf48e4-7633-4a13-a227-bc68ed9b769d",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.475Z",
+      "updated_at": "2026-11-21T17:15:10.475Z",
+      "occurred_at": "2026-11-21T17:15:10.475Z",
+      "action": "research_board_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "5f64595b-a886-43d0-8345-1c5ae44124cc",
+      "resource_id": "dbf5acff-fd02-4e84-af72-7eb92dac66c8",
+      "resource_type": "research",
+      "resource_title": "Gateway authorized sample",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/3466a909-d129-4c1c-8b42-4cd10c0ac1e5",
+    "row": {
+      "id": "3466a909-d129-4c1c-8b42-4cd10c0ac1e5",
+      "action": "research_add_item",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "cbe408ce-e6c1-4cb9-9fe3-dc65940ed4cb",
+      "occurred_at": "2026-11-21T17:15:10.496Z",
+      "resource_id": "dbf5acff-fd02-4e84-af72-7eb92dac66c8"
+    }
+  },
+  {
+    "key": "row/activity_event/415cf10c-d1ba-4f94-ae87-c3bfa26ff521",
+    "row": {
+      "id": "415cf10c-d1ba-4f94-ae87-c3bfa26ff521",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.496Z",
+      "updated_at": "2026-11-21T17:15:10.496Z",
+      "occurred_at": "2026-11-21T17:15:10.496Z",
+      "action": "research_add_item",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "cbe408ce-e6c1-4cb9-9fe3-dc65940ed4cb",
+      "resource_id": "d16dbbff-a29e-4d4b-81e0-c8974cc192f9",
+      "resource_type": null,
+      "resource_title": "棱镜暖光桌灯",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/325bc1d0-6209-4d7a-a183-90a85bb49526",
+    "row": {
+      "id": "325bc1d0-6209-4d7a-a183-90a85bb49526",
+      "action": "research_create_note",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "031c2c1b-c5a9-4cf7-8e83-1fd9224a3472",
+      "occurred_at": "2026-11-21T17:15:10.546Z",
+      "resource_id": "dbf5acff-fd02-4e84-af72-7eb92dac66c8"
+    }
+  },
+  {
+    "key": "row/activity_event/5ca9fc08-a8ee-40f4-860f-d8cf917c7ed5",
+    "row": {
+      "id": "5ca9fc08-a8ee-40f4-860f-d8cf917c7ed5",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.546Z",
+      "updated_at": "2026-11-21T17:15:10.546Z",
+      "occurred_at": "2026-11-21T17:15:10.546Z",
+      "action": "research_create_note",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "031c2c1b-c5a9-4cf7-8e83-1fd9224a3472",
+      "resource_id": "76d48764-b940-448c-99f6-0aa08dfa5a50",
+      "resource_type": null,
+      "resource_title": "Gateway local evidence",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/be25e0be-f97a-49f2-ab49-cd1b651868ab",
+    "row": {
+      "id": "be25e0be-f97a-49f2-ab49-cd1b651868ab",
+      "action": "research_item_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "f172d222-c77c-4c1c-96a5-492422536c8f",
+      "occurred_at": "2026-11-21T17:15:10.582Z",
+      "resource_id": "76d48764-b940-448c-99f6-0aa08dfa5a50"
+    }
+  },
+  {
+    "key": "row/activity_event/024d3971-720e-4e08-ba66-c01f83e775de",
+    "row": {
+      "id": "024d3971-720e-4e08-ba66-c01f83e775de",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.582Z",
+      "updated_at": "2026-11-21T17:15:10.582Z",
+      "occurred_at": "2026-11-21T17:15:10.582Z",
+      "action": "research_item_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "f172d222-c77c-4c1c-96a5-492422536c8f",
+      "resource_id": "76d48764-b940-448c-99f6-0aa08dfa5a50",
+      "resource_type": null,
+      "resource_title": "Gateway confirmed local evidence",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/4457af89-7b4d-40c9-a299-42922d3eb9fe",
+    "row": {
+      "id": "4457af89-7b4d-40c9-a299-42922d3eb9fe",
+      "action": "research_board_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "4d2f19a2-7c55-46de-84c9-25e4da67ae2d",
+      "occurred_at": "2026-11-21T17:15:10.604Z",
+      "resource_id": "dbf5acff-fd02-4e84-af72-7eb92dac66c8"
+    }
+  },
+  {
+    "key": "row/activity_event/6ec48c52-1e53-41dd-815a-ebc3e2f5954e",
+    "row": {
+      "id": "6ec48c52-1e53-41dd-815a-ebc3e2f5954e",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.604Z",
+      "updated_at": "2026-11-21T17:15:10.604Z",
+      "occurred_at": "2026-11-21T17:15:10.604Z",
+      "action": "research_board_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "4d2f19a2-7c55-46de-84c9-25e4da67ae2d",
+      "resource_id": "dbf5acff-fd02-4e84-af72-7eb92dac66c8",
+      "resource_type": "research",
+      "resource_title": "Gateway verified authorized sample",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/a870f104-dc18-4de9-9714-a3e6da117cd3",
+    "row": {
+      "id": "a870f104-dc18-4de9-9714-a3e6da117cd3",
+      "action": "creative_reference_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b379c0ef-9875-4ba3-82d5-d66ec5b57935",
+      "occurred_at": "2026-11-21T17:15:10.624Z",
+      "resource_id": "431a41ad-b3eb-4cea-8210-dbfa50f469f8"
+    }
+  },
+  {
+    "key": "row/activity_event/c0021c3f-038c-4822-96a5-aed8be08423d",
+    "row": {
+      "id": "c0021c3f-038c-4822-96a5-aed8be08423d",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.624Z",
+      "updated_at": "2026-11-21T17:15:10.624Z",
+      "occurred_at": "2026-11-21T17:15:10.624Z",
+      "action": "creative_reference_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b379c0ef-9875-4ba3-82d5-d66ec5b57935",
+      "resource_id": "431a41ad-b3eb-4cea-8210-dbfa50f469f8",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/d45fe0b0-458f-42fe-adc1-bd838b82f835",
+    "row": {
+      "id": "d45fe0b0-458f-42fe-adc1-bd838b82f835",
+      "action": "creative_reference_annotate",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "652c9d20-83de-48aa-9a1c-71d377f65165",
+      "occurred_at": "2026-11-21T17:15:10.644Z",
+      "resource_id": "431a41ad-b3eb-4cea-8210-dbfa50f469f8"
+    }
+  },
+  {
+    "key": "row/activity_event/dc8e2894-8ad5-43f3-b158-0d1741d4313f",
+    "row": {
+      "id": "dc8e2894-8ad5-43f3-b158-0d1741d4313f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.644Z",
+      "updated_at": "2026-11-21T17:15:10.644Z",
+      "occurred_at": "2026-11-21T17:15:10.644Z",
+      "action": "creative_reference_annotate",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "652c9d20-83de-48aa-9a1c-71d377f65165",
+      "resource_id": "431a41ad-b3eb-4cea-8210-dbfa50f469f8",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/b3c56927-e480-49de-aaea-586d3b35220e",
+    "row": {
+      "id": "b3c56927-e480-49de-aaea-586d3b35220e",
+      "action": "research_item_convert",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b53ab277-a12d-4616-8a31-dbd0d049dd11",
+      "occurred_at": "2026-11-21T17:15:10.682Z",
+      "resource_id": "d16dbbff-a29e-4d4b-81e0-c8974cc192f9"
+    }
+  },
+  {
+    "key": "row/activity_event/9dadc723-8c40-4d98-9fc7-410ab9a60aa2",
+    "row": {
+      "id": "9dadc723-8c40-4d98-9fc7-410ab9a60aa2",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.682Z",
+      "updated_at": "2026-11-21T17:15:10.682Z",
+      "occurred_at": "2026-11-21T17:15:10.682Z",
+      "action": "research_item_convert",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b53ab277-a12d-4616-8a31-dbd0d049dd11",
+      "resource_id": "d16dbbff-a29e-4d4b-81e0-c8974cc192f9",
+      "resource_type": null,
+      "resource_title": "棱镜暖光桌灯",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/dbc9b2f6-729c-422b-a8aa-b264f15ab0fb",
+    "row": {
+      "id": "dbc9b2f6-729c-422b-a8aa-b264f15ab0fb",
+      "action": "product_candidate_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "cccaf1ed-0f52-4774-97fd-3928c993cd96",
+      "occurred_at": "2026-11-21T17:15:10.720Z",
+      "resource_id": "f821a3a4-0462-45f2-bce4-674bf817291e"
+    }
+  },
+  {
+    "key": "row/activity_event/156a9033-e5fe-4912-a6ae-cd182abeb80d",
+    "row": {
+      "id": "156a9033-e5fe-4912-a6ae-cd182abeb80d",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.720Z",
+      "updated_at": "2026-11-21T17:15:10.720Z",
+      "occurred_at": "2026-11-21T17:15:10.720Z",
+      "action": "product_candidate_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "cccaf1ed-0f52-4774-97fd-3928c993cd96",
+      "resource_id": "f821a3a4-0462-45f2-bce4-674bf817291e",
+      "resource_type": null,
+      "resource_title": "Gateway lamp candidate",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/660cb335-d66c-4b97-9e33-130daa722286",
+    "row": {
+      "id": "660cb335-d66c-4b97-9e33-130daa722286",
+      "action": "product_candidate_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "9b623c13-9880-4ded-9982-79bc1f404a6a",
+      "occurred_at": "2026-11-21T17:15:10.743Z",
+      "resource_id": "f821a3a4-0462-45f2-bce4-674bf817291e"
+    }
+  },
+  {
+    "key": "row/activity_event/13d0ef9d-9dfe-4751-b2b2-e6da188f4c8f",
+    "row": {
+      "id": "13d0ef9d-9dfe-4751-b2b2-e6da188f4c8f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.743Z",
+      "updated_at": "2026-11-21T17:15:10.743Z",
+      "occurred_at": "2026-11-21T17:15:10.743Z",
+      "action": "product_candidate_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "9b623c13-9880-4ded-9982-79bc1f404a6a",
+      "resource_id": "f821a3a4-0462-45f2-bce4-674bf817291e",
+      "resource_type": null,
+      "resource_title": "Gateway lamp candidate",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/6e27fca7-fee1-4d3e-87b6-e54d845e8b5f",
+    "row": {
+      "id": "6e27fca7-fee1-4d3e-87b6-e54d845e8b5f",
+      "action": "product_candidates_score",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "a903e7e8-a834-4ed8-b5ae-4d4d1472949c",
+      "occurred_at": "2026-11-21T17:15:10.763Z",
+      "resource_id": "f821a3a4-0462-45f2-bce4-674bf817291e"
+    }
+  },
+  {
+    "key": "row/activity_event/77204e66-a713-464e-90b8-f4db70352653",
+    "row": {
+      "id": "77204e66-a713-464e-90b8-f4db70352653",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.763Z",
+      "updated_at": "2026-11-21T17:15:10.763Z",
+      "occurred_at": "2026-11-21T17:15:10.763Z",
+      "action": "product_candidates_score",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "a903e7e8-a834-4ed8-b5ae-4d4d1472949c",
+      "resource_id": "76fbfdfc-3a51-4583-a03d-d14709e12d74",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/b13fcf5e-cce9-4ce7-ba04-af2b28abc5cd",
+    "row": {
+      "id": "b13fcf5e-cce9-4ce7-ba04-af2b28abc5cd",
+      "action": "desktop_request_capability",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "7ee2775e-6e44-44a2-a787-6cba9e299ebe",
+      "occurred_at": "2026-11-21T17:15:10.909Z",
+      "resource_id": "71f12eb5-63b9-4393-8b57-d81e5940df4d"
+    }
+  },
+  {
+    "key": "row/activity_event/85fb3e1d-2b5e-4d0f-9a68-e714594885ff",
+    "row": {
+      "id": "85fb3e1d-2b5e-4d0f-9a68-e714594885ff",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:10.909Z",
+      "updated_at": "2026-11-21T17:15:10.909Z",
+      "occurred_at": "2026-11-21T17:15:10.909Z",
+      "action": "desktop_request_capability",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "7ee2775e-6e44-44a2-a787-6cba9e299ebe",
+      "resource_id": "71f12eb5-63b9-4393-8b57-d81e5940df4d",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/b29771a5-9e7d-4966-b8dc-60fffe2d4842",
+    "row": {
+      "id": "b29771a5-9e7d-4966-b8dc-60fffe2d4842",
+      "action": "zhihu_stats_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "79938caa-f1f6-44f5-ae8e-aacd99187714",
+      "occurred_at": "2026-11-21T17:15:11.178Z",
+      "resource_id": "8a8a7779-4671-47ef-bb5d-09b479c01985"
+    }
+  },
+  {
+    "key": "row/activity_event/fec9d25f-728e-4bdd-87c8-3e3866d43245",
+    "row": {
+      "id": "fec9d25f-728e-4bdd-87c8-3e3866d43245",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.178Z",
+      "updated_at": "2026-11-21T17:15:11.178Z",
+      "occurred_at": "2026-11-21T17:15:11.178Z",
+      "action": "zhihu_stats_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "79938caa-f1f6-44f5-ae8e-aacd99187714",
+      "resource_id": "8a8a7779-4671-47ef-bb5d-09b479c01985",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/88dcb744-e441-4f76-b1e7-20761bebbec1",
+    "row": {
+      "id": "88dcb744-e441-4f76-b1e7-20761bebbec1",
+      "action": "workspace_brand_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "f0dde7fe-fc14-4d69-aac1-f88df8106486",
+      "occurred_at": "2026-11-21T17:15:11.232Z",
+      "resource_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "row/activity_event/690f6d10-bb0c-4d0f-b80f-a909f1698078",
+    "row": {
+      "id": "690f6d10-bb0c-4d0f-b80f-a909f1698078",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.232Z",
+      "updated_at": "2026-11-21T17:15:11.232Z",
+      "occurred_at": "2026-11-21T17:15:11.232Z",
+      "action": "workspace_brand_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "f0dde7fe-fc14-4d69-aac1-f88df8106486",
+      "resource_id": "e494897f-0379-44f0-9d18-b767c3309fd5",
+      "resource_type": "brand",
+      "resource_title": "Gateway desk lamp studio",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/73a9b512-adc7-4167-8ab7-1d5e82e66622",
+    "row": {
+      "id": "73a9b512-adc7-4167-8ab7-1d5e82e66622",
+      "action": "workspace_market_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3244ae39-21a0-44e2-8b15-0d85b4ccc7fd",
+      "occurred_at": "2026-11-21T17:15:11.253Z",
+      "resource_id": "4982aa54-3b7c-4aac-9b1d-1c4628ff65f8"
+    }
+  },
+  {
+    "key": "row/activity_event/5ff50963-8cdf-4b89-9ea1-7f2d74bac08a",
+    "row": {
+      "id": "5ff50963-8cdf-4b89-9ea1-7f2d74bac08a",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.253Z",
+      "updated_at": "2026-11-21T17:15:11.253Z",
+      "occurred_at": "2026-11-21T17:15:11.253Z",
+      "action": "workspace_market_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3244ae39-21a0-44e2-8b15-0d85b4ccc7fd",
+      "resource_id": "4982aa54-3b7c-4aac-9b1d-1c4628ff65f8",
+      "resource_type": "market",
+      "resource_title": "Gateway Shanghai market",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/bc265141-e2f2-46ab-87c4-70c8373cd5dc",
+    "row": {
+      "id": "bc265141-e2f2-46ab-87c4-70c8373cd5dc",
+      "action": "tasks_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "7b6572ac-aeb6-4157-9f0c-3436448dd7b3",
+      "occurred_at": "2026-11-21T17:15:11.273Z",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f"
+    }
+  },
+  {
+    "key": "row/activity_event/51927554-b566-4b6e-97de-2b87e3b63c72",
+    "row": {
+      "id": "51927554-b566-4b6e-97de-2b87e3b63c72",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.273Z",
+      "updated_at": "2026-11-21T17:15:11.273Z",
+      "occurred_at": "2026-11-21T17:15:11.273Z",
+      "action": "tasks_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "7b6572ac-aeb6-4157-9f0c-3436448dd7b3",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f",
+      "resource_type": null,
+      "resource_title": "Gateway review checklist",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/9fa8a990-b005-4298-989b-4cc44e35c827",
+    "row": {
+      "id": "9fa8a990-b005-4298-989b-4cc44e35c827",
+      "action": "tasks_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "0b55bf4a-5cbe-42ca-bcbe-0137e19ca46c",
+      "occurred_at": "2026-11-21T17:15:11.296Z",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f"
+    }
+  },
+  {
+    "key": "row/activity_event/927dbf23-f3ef-4a0c-9936-bb6a409cabf3",
+    "row": {
+      "id": "927dbf23-f3ef-4a0c-9936-bb6a409cabf3",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.296Z",
+      "updated_at": "2026-11-21T17:15:11.296Z",
+      "occurred_at": "2026-11-21T17:15:11.296Z",
+      "action": "tasks_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "0b55bf4a-5cbe-42ca-bcbe-0137e19ca46c",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f",
+      "resource_type": null,
+      "resource_title": "Gateway revised checklist",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/23124020-f16d-425f-b482-57b46fca3b0d",
+    "row": {
+      "id": "23124020-f16d-425f-b482-57b46fca3b0d",
+      "action": "tasks_complete",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b53726f0-279f-4be4-b4d2-b0134db5239c",
+      "occurred_at": "2026-11-21T17:15:11.321Z",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f"
+    }
+  },
+  {
+    "key": "row/activity_event/0e929cc6-469f-439a-9a7e-f7b6c9501ad4",
+    "row": {
+      "id": "0e929cc6-469f-439a-9a7e-f7b6c9501ad4",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.321Z",
+      "updated_at": "2026-11-21T17:15:11.321Z",
+      "occurred_at": "2026-11-21T17:15:11.321Z",
+      "action": "tasks_complete",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b53726f0-279f-4be4-b4d2-b0134db5239c",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f",
+      "resource_type": null,
+      "resource_title": "Gateway revised checklist",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/ae30e647-336f-484b-8a56-447f1ed55f91",
+    "row": {
+      "id": "ae30e647-336f-484b-8a56-447f1ed55f91",
+      "action": "tasks_reopen",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3f119353-a7a0-477b-9d01-f4e106201651",
+      "occurred_at": "2026-11-21T17:15:11.345Z",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f"
+    }
+  },
+  {
+    "key": "row/activity_event/72f184a2-5c2a-42ac-b480-5700c55da2d9",
+    "row": {
+      "id": "72f184a2-5c2a-42ac-b480-5700c55da2d9",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.345Z",
+      "updated_at": "2026-11-21T17:15:11.345Z",
+      "occurred_at": "2026-11-21T17:15:11.345Z",
+      "action": "tasks_reopen",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3f119353-a7a0-477b-9d01-f4e106201651",
+      "resource_id": "dff285d5-a938-4a25-9974-9c3bcd361c1f",
+      "resource_type": null,
+      "resource_title": "Gateway revised checklist",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/0da837e0-2e5d-4f44-99ea-fe161cf68249",
+    "row": {
+      "id": "0da837e0-2e5d-4f44-99ea-fe161cf68249",
+      "action": "change_sets_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "80eb604b-94c4-4e02-8c33-331a4e2b7eb9",
+      "occurred_at": "2026-11-21T17:15:11.369Z",
+      "resource_id": "44f5da6e-50fc-42cb-91b3-0a1ca14bb703"
+    }
+  },
+  {
+    "key": "row/activity_event/d3848c3f-d997-4ec9-b9bd-c6c77de1e588",
+    "row": {
+      "id": "d3848c3f-d997-4ec9-b9bd-c6c77de1e588",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.369Z",
+      "updated_at": "2026-11-21T17:15:11.369Z",
+      "occurred_at": "2026-11-21T17:15:11.369Z",
+      "action": "change_sets_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "80eb604b-94c4-4e02-8c33-331a4e2b7eb9",
+      "resource_id": "44f5da6e-50fc-42cb-91b3-0a1ca14bb703",
+      "resource_type": "change_set",
+      "resource_title": "Gateway review proposal",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/fbd85dc3-3683-4a73-bca6-1ade45f3c2a1",
+    "row": {
+      "id": "fbd85dc3-3683-4a73-bca6-1ade45f3c2a1",
+      "action": "agent_jobs_claim",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "1a7b6665-4928-4c2f-9a81-3af938bc7ee3",
+      "occurred_at": "2026-11-21T17:15:11.420Z",
+      "resource_id": "4093fc9e-48a5-4ac7-8f64-225e2f54224f"
+    }
+  },
+  {
+    "key": "row/activity_event/177074f9-3407-41bb-b3b6-9dd228d24ffc",
+    "row": {
+      "id": "177074f9-3407-41bb-b3b6-9dd228d24ffc",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.420Z",
+      "updated_at": "2026-11-21T17:15:11.420Z",
+      "occurred_at": "2026-11-21T17:15:11.420Z",
+      "action": "agent_jobs_claim",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "1a7b6665-4928-4c2f-9a81-3af938bc7ee3",
+      "resource_id": "4093fc9e-48a5-4ac7-8f64-225e2f54224f",
+      "resource_type": "agent_job",
+      "resource_title": "Gateway collect fixture note",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/7e2ba480-31ee-48ff-b9f7-bafc89b72a16",
+    "row": {
+      "id": "7e2ba480-31ee-48ff-b9f7-bafc89b72a16",
+      "action": "agent_jobs_heartbeat",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "7f6c5600-9db1-43a2-95bf-4beeb20af2d7",
+      "occurred_at": "2026-11-21T17:15:11.445Z",
+      "resource_id": "4093fc9e-48a5-4ac7-8f64-225e2f54224f"
+    }
+  },
+  {
+    "key": "row/activity_event/7b690b26-ffb7-4134-aa4c-9fc03d241f0a",
+    "row": {
+      "id": "7b690b26-ffb7-4134-aa4c-9fc03d241f0a",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.445Z",
+      "updated_at": "2026-11-21T17:15:11.445Z",
+      "occurred_at": "2026-11-21T17:15:11.445Z",
+      "action": "agent_jobs_heartbeat",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "7f6c5600-9db1-43a2-95bf-4beeb20af2d7",
+      "resource_id": "4093fc9e-48a5-4ac7-8f64-225e2f54224f",
+      "resource_type": "agent_job",
+      "resource_title": "Gateway collect fixture note",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/efa88ea2-a6bf-4062-9b1b-3c32a2d1609b",
+    "row": {
+      "id": "efa88ea2-a6bf-4062-9b1b-3c32a2d1609b",
+      "action": "agent_jobs_submit_result",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "901545ab-032e-4a4c-bb25-aa78e7bd9f7e",
+      "occurred_at": "2026-11-21T17:15:11.469Z",
+      "resource_id": "4093fc9e-48a5-4ac7-8f64-225e2f54224f"
+    }
+  },
+  {
+    "key": "row/activity_event/5868915b-3fd9-43fa-af7e-a23ee2fecf1e",
+    "row": {
+      "id": "5868915b-3fd9-43fa-af7e-a23ee2fecf1e",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.469Z",
+      "updated_at": "2026-11-21T17:15:11.469Z",
+      "occurred_at": "2026-11-21T17:15:11.469Z",
+      "action": "agent_jobs_submit_result",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "901545ab-032e-4a4c-bb25-aa78e7bd9f7e",
+      "resource_id": "4093fc9e-48a5-4ac7-8f64-225e2f54224f",
+      "resource_type": "agent_job",
+      "resource_title": "Gateway collect fixture note",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/1991d7d5-9256-4a81-a42a-3f517d22fee8",
+    "row": {
+      "id": "1991d7d5-9256-4a81-a42a-3f517d22fee8",
+      "action": "campaign_create_draft",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "7fb28585-ecfb-4549-b2c1-5b13ad08fa42",
+      "occurred_at": "2026-11-21T17:15:11.518Z",
+      "resource_id": "6cfd3354-3281-4f7e-9cc9-a59d2497ecf2"
+    }
+  },
+  {
+    "key": "row/activity_event/06bf10db-7d1d-4877-9537-e7ab917d0b4d",
+    "row": {
+      "id": "06bf10db-7d1d-4877-9537-e7ab917d0b4d",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.518Z",
+      "updated_at": "2026-11-21T17:15:11.518Z",
+      "occurred_at": "2026-11-21T17:15:11.518Z",
+      "action": "campaign_create_draft",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "7fb28585-ecfb-4549-b2c1-5b13ad08fa42",
+      "resource_id": "6cfd3354-3281-4f7e-9cc9-a59d2497ecf2",
+      "resource_type": "campaign",
+      "resource_title": "Gateway launch plan",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/e2c109fe-700d-45b8-8743-11f4439d9c80",
+    "row": {
+      "id": "e2c109fe-700d-45b8-8743-11f4439d9c80",
+      "action": "campaign_goal_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "ed9b1acc-611b-4645-88d9-6de6d3ba958f",
+      "occurred_at": "2026-11-21T17:15:11.542Z",
+      "resource_id": "6cfd3354-3281-4f7e-9cc9-a59d2497ecf2"
+    }
+  },
+  {
+    "key": "row/activity_event/17a60e29-0c54-4b6d-a00e-00b995cbf5b7",
+    "row": {
+      "id": "17a60e29-0c54-4b6d-a00e-00b995cbf5b7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.542Z",
+      "updated_at": "2026-11-21T17:15:11.542Z",
+      "occurred_at": "2026-11-21T17:15:11.542Z",
+      "action": "campaign_goal_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "ed9b1acc-611b-4645-88d9-6de6d3ba958f",
+      "resource_id": "87266a99-12fc-4384-9795-e0e7f02d93fa",
+      "resource_type": "campaign_goal",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/a130aa64-be49-4db5-bca7-8c5104a8196b",
+    "row": {
+      "id": "a130aa64-be49-4db5-bca7-8c5104a8196b",
+      "action": "campaign_goal_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "9c88740b-49f4-4be2-950e-fbd7cb854190",
+      "occurred_at": "2026-11-21T17:15:11.566Z",
+      "resource_id": "6cfd3354-3281-4f7e-9cc9-a59d2497ecf2"
+    }
+  },
+  {
+    "key": "row/activity_event/bbbf0ffa-032c-4683-be77-9a234db20b18",
+    "row": {
+      "id": "bbbf0ffa-032c-4683-be77-9a234db20b18",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.566Z",
+      "updated_at": "2026-11-21T17:15:11.566Z",
+      "occurred_at": "2026-11-21T17:15:11.566Z",
+      "action": "campaign_goal_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "9c88740b-49f4-4be2-950e-fbd7cb854190",
+      "resource_id": "87266a99-12fc-4384-9795-e0e7f02d93fa",
+      "resource_type": "campaign_goal",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/72ef50dd-645d-4dc0-88f7-a47e3607803e",
+    "row": {
+      "id": "72ef50dd-645d-4dc0-88f7-a47e3607803e",
+      "action": "campaign_plan_slot_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "a84296e7-79e0-459b-92b1-d0657b79c4b6",
+      "occurred_at": "2026-11-21T17:15:11.593Z",
+      "resource_id": "6cfd3354-3281-4f7e-9cc9-a59d2497ecf2"
+    }
+  },
+  {
+    "key": "row/activity_event/f9b933a5-5065-4fc6-9617-9737c9b28919",
+    "row": {
+      "id": "f9b933a5-5065-4fc6-9617-9737c9b28919",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.593Z",
+      "updated_at": "2026-11-21T17:15:11.593Z",
+      "occurred_at": "2026-11-21T17:15:11.593Z",
+      "action": "campaign_plan_slot_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "a84296e7-79e0-459b-92b1-d0657b79c4b6",
+      "resource_id": "35ad9b9c-7d9a-498b-b619-80a3645b9da4",
+      "resource_type": "campaign_plan_slot",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/f9a85c92-63b2-447f-9839-3b07005b432e",
+    "row": {
+      "id": "f9a85c92-63b2-447f-9839-3b07005b432e",
+      "action": "campaign_plan_slot_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "d26aaa1c-8c2d-4ebd-af95-3114fe33ad5d",
+      "occurred_at": "2026-11-21T17:15:11.617Z",
+      "resource_id": "6cfd3354-3281-4f7e-9cc9-a59d2497ecf2"
+    }
+  },
+  {
+    "key": "row/activity_event/4550b2d9-dadb-42bd-a039-443cdc3b6478",
+    "row": {
+      "id": "4550b2d9-dadb-42bd-a039-443cdc3b6478",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.617Z",
+      "updated_at": "2026-11-21T17:15:11.617Z",
+      "occurred_at": "2026-11-21T17:15:11.617Z",
+      "action": "campaign_plan_slot_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "d26aaa1c-8c2d-4ebd-af95-3114fe33ad5d",
+      "resource_id": "35ad9b9c-7d9a-498b-b619-80a3645b9da4",
+      "resource_type": "campaign_plan_slot",
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/41834f72-d062-4e6d-aaf5-a5a6c4f5b244",
+    "row": {
+      "id": "41834f72-d062-4e6d-aaf5-a5a6c4f5b244",
+      "action": "commerce_variant_group_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "4b23094f-4e25-4593-955e-c20ac6dd14b7",
+      "occurred_at": "2026-11-21T17:15:11.660Z",
+      "resource_id": "4c0b3f7e-ce97-48d9-bcfa-102108a4fc9e"
+    }
+  },
+  {
+    "key": "row/activity_event/af81c517-ef6f-45d0-bc12-17c7c2d27f2c",
+    "row": {
+      "id": "af81c517-ef6f-45d0-bc12-17c7c2d27f2c",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.660Z",
+      "updated_at": "2026-11-21T17:15:11.660Z",
+      "occurred_at": "2026-11-21T17:15:11.660Z",
+      "action": "commerce_variant_group_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "4b23094f-4e25-4593-955e-c20ac6dd14b7",
+      "resource_id": "4c0b3f7e-ce97-48d9-bcfa-102108a4fc9e",
+      "resource_type": "product_variant",
+      "resource_title": "Gateway variant group",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/259be6c8-e3fa-4216-996b-4e71637bf7a2",
+    "row": {
+      "id": "259be6c8-e3fa-4216-996b-4e71637bf7a2",
+      "action": "creators_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "d85cc05c-4a95-4dcd-8417-722a5a71fc3c",
+      "occurred_at": "2026-11-21T17:15:11.685Z",
+      "resource_id": "6a8d3580-8fe6-48da-b106-fa432d1ef615"
+    }
+  },
+  {
+    "key": "row/activity_event/e2c02377-ec7d-4bd9-b038-d0fdba1e8340",
+    "row": {
+      "id": "e2c02377-ec7d-4bd9-b038-d0fdba1e8340",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.685Z",
+      "updated_at": "2026-11-21T17:15:11.685Z",
+      "occurred_at": "2026-11-21T17:15:11.685Z",
+      "action": "creators_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "d85cc05c-4a95-4dcd-8417-722a5a71fc3c",
+      "resource_id": "6a8d3580-8fe6-48da-b106-fa432d1ef615",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c9a9868a-3361-44af-b7d7-7622c5c5715c",
+    "row": {
+      "id": "c9a9868a-3361-44af-b7d7-7622c5c5715c",
+      "action": "customers_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "53fec464-f139-40c1-9937-e4dad6f938d6",
+      "occurred_at": "2026-11-21T17:15:11.710Z",
+      "resource_id": "e22f0a01-c314-48a3-b3af-61c02eae368f"
+    }
+  },
+  {
+    "key": "row/activity_event/eae8d1e2-d5a0-4285-ac7d-9de95b3b3676",
+    "row": {
+      "id": "eae8d1e2-d5a0-4285-ac7d-9de95b3b3676",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.710Z",
+      "updated_at": "2026-11-21T17:15:11.710Z",
+      "occurred_at": "2026-11-21T17:15:11.710Z",
+      "action": "customers_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "53fec464-f139-40c1-9937-e4dad6f938d6",
+      "resource_id": "e22f0a01-c314-48a3-b3af-61c02eae368f",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/d707bfe0-ab2a-4ebf-b7f0-21c662b6bded",
+    "row": {
+      "id": "d707bfe0-ab2a-4ebf-b7f0-21c662b6bded",
+      "action": "watch_target_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "4362161f-4d2a-494f-b2f3-f2e83f588463",
+      "occurred_at": "2026-11-21T17:15:11.732Z",
+      "resource_id": "c959b183-d366-42de-977c-255fc7ea98aa"
+    }
+  },
+  {
+    "key": "row/activity_event/a2bf4521-64b5-4069-a6c9-5a1132fd06b0",
+    "row": {
+      "id": "a2bf4521-64b5-4069-a6c9-5a1132fd06b0",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.732Z",
+      "updated_at": "2026-11-21T17:15:11.732Z",
+      "occurred_at": "2026-11-21T17:15:11.732Z",
+      "action": "watch_target_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "4362161f-4d2a-494f-b2f3-f2e83f588463",
+      "resource_id": "c959b183-d366-42de-977c-255fc7ea98aa",
+      "resource_type": null,
+      "resource_title": "Gateway sample monitoring",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/72ab4e27-b49d-4e83-99fc-c5eecd11e182",
+    "row": {
+      "id": "72ab4e27-b49d-4e83-99fc-c5eecd11e182",
+      "action": "watch_target_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "15448842-ae0f-409b-9157-6f52375830d0",
+      "occurred_at": "2026-11-21T17:15:11.755Z",
+      "resource_id": "c959b183-d366-42de-977c-255fc7ea98aa"
+    }
+  },
+  {
+    "key": "row/activity_event/1fc27e07-bafc-4945-b8f6-7c4a53e48a0e",
+    "row": {
+      "id": "1fc27e07-bafc-4945-b8f6-7c4a53e48a0e",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.755Z",
+      "updated_at": "2026-11-21T17:15:11.755Z",
+      "occurred_at": "2026-11-21T17:15:11.755Z",
+      "action": "watch_target_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "15448842-ae0f-409b-9157-6f52375830d0",
+      "resource_id": "c959b183-d366-42de-977c-255fc7ea98aa",
+      "resource_type": null,
+      "resource_title": "Gateway authorized sample monitoring",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/0345abce-49e0-4380-97bc-8c9807b4a970",
+    "row": {
+      "id": "0345abce-49e0-4380-97bc-8c9807b4a970",
+      "action": "observation_record",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "044b349c-bee0-4cc7-abd8-e4f092c2eb34",
+      "occurred_at": "2026-11-21T17:15:11.779Z",
+      "resource_id": "0d5c228c-38b5-44a5-aed3-e4cb7d047384"
+    }
+  },
+  {
+    "key": "row/activity_event/942cc34f-4915-4afd-a16e-18db69205c0f",
+    "row": {
+      "id": "942cc34f-4915-4afd-a16e-18db69205c0f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.779Z",
+      "updated_at": "2026-11-21T17:15:11.779Z",
+      "occurred_at": "2026-11-21T17:15:11.779Z",
+      "action": "observation_record",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "044b349c-bee0-4cc7-abd8-e4f092c2eb34",
+      "resource_id": "0d5c228c-38b5-44a5-aed3-e4cb7d047384",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/6a129580-b898-47f6-849e-a21189363833",
+    "row": {
+      "id": "6a129580-b898-47f6-849e-a21189363833",
+      "action": "mention_record",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "9f95c21f-de9e-495e-be1b-2a9297d11d8c",
+      "occurred_at": "2026-11-21T17:15:11.859Z",
+      "resource_id": "bc89d594-e87c-44b9-9366-fde5dbe8ba0f"
+    }
+  },
+  {
+    "key": "row/activity_event/6fb69ff5-1bf3-4cf1-bdfb-fc3891af75f5",
+    "row": {
+      "id": "6fb69ff5-1bf3-4cf1-bdfb-fc3891af75f5",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.859Z",
+      "updated_at": "2026-11-21T17:15:11.859Z",
+      "occurred_at": "2026-11-21T17:15:11.859Z",
+      "action": "mention_record",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "9f95c21f-de9e-495e-be1b-2a9297d11d8c",
+      "resource_id": "bc89d594-e87c-44b9-9366-fde5dbe8ba0f",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/8a922de0-8e5c-4f75-8b44-7e83591e6fe9",
+    "row": {
+      "id": "8a922de0-8e5c-4f75-8b44-7e83591e6fe9",
+      "action": "mention_escalate",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "249b2de3-7cae-4e6c-bba0-0bc55b5c24b4",
+      "occurred_at": "2026-11-21T17:15:11.904Z",
+      "resource_id": "bc89d594-e87c-44b9-9366-fde5dbe8ba0f"
+    }
+  },
+  {
+    "key": "row/activity_event/2fa23da1-910b-4b7f-9a14-021871552c69",
+    "row": {
+      "id": "2fa23da1-910b-4b7f-9a14-021871552c69",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:11.904Z",
+      "updated_at": "2026-11-21T17:15:11.904Z",
+      "occurred_at": "2026-11-21T17:15:11.904Z",
+      "action": "mention_escalate",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "249b2de3-7cae-4e6c-bba0-0bc55b5c24b4",
+      "resource_id": "efb5718c-2349-4669-ba70-170bb5c9eedc",
+      "resource_type": null,
+      "resource_title": "Review synthetic desk lamp mention",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/b18d0b34-be0e-4c74-98f1-185f32102302",
+    "row": {
+      "id": "b18d0b34-be0e-4c74-98f1-185f32102302",
+      "action": "inbox_ingest_batch",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "606e3b56-0c80-4bfa-af0b-4fc68538a0fe",
+      "occurred_at": "2026-11-21T17:15:12.052Z"
+    }
+  },
+  {
+    "key": "row/activity_event/b27cf720-33bf-49ea-99ee-4b8de474f111",
+    "row": {
+      "id": "b27cf720-33bf-49ea-99ee-4b8de474f111",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.052Z",
+      "updated_at": "2026-11-21T17:15:12.052Z",
+      "occurred_at": "2026-11-21T17:15:12.052Z",
+      "action": "inbox_ingest_batch",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "606e3b56-0c80-4bfa-af0b-4fc68538a0fe",
+      "resource_id": null,
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/5616f0ea-86c1-4a07-8039-f6545a85662d",
+    "row": {
+      "id": "5616f0ea-86c1-4a07-8039-f6545a85662d",
+      "action": "inbox_claim",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "875f0ba1-ae4a-44c6-9054-fa33259792dd",
+      "occurred_at": "2026-11-21T17:15:12.079Z",
+      "resource_id": "accb9973-e6bc-4a5a-9fda-a03043d96bf4"
+    }
+  },
+  {
+    "key": "row/activity_event/f50693fd-ace6-4545-909a-05b5aa3f4dd9",
+    "row": {
+      "id": "f50693fd-ace6-4545-909a-05b5aa3f4dd9",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.079Z",
+      "updated_at": "2026-11-21T17:15:12.079Z",
+      "occurred_at": "2026-11-21T17:15:12.079Z",
+      "action": "inbox_claim",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "875f0ba1-ae4a-44c6-9054-fa33259792dd",
+      "resource_id": "0735dd06-d07b-487f-8d0d-96718792b379",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c784e7f1-c417-4898-9368-a6219ade5acc",
+    "row": {
+      "id": "c784e7f1-c417-4898-9368-a6219ade5acc",
+      "action": "inbox_release",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "19183f97-49bb-4b02-9556-8737b520e0ca",
+      "occurred_at": "2026-11-21T17:15:12.103Z",
+      "resource_id": "accb9973-e6bc-4a5a-9fda-a03043d96bf4"
+    }
+  },
+  {
+    "key": "row/activity_event/dadb34db-2570-48f7-9ffb-9eca059ef963",
+    "row": {
+      "id": "dadb34db-2570-48f7-9ffb-9eca059ef963",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.103Z",
+      "updated_at": "2026-11-21T17:15:12.103Z",
+      "occurred_at": "2026-11-21T17:15:12.103Z",
+      "action": "inbox_release",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "19183f97-49bb-4b02-9556-8737b520e0ca",
+      "resource_id": "accb9973-e6bc-4a5a-9fda-a03043d96bf4",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/8ea42a8e-99e1-47be-901b-1c93a2781045",
+    "row": {
+      "id": "8ea42a8e-99e1-47be-901b-1c93a2781045",
+      "action": "inbox_create_case",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3c2d953e-5f4a-4f81-b256-b138a5e7d182",
+      "occurred_at": "2026-11-21T17:15:12.129Z",
+      "resource_id": "00076073-c542-41cf-978b-638b88a62051"
+    }
+  },
+  {
+    "key": "row/activity_event/ede47ce8-dcd4-4241-ada2-21777694c16f",
+    "row": {
+      "id": "ede47ce8-dcd4-4241-ada2-21777694c16f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.129Z",
+      "updated_at": "2026-11-21T17:15:12.129Z",
+      "occurred_at": "2026-11-21T17:15:12.129Z",
+      "action": "inbox_create_case",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3c2d953e-5f4a-4f81-b256-b138a5e7d182",
+      "resource_id": "00076073-c542-41cf-978b-638b88a62051",
+      "resource_type": "product_issue",
+      "resource_title": "Gateway synthetic inbox case",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/c05ff66b-7b53-47de-9b96-c1f043dfb4ba",
+    "row": {
+      "id": "c05ff66b-7b53-47de-9b96-c1f043dfb4ba",
+      "action": "content_create_pillar",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "4ca1b834-aede-4328-8093-8a19bc6816a0",
+      "occurred_at": "2026-11-21T17:15:12.173Z",
+      "resource_id": "9cc588e0-bdcb-453c-be93-aef40936fb53"
+    }
+  },
+  {
+    "key": "row/activity_event/1184c051-c0d1-4fff-9518-ae7537b68178",
+    "row": {
+      "id": "1184c051-c0d1-4fff-9518-ae7537b68178",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.173Z",
+      "updated_at": "2026-11-21T17:15:12.173Z",
+      "occurred_at": "2026-11-21T17:15:12.173Z",
+      "action": "content_create_pillar",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "4ca1b834-aede-4328-8093-8a19bc6816a0",
+      "resource_id": "9cc588e0-bdcb-453c-be93-aef40936fb53",
+      "resource_type": null,
+      "resource_title": "Gateway editorial",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/a5714f8f-302c-46bb-93b4-c3d96dbf5ac0",
+    "row": {
+      "id": "a5714f8f-302c-46bb-93b4-c3d96dbf5ac0",
+      "action": "content_update_pillar",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "d4daf2ca-1e74-40c0-b247-32623eb66e5e",
+      "occurred_at": "2026-11-21T17:15:12.196Z",
+      "resource_id": "9cc588e0-bdcb-453c-be93-aef40936fb53"
+    }
+  },
+  {
+    "key": "row/activity_event/b34620d2-39d2-43e4-b903-bf21e196f4fd",
+    "row": {
+      "id": "b34620d2-39d2-43e4-b903-bf21e196f4fd",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.196Z",
+      "updated_at": "2026-11-21T17:15:12.196Z",
+      "occurred_at": "2026-11-21T17:15:12.196Z",
+      "action": "content_update_pillar",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "d4daf2ca-1e74-40c0-b247-32623eb66e5e",
+      "resource_id": "9cc588e0-bdcb-453c-be93-aef40936fb53",
+      "resource_type": null,
+      "resource_title": "Gateway editorial revised",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/cbb92dac-d9e9-4e01-91bb-e39bae3a5504",
+    "row": {
+      "id": "cbb92dac-d9e9-4e01-91bb-e39bae3a5504",
+      "action": "idea_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "c6b2ebb8-272c-41b7-b043-9ef3638fb522",
+      "occurred_at": "2026-11-21T17:15:12.219Z",
+      "resource_id": "6b5705aa-f086-4235-8130-0249555593c0"
+    }
+  },
+  {
+    "key": "row/activity_event/56c5c5b9-492a-462f-917c-3f5a41b6bb40",
+    "row": {
+      "id": "56c5c5b9-492a-462f-917c-3f5a41b6bb40",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.219Z",
+      "updated_at": "2026-11-21T17:15:12.219Z",
+      "occurred_at": "2026-11-21T17:15:12.219Z",
+      "action": "idea_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "c6b2ebb8-272c-41b7-b043-9ef3638fb522",
+      "resource_id": "6b5705aa-f086-4235-8130-0249555593c0",
+      "resource_type": null,
+      "resource_title": "Gateway lamp story",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/70858a59-9da1-4230-9ebd-ed69a7aeb0a6",
+    "row": {
+      "id": "70858a59-9da1-4230-9ebd-ed69a7aeb0a6",
+      "action": "idea_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "89298645-9c15-4c00-9222-0abb7bcfccd6",
+      "occurred_at": "2026-11-21T17:15:12.243Z",
+      "resource_id": "6b5705aa-f086-4235-8130-0249555593c0"
+    }
+  },
+  {
+    "key": "row/activity_event/809d98b5-a749-4a61-a8c2-a97a479c9771",
+    "row": {
+      "id": "809d98b5-a749-4a61-a8c2-a97a479c9771",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.243Z",
+      "updated_at": "2026-11-21T17:15:12.243Z",
+      "occurred_at": "2026-11-21T17:15:12.243Z",
+      "action": "idea_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "89298645-9c15-4c00-9222-0abb7bcfccd6",
+      "resource_id": "6b5705aa-f086-4235-8130-0249555593c0",
+      "resource_type": null,
+      "resource_title": "Gateway revised lamp story",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/16985bd8-f76f-4c4e-baed-1ccc54843e75",
+    "row": {
+      "id": "16985bd8-f76f-4c4e-baed-1ccc54843e75",
+      "action": "knowledge_propose",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "fd64ac58-4d2d-4ce8-ab1b-e2c401802a87",
+      "occurred_at": "2026-11-21T17:15:12.268Z",
+      "resource_id": "a676f7c6-d3b6-4f12-9e53-ec8b21ad788d"
+    }
+  },
+  {
+    "key": "row/activity_event/c5adbd5b-6d23-4d80-969c-b005b5cced5a",
+    "row": {
+      "id": "c5adbd5b-6d23-4d80-969c-b005b5cced5a",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.268Z",
+      "updated_at": "2026-11-21T17:15:12.268Z",
+      "occurred_at": "2026-11-21T17:15:12.268Z",
+      "action": "knowledge_propose",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "fd64ac58-4d2d-4ce8-ab1b-e2c401802a87",
+      "resource_id": "a676f7c6-d3b6-4f12-9e53-ec8b21ad788d",
+      "resource_type": "tone",
+      "resource_title": "Gateway editorial tone",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/c742dab7-ff26-4b2f-a569-0a3db27b49ca",
+    "row": {
+      "id": "c742dab7-ff26-4b2f-a569-0a3db27b49ca",
+      "action": "workspace_saved_views_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "bc731d5e-40a9-4246-952e-3025aa242cd4",
+      "occurred_at": "2026-11-21T17:15:12.292Z",
+      "resource_id": "b1d752aa-5520-48dd-8a0e-f44a9f776b5f"
+    }
+  },
+  {
+    "key": "row/activity_event/5d2412da-9af9-4991-b558-e5dc69815b0c",
+    "row": {
+      "id": "5d2412da-9af9-4991-b558-e5dc69815b0c",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.292Z",
+      "updated_at": "2026-11-21T17:15:12.292Z",
+      "occurred_at": "2026-11-21T17:15:12.292Z",
+      "action": "workspace_saved_views_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "bc731d5e-40a9-4246-952e-3025aa242cd4",
+      "resource_id": "b1d752aa-5520-48dd-8a0e-f44a9f776b5f",
+      "resource_type": null,
+      "resource_title": "Gateway media search",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/0b4113ff-b79f-45ab-990a-3d84cf5b46cf",
+    "row": {
+      "id": "0b4113ff-b79f-45ab-990a-3d84cf5b46cf",
+      "action": "workspace_saved_views_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "5e14a622-dc52-4f1c-9c39-8a506dd5996a",
+      "occurred_at": "2026-11-21T17:15:12.316Z",
+      "resource_id": "b1d752aa-5520-48dd-8a0e-f44a9f776b5f"
+    }
+  },
+  {
+    "key": "row/activity_event/a2c2542e-cd0d-4076-873a-4473926482a8",
+    "row": {
+      "id": "a2c2542e-cd0d-4076-873a-4473926482a8",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.316Z",
+      "updated_at": "2026-11-21T17:15:12.316Z",
+      "occurred_at": "2026-11-21T17:15:12.316Z",
+      "action": "workspace_saved_views_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "5e14a622-dc52-4f1c-9c39-8a506dd5996a",
+      "resource_id": "b1d752aa-5520-48dd-8a0e-f44a9f776b5f",
+      "resource_type": null,
+      "resource_title": "Gateway saved media search",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/b05d032d-d507-4d0f-9d33-9040d97f7e81",
+    "row": {
+      "id": "b05d032d-d507-4d0f-9d33-9040d97f7e81",
+      "action": "commerce_promotion_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "cfee89db-ee14-4de0-9c01-90b20d7b7796",
+      "occurred_at": "2026-11-21T17:15:12.342Z",
+      "resource_id": "c15c5545-7238-4d25-9f19-f64e0d845d00"
+    }
+  },
+  {
+    "key": "row/activity_event/9b9ef1f6-564d-4986-ae7c-e7a42d3c89fd",
+    "row": {
+      "id": "9b9ef1f6-564d-4986-ae7c-e7a42d3c89fd",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.342Z",
+      "updated_at": "2026-11-21T17:15:12.342Z",
+      "occurred_at": "2026-11-21T17:15:12.342Z",
+      "action": "commerce_promotion_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "cfee89db-ee14-4de0-9c01-90b20d7b7796",
+      "resource_id": "c15c5545-7238-4d25-9f19-f64e0d845d00",
+      "resource_type": null,
+      "resource_title": "Gateway local promotion draft",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/ed9ef518-f9d1-4347-8596-7e9d8e642977",
+    "row": {
+      "id": "ed9ef518-f9d1-4347-8596-7e9d8e642977",
+      "action": "commerce_promotion_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "53329abc-c8a2-480b-815d-7fe0faa25228",
+      "occurred_at": "2026-11-21T17:15:12.373Z",
+      "resource_id": "c15c5545-7238-4d25-9f19-f64e0d845d00"
+    }
+  },
+  {
+    "key": "row/activity_event/11847f1a-f921-43eb-985e-480300f974be",
+    "row": {
+      "id": "11847f1a-f921-43eb-985e-480300f974be",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.373Z",
+      "updated_at": "2026-11-21T17:15:12.373Z",
+      "occurred_at": "2026-11-21T17:15:12.373Z",
+      "action": "commerce_promotion_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "53329abc-c8a2-480b-815d-7fe0faa25228",
+      "resource_id": "c15c5545-7238-4d25-9f19-f64e0d845d00",
+      "resource_type": null,
+      "resource_title": "Gateway revised promotion draft",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c35a6487-094e-4b21-9980-ef128070d836",
+    "row": {
+      "id": "c35a6487-094e-4b21-9980-ef128070d836",
+      "action": "commerce_promotion_cancel",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "c1dabdb5-62d6-4eb9-adad-dd1c2c3a60c1",
+      "occurred_at": "2026-11-21T17:15:12.406Z",
+      "resource_id": "c15c5545-7238-4d25-9f19-f64e0d845d00"
+    }
+  },
+  {
+    "key": "row/activity_event/0e613bdf-7d00-4060-a8c3-cd0e0aa0119b",
+    "row": {
+      "id": "0e613bdf-7d00-4060-a8c3-cd0e0aa0119b",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.406Z",
+      "updated_at": "2026-11-21T17:15:12.406Z",
+      "occurred_at": "2026-11-21T17:15:12.406Z",
+      "action": "commerce_promotion_cancel",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "c1dabdb5-62d6-4eb9-adad-dd1c2c3a60c1",
+      "resource_id": "c15c5545-7238-4d25-9f19-f64e0d845d00",
+      "resource_type": null,
+      "resource_title": "Gateway revised promotion draft",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/16070da9-730b-4378-85a3-d3c034885fe4",
+    "row": {
+      "id": "16070da9-730b-4378-85a3-d3c034885fe4",
+      "action": "ads_register_account",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "ee166246-d4f2-49b9-a502-794842d36868",
+      "occurred_at": "2026-11-21T17:15:12.458Z",
+      "resource_id": "bbe5a268-e677-444a-8587-30d7a547e20a"
+    }
+  },
+  {
+    "key": "row/activity_event/c0b6ba1c-42da-403b-ba86-d9657f2f3f6f",
+    "row": {
+      "id": "c0b6ba1c-42da-403b-ba86-d9657f2f3f6f",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.458Z",
+      "updated_at": "2026-11-21T17:15:12.458Z",
+      "occurred_at": "2026-11-21T17:15:12.458Z",
+      "action": "ads_register_account",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "ee166246-d4f2-49b9-a502-794842d36868",
+      "resource_id": "bbe5a268-e677-444a-8587-30d7a547e20a",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/b365f982-4bc3-41da-93d6-746a31fa892b",
+    "row": {
+      "id": "b365f982-4bc3-41da-93d6-746a31fa892b",
+      "action": "data_source_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "b70aa821-745b-41ed-bdea-aecfa62cd4f8",
+      "occurred_at": "2026-11-21T17:15:12.512Z",
+      "resource_id": "1721cf05-6527-42fd-854f-e9a03a0b972f"
+    }
+  },
+  {
+    "key": "row/activity_event/c5b5e410-8a7e-49ed-8c44-2239a34e6f00",
+    "row": {
+      "id": "c5b5e410-8a7e-49ed-8c44-2239a34e6f00",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.512Z",
+      "updated_at": "2026-11-21T17:15:12.512Z",
+      "occurred_at": "2026-11-21T17:15:12.512Z",
+      "action": "data_source_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "b70aa821-745b-41ed-bdea-aecfa62cd4f8",
+      "resource_id": "1721cf05-6527-42fd-854f-e9a03a0b972f",
+      "resource_type": "file_import",
+      "resource_title": "Gateway ads CSV source",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c252900f-8866-450c-a8ae-21b78d88b486",
+    "row": {
+      "id": "c252900f-8866-450c-a8ae-21b78d88b486",
+      "action": "ads_import_report",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "3ce32281-f25f-4da2-99ee-fcb8b487ca5c",
+      "occurred_at": "2026-11-21T17:15:12.589Z",
+      "resource_id": "bbe5a268-e677-444a-8587-30d7a547e20a"
+    }
+  },
+  {
+    "key": "row/activity_event/354e8916-35c8-48ec-84ab-38979cc72a83",
+    "row": {
+      "id": "354e8916-35c8-48ec-84ab-38979cc72a83",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.589Z",
+      "updated_at": "2026-11-21T17:15:12.589Z",
+      "occurred_at": "2026-11-21T17:15:12.589Z",
+      "action": "ads_import_report",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "3ce32281-f25f-4da2-99ee-fcb8b487ca5c",
+      "resource_id": "54e332c9-bc23-4f47-9db5-797578936d71",
+      "resource_type": null,
+      "resource_title": "Gateway imported ad",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/3d236a34-d98c-4edc-91c8-848825edcdd8",
+    "row": {
+      "id": "3d236a34-d98c-4edc-91c8-848825edcdd8",
+      "action": "ads_create_creative",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "ed58d7c9-173e-47a5-8ae1-e577b4aae455",
+      "occurred_at": "2026-11-21T17:15:12.618Z",
+      "resource_id": "8bd9b66b-6de7-4fdd-a135-adcb4aaa08d9"
+    }
+  },
+  {
+    "key": "row/activity_event/4d61dd36-feee-4aad-97db-db0e37ae6281",
+    "row": {
+      "id": "4d61dd36-feee-4aad-97db-db0e37ae6281",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.618Z",
+      "updated_at": "2026-11-21T17:15:12.618Z",
+      "occurred_at": "2026-11-21T17:15:12.618Z",
+      "action": "ads_create_creative",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "ed58d7c9-173e-47a5-8ae1-e577b4aae455",
+      "resource_id": "8bd9b66b-6de7-4fdd-a135-adcb4aaa08d9",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/7350bb39-4fc1-4bcd-91b0-ff9eff0abbd4",
+    "row": {
+      "id": "7350bb39-4fc1-4bcd-91b0-ff9eff0abbd4",
+      "action": "ads_archive_creative",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "756374d5-a60d-4296-9460-42b97be53b59",
+      "occurred_at": "2026-11-21T17:15:12.647Z",
+      "resource_id": "8bd9b66b-6de7-4fdd-a135-adcb4aaa08d9"
+    }
+  },
+  {
+    "key": "row/activity_event/8da014d0-72de-4ebf-88b6-bff137cd84e1",
+    "row": {
+      "id": "8da014d0-72de-4ebf-88b6-bff137cd84e1",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.647Z",
+      "updated_at": "2026-11-21T17:15:12.647Z",
+      "occurred_at": "2026-11-21T17:15:12.647Z",
+      "action": "ads_archive_creative",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "756374d5-a60d-4296-9460-42b97be53b59",
+      "resource_id": "8bd9b66b-6de7-4fdd-a135-adcb4aaa08d9",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/c25c49bf-5514-457c-8d81-9edab3d5de3d",
+    "row": {
+      "id": "c25c49bf-5514-457c-8d81-9edab3d5de3d",
+      "action": "utm_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "83bbe2c1-64d6-4f9d-8c09-3939e2a8c840",
+      "occurred_at": "2026-11-21T17:15:12.677Z",
+      "resource_id": "26a33f81-2c85-408a-b382-e82c9cbdd145"
+    }
+  },
+  {
+    "key": "row/activity_event/b430957d-85d5-46f6-b18c-ac9230736932",
+    "row": {
+      "id": "b430957d-85d5-46f6-b18c-ac9230736932",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.677Z",
+      "updated_at": "2026-11-21T17:15:12.677Z",
+      "occurred_at": "2026-11-21T17:15:12.677Z",
+      "action": "utm_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "83bbe2c1-64d6-4f9d-8c09-3939e2a8c840",
+      "resource_id": "26a33f81-2c85-408a-b382-e82c9cbdd145",
+      "resource_type": null,
+      "resource_title": "Gateway tracking template",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/4e6aeb66-d7a6-44fd-836e-147c5f6bd025",
+    "row": {
+      "id": "4e6aeb66-d7a6-44fd-836e-147c5f6bd025",
+      "action": "utm_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "5358e455-78b7-45ea-84dd-01b5cc2f86ad",
+      "occurred_at": "2026-11-21T17:15:12.703Z",
+      "resource_id": "26a33f81-2c85-408a-b382-e82c9cbdd145"
+    }
+  },
+  {
+    "key": "row/activity_event/05104564-3e48-4f2b-9e45-5ad239aec5f7",
+    "row": {
+      "id": "05104564-3e48-4f2b-9e45-5ad239aec5f7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.703Z",
+      "updated_at": "2026-11-21T17:15:12.703Z",
+      "occurred_at": "2026-11-21T17:15:12.703Z",
+      "action": "utm_update",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "5358e455-78b7-45ea-84dd-01b5cc2f86ad",
+      "resource_id": "26a33f81-2c85-408a-b382-e82c9cbdd145",
+      "resource_type": null,
+      "resource_title": "Gateway tracking template revised",
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/b649c6ad-30cb-4f23-9bf7-ea797e61320a",
+    "row": {
+      "id": "b649c6ad-30cb-4f23-9bf7-ea797e61320a",
+      "action": "lifecycle_create_consent_text",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "12e9bb83-6a25-4105-a699-68605c191bd1",
+      "occurred_at": "2026-11-21T17:15:12.731Z",
+      "resource_id": "cee30efd-1c83-40d4-98f2-322b273ed4b4"
+    }
+  },
+  {
+    "key": "row/activity_event/30124697-79b4-458c-96cd-6bde7d3acdb7",
+    "row": {
+      "id": "30124697-79b4-458c-96cd-6bde7d3acdb7",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.731Z",
+      "updated_at": "2026-11-21T17:15:12.731Z",
+      "occurred_at": "2026-11-21T17:15:12.731Z",
+      "action": "lifecycle_create_consent_text",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "12e9bb83-6a25-4105-a699-68605c191bd1",
+      "resource_id": "cee30efd-1c83-40d4-98f2-322b273ed4b4",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": null
+    }
+  },
+  {
+    "key": "audit/c579734c-2c40-4787-b14f-e207f0bfaec2",
+    "row": {
+      "id": "c579734c-2c40-4787-b14f-e207f0bfaec2",
+      "action": "segments_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "236045a6-a7de-4a42-bce3-a6374c1b33d1",
+      "occurred_at": "2026-11-21T17:15:12.783Z",
+      "resource_id": "2b1fdc24-39c2-41eb-90b0-f30dc8728b0b"
+    }
+  },
+  {
+    "key": "row/activity_event/121321d5-f703-4ad4-a21c-507004a416ec",
+    "row": {
+      "id": "121321d5-f703-4ad4-a21c-507004a416ec",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.783Z",
+      "updated_at": "2026-11-21T17:15:12.783Z",
+      "occurred_at": "2026-11-21T17:15:12.783Z",
+      "action": "segments_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "236045a6-a7de-4a42-bce3-a6374c1b33d1",
+      "resource_id": "2b1fdc24-39c2-41eb-90b0-f30dc8728b0b",
+      "resource_type": null,
+      "resource_title": "Gateway synthetic segment",
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  },
+  {
+    "key": "audit/31e970bc-ede6-4f91-a8d4-9d840c4b0041",
+    "row": {
+      "id": "31e970bc-ede6-4f91-a8d4-9d840c4b0041",
+      "action": "collaborations_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "source": "mcp",
+      "request_id": "9da89329-1538-49e4-9a9e-5a373b1c5cae",
+      "occurred_at": "2026-11-21T17:15:12.839Z",
+      "resource_id": "53879a02-1463-4ec7-8ebe-7baa81a7b6f2"
+    }
+  },
+  {
+    "key": "row/activity_event/702db284-689e-4bb2-a335-c0a980b2646c",
+    "row": {
+      "id": "702db284-689e-4bb2-a335-c0a980b2646c",
+      "version": 1,
+      "created_at": "2026-11-21T17:15:12.839Z",
+      "updated_at": "2026-11-21T17:15:12.839Z",
+      "occurred_at": "2026-11-21T17:15:12.839Z",
+      "action": "collaborations_create",
+      "actor_id": "aed0edcb-237b-4d8c-9bfe-7d1a81bdf8ef",
+      "actor_type": "agent",
+      "credential_id": "37d38ce4-85d3-46ad-ae1e-12f456837791",
+      "credential_label": "Generic gateway SDK verification",
+      "source": "mcp",
+      "request_id": "9da89329-1538-49e4-9a9e-5a373b1c5cae",
+      "resource_id": "53879a02-1463-4ec7-8ebe-7baa81a7b6f2",
+      "resource_type": null,
+      "resource_title": null,
+      "brand_id": "e494897f-0379-44f0-9d18-b767c3309fd5"
+    }
+  }
+]

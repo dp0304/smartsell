@@ -1,0 +1,431 @@
+{
+  "passed": true,
+  "native": {
+    "attempted": 8,
+    "receipts": 8,
+    "matched": 8,
+    "business": 8
+  },
+  "evidence": [
+    {
+      "label": "read-a",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_get",
+      "id": "toolu_a128ad7c5f1d4b5ea44da99bcffad8de",
+      "caseId": "1c80e8fa-a4b3-4d33-9965-a6dd14e8573b",
+      "isError": false,
+      "conclusion": "收到成功回执",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "daeb3808-4b41-43f2-9a33-f23607cb216c",
+      "wire": {
+        "caseId": "1c80e8fa-a4b3-4d33-9965-a6dd14e8573b",
+        "rpcId": 3,
+        "at": "2026-11-21T17:05:29.218Z",
+        "requestId": "daeb3808-4b41-43f2-9a33-f23607cb216c",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=daeb3808-4b41-43f2-9a33-f23607cb216c",
+        "status": "matched",
+        "auditId": "b4df4e53-0151-47da-8609-959d3f8f460e",
+        "cohort": [
+          {
+            "id": "b4df4e53-0151-47da-8609-959d3f8f460e",
+            "call_id": "b4df4e53-0151-47da-8609-959d3f8f460e",
+            "request_id": "daeb3808-4b41-43f2-9a33-f23607cb216c",
+            "credential_id": "f8a64fe2-8cbc-4633-b90f-6f163f1d51a8",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:29.224Z",
+            "tool": "workspace_brand_get",
+            "target": "GET /brands/:id",
+            "outcome": "success"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "b4df4e53-0151-47da-8609-959d3f8f460e"
+      ]
+    },
+    {
+      "label": "read-b-same-tool-in-same-turn",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_get",
+      "id": "toolu_7ae52648f2ae45b3823ab7211650fca1",
+      "caseId": "8c3791a7-ec30-4414-b6a8-d408bf9abd4e",
+      "isError": false,
+      "conclusion": "收到成功回执",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "419c4c32-528b-4706-a304-d20c4cba5e2f",
+      "wire": {
+        "caseId": "8c3791a7-ec30-4414-b6a8-d408bf9abd4e",
+        "rpcId": 4,
+        "at": "2026-11-21T17:05:29.234Z",
+        "requestId": "419c4c32-528b-4706-a304-d20c4cba5e2f",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=419c4c32-528b-4706-a304-d20c4cba5e2f",
+        "status": "matched",
+        "auditId": "d58e79f0-990f-489d-8846-390316d69c04",
+        "cohort": [
+          {
+            "id": "d58e79f0-990f-489d-8846-390316d69c04",
+            "call_id": "d58e79f0-990f-489d-8846-390316d69c04",
+            "request_id": "419c4c32-528b-4706-a304-d20c4cba5e2f",
+            "credential_id": "f8a64fe2-8cbc-4633-b90f-6f163f1d51a8",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:29.241Z",
+            "tool": "workspace_brand_get",
+            "target": "GET /brands/:id",
+            "outcome": "success"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "d58e79f0-990f-489d-8846-390316d69c04"
+      ]
+    },
+    {
+      "label": "failed-missing-brand",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_get",
+      "id": "toolu_e68957bb54e54a8db3a7caa5d6b97a4a",
+      "caseId": "67a938cd-3b56-46d3-84e2-52d1379fe98d",
+      "isError": true,
+      "conclusion": "预期拒绝",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "308a62fa-cf8b-4971-b16b-05be61f63a5b",
+      "wire": {
+        "caseId": "67a938cd-3b56-46d3-84e2-52d1379fe98d",
+        "rpcId": 5,
+        "at": "2026-11-21T17:05:29.235Z",
+        "requestId": "308a62fa-cf8b-4971-b16b-05be61f63a5b",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=308a62fa-cf8b-4971-b16b-05be61f63a5b",
+        "status": "matched",
+        "auditId": "475f6f47-883b-4302-acaa-234bc9cb3a13",
+        "cohort": [
+          {
+            "id": "475f6f47-883b-4302-acaa-234bc9cb3a13",
+            "call_id": "475f6f47-883b-4302-acaa-234bc9cb3a13",
+            "request_id": "308a62fa-cf8b-4971-b16b-05be61f63a5b",
+            "credential_id": "f8a64fe2-8cbc-4633-b90f-6f163f1d51a8",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:29.249Z",
+            "tool": "workspace_brand_get",
+            "target": "GET /brands/:id",
+            "outcome": "failed",
+            "error_code": "NOT_FOUND"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "475f6f47-883b-4302-acaa-234bc9cb3a13"
+      ]
+    },
+    {
+      "label": "same-tool-independent-request-and-call-ids",
+      "passed": true
+    },
+    {
+      "label": "first-write",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_create",
+      "id": "toolu_a690d012b4044500aec3687c33b36c23",
+      "caseId": "ff14b5e0-8581-4180-87df-a20e51faab1a",
+      "isError": false,
+      "conclusion": "收到成功回执",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "a5471bf8-421f-4b34-a5f0-dcb70e41dc64",
+      "wire": {
+        "caseId": "ff14b5e0-8581-4180-87df-a20e51faab1a",
+        "rpcId": 3,
+        "at": "2026-11-21T17:05:31.025Z",
+        "requestId": "a5471bf8-421f-4b34-a5f0-dcb70e41dc64",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=a5471bf8-421f-4b34-a5f0-dcb70e41dc64",
+        "status": "matched",
+        "auditId": "f0976ba6-2215-4983-adab-abc7de91ba22",
+        "cohort": [
+          {
+            "id": "f0976ba6-2215-4983-adab-abc7de91ba22",
+            "call_id": "f0976ba6-2215-4983-adab-abc7de91ba22",
+            "request_id": "a5471bf8-421f-4b34-a5f0-dcb70e41dc64",
+            "credential_id": "f8a64fe2-8cbc-4633-b90f-6f163f1d51a8",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:31.028Z",
+            "tool": "workspace_brand_create",
+            "target": "POST /brands",
+            "outcome": "success"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "f0976ba6-2215-4983-adab-abc7de91ba22"
+      ]
+    },
+    {
+      "label": "identical-write-replay",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_create",
+      "id": "toolu_41196437d9e04ce6b24d1d3cbb690be9",
+      "caseId": "def01c25-42c7-412a-b973-771d6f9fb0cf",
+      "isError": false,
+      "conclusion": "收到成功回执",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "3cd37d84-c2d0-4e95-a8aa-3af1bae46041",
+      "wire": {
+        "caseId": "def01c25-42c7-412a-b973-771d6f9fb0cf",
+        "rpcId": 3,
+        "at": "2026-11-21T17:05:32.192Z",
+        "requestId": "3cd37d84-c2d0-4e95-a8aa-3af1bae46041",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=3cd37d84-c2d0-4e95-a8aa-3af1bae46041",
+        "status": "matched",
+        "auditId": "efe0c0a1-d5ef-4214-a4b8-bb6ebb48d51e",
+        "cohort": [
+          {
+            "id": "efe0c0a1-d5ef-4214-a4b8-bb6ebb48d51e",
+            "call_id": "efe0c0a1-d5ef-4214-a4b8-bb6ebb48d51e",
+            "request_id": "3cd37d84-c2d0-4e95-a8aa-3af1bae46041",
+            "credential_id": "f8a64fe2-8cbc-4633-b90f-6f163f1d51a8",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:32.203Z",
+            "tool": "workspace_brand_create",
+            "target": "POST /brands",
+            "outcome": "success",
+            "replayed": true
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "efe0c0a1-d5ef-4214-a4b8-bb6ebb48d51e"
+      ]
+    },
+    {
+      "label": "replay-one-effect-two-audit-rows",
+      "duplicateWrites": 0,
+      "distinctReplay": true,
+      "replayFlag": true,
+      "passed": true
+    },
+    {
+      "label": "denied-human-required",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "smartsell_operation_call",
+      "id": "toolu_55c72288d47548489ddd94e77bb4b830",
+      "caseId": "0e91a07e-eed9-4275-88d9-819fd48b8c5f",
+      "isError": true,
+      "conclusion": "预期拒绝",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "c2c4a841-0533-4ead-9e55-097b075b90c3",
+      "wire": {
+        "caseId": "0e91a07e-eed9-4275-88d9-819fd48b8c5f",
+        "rpcId": 3,
+        "at": "2026-11-21T17:05:34.257Z",
+        "requestId": "c2c4a841-0533-4ead-9e55-097b075b90c3",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=c2c4a841-0533-4ead-9e55-097b075b90c3",
+        "status": "matched",
+        "auditId": "d60a2d8d-30cc-498f-aada-36217dd4f5d7",
+        "cohort": [
+          {
+            "id": "d60a2d8d-30cc-498f-aada-36217dd4f5d7",
+            "call_id": "d60a2d8d-30cc-498f-aada-36217dd4f5d7",
+            "request_id": "c2c4a841-0533-4ead-9e55-097b075b90c3",
+            "credential_id": "f8a64fe2-8cbc-4633-b90f-6f163f1d51a8",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:34.264Z",
+            "tool": "smartsell_operation_call",
+            "target": "POST /ad-proposals/:id/decide",
+            "outcome": "denied",
+            "error_code": "HUMAN_REQUIRED"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "d60a2d8d-30cc-498f-aada-36217dd4f5d7"
+      ]
+    },
+    {
+      "label": "denied-read-only-write",
+      "transport": "direct JSON-RPC (hidden from native discovery)",
+      "requestId": "8f1780a9-1124-42d5-a5b5-f82c667258f2",
+      "denialAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=8f1780a9-1124-42d5-a5b5-f82c667258f2",
+        "status": "matched",
+        "auditId": "a93de7d2-5a00-4b51-b1e4-537c3e624dc4",
+        "cohort": [
+          {
+            "id": "a93de7d2-5a00-4b51-b1e4-537c3e624dc4",
+            "call_id": "a93de7d2-5a00-4b51-b1e4-537c3e624dc4",
+            "request_id": "8f1780a9-1124-42d5-a5b5-f82c667258f2",
+            "credential_id": "5226c9d3-0fd8-4b30-b648-4782fd8e5d46",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:34.420Z",
+            "tool": "workspace_brand_create",
+            "target": "POST /brands",
+            "outcome": "denied",
+            "error_code": "TOOL_UNAVAILABLE"
+          }
+        ]
+      },
+      "rpcError": "TOOL_UNAVAILABLE",
+      "passed": true
+    },
+    {
+      "label": "oauth-read-a",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_get",
+      "id": "toolu_c3a42a3837934d18a5bee917e0719f8f",
+      "caseId": "3633b1a5-a881-4056-9e2c-d62408c644e5",
+      "isError": false,
+      "conclusion": "收到成功回执",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "61bc6eb4-9f48-4c72-a645-ada74e127872",
+      "wire": {
+        "caseId": "3633b1a5-a881-4056-9e2c-d62408c644e5",
+        "rpcId": 3,
+        "at": "2026-11-21T17:05:35.925Z",
+        "requestId": "61bc6eb4-9f48-4c72-a645-ada74e127872",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=61bc6eb4-9f48-4c72-a645-ada74e127872",
+        "status": "matched",
+        "auditId": "ca973470-b117-4a84-b7d0-338e2800b097",
+        "cohort": [
+          {
+            "id": "ca973470-b117-4a84-b7d0-338e2800b097",
+            "call_id": "ca973470-b117-4a84-b7d0-338e2800b097",
+            "request_id": "61bc6eb4-9f48-4c72-a645-ada74e127872",
+            "credential_id": "12f5112d-87d6-4127-b627-bc0fac175405",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:35.927Z",
+            "tool": "workspace_brand_get",
+            "target": "GET /brands/:id",
+            "outcome": "success"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "ca973470-b117-4a84-b7d0-338e2800b097"
+      ]
+    },
+    {
+      "label": "oauth-read-b",
+      "transport": "native CLI",
+      "business": true,
+      "passed": true,
+      "name": "workspace_brand_get",
+      "id": "toolu_0771b01c83cb41be83f5c828912ddba9",
+      "caseId": "55b55058-acb7-46bc-b8fc-d9418c6cab2e",
+      "isError": false,
+      "conclusion": "收到成功回执",
+      "childExit": {
+        "code": 0,
+        "signal": null
+      },
+      "requestId": "8183d034-7d89-4bd0-9e03-62128b38f369",
+      "wire": {
+        "caseId": "55b55058-acb7-46bc-b8fc-d9418c6cab2e",
+        "rpcId": 4,
+        "at": "2026-11-21T17:05:35.943Z",
+        "requestId": "8183d034-7d89-4bd0-9e03-62128b38f369",
+        "httpStatus": 200
+      },
+      "webAudit": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=8183d034-7d89-4bd0-9e03-62128b38f369",
+        "status": "matched",
+        "auditId": "7a417ae1-4ec7-408f-a12a-7a12716eb297",
+        "cohort": [
+          {
+            "id": "7a417ae1-4ec7-408f-a12a-7a12716eb297",
+            "call_id": "7a417ae1-4ec7-408f-a12a-7a12716eb297",
+            "request_id": "8183d034-7d89-4bd0-9e03-62128b38f369",
+            "credential_id": "12f5112d-87d6-4127-b627-bc0fac175405",
+            "actor_id": "0934e521-a0b9-4c25-ae20-c13440b3550b",
+            "occurred_at": "2026-11-21T17:05:35.946Z",
+            "tool": "workspace_brand_get",
+            "target": "GET /brands/:id",
+            "outcome": "success"
+          }
+        ]
+      },
+      "serverAuditIds": [
+        "7a417ae1-4ec7-408f-a12a-7a12716eb297"
+      ]
+    },
+    {
+      "label": "oauth-same-grant-and-revoked-call-unattributed",
+      "credentialId": "12f5112d-87d6-4127-b627-bc0fac175405",
+      "requestId": "e2c45655-8d95-4714-b931-e65d26feba22",
+      "status": 401,
+      "noRow": {
+        "httpStatus": 200,
+        "path": "/api/v1/workspaces/d8eb8646-58f5-423f-bd05-ed799eff0c3d/mcp-tool-calls?request_id=e2c45655-8d95-4714-b931-e65d26feba22",
+        "status": "missing_web_row",
+        "cohort": []
+      },
+      "passed": true
+    },
+    {
+      "label": "audit-needs-authenticated-browser-session",
+      "anonymousStatus": 401,
+      "bearerStatus": 401,
+      "passed": true
+    }
+  ]
+}

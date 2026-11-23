@@ -1,0 +1,53 @@
+{
+  "route": "/app/3f80f190-e750-4084-b109-75c4e25d175a/agent",
+  "browserRows": [
+    {
+      "requestId": "b83c4a3e-d224-4cfe-af14-d4c80031868d",
+      "callId": "f74050a8-96be-42e1-a39e-498cd49c3745",
+      "rows": 1,
+      "rendered": "11/22 01:06 · workspace_brand_get · GET /brands/:id · 成功\n\n請求 ID\nb83c4a3e-d224-4cfe-af14-d4c80031868d\n呼叫 ID\nf74050a8-96be-42e1-a39e-498cd49c3745\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n3a7703cb-0706-4060-b847-81523d2b485e"
+    },
+    {
+      "requestId": "cf49070e-3105-4ccf-87c3-5602f9da7eb6",
+      "callId": "b947db9d-4b85-40fe-b3e3-1b9a8a45318b",
+      "rows": 1,
+      "rendered": "11/22 01:06 · workspace_brand_get · GET /brands/:id · 成功\n\n請求 ID\ncf49070e-3105-4ccf-87c3-5602f9da7eb6\n呼叫 ID\nb947db9d-4b85-40fe-b3e3-1b9a8a45318b\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n3a7703cb-0706-4060-b847-81523d2b485e"
+    },
+    {
+      "requestId": "d96b46c1-1e62-47fc-9b88-f4bf52d33d1f",
+      "callId": "81180542-b503-43c7-8ffb-5dc9861610f1",
+      "rows": 1,
+      "rendered": "11/22 01:06 · workspace_brand_get · GET /brands/:id · 呼叫失敗 · NOT_FOUND\n\n請求 ID\nd96b46c1-1e62-47fc-9b88-f4bf52d33d1f\n呼叫 ID\n81180542-b503-43c7-8ffb-5dc9861610f1\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n3a7703cb-0706-4060-b847-81523d2b485e"
+    },
+    {
+      "requestId": "1512000c-a30d-4af2-9d8b-3e906d8caf60",
+      "callId": "35670f28-b512-433e-a558-d682c67194aa",
+      "rows": 1,
+      "rendered": "11/22 01:06 · workspace_brand_get · GET /brands/:id · 成功\n\n請求 ID\n1512000c-a30d-4af2-9d8b-3e906d8caf60\n呼叫 ID\n35670f28-b512-433e-a558-d682c67194aa\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n6856d310-fa4b-4b9a-8e9d-05e2f5f17e4c"
+    },
+    {
+      "requestId": "66e0c784-68d1-4c5b-9590-972bb4982eae",
+      "callId": "dae06554-417e-436f-ba77-ce275fec45e8",
+      "rows": 1,
+      "rendered": "11/22 01:06 · content_autosave_variant · PATCH /content-variants/:id · 成功\n\n請求 ID\n66e0c784-68d1-4c5b-9590-972bb4982eae\n呼叫 ID\ndae06554-417e-436f-ba77-ce275fec45e8\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n3a7703cb-0706-4060-b847-81523d2b485e"
+    },
+    {
+      "requestId": "32d87712-e0a9-4142-a1d3-5fb1c6ff243b",
+      "callId": "70fb8d07-8b2a-4137-9953-d3597731a892",
+      "rows": 1,
+      "rendered": "11/22 01:06 · content_autosave_variant · PATCH /content-variants/:id · 成功 · 已重播\n\n請求 ID\n32d87712-e0a9-4142-a1d3-5fb1c6ff243b\n呼叫 ID\n70fb8d07-8b2a-4137-9953-d3597731a892\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n3a7703cb-0706-4060-b847-81523d2b485e"
+    },
+    {
+      "requestId": "c8d87980-59b7-43c9-a332-574b5f4837f2",
+      "callId": "e7ab3142-4827-409a-b0be-0ec547f8f311",
+      "rows": 1,
+      "rendered": "11/22 01:06 · content_autosave_variant · PATCH /content-variants/:id · 已拒絕 · TOOL_UNAVAILABLE\n\n請求 ID\nc8d87980-59b7-43c9-a332-574b5f4837f2\n呼叫 ID\ne7ab3142-4827-409a-b0be-0ec547f8f311\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n6856d310-fa4b-4b9a-8e9d-05e2f5f17e4c"
+    },
+    {
+      "requestId": "e631afa8-3d7c-42d1-94c2-4a004381799f",
+      "callId": "0d837734-aaa9-49e8-b4fb-60f991da055d",
+      "rows": 1,
+      "rendered": "11/22 01:06 · desktop_request_capability · POST /desktop-capability-requests · 成功 · 不支援\n\n請求 ID\ne631afa8-3d7c-42d1-94c2-4a004381799f\n呼叫 ID\n0d837734-aaa9-49e8-b4fb-60f991da055d\n使用者 ID\n5acddafe-21c7-4c3d-8c10-fb17eaa96c3c\nAgent 授權 ID\n3a7703cb-0706-4060-b847-81523d2b485e"
+    }
+  ]
+}

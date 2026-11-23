@@ -1,0 +1,117 @@
+{
+  "at": "2026-11-21T16:24:44.743Z",
+  "deviceId": null,
+  "job": {
+    "title": "商品建品、导入与沙箱上架",
+    "kind": "custom",
+    "due_at": null,
+    "status": "submitted",
+    "fencing_token": "[REDACTED]",
+    "work_item_id": "adafe24a-d8eb-4dca-bf88-77884a2a597b",
+    "input_scope": {
+      "brand_ids": [
+        "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      ],
+      "campaign_id": null,
+      "resource_refs": [],
+      "constraints": "仅隔离测试；保持人工审核；不得发布到任何真实社媒或店铺。"
+    },
+    "expected_output": {
+      "type": "note"
+    },
+    "created_by": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+    "assignee_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+    "assignee_type": "agent_client",
+    "source_rule_run_id": null,
+    "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e",
+    "campaign_id": null,
+    "created_via": "human",
+    "id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+    "version": 3,
+    "created_at": "2026-11-21T16:23:19.662Z",
+    "updated_at": "2026-11-21T16:24:03.413Z",
+    "lease_owner_id": null,
+    "lease_expires_at": null,
+    "result_ref": {
+      "note": "已建立并回读内部商品「棱镜暖光桌灯 · 内建草稿」，商品 ID ff86811b-2ab0-4264-b2d8-de3243c53289，版本 1，状态 draft，来源 manual，变体和上架记录均为空。测试店 ID 68208918-2b8b-4a8f-a2b0-a549cb57dda7，回读为 file_import / import_only，connection_id 为空。CSV 样品 PRISM-IMPORT-21 的 product_list 批次创建因当前会话未获准调用 commerce_store_import 而阻塞，未取得批次 ID，行核对、预览、确认及导入回读待完成。NO_AUTHORIZED_STORE_SANDBOX：测试店没有已授权的可写远端沙箱，远端上架未执行。"
+    },
+    "events": [
+      {
+        "agent_job_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "type": "created",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "occurred_at": "2026-11-21T16:23:19.662Z",
+        "created_via": "human",
+        "id": "ffcd53ee-d838-447f-8bd0-8716ffb85d2d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.662Z",
+        "updated_at": "2026-11-21T16:23:19.662Z"
+      },
+      {
+        "agent_job_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "type": "claimed",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:27.329Z",
+        "created_via": "agent",
+        "id": "5d4f5828-ba77-475f-97a1-8d28d4938dcc",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:27.329Z",
+        "updated_at": "2026-11-21T16:23:27.329Z"
+      },
+      {
+        "agent_job_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "type": "submitted",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:24:03.413Z",
+        "created_via": "agent",
+        "id": "40005d1b-099b-474e-af59-6ae73a696160",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:03.413Z",
+        "updated_at": "2026-11-21T16:24:03.413Z"
+      }
+    ]
+  },
+  "products": [
+    {
+      "store_id": "68208918-2b8b-4a8f-a2b0-a549cb57dda7",
+      "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e",
+      "external_product_id": null,
+      "source": {
+        "kind": "manual"
+      },
+      "title": "棱镜暖光桌灯 · 内建草稿",
+      "status": "draft",
+      "created_via": "agent",
+      "id": "ff86811b-2ab0-4264-b2d8-de3243c53289",
+      "version": 1,
+      "created_at": "2026-11-21T16:23:43.304Z",
+      "updated_at": "2026-11-21T16:23:43.304Z",
+      "as_of": "2026-11-21T16:24:44.732Z"
+    }
+  ],
+  "store": {
+    "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e",
+    "provider": "file_import",
+    "external_store_id": "prism-file-c2fa4979-9117-48dd-8b6a-7141aa32ea96",
+    "name": "棱镜 CSV 测试店（非远端沙箱）",
+    "default_currency": "CNY",
+    "default_locale": "zh-CN",
+    "region": null,
+    "sync_scope": {},
+    "status": "import_only",
+    "status_reason": null,
+    "connection_id": null,
+    "data_source_id": null,
+    "last_snapshot_at": null,
+    "last_incremental_at": null,
+    "created_via": "human",
+    "id": "68208918-2b8b-4a8f-a2b0-a549cb57dda7",
+    "version": 1,
+    "created_at": "2026-11-21T16:23:19.163Z",
+    "updated_at": "2026-11-21T16:23:19.163Z",
+    "data_source": null,
+    "initial_snapshot_pending": false
+  }
+}

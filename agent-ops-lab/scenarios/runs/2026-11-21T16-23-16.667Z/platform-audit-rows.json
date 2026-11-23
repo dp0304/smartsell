@@ -1,0 +1,784 @@
+{
+  "at": "2026-11-21T16:24:44.988Z",
+  "rows": [
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/ebe53750-e8e7-4795-87d6-ae66073b23b5",
+      "data": {
+        "id": "ebe53750-e8e7-4795-87d6-ae66073b23b5",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.146Z",
+        "updated_at": "2026-11-21T16:23:19.146Z",
+        "occurred_at": "2026-11-21T16:23:19.146Z",
+        "action": "workspace_brand_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-3",
+        "resource_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e",
+        "resource_type": "brand",
+        "resource_title": "棱镜验收品牌",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/2fbf8083-e46b-449c-87d0-6cd183262d35",
+      "data": {
+        "id": "2fbf8083-e46b-449c-87d0-6cd183262d35",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.150Z",
+        "updated_at": "2026-11-21T16:23:19.150Z",
+        "occurred_at": "2026-11-21T16:23:19.150Z",
+        "action": "workspace_market_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-4",
+        "resource_id": "b255f75c-45df-44de-bf54-b792050c5329",
+        "resource_type": "market",
+        "resource_title": "中国测试市场",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/f9f87fe3-34b2-4d39-90a6-b4ad5f90338d",
+      "data": {
+        "id": "f9f87fe3-34b2-4d39-90a6-b4ad5f90338d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.159Z",
+        "updated_at": "2026-11-21T16:23:19.159Z",
+        "occurred_at": "2026-11-21T16:23:19.159Z",
+        "action": "account_register_owned_social_account",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-5",
+        "resource_id": "21ce6d3f-b4c8-4088-aa34-986986f2fdcd",
+        "resource_type": null,
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/1dcf0871-2ea3-4ecf-b18f-68a89aac4eab",
+      "data": {
+        "id": "1dcf0871-2ea3-4ecf-b18f-68a89aac4eab",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.163Z",
+        "updated_at": "2026-11-21T16:23:19.163Z",
+        "occurred_at": "2026-11-21T16:23:19.163Z",
+        "action": "commerce_store_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-6",
+        "resource_id": "68208918-2b8b-4a8f-a2b0-a549cb57dda7",
+        "resource_type": "store",
+        "resource_title": "棱镜 CSV 测试店（非远端沙箱）",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/fd01b5f9-1188-45aa-aacd-490303b7e0c7",
+      "data": {
+        "id": "fd01b5f9-1188-45aa-aacd-490303b7e0c7",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.166Z",
+        "updated_at": "2026-11-21T16:23:19.166Z",
+        "occurred_at": "2026-11-21T16:23:19.166Z",
+        "action": "research_board_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-7",
+        "resource_id": "b3846274-c5b0-482e-9f6e-a906e2f832a7",
+        "resource_type": "research",
+        "resource_title": "授权样页采集记录",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/ae6dde9e-3705-4ac7-9d7e-72b40cbb75c9",
+      "data": {
+        "id": "ae6dde9e-3705-4ac7-9d7e-72b40cbb75c9",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.170Z",
+        "updated_at": "2026-11-21T16:23:19.170Z",
+        "occurred_at": "2026-11-21T16:23:19.170Z",
+        "action": "agent_connection_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-8",
+        "resource_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "resource_type": "agent_connection",
+        "resource_title": "Claude Code 运营验收",
+        "brand_id": null
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/dabaa171-65e5-479d-8fd8-793fd0081d28",
+      "data": {
+        "id": "dabaa171-65e5-479d-8fd8-793fd0081d28",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.311Z",
+        "updated_at": "2026-11-21T16:23:19.311Z",
+        "occurred_at": "2026-11-21T16:23:19.311Z",
+        "action": "file_begin_upload",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-c",
+        "resource_id": "64185096-f431-4ee0-a1fb-0f84905099e3",
+        "resource_type": null,
+        "resource_title": null,
+        "brand_id": null
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/dd2c6b86-79b0-4afd-9c6d-8ebf3cc8ebc6",
+      "data": {
+        "id": "dd2c6b86-79b0-4afd-9c6d-8ebf3cc8ebc6",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.318Z",
+        "updated_at": "2026-11-21T16:23:19.318Z",
+        "occurred_at": "2026-11-21T16:23:19.318Z",
+        "action": "file_complete_upload",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-d",
+        "resource_id": "922642de-a7fe-4c99-ae98-8c18ed18fae6",
+        "resource_type": null,
+        "resource_title": null,
+        "brand_id": null
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/77c8e3b5-ea5e-4a03-b2f4-e457e367872d",
+      "data": {
+        "id": "77c8e3b5-ea5e-4a03-b2f4-e457e367872d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.363Z",
+        "updated_at": "2026-11-21T16:23:19.363Z",
+        "occurred_at": "2026-11-21T16:23:19.363Z",
+        "action": "asset_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-e",
+        "resource_id": "b103065f-2cdb-4799-85d6-73ab5fd69714",
+        "resource_type": "video",
+        "resource_title": "棱镜桌灯 3 秒测试视频",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/bbb858ea-3974-4151-8b2c-84557e3d9698",
+      "data": {
+        "id": "bbb858ea-3974-4151-8b2c-84557e3d9698",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.368Z",
+        "updated_at": "2026-11-21T16:23:19.368Z",
+        "occurred_at": "2026-11-21T16:23:19.368Z",
+        "action": "rights_create_draft",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-f",
+        "resource_id": "427a1ee9-3434-459d-9244-e0c5a9889140",
+        "resource_type": null,
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/50953f20-88d8-45f8-beaa-dca3dcaca6fa",
+      "data": {
+        "id": "50953f20-88d8-45f8-beaa-dca3dcaca6fa",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.372Z",
+        "updated_at": "2026-11-21T16:23:19.372Z",
+        "occurred_at": "2026-11-21T16:23:19.372Z",
+        "action": "rights_activate",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-g",
+        "resource_id": "427a1ee9-3434-459d-9244-e0c5a9889140",
+        "resource_type": null,
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/db349ea4-ed3d-48db-a595-bada665ffcf5",
+      "data": {
+        "agent_job_id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+        "type": "created",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "occurred_at": "2026-11-21T16:23:19.657Z",
+        "created_via": "human",
+        "id": "db349ea4-ed3d-48db-a595-bada665ffcf5",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.657Z",
+        "updated_at": "2026-11-21T16:23:19.657Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/dc564a12-0410-4234-ac12-bd44f1bcb4c7",
+      "data": {
+        "id": "dc564a12-0410-4234-ac12-bd44f1bcb4c7",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.657Z",
+        "updated_at": "2026-11-21T16:23:19.657Z",
+        "occurred_at": "2026-11-21T16:23:19.657Z",
+        "action": "agent_jobs_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-h",
+        "resource_id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+        "resource_type": "agent_job",
+        "resource_title": "视频排期与沙箱回执",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/ffcd53ee-d838-447f-8bd0-8716ffb85d2d",
+      "data": {
+        "agent_job_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "type": "created",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "occurred_at": "2026-11-21T16:23:19.662Z",
+        "created_via": "human",
+        "id": "ffcd53ee-d838-447f-8bd0-8716ffb85d2d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.662Z",
+        "updated_at": "2026-11-21T16:23:19.662Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/79aefe55-5a1e-48f4-ac95-783b03b812e5",
+      "data": {
+        "id": "79aefe55-5a1e-48f4-ac95-783b03b812e5",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.662Z",
+        "updated_at": "2026-11-21T16:23:19.662Z",
+        "occurred_at": "2026-11-21T16:23:19.662Z",
+        "action": "agent_jobs_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-i",
+        "resource_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "resource_type": "agent_job",
+        "resource_title": "商品建品、导入与沙箱上架",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/13f39a43-8f6b-4475-9107-e2e1838a408c",
+      "data": {
+        "agent_job_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "type": "created",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "occurred_at": "2026-11-21T16:23:19.666Z",
+        "created_via": "human",
+        "id": "13f39a43-8f6b-4475-9107-e2e1838a408c",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.666Z",
+        "updated_at": "2026-11-21T16:23:19.666Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/9bbf949d-b537-4eab-9190-1d742731e43f",
+      "data": {
+        "id": "9bbf949d-b537-4eab-9190-1d742731e43f",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:19.666Z",
+        "updated_at": "2026-11-21T16:23:19.666Z",
+        "occurred_at": "2026-11-21T16:23:19.666Z",
+        "action": "agent_jobs_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-j",
+        "resource_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "resource_type": "agent_job",
+        "resource_title": "授权公开样页采集与回读",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/5d4f5828-ba77-475f-97a1-8d28d4938dcc",
+      "data": {
+        "agent_job_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "type": "claimed",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:27.329Z",
+        "created_via": "agent",
+        "id": "5d4f5828-ba77-475f-97a1-8d28d4938dcc",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:27.329Z",
+        "updated_at": "2026-11-21T16:23:27.329Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/2aa21e13-55f1-4b79-a8d3-8162c8067691",
+      "data": {
+        "id": "2aa21e13-55f1-4b79-a8d3-8162c8067691",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:27.329Z",
+        "updated_at": "2026-11-21T16:23:27.329Z",
+        "occurred_at": "2026-11-21T16:23:27.329Z",
+        "action": "agent_jobs_claim",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-15",
+        "resource_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "resource_type": "agent_job",
+        "resource_title": "商品建品、导入与沙箱上架",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/a742ff96-b027-4843-8e24-f806410e009d",
+      "data": {
+        "agent_job_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "type": "claimed",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:28.877Z",
+        "created_via": "agent",
+        "id": "a742ff96-b027-4843-8e24-f806410e009d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:28.877Z",
+        "updated_at": "2026-11-21T16:23:28.877Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/e62dd5e8-7bab-4ad5-8c80-002458e6fb1e",
+      "data": {
+        "id": "e62dd5e8-7bab-4ad5-8c80-002458e6fb1e",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:28.877Z",
+        "updated_at": "2026-11-21T16:23:28.877Z",
+        "occurred_at": "2026-11-21T16:23:28.877Z",
+        "action": "agent_jobs_claim",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-16",
+        "resource_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "resource_type": "agent_job",
+        "resource_title": "授权公开样页采集与回读",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/0c800a26-99dc-43b1-98a9-18113da3abf2",
+      "data": {
+        "agent_job_id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+        "type": "claimed",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:29.112Z",
+        "created_via": "agent",
+        "id": "0c800a26-99dc-43b1-98a9-18113da3abf2",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:29.112Z",
+        "updated_at": "2026-11-21T16:23:29.112Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/66c36451-5070-453f-ab15-2dcae8028a72",
+      "data": {
+        "id": "66c36451-5070-453f-ab15-2dcae8028a72",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:29.112Z",
+        "updated_at": "2026-11-21T16:23:29.112Z",
+        "occurred_at": "2026-11-21T16:23:29.112Z",
+        "action": "agent_jobs_claim",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-17",
+        "resource_id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+        "resource_type": "agent_job",
+        "resource_title": "视频排期与沙箱回执",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/00c8e8c4-9f7d-45f1-ab35-216eb2d51d5b",
+      "data": {
+        "id": "00c8e8c4-9f7d-45f1-ab35-216eb2d51d5b",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:38.799Z",
+        "updated_at": "2026-11-21T16:23:38.799Z",
+        "occurred_at": "2026-11-21T16:23:38.799Z",
+        "action": "research_add_item",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-1k",
+        "resource_id": "8cb05afb-d7df-4a6f-a15f-880ed8384274",
+        "resource_type": null,
+        "resource_title": "棱镜暖光桌灯",
+        "brand_id": null
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/0b35b81e-c148-4833-a8ab-d1ad2cb7b5aa",
+      "data": {
+        "id": "0b35b81e-c148-4833-a8ab-d1ad2cb7b5aa",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:42.765Z",
+        "updated_at": "2026-11-21T16:23:42.765Z",
+        "occurred_at": "2026-11-21T16:23:42.765Z",
+        "action": "content_create_item",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-1r",
+        "resource_id": "0a692114-5bf4-41fe-baad-86ee4749ed58",
+        "resource_type": "content_item",
+        "resource_title": "棱镜桌灯短片",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/b76ed531-3850-42a0-816b-d76b99160e94",
+      "data": {
+        "id": "b76ed531-3850-42a0-816b-d76b99160e94",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:43.304Z",
+        "updated_at": "2026-11-21T16:23:43.304Z",
+        "occurred_at": "2026-11-21T16:23:43.304Z",
+        "action": "commerce_product_create",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-1s",
+        "resource_id": "ff86811b-2ab0-4264-b2d8-de3243c53289",
+        "resource_type": "product",
+        "resource_title": "棱镜暖光桌灯 · 内建草稿",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/7638ffdb-5d4b-433a-8c02-4ed8484fecd3",
+      "data": {
+        "agent_job_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "type": "submitted",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:23:48.551Z",
+        "created_via": "agent",
+        "id": "7638ffdb-5d4b-433a-8c02-4ed8484fecd3",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:48.551Z",
+        "updated_at": "2026-11-21T16:23:48.551Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/08abf797-1044-4261-b4c8-0c57ea072512",
+      "data": {
+        "id": "08abf797-1044-4261-b4c8-0c57ea072512",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:48.551Z",
+        "updated_at": "2026-11-21T16:23:48.551Z",
+        "occurred_at": "2026-11-21T16:23:48.551Z",
+        "action": "agent_jobs_submit_result",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-1u",
+        "resource_id": "bccfdcde-be30-488c-9786-bc3514af55da",
+        "resource_type": "agent_job",
+        "resource_title": "授权公开样页采集与回读",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/77c7b89a-a968-411d-b0be-5ab84eda2682",
+      "data": {
+        "id": "77c7b89a-a968-411d-b0be-5ab84eda2682",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:51.773Z",
+        "updated_at": "2026-11-21T16:23:51.773Z",
+        "occurred_at": "2026-11-21T16:23:51.773Z",
+        "action": "content_create_variant",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-1v",
+        "resource_id": "ba22edc7-0a53-4953-98f3-6cbe8fc99d71",
+        "resource_type": "content_variant",
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/39f8ce65-fee7-4842-b1cc-8a3842ad6b0d",
+      "data": {
+        "id": "39f8ce65-fee7-4842-b1cc-8a3842ad6b0d",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:56.267Z",
+        "updated_at": "2026-11-21T16:23:56.267Z",
+        "occurred_at": "2026-11-21T16:23:56.267Z",
+        "action": "content_autosave_variant",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-1y",
+        "resource_id": "ba22edc7-0a53-4953-98f3-6cbe8fc99d71",
+        "resource_type": "content_variant",
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/ab16469b-1c15-4493-adfe-1039a61a1d87",
+      "data": {
+        "id": "ab16469b-1c15-4493-adfe-1039a61a1d87",
+        "version": 1,
+        "created_at": "2026-11-21T16:23:59.731Z",
+        "updated_at": "2026-11-21T16:23:59.731Z",
+        "occurred_at": "2026-11-21T16:23:59.731Z",
+        "action": "content_commit_revision",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-21",
+        "resource_id": "ba22edc7-0a53-4953-98f3-6cbe8fc99d71",
+        "resource_type": "content_revision",
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/40005d1b-099b-474e-af59-6ae73a696160",
+      "data": {
+        "agent_job_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "type": "submitted",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:24:03.413Z",
+        "created_via": "agent",
+        "id": "40005d1b-099b-474e-af59-6ae73a696160",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:03.413Z",
+        "updated_at": "2026-11-21T16:24:03.413Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/06828213-93c5-42ef-a3f0-10dbcafbc4c3",
+      "data": {
+        "id": "06828213-93c5-42ef-a3f0-10dbcafbc4c3",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:03.413Z",
+        "updated_at": "2026-11-21T16:24:03.413Z",
+        "occurred_at": "2026-11-21T16:24:03.413Z",
+        "action": "agent_jobs_submit_result",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-22",
+        "resource_id": "ebebd92f-f238-4e98-836a-a1f183978fa1",
+        "resource_type": "agent_job",
+        "resource_title": "商品建品、导入与沙箱上架",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/9f67119a-370d-4f0d-89ea-039f930444d1",
+      "data": {
+        "id": "9f67119a-370d-4f0d-89ea-039f930444d1",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:04.683Z",
+        "updated_at": "2026-11-21T16:24:04.683Z",
+        "occurred_at": "2026-11-21T16:24:04.683Z",
+        "action": "publishing_create_target",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-23",
+        "resource_id": "8181bfa3-3167-4311-8cb7-f03bca32d7ef",
+        "resource_type": "publish_target",
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/95242999-8478-41d1-ae32-d564123c2c49",
+      "data": {
+        "id": "95242999-8478-41d1-ae32-d564123c2c49",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:08.051Z",
+        "updated_at": "2026-11-21T16:24:08.051Z",
+        "occurred_at": "2026-11-21T16:24:08.051Z",
+        "action": "publishing_request_approval",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-24",
+        "resource_id": "8181bfa3-3167-4311-8cb7-f03bca32d7ef",
+        "resource_type": "publish_target",
+        "resource_title": null,
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "agent_job_event",
+      "id": "row/agent_job_event/03026ff6-349a-4af6-b42f-44cd7aeb8e72",
+      "data": {
+        "agent_job_id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+        "type": "submitted",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:24:25.010Z",
+        "created_via": "agent",
+        "id": "03026ff6-349a-4af6-b42f-44cd7aeb8e72",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:25.010Z",
+        "updated_at": "2026-11-21T16:24:25.010Z"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/adcd5367-9be6-4807-9e41-903a854803be",
+      "data": {
+        "id": "adcd5367-9be6-4807-9e41-903a854803be",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:25.010Z",
+        "updated_at": "2026-11-21T16:24:25.010Z",
+        "occurred_at": "2026-11-21T16:24:25.010Z",
+        "action": "agent_jobs_submit_result",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "agent",
+        "credential_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "credential_label": "Claude Code 运营验收",
+        "source": "mcp",
+        "request_id": "req-2a",
+        "resource_id": "e5b05423-694e-473e-b825-1632df4f5bb4",
+        "resource_type": "agent_job",
+        "resource_title": "视频排期与沙箱回执",
+        "brand_id": "521db83a-1e7a-4598-91b2-fe4154e0b88e"
+      }
+    },
+    {
+      "kind": "activity_event",
+      "id": "row/activity_event/5b75e071-a730-4708-880c-49195554ecf0",
+      "data": {
+        "id": "5b75e071-a730-4708-880c-49195554ecf0",
+        "version": 1,
+        "created_at": "2026-11-21T16:24:44.748Z",
+        "updated_at": "2026-11-21T16:24:44.748Z",
+        "occurred_at": "2026-11-21T16:24:44.748Z",
+        "action": "agent_connection_revoke",
+        "actor_id": "27bc20fe-fbb8-482b-a23a-6dc46dd23ce6",
+        "actor_type": "human",
+        "credential_id": null,
+        "credential_label": null,
+        "source": "rest",
+        "request_id": "req-2m",
+        "resource_id": "9c9153c0-a3f8-4742-bd3f-c8a89f73307a",
+        "resource_type": "agent_connection",
+        "resource_title": "Claude Code 运营验收",
+        "brand_id": null
+      }
+    }
+  ]
+}

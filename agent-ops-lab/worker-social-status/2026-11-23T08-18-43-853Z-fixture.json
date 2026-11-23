@@ -1,0 +1,1082 @@
+{
+  "schema": 1,
+  "run": "fixture",
+  "started_at": "2026-11-23T08:18:43.853Z",
+  "checks": [
+    {
+      "name": "server_discovery",
+      "unauthenticated_http": 401,
+      "initialize_http": 200,
+      "list_http": 200,
+      "named": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ],
+      "missing": [],
+      "workspace": "id-4",
+      "connection": "id-5"
+    },
+    {
+      "name": "no_worker",
+      "error": {
+        "code": "SOCIAL_STATUS_WORKER_UNPAIRED",
+        "message": "[redacted]"
+      }
+    },
+    {
+      "name": "read_only_permission",
+      "http": 200,
+      "outcome": {
+        "error": {
+          "code": "[redacted]"
+        }
+      },
+      "request_listed": false
+    },
+    {
+      "name": "legacy_worker",
+      "error": {
+        "code": "SOCIAL_STATUS_WORKER_UNSUPPORTED",
+        "message": "[redacted]"
+      }
+    },
+    {
+      "name": "fixture_case_start",
+      "label": "recent_posts"
+    },
+    {
+      "name": "web_terminal",
+      "task": {
+        "id": "id-18",
+        "workspace_id": "id-4",
+        "device_id": "id-12",
+        "mode": "recent_posts",
+        "platform": "x",
+        "status": "completed",
+        "lease_expires_at": "2026-11-23T08:20:44.422Z",
+        "result": {
+          "channels": [
+            {
+              "platform": "x",
+              "status": "verified",
+              "identity": "fixture_angler",
+              "posts": [
+                {
+                  "id": "[redacted]",
+                  "url": "https://x.com/fixture_angler/status/1001",
+                  "text": "fixture_video",
+                  "has_video": true
+                },
+                {
+                  "id": "[redacted]",
+                  "url": "https://x.com/fixture_angler/status/1002",
+                  "text": "fixture_plain",
+                  "has_video": false
+                }
+              ]
+            }
+          ]
+        },
+        "reported_at": "2026-11-23T08:18:44.565Z"
+      },
+      "web_request_id": "id-23",
+      "claim_request_id": "id-19",
+      "report_request_id": "id-21",
+      "audit": [
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-22",
+          "task_id": "id-18",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.684Z"
+        },
+        {
+          "tool": "[redacted]",
+          "outcome": "[redacted]",
+          "request_id": "id-21",
+          "task_id": "id-18",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.565Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-20",
+          "task_id": "id-18",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.427Z"
+        },
+        {
+          "tool": "worker_social_status_request",
+          "outcome": "[redacted]",
+          "request_id": "id-17",
+          "task_id": "id-18",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.417Z"
+        }
+      ]
+    },
+    {
+      "name": "fixture_case_start",
+      "label": "default_account_status"
+    },
+    {
+      "name": "web_terminal",
+      "task": {
+        "id": "id-26",
+        "workspace_id": "id-4",
+        "device_id": "id-12",
+        "mode": "account_status",
+        "status": "blocked",
+        "lease_expires_at": "2026-11-23T08:20:44.775Z",
+        "result": {
+          "channels": [
+            {
+              "platform": "x",
+              "status": "verified",
+              "identity": "fixture_angler"
+            },
+            {
+              "platform": "youtube",
+              "status": "unverified"
+            },
+            {
+              "platform": "facebook",
+              "status": "unverified"
+            },
+            {
+              "platform": "instagram",
+              "status": "unverified"
+            },
+            {
+              "platform": "[redacted]",
+              "status": "unverified"
+            },
+            {
+              "platform": "douyin",
+              "status": "unverified"
+            },
+            {
+              "platform": "[redacted]",
+              "status": "unverified"
+            },
+            {
+              "platform": "tiktok",
+              "status": "unverified"
+            }
+          ]
+        },
+        "reported_at": "2026-11-23T08:18:44.779Z"
+      },
+      "web_request_id": "id-32",
+      "claim_request_id": "id-29",
+      "report_request_id": "id-30",
+      "audit": [
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-31",
+          "task_id": "id-26",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.962Z"
+        },
+        {
+          "tool": "[redacted]",
+          "outcome": "[redacted]",
+          "request_id": "id-30",
+          "task_id": "id-26",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.779Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-27",
+          "task_id": "id-26",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.699Z"
+        },
+        {
+          "tool": "worker_social_status_request",
+          "outcome": "[redacted]",
+          "request_id": "id-25",
+          "task_id": "id-26",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.693Z"
+        }
+      ]
+    },
+    {
+      "name": "fixture_case_start",
+      "label": "signed_out"
+    },
+    {
+      "name": "web_terminal",
+      "task": {
+        "id": "id-35",
+        "workspace_id": "id-4",
+        "device_id": "id-12",
+        "mode": "account_status",
+        "platform": "x",
+        "status": "blocked",
+        "lease_expires_at": "2026-11-23T08:20:45.137Z",
+        "result": {
+          "channels": [
+            {
+              "platform": "x",
+              "status": "login_required"
+            }
+          ]
+        },
+        "reported_at": "2026-11-23T08:18:46.431Z"
+      },
+      "web_request_id": "id-47",
+      "claim_request_id": "id-38",
+      "report_request_id": "id-44",
+      "audit": [
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-46",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:46.543Z"
+        },
+        {
+          "tool": "[redacted]",
+          "outcome": "[redacted]",
+          "request_id": "id-44",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:46.431Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-43",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:46.288Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-42",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:46.028Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-41",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:45.766Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-40",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:45.501Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-39",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:45.244Z"
+        },
+        {
+          "tool": "worker_social_status_get",
+          "outcome": "[redacted]",
+          "request_id": "id-36",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.987Z"
+        },
+        {
+          "tool": "worker_social_status_request",
+          "outcome": "[redacted]",
+          "request_id": "id-34",
+          "task_id": "id-35",
+          "device_id": "id-12",
+          "occurred_at": "2026-11-23T08:18:44.978Z"
+        }
+      ]
+    },
+    {
+      "name": "offline_chrome",
+      "navigations": 4,
+      "fulfilled": 4,
+      "blocked": 0,
+      "observations": [
+        "profile",
+        "posts",
+        "net::ERR_PROXY_CONNECTION_FAILED"
+      ]
+    }
+  ],
+  "events": [],
+  "protocol": [
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 401,
+      "request_id": "id-1"
+    },
+    {
+      "route": "mcp",
+      "method": "initialize",
+      "http": 200,
+      "request_id": "id-2",
+      "worker_instructions": true
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 200,
+      "request_id": "id-3",
+      "named_tools": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-6"
+      },
+      "http": 200,
+      "request_id": "id-7",
+      "result": {
+        "error": {
+          "code": "SOCIAL_STATUS_WORKER_UNPAIRED",
+          "message": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 200,
+      "request_id": "id-8",
+      "named_tools": [
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-9"
+      },
+      "http": 200,
+      "request_id": "id-10",
+      "result": {
+        "error": {
+          "code": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-11",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]"
+      },
+      "response": {
+        "status": "online"
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-13"
+      },
+      "http": 200,
+      "request_id": "id-14",
+      "result": {
+        "error": {
+          "code": "SOCIAL_STATUS_WORKER_UNSUPPORTED",
+          "message": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-15",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]",
+        "include_bindings": true,
+        "include_browser_work": true,
+        "social_status_version": 1
+      },
+      "response": {
+        "status": "online",
+        "social_status_version": 1,
+        "bindings": {
+          "social": {},
+          "commerce": {}
+        },
+        "browser_work": {
+          "pending_identity": []
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {
+          "mode": "recent_posts",
+          "platform": "x"
+        },
+        "idempotency_key": "id-16"
+      },
+      "http": 200,
+      "request_id": "id-17",
+      "result": {
+        "data": {
+          "id": "id-18",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "recent_posts",
+          "platform": "x",
+          "status": "queued"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/social-status/claim",
+      "action": "social.status.claim",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-19",
+      "device_id": "id-12",
+      "request": {},
+      "response": {
+        "claim": {
+          "id": "id-18",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "recent_posts",
+          "platform": "x",
+          "lease_expires_at": "2026-11-23T08:20:44.422Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-18"
+        }
+      },
+      "http": 200,
+      "request_id": "id-20",
+      "result": {
+        "data": {
+          "id": "id-18",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "recent_posts",
+          "platform": "x",
+          "status": "[redacted]",
+          "lease_expires_at": "2026-11-23T08:20:44.422Z"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/social-status/report",
+      "action": "social.status.report",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-21",
+      "device_id": "id-12",
+      "request": {
+        "id": "id-18",
+        "result": {
+          "channels": [
+            {
+              "platform": "x",
+              "status": "verified",
+              "identity": "fixture_angler",
+              "posts": [
+                {
+                  "id": "[redacted]",
+                  "url": "https://x.com/fixture_angler/status/1001",
+                  "text": "fixture_video",
+                  "has_video": true
+                },
+                {
+                  "id": "[redacted]",
+                  "url": "https://x.com/fixture_angler/status/1002",
+                  "text": "fixture_plain",
+                  "has_video": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "response": {
+        "id": "id-18",
+        "status": "completed"
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-18"
+        }
+      },
+      "http": 200,
+      "request_id": "id-22",
+      "result": {
+        "data": {
+          "id": "id-18",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "recent_posts",
+          "platform": "x",
+          "status": "completed",
+          "lease_expires_at": "2026-11-23T08:20:44.422Z",
+          "result": {
+            "channels": [
+              {
+                "platform": "x",
+                "status": "verified",
+                "identity": "fixture_angler",
+                "posts": [
+                  {
+                    "id": "[redacted]",
+                    "url": "https://x.com/fixture_angler/status/1001",
+                    "text": "fixture_video",
+                    "has_video": true
+                  },
+                  {
+                    "id": "[redacted]",
+                    "url": "https://x.com/fixture_angler/status/1002",
+                    "text": "fixture_plain",
+                    "has_video": false
+                  }
+                ]
+              }
+            ]
+          },
+          "reported_at": "2026-11-23T08:18:44.565Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-24"
+      },
+      "http": 200,
+      "request_id": "id-25",
+      "result": {
+        "data": {
+          "id": "id-26",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "status": "queued"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-26"
+        }
+      },
+      "http": 200,
+      "request_id": "id-27",
+      "result": {
+        "data": {
+          "id": "id-26",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "status": "queued"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-28",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]",
+        "include_bindings": true,
+        "include_browser_work": true,
+        "social_status_version": 1
+      },
+      "response": {
+        "status": "online",
+        "social_status_version": 1,
+        "bindings": {
+          "social": {},
+          "commerce": {}
+        },
+        "browser_work": {
+          "pending_identity": []
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/social-status/claim",
+      "action": "social.status.claim",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-29",
+      "device_id": "id-12",
+      "request": {},
+      "response": {
+        "claim": {
+          "id": "id-26",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "lease_expires_at": "2026-11-23T08:20:44.775Z"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/social-status/report",
+      "action": "social.status.report",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-30",
+      "device_id": "id-12",
+      "request": {
+        "id": "id-26",
+        "result": {
+          "channels": [
+            {
+              "platform": "x",
+              "status": "verified",
+              "identity": "fixture_angler"
+            },
+            {
+              "platform": "youtube",
+              "status": "unverified"
+            },
+            {
+              "platform": "facebook",
+              "status": "unverified"
+            },
+            {
+              "platform": "instagram",
+              "status": "unverified"
+            },
+            {
+              "platform": "[redacted]",
+              "status": "unverified"
+            },
+            {
+              "platform": "douyin",
+              "status": "unverified"
+            },
+            {
+              "platform": "[redacted]",
+              "status": "unverified"
+            },
+            {
+              "platform": "tiktok",
+              "status": "unverified"
+            }
+          ]
+        }
+      },
+      "response": {
+        "id": "id-26",
+        "status": "blocked"
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-26"
+        }
+      },
+      "http": 200,
+      "request_id": "id-31",
+      "result": {
+        "data": {
+          "id": "id-26",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "status": "blocked",
+          "lease_expires_at": "2026-11-23T08:20:44.775Z",
+          "result": {
+            "channels": [
+              {
+                "platform": "x",
+                "status": "verified",
+                "identity": "fixture_angler"
+              },
+              {
+                "platform": "youtube",
+                "status": "unverified"
+              },
+              {
+                "platform": "facebook",
+                "status": "unverified"
+              },
+              {
+                "platform": "instagram",
+                "status": "unverified"
+              },
+              {
+                "platform": "[redacted]",
+                "status": "unverified"
+              },
+              {
+                "platform": "douyin",
+                "status": "unverified"
+              },
+              {
+                "platform": "[redacted]",
+                "status": "unverified"
+              },
+              {
+                "platform": "tiktok",
+                "status": "unverified"
+              }
+            ]
+          },
+          "reported_at": "2026-11-23T08:18:44.779Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {
+          "platform": "x"
+        },
+        "idempotency_key": "id-33"
+      },
+      "http": 200,
+      "request_id": "id-34",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "queued"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-36",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "queued"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-37",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]",
+        "include_bindings": true,
+        "include_browser_work": true,
+        "social_status_version": 1
+      },
+      "response": {
+        "status": "online",
+        "social_status_version": 1,
+        "bindings": {
+          "social": {},
+          "commerce": {}
+        },
+        "browser_work": {
+          "pending_identity": []
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/social-status/claim",
+      "action": "social.status.claim",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-38",
+      "device_id": "id-12",
+      "request": {},
+      "response": {
+        "claim": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-39",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "[redacted]",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-40",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "[redacted]",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-41",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "[redacted]",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-42",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "[redacted]",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-43",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "[redacted]",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/social-status/report",
+      "action": "social.status.report",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-44",
+      "device_id": "id-12",
+      "request": {
+        "id": "id-35",
+        "result": {
+          "channels": [
+            {
+              "platform": "x",
+              "status": "login_required"
+            }
+          ]
+        }
+      },
+      "response": {
+        "id": "id-35",
+        "status": "blocked"
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-45",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]",
+        "include_bindings": true,
+        "include_browser_work": true,
+        "social_status_version": 1
+      },
+      "response": {
+        "status": "online",
+        "social_status_version": 1,
+        "bindings": {
+          "social": {},
+          "commerce": {}
+        },
+        "browser_work": {
+          "pending_identity": []
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "tool": "worker_social_status_get",
+      "args": {
+        "params": {
+          "id": "id-35"
+        }
+      },
+      "http": 200,
+      "request_id": "id-46",
+      "result": {
+        "data": {
+          "id": "id-35",
+          "workspace_id": "id-4",
+          "device_id": "id-12",
+          "mode": "account_status",
+          "platform": "x",
+          "status": "blocked",
+          "lease_expires_at": "2026-11-23T08:20:45.137Z",
+          "result": {
+            "channels": [
+              {
+                "platform": "x",
+                "status": "login_required"
+              }
+            ]
+          },
+          "reported_at": "2026-11-23T08:18:46.431Z"
+        }
+      }
+    }
+  ],
+  "canary": {},
+  "outcome": "passed",
+  "finished_at": "2026-11-23T08:18:46.740Z"
+}

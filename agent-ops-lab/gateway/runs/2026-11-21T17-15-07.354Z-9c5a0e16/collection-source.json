@@ -1,0 +1,14 @@
+{
+  "source_url": "http://127.0.0.1:62043/desk-lamp",
+  "observed_at": "2026-11-21T17:15:10.467Z",
+  "http_status": 200,
+  "sha256": "e2fb4f2306408dab2717ffa0c215093aff4f9d58510dd88f89b201f9903f77a5",
+  "fields": {
+    "name": "棱镜暖光桌灯",
+    "sku": "GATEWAY-QA-21",
+    "price_minor": 12900,
+    "currency": "CNY",
+    "availability": "有货"
+  },
+  "scope": "本次自建回环样页，授权读取和入库"
+}

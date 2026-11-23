@@ -1,0 +1,17 @@
+{
+  "app": ".local/smartsell-desktop-ops-dkxMMW/release-local/mac-arm64/SmartSell Connector.app",
+  "archiveSize": 2532657,
+  "verified": {
+    "dist/main.cjs": "0245448e9aab12f356223e4ee78caa4ce815713212b1b97ea71bb84ff846738c",
+    "dist/preload.cjs": "379721b87e73ee56499dc8ce0236f7b5e719d193fe885251bc744542cf745399",
+    "dist/ui/index.html": "88b8f833cd14c0cfa0c7b51356d341edc6f8806b70a90080780bb545d42e714d",
+    "dist/ui/renderer.js": "70fe7d13b293dfe92214c6797367f97ee31257ac06779f74d21bf251cb749508",
+    "dist/ui/styles.css": "695064968f0bd849bf2bccb5300722df749992d5d1b7210d104410f83f2c9da0",
+    "dist/smartsell-install-skills.mjs": "0d0dd1753e7245a5853f20b396d1122f03017f57c4576180f0275882752fda44"
+  },
+  "skills": [
+    "smartsell-video-publish",
+    "smartsell-product-listing",
+    "smartsell-data-collection"
+  ]
+}

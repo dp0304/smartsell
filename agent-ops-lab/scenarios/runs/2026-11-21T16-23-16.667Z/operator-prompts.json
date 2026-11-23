@@ -1,0 +1,14 @@
+{
+  "01-video": [
+    "把现成的棱镜桌灯短片做成 Facebook 内容，配文「暖光陪你工作到夜晚。#棱镜桌灯 #测试素材」，上海时区排期并送审；只在真实授权沙箱有回执才说已发布。平台任务 e5b05423-694e-473e-b825-1632df4f5bb4。请读任务，claim，然后完成业务并调用 agent_jobs_submit_result，带最新版本与原 fencing_token；result_ref.note 写业务 ID、回读及缺口。每次写带幂等键。\nbrand_id=521db83a-1e7a-4598-91b2-fe4154e0b88e; market_id=b255f75c-45df-44de-bf54-b792050c5329; social_account_id=21ce6d3f-b4c8-4088-aa34-986986f2fdcd; asset_version_id=dfc4a53b-0ef0-466d-807e-0fa49872f32d; scheduled_at=2026-11-21T17:23:19.668Z; schedule_tz=Asia/Shanghai。创建 item、Facebook video variant，autosave 文案与素材版本，commit（首次 base_revision_id:null），创建目标（connector_mode_pref:assist），送审再 get。此账号纯本地、无远端授权，反馈 NO_AUTHORIZED_SOCIAL_SANDBOX，不要审批。",
+    "请再次读任务与排期，告诉我上海时间、审批状态和是否存在真正的沙箱回执。不要再写。"
+  ],
+  "02-shop": [
+    "把桌灯备到测试店：先建 SmartSell 内部商品「棱镜暖光桌灯 · 内建草稿」，再导入另一个 CSV 样品。只有已授权可写远端沙箱才上架。平台任务 ebebd92f-f238-4e98-836a-a1f183978fa1。请读任务，claim，然后完成业务并调用 agent_jobs_submit_result，带最新版本与原 fencing_token；result_ref.note 写业务 ID、回读及缺口。每次写带幂等键。\nstore_id=68208918-2b8b-4a8f-a2b0-a549cb57dda7，只有 file_import，没有远端授权。用模板 product_list；创建批次后核对行、按需要预览并确认，最后读回。CSV 输入如下：\nexternal_product_id,external_variant_id,title,sku,currency,price,available,market_id\nprism-import-01,prism-import-v1,棱镜桌灯 · CSV 样品,PRISM-IMPORT-21,CNY,129.00,true,b255f75c-45df-44de-bf54-b792050c5329\n持久化 NO_AUTHORIZED_STORE_SANDBOX。",
+    "重新读任务和导入批次。分别说内部商品 ID、导入批次及状态、远端商品 ID／上架回执有哪些；不要再写。"
+  ],
+  "03-collect": [
+    "把我们授权公开样页中的商品名、SKU、价格、币种、库存存进 SmartSell，保留来源和实际采集时间。平台任务 bccfdcde-be30-488c-9786-bc3514af55da。请读任务，claim，然后完成业务并调用 agent_jobs_submit_result，带最新版本与原 fencing_token；result_ref.note 写业务 ID、回读及缺口。每次写带幂等键。\n以下是本地 Chrome 实际读取，不需要你再访问网站：{\"source_url\":\"http://127.0.0.1:46433/catalog/desk-lamp\",\"observed_at\":\"2026-11-21T16:23:19.528Z\",\"http_status\":200,\"sha256\":\"657cf3761d365e0392b55535ba3009f7c85eaacf911db683924de1ce8633386a\",\"fields\":{\"name\":\"棱镜暖光桌灯\",\"sku\":\"PRISM-QA-21\",\"price_minor\":12900,\"currency\":\"CNY\",\"availability\":\"有货\"},\"authorization\":\"本轮自建的回环公开页面、无登录；授权读取、入库与模型处理。\"}。用 smartsell_operation_call 调 research_add_item，params.id=b3846274-c5b0-482e-9f6e-a906e2f832a7，body={item_type:'link',url:来源URL,title:商品名,body:上述采集结果的 JSON 字符串,labels:['授权样页']}，再调 research_board_get 回读持久化字段。",
+    "再从平台读这条记录和任务，逐项给出价格、库存、来源、采集时间与记录 ID。不要重复写。"
+  ]
+}

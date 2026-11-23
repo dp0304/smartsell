@@ -1,0 +1,477 @@
+{
+  "schema": 1,
+  "run": "native-offline",
+  "started_at": "2026-11-23T08:37:02.839Z",
+  "checks": [
+    {
+      "name": "server_discovery",
+      "unauthenticated_http": 401,
+      "initialize_http": 200,
+      "list_http": 200,
+      "named": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ],
+      "missing": [],
+      "workspace": "id-4",
+      "connection": "id-5"
+    },
+    {
+      "name": "no_worker",
+      "error": {
+        "code": "SOCIAL_STATUS_WORKER_UNPAIRED",
+        "message": "[redacted]"
+      }
+    },
+    {
+      "name": "read_only_permission",
+      "http": 200,
+      "outcome": {
+        "error": {
+          "code": "TOOL_UNAVAILABLE"
+        }
+      },
+      "request_listed": false
+    },
+    {
+      "name": "legacy_worker",
+      "error": {
+        "code": "SOCIAL_STATUS_WORKER_UNSUPPORTED",
+        "message": "[redacted]"
+      }
+    },
+    {
+      "name": "native_configured",
+      "executable": "codex",
+      "node": "v24.21.0",
+      "empty_project": true,
+      "install": [
+        {
+          "server": "smartsell",
+          "exit": 0,
+          "signal": null,
+          "expired": false,
+          "stderr": {
+            "kind": "unclassified"
+          }
+        },
+        {
+          "server": "local_canary",
+          "exit": 0,
+          "signal": null,
+          "expired": false,
+          "stderr": {
+            "kind": "unclassified"
+          }
+        }
+      ]
+    },
+    {
+      "name": "native_app_server_discovery",
+      "servers": [
+        {
+          "server": "local_canary",
+          "tools": [
+            "local_web_search",
+            "local_browser_open"
+          ]
+        },
+        {
+          "server": "smartsell",
+          "tools": [
+            "worker_social_status_get",
+            "worker_social_status_request"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "native_prompt",
+      "prompt": 1,
+      "exit": 1,
+      "signal": null,
+      "expired": false,
+      "stderr": {
+        "kind": "unclassified",
+        "diagnostic": [
+          "[redacted]"
+        ]
+      },
+      "canary": {
+        "prompt": 1,
+        "lists": 1,
+        "calls": [],
+        "requests": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ]
+      },
+      "direct": 0,
+      "protocol_start": 14,
+      "protocol_end": 17,
+      "tools": [],
+      "completed": false
+    },
+    {
+      "name": "native_prompt",
+      "prompt": 2,
+      "exit": 1,
+      "signal": null,
+      "expired": false,
+      "stderr": {
+        "kind": "unclassified",
+        "diagnostic": [
+          "[redacted]"
+        ]
+      },
+      "canary": {
+        "prompt": 2,
+        "lists": 1,
+        "calls": [],
+        "requests": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ]
+      },
+      "direct": 0,
+      "protocol_start": 17,
+      "protocol_end": 20,
+      "tools": [],
+      "completed": false
+    },
+    {
+      "name": "offline_cli_transport_verified",
+      "real_model": false,
+      "task_selection_verified": false
+    }
+  ],
+  "events": [
+    {
+      "prompt": 1,
+      "type": "thread.started"
+    },
+    {
+      "prompt": 1,
+      "type": "item.completed",
+      "item": "error",
+      "id": "item_0",
+      "detail": {
+        "kind": "model"
+      },
+      "offline_detail": "Model metadata for `gpt-5` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+    },
+    {
+      "prompt": 1,
+      "type": "turn.started"
+    },
+    {
+      "prompt": 1,
+      "type": "error",
+      "detail": {
+        "http_statuses": [
+          401
+        ]
+      },
+      "offline_detail": "unexpected status 401 Unauthorized: Offline model endpoint deliberately unavailable, url: [url]"
+    },
+    {
+      "prompt": 1,
+      "type": "turn.failed",
+      "detail": {
+        "http_statuses": [
+          401
+        ]
+      },
+      "offline_detail": "unexpected status 401 Unauthorized: Offline model endpoint deliberately unavailable, url: [url]"
+    },
+    {
+      "prompt": 2,
+      "type": "thread.started"
+    },
+    {
+      "prompt": 2,
+      "type": "item.completed",
+      "item": "error",
+      "id": "item_0",
+      "detail": {
+        "kind": "model"
+      },
+      "offline_detail": "Model metadata for `gpt-5` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+    },
+    {
+      "prompt": 2,
+      "type": "turn.started"
+    },
+    {
+      "prompt": 2,
+      "type": "error",
+      "detail": {
+        "http_statuses": [
+          401
+        ]
+      },
+      "offline_detail": "unexpected status 401 Unauthorized: Offline model endpoint deliberately unavailable, url: [url]"
+    },
+    {
+      "prompt": 2,
+      "type": "turn.failed",
+      "detail": {
+        "http_statuses": [
+          401
+        ]
+      },
+      "offline_detail": "unexpected status 401 Unauthorized: Offline model endpoint deliberately unavailable, url: [url]"
+    }
+  ],
+  "protocol": [
+    {
+      "route": "mcp",
+      "method": "tools/list",
+      "http": 401,
+      "request_id": "id-1"
+    },
+    {
+      "route": "mcp",
+      "method": "initialize",
+      "http": 200,
+      "request_id": "id-2",
+      "worker_instructions": true
+    },
+    {
+      "route": "mcp",
+      "method": "tools/list",
+      "http": 200,
+      "request_id": "id-3",
+      "named_tools": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "tools/call",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-6"
+      },
+      "http": 200,
+      "request_id": "id-7",
+      "result": {
+        "error": {
+          "code": "SOCIAL_STATUS_WORKER_UNPAIRED",
+          "message": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "tools/list",
+      "http": 200,
+      "request_id": "id-8",
+      "named_tools": [
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "tools/call",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-9"
+      },
+      "http": 200,
+      "request_id": "id-10",
+      "result": {
+        "error": {
+          "code": "TOOL_UNAVAILABLE"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-11",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]"
+      },
+      "response": {
+        "status": "online"
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "tools/call",
+      "tool": "worker_social_status_request",
+      "args": {
+        "body": {},
+        "idempotency_key": "id-13"
+      },
+      "http": 200,
+      "request_id": "id-14",
+      "result": {
+        "error": {
+          "code": "SOCIAL_STATUS_WORKER_UNSUPPORTED",
+          "message": "[redacted]"
+        }
+      }
+    },
+    {
+      "route": "/api/v1/device/heartbeat",
+      "action": "heartbeat",
+      "http": 200,
+      "signed": true,
+      "request_id": "id-15",
+      "device_id": "id-12",
+      "request": {
+        "client_version": "[redacted]",
+        "include_bindings": true,
+        "include_browser_work": true,
+        "social_status_version": 1
+      },
+      "response": {
+        "status": "online",
+        "social_status_version": 1,
+        "bindings": {
+          "social": {},
+          "commerce": {}
+        },
+        "browser_work": {
+          "pending_identity": []
+        }
+      }
+    },
+    {
+      "route": "mcp",
+      "method": "initialize",
+      "http": 200,
+      "request_id": "id-17",
+      "worker_instructions": true
+    },
+    {
+      "route": "mcp",
+      "method": "notifications/initialized",
+      "http": 202,
+      "request_id": "id-18"
+    },
+    {
+      "route": "mcp",
+      "method": "tools/list",
+      "http": 200,
+      "request_id": "id-19",
+      "named_tools": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 200,
+      "request_id": "id-20"
+    },
+    {
+      "route": "mcp",
+      "method": "[redacted]",
+      "http": 200,
+      "request_id": "id-21"
+    },
+    {
+      "route": "mcp",
+      "method": "initialize",
+      "http": 200,
+      "request_id": "id-22",
+      "worker_instructions": true
+    },
+    {
+      "route": "mcp",
+      "method": "notifications/initialized",
+      "http": 202,
+      "request_id": "id-23"
+    },
+    {
+      "route": "mcp",
+      "method": "tools/list",
+      "http": 200,
+      "request_id": "id-25",
+      "named_tools": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ]
+    },
+    {
+      "route": "mcp",
+      "method": "initialize",
+      "http": 200,
+      "request_id": "id-26",
+      "worker_instructions": true
+    },
+    {
+      "route": "mcp",
+      "method": "notifications/initialized",
+      "http": 202,
+      "request_id": "id-27"
+    },
+    {
+      "route": "mcp",
+      "method": "tools/list",
+      "http": 200,
+      "request_id": "id-28",
+      "named_tools": [
+        "worker_social_status_request",
+        "worker_social_status_get"
+      ]
+    }
+  ],
+  "canary": {
+    "tools": [
+      "local_browser_open",
+      "local_web_search"
+    ],
+    "self_test": true,
+    "native": [
+      {
+        "prompt": 1,
+        "lists": 1,
+        "calls": [],
+        "requests": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ]
+      },
+      {
+        "prompt": 2,
+        "lists": 1,
+        "calls": [],
+        "requests": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ]
+      }
+    ]
+  },
+  "model": [
+    {
+      "endpoint": "/responses",
+      "method": "POST",
+      "status": 401,
+      "fixture": true
+    },
+    {
+      "endpoint": "/responses",
+      "method": "POST",
+      "status": 401,
+      "fixture": true
+    }
+  ],
+  "outcome": "cli-transport-only",
+  "finished_at": "2026-11-23T08:37:04.852Z"
+}

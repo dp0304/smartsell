@@ -1,0 +1,86 @@
+{
+  "workspace": "./",
+  "node": "v24.21.0",
+  "server": "main workspace TypeScript entrypoints launched through tsx",
+  "web": "apps/web/dist (Vite preview)",
+  "assets": [
+    {
+      "path": "apps/web/dist/index.html",
+      "sha256": "06746538a90d2c00db9eb97dbf10db0595dcbb807b1a05a3e584a7edc7dcf9ff"
+    },
+    {
+      "path": "apps/web/dist/assets/index-BCuxft56.js",
+      "sha256": "d69becfaa03b4ec3dee540095ecb906e5fe86330c62ff8e045b505347deaef0d"
+    },
+    {
+      "path": "apps/web/dist/assets/index-DVaXrHuM.css",
+      "sha256": "0f024043c521f8fad3b10cce37e8fcc8ef20b5dcd0ff58ad8642381d0c40824e"
+    },
+    {
+      "path": "apps/web/dist/assets/main-CqFeNy3Z.js",
+      "sha256": "dcdc6b5eabc68a488674ab8c7d9d4ff06f7181f10ab65f5c720e00985289cd18"
+    },
+    {
+      "path": "apps/web/dist/assets/main-OuZkMofq.css",
+      "sha256": "59ccb8a886f07ce6240f270d70e094dbc6bfae0f8534347c2291dc6e31b0b240"
+    },
+    {
+      "path": "apps/web/dist/assets/react-B1yCEEHA.js",
+      "sha256": "96c157ef2b9f017b35ebf2b80020a8fc11a8609450d90d9f24241735eaa6f0c6"
+    },
+    {
+      "path": "apps/web/dist/assets/routes-BJ6whery.css",
+      "sha256": "24c9a283702f96e8fdc4c630133647bc1e8f988de70c73c65471e44843b3223b"
+    },
+    {
+      "path": "apps/web/dist/assets/routes-DgakY_i4.js",
+      "sha256": "4a55087768c56c107616c0a71b15e63c4a3e104ee858f076264ea6e8b92d0415"
+    },
+    {
+      "path": "apps/web/dist/assets/workbench-Crk26skt.js",
+      "sha256": "4476beecf831d5798fca6e69c3c4af3021a8f075417493f4dd73918814319d07"
+    },
+    {
+      "path": "apps/web/dist/assets/workbench-D2Fuaaif.css",
+      "sha256": "cf74b5a017c60b2add6c4512bde69f0216dce8a0b86c43818b6b19bb0a62d51e"
+    },
+    {
+      "path": "apps/web/dist/assets/workbench-entry-EXhKtgbe.js",
+      "sha256": "4424c4128cde16e6d5146c4b126d349b4a79922f2ad3ef114e572709ae4be301"
+    }
+  ],
+  "sources": [
+    {
+      "path": "apps/server/src/app.ts",
+      "sha256": "d198e349b3aa2f805a5581d90ef25c722f790553d380556016d7ecaaf19f7649"
+    },
+    {
+      "path": "apps/server/src/extensions/mcp-streamable.ts",
+      "sha256": "8b8e06af294a0f488a8cbbe1ac05e3c75fb1ddc8b9e4828fbd4910d0427e05dc"
+    },
+    {
+      "path": "apps/server/src/integration/command-mcp.ts",
+      "sha256": "e3f0f7798ba398bf0c29c727f364dd96b03b7bcfd76aba89bfdddb5e5404239f"
+    },
+    {
+      "path": "apps/server/src/integration/mcp-call-audit.ts",
+      "sha256": "1912cb791e639b3ac88c30a1bc874fcec78d9ab607706655774929ac4b817d1e"
+    },
+    {
+      "path": "apps/server/src/mcp.ts",
+      "sha256": "3e4b406b2eff0406dffddf9a467eb1f4773340fc8113422273c3049615c0ac6c"
+    },
+    {
+      "path": "apps/server/src/operations.ts",
+      "sha256": "b760d9cf86ff8e20aa54ebf6565b1676039a21384c03828df9ac4dae9a736c3d"
+    },
+    {
+      "path": "apps/server/src/operation-server.ts",
+      "sha256": "b79ce7a4e33a163f60ada55c542ede452e297ac23132a86cda4a4c4e77c2e28e"
+    },
+    {
+      "path": "apps/server/src/server.ts",
+      "sha256": "3cac4733ea250378f5d18b7f1916e0cf1dbc2ffbb02f98702b80768b57e19ae0"
+    }
+  ]
+}

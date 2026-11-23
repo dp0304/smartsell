@@ -1,0 +1,123 @@
+{
+  "at": "2026-11-21T16:43:52.257Z",
+  "deviceId": null,
+  "job": {
+    "title": "视频排期与沙箱回执",
+    "kind": "custom",
+    "due_at": null,
+    "status": "submitted",
+    "fencing_token": "[REDACTED]",
+    "work_item_id": "add5a7c9-ffe0-4c9d-a09f-a25a4d1912db",
+    "input_scope": {
+      "brand_ids": [
+        "08ce9720-5925-42bf-b20d-d2792258b367"
+      ],
+      "campaign_id": null,
+      "resource_refs": [],
+      "constraints": "仅隔离测试；保持人工审核；不得发布到任何真实社媒或店铺。"
+    },
+    "expected_output": {
+      "type": "note"
+    },
+    "created_by": "71d46cdd-9aea-44cc-801a-04da6c744415",
+    "assignee_id": "71d46cdd-9aea-44cc-801a-04da6c744415",
+    "assignee_type": "agent_client",
+    "source_rule_run_id": null,
+    "brand_id": "08ce9720-5925-42bf-b20d-d2792258b367",
+    "campaign_id": null,
+    "created_via": "human",
+    "id": "d54410b1-6d19-450f-b1e7-fc0e040c728d",
+    "version": 3,
+    "created_at": "2026-11-21T16:42:36.875Z",
+    "updated_at": "2026-11-21T16:43:33.621Z",
+    "lease_owner_id": null,
+    "lease_expires_at": null,
+    "result_ref": {
+      "note": "棱镜桌灯 Facebook 视频已排期送审。内容条目 d0fcee33-1763-40dc-b841-e6b4734b92b4，变体 2eb4cc8a-53ea-4525-a43c-f75c69303fa1，修订 dfa6e4cd-113d-41ff-a8d2-42d0e953391d，素材版本 dbe5ae48-225a-435c-a6e4-f9706539da33，发布目标 eb26df5a-cea0-46b9-b10b-ee5169ad7a63，审核请求 1420e266-d85e-4b72-9d99-aed3cc650e61，预检 e6a91011-e0d4-4972-ae09-8fab44a618f4（检查项 8a5a130d-ec31-419f-b4d1-1c106b020226）。目标回读为 awaiting_approval，审核 pending，模式 assist，排期 2026-11-22 00:46:16.340 Asia/Shanghai（2026-11-21T16:46:16.340Z）。修订回读确认文案「暖光陪你工作到夜晚。#棱镜桌灯 #测试素材」和指定素材。预检为 risk，仅支持人工准备。缺口 NO_AUTHORIZED_SOCIAL_SANDBOX，账号仅本地且无远端授权，执行记录、平台帖子 ID、发布时间及发布验证均为空。"
+    },
+    "events": [
+      {
+        "agent_job_id": "d54410b1-6d19-450f-b1e7-fc0e040c728d",
+        "type": "created",
+        "actor_id": "71d46cdd-9aea-44cc-801a-04da6c744415",
+        "occurred_at": "2026-11-21T16:42:36.875Z",
+        "created_via": "human",
+        "id": "594a8b7e-1e30-4af8-a3ca-a141d2ed95a2",
+        "version": 1,
+        "created_at": "2026-11-21T16:42:36.875Z",
+        "updated_at": "2026-11-21T16:42:36.875Z"
+      },
+      {
+        "agent_job_id": "d54410b1-6d19-450f-b1e7-fc0e040c728d",
+        "type": "claimed",
+        "actor_id": "71d46cdd-9aea-44cc-801a-04da6c744415",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:42:44.315Z",
+        "created_via": "agent",
+        "id": "42c911f0-32e1-4e72-8b3b-7e0b680b9ec4",
+        "version": 1,
+        "created_at": "2026-11-21T16:42:44.315Z",
+        "updated_at": "2026-11-21T16:42:44.315Z"
+      },
+      {
+        "agent_job_id": "d54410b1-6d19-450f-b1e7-fc0e040c728d",
+        "type": "submitted",
+        "actor_id": "71d46cdd-9aea-44cc-801a-04da6c744415",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:43:33.621Z",
+        "created_via": "agent",
+        "id": "5b0f7735-c453-480d-90b5-8c713d420a95",
+        "version": 1,
+        "created_at": "2026-11-21T16:43:33.621Z",
+        "updated_at": "2026-11-21T16:43:33.621Z"
+      }
+    ]
+  },
+  "targets": [
+    {
+      "social_account_id": "66d48eeb-c953-4187-aa21-4032991586d4",
+      "content_variant_id": "2eb4cc8a-53ea-4525-a43c-f75c69303fa1",
+      "content_item_id": "d0fcee33-1763-40dc-b841-e6b4734b92b4",
+      "brand_id": "08ce9720-5925-42bf-b20d-d2792258b367",
+      "campaign_id": null,
+      "variant_revision_id": "dfa6e4cd-113d-41ff-a8d2-42d0e953391d",
+      "follow_latest_revision": false,
+      "visibility": "public",
+      "operation": "publish",
+      "content_format": "video",
+      "schedule_kind": "exact",
+      "schedule_tz": "Asia/Shanghai",
+      "scheduled_at": "2026-11-21T16:46:16.340Z",
+      "local_scheduled_at": "2026-11-22T00:46",
+      "dst_resolution": "none",
+      "late_policy": null,
+      "grace_minutes": null,
+      "connector_mode_pref": "assist",
+      "options": {},
+      "promotion_ids": [],
+      "owner_user_id": "71d46cdd-9aea-44cc-801a-04da6c744415",
+      "origin": "agent",
+      "plan_status": "awaiting_approval",
+      "snapshot_generation": 1,
+      "precheck_summary": "risk",
+      "created_via": "agent",
+      "id": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63",
+      "version": 3,
+      "created_at": "2026-11-21T16:43:16.344Z",
+      "updated_at": "2026-11-21T16:43:19.421Z",
+      "last_precheck_run_id": "e6a91011-e0d4-4972-ae09-8fab44a618f4",
+      "frozen_hash": "bebe2bf99451d20b32e458acab5227dc1924eb744cf4fe7f5df43fceef1c1684",
+      "approval_request_id": "1420e266-d85e-4b72-9d99-aed3cc650e61",
+      "approval_invalidated_reason": null,
+      "paused_by_switch_id": null,
+      "title": "棱镜桌灯短片",
+      "display_status": "awaiting_approval",
+      "execution_status": null,
+      "execution_substatus": null,
+      "platform_post_id": null,
+      "published_at": null,
+      "post_verification": null
+    }
+  ],
+  "posts": []
+}

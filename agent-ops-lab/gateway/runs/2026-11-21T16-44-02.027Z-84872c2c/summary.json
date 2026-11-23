@@ -1,0 +1,54 @@
+{
+  "discovered": 700,
+  "modules": {
+    "account": 23,
+    "ads": 21,
+    "agent": 16,
+    "analytics": 53,
+    "asset": 39,
+    "campaign": 64,
+    "commerce": 46,
+    "content": 56,
+    "creator": 50,
+    "execution": 12,
+    "files": 3,
+    "inbox": 65,
+    "ingest": 39,
+    "intel": 41,
+    "lifecycle": 41,
+    "ops": 2,
+    "planning": 32,
+    "traffic": 41,
+    "workspace": 56
+  },
+  "uniqueCalled": 52,
+  "discoveredCalled": 50,
+  "attempts": 53,
+  "observedBusinessSuccesses": 23,
+  "catalogStatuses": {
+    "boundary_confirmed": 2,
+    "business_verified": 23,
+    "not_exercised": 650,
+    "response_only": 25
+  },
+  "callStatuses": {
+    "boundary_confirmed": 4,
+    "business_verified": 23,
+    "idempotent_replay": 1,
+    "response_only": 25
+  },
+  "auditPersistedCalls": 0,
+  "callsOutsideCatalog": [
+    {
+      "seq": 12,
+      "operation": "file_download",
+      "status": "boundary_confirmed"
+    },
+    {
+      "seq": 27,
+      "operation": "publishing_approve",
+      "status": "boundary_confirmed"
+    }
+  ],
+  "gaps": {}
+}

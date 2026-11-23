@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "run": "initial-checkout-discovery-baseline",
+  "date": "2026-11-23",
+  "command": "node --import tsx --test --test-name-pattern='Codex can find both Worker' apps/server/src/integration/agent-connections.test.ts",
+  "client": "product Codex-scoped test credential and HTTP MCP tool discovery",
+  "outcome": "gap-reproduced",
+  "exit": 1,
+  "passed": 0,
+  "failed": 1,
+  "first_failed_assertion": "assert.ok(names.includes('worker_social_status_request'))",
+  "stage": "tools/list",
+  "request_created": false,
+  "native_model_attempted": false,
+  "checkout_note": "Parallel worktree changed while the acceptance harness was being written. The same focused test subsequently passed with both tools present."
+}

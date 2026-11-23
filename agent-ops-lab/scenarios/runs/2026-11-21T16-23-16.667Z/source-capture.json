@@ -1,0 +1,14 @@
+{
+  "source_url": "http://127.0.0.1:46433/catalog/desk-lamp",
+  "observed_at": "2026-11-21T16:23:19.528Z",
+  "http_status": 200,
+  "sha256": "657cf3761d365e0392b55535ba3009f7c85eaacf911db683924de1ce8633386a",
+  "fields": {
+    "name": "棱镜暖光桌灯",
+    "sku": "PRISM-QA-21",
+    "price_minor": 12900,
+    "currency": "CNY",
+    "availability": "有货"
+  },
+  "authorization": "[REDACTED]"
+}

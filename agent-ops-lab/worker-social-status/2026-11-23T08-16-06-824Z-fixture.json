@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "run": "fixture",
+  "started_at": "2026-11-23T08:16:06.824Z",
+  "checks": [
+    {
+      "name": "failure",
+      "type": "Error",
+      "detail": {
+        "kind": "unclassified"
+      }
+    }
+  ],
+  "events": [],
+  "protocol": [],
+  "canary": {},
+  "outcome": "failed",
+  "finished_at": "2026-11-23T08:16:06.831Z"
+}

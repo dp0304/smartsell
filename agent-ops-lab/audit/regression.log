@@ -1,0 +1,62 @@
+
+> smartsell@0.1.0 typecheck ./.local/mcp-lab-Lh53qf
+> tsc --noEmit -p tsconfig.json
+
+✔ MCP dispatch shares the workspace command transaction and records credential-bound audit (137.604833ms)
+✔ negotiates protocol versions and accepts notifications without dispatch (104.535ms)
+✔ checks origin, bearer, media types, and message size at the transport boundary (3.369292ms)
+✔ advertises configured OAuth discovery and checks revocation per request (0.838041ms)
+✔ intersects explicit allowlist, verified grants, and both server authorization checks (8.36575ms)
+✔ rejects foreign workspace and extra or invalid call arguments before dispatch (10.838791ms)
+✔ uses trusted dispatch identity and preserves the command DTO with version and lease (1.494292ms)
+✔ accepts reviewed draft updates and rejects unsupported nested fields (12.95475ms)
+✔ defaults to safe metadata and wraps policy-approved external data with provenance (104.902667ms)
+✔ binds the real job command lease to the verified credential and enforces its version (7.415708ms)
+✔ fails closed on auth, audit, dispatch, and output errors (7.19925ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Zhihu stats use curated MCP tools and fenced, signed device-only claims and reports (3195.571458ms)
+✔ memory sessions accept a bounded TTL and expire independently of the default lifetime (2.378875ms)
+✔ development secrets persist under the owner-only preview key (33.939083ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ legacy tokens keep their Commands job tools and gain the generic Operation tools (715.209291ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ agent connections issue, list, survive logout, touch last use and revoke (160.803917ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ Agent job MCP schemas describe lease arguments and result shapes (154.140625ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ revoking a connection stops the Agent and returns its Operation job lease (138.451ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ operation tools write through Operations with attribution, activity and detailed errors (154.765083ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ Commands MCP audit correlates authenticated calls without logging arguments or duplicating writes (146.492666ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ preserves a bounded unsupported desktop listing receipt and named audit after grant revocation (191.786958ms)
+(node:21930) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ human-only decisions are refused for Agent credentials on MCP and in the shared runner (134.598083ms)
+✔ workspace audit filters before stable pagination and projects only permitted fields (40.604417ms)
+✔ target metadata uses the registered shape and only recognized business associations (0.362458ms)
+✔ file kernel: auth, isolation, version checks, atomic outbox, idempotency, MCP and OAuth (1925.437583ms)
+﹣ postgres kernel and direct RLS (0.268584ms) # SKIP
+﹣ PostgreSQL publishes workspace wakeups only after the transaction commits (3.296ms) # SKIP
+✔ scheduler dispatches to durable jobs; subscriber publishes an SSE invalidation (379.167375ms)
+✔ scheduler queues jobs and the worker and media roles consume their own queues (309.221083ms)
+✔ discovers every advertised module and mounts the real REST catalog (1380.29775ms)
+✔ Operations audit records SDK replays, rollback, and the job adapter independently (180.673042ms)
+✔ production rejects missing or unsafe configuration (0.996917ms)
+(node:21933) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ default HTTP MCP drafts on REST boards, resolves exact evidence and annotates the same creative references (2221.667292ms)
+(node:21933) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ default HTTP MCP rechecks live display and model processing policy for sourced evidence (529.2945ms)
+✔ OP03 a single synthetic credential stays out of inventory, REST, MCP and request error logs (1990.736208ms)
+✔ OP05 a scheduled revision pins actual local object bytes through purge preview and approval (456.720917ms)
+✔ OP10 read-only exports a known audit row and reads back an already published receipt without submitting (974.8785ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 7741.419375

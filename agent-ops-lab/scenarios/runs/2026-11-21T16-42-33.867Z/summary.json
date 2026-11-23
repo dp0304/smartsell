@@ -1,0 +1,51 @@
+{
+  "at": "2026-11-21T16:43:52.254Z",
+  "nativeSummary": {
+    "01-video": {
+      "turns": [
+        {
+          "turn": 1,
+          "status": "success",
+          "reply": true
+        },
+        {
+          "turn": 2,
+          "status": "success",
+          "reply": true
+        }
+      ],
+      "calls": [
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_claim",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__account_list_social_accounts",
+        "mcp__smartsell_lab__workspace_brand_get",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__content_create_item",
+        "content_create_variant",
+        "content_autosave_variant",
+        "content_commit_revision",
+        "publishing_create_target",
+        "mcp__smartsell_lab__content_create_variant",
+        "mcp__smartsell_lab__content_autosave_variant",
+        "mcp__smartsell_lab__content_commit_revision",
+        "mcp__smartsell_lab__publishing_create_target",
+        "mcp__smartsell_lab__publishing_request_approval",
+        "mcp__smartsell_lab__publishing_get_target",
+        "mcp__smartsell_lab__agent_jobs_submit_result",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__publishing_get_target"
+      ]
+    }
+  },
+  "jobs": {
+    "01-video": {
+      "id": "d54410b1-6d19-450f-b1e7-fc0e040c728d",
+      "status": "submitted",
+      "result": {
+        "note": "棱镜桌灯 Facebook 视频已排期送审。内容条目 d0fcee33-1763-40dc-b841-e6b4734b92b4，变体 2eb4cc8a-53ea-4525-a43c-f75c69303fa1，修订 dfa6e4cd-113d-41ff-a8d2-42d0e953391d，素材版本 dbe5ae48-225a-435c-a6e4-f9706539da33，发布目标 eb26df5a-cea0-46b9-b10b-ee5169ad7a63，审核请求 1420e266-d85e-4b72-9d99-aed3cc650e61，预检 e6a91011-e0d4-4972-ae09-8fab44a618f4（检查项 8a5a130d-ec31-419f-b4d1-1c106b020226）。目标回读为 awaiting_approval，审核 pending，模式 assist，排期 2026-11-22 00:46:16.340 Asia/Shanghai（2026-11-21T16:46:16.340Z）。修订回读确认文案「暖光陪你工作到夜晚。#棱镜桌灯 #测试素材」和指定素材。预检为 risk，仅支持人工准备。缺口 NO_AUTHORIZED_SOCIAL_SANDBOX，账号仅本地且无远端授权，执行记录、平台帖子 ID、发布时间及发布验证均为空。"
+      }
+    }
+  },
+  "posts": 0
+}

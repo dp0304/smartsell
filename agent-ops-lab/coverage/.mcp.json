@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "matrix": {
+      "type": "http",
+      "url": "${SMARTSELL_MATRIX_ORIGIN}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SMARTSELL_MATRIX_TOKEN}"
+      }
+    }
+  }
+}

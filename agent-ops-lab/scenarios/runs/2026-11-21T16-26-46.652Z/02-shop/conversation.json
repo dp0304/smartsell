@@ -1,0 +1,31 @@
+[
+  {
+    "turn": 1,
+    "user": "把桌灯备到测试店：先建 SmartSell 内部商品「棱镜暖光桌灯 · 内建草稿」，再导入另一个 CSV 样品。只有已授权可写远端沙箱才上架。平台任务 9ddd532c-bd89-4aa2-aa9c-55dab1e79210。请读任务，claim，然后完成业务并调用 agent_jobs_submit_result，带最新版本与原 fencing_token；result_ref.note 写业务 ID、回读及缺口。每次写带幂等键。租约字段只传工具，不要向用户复述。\nstore_id=d44aaa57-8d4f-4ee0-941a-95594b8aa45e，只有 file_import，没有远端授权。用具名 import_create（body.template_key=product_list、body.store_id=上述店铺 ID，body.csv_text=下方 CSV）创建批次，或用同作用域的 commerce_store_import；调用 import_rows，确认无错误后用 import_confirm 本地合并，最后用 import_get 读回。注意 CSV synthetic external_product_id 只是导入来源键，不是远端商品 ID。CSV 输入如下：\nexternal_product_id,external_variant_id,title,sku,currency,price,available,market_id\nprism-import-01,prism-import-v1,棱镜桌灯 · CSV 样品,PRISM-IMPORT-21,CNY,129.00,true,5f6e5c96-1b54-4a1e-95fd-e435eb43e39c\n持久化 NO_AUTHORIZED_STORE_SANDBOX。",
+    "userAt": "2026-11-21T16:26:49.717Z",
+    "reply": "已向平台任务 `9ddd532c-bd89-4aa2-aa9c-55dab1e79210` 提交结果，状态为 `submitted`。\n\n- **内部商品已建好并回读。**「棱镜暖光桌灯 · 内建草稿」ID 为 `0ba72ee5-84bf-4d71-b53b-7572129aacb1`，状态为 `draft`。\n- **CSV 样品未合并。** 批次 `5146ac6c-86c0-4d38-afc6-d6b2801e9176` 回读为 `awaiting_confirmation`，0 行有效、1 行无效。第 2 行的 `available=true` 未通过校验，模板要求该字段为范围内的整数。\n- **远端未上架。** 测试店仅支持 `file_import`，无远端授权。`NO_AUTHORIZED_STORE_SANDBOX` 已写入任务结果。",
+    "visible": [
+      "我先读取并领取任务，再创建内部商品、预览并合并 CSV，最后回读记录并提交结果。",
+      "内部草稿已建好。CSV 预览标记了 1 行错误，我正在核对具体原因。",
+      "已向平台任务 `9ddd532c-bd89-4aa2-aa9c-55dab1e79210` 提交结果，状态为 `submitted`。\n\n- **内部商品已建好并回读。**「棱镜暖光桌灯 · 内建草稿」ID 为 `0ba72ee5-84bf-4d71-b53b-7572129aacb1`，状态为 `draft`。\n- **CSV 样品未合并。** 批次 `5146ac6c-86c0-4d38-afc6-d6b2801e9176` 回读为 `awaiting_confirmation`，0 行有效、1 行无效。第 2 行的 `available=true` 未通过校验，模板要求该字段为范围内的整数。\n- **远端未上架。** 测试店仅支持 `file_import`，无远端授权。`NO_AUTHORIZED_STORE_SANDBOX` 已写入任务结果。"
+    ],
+    "status": "success",
+    "isError": false,
+    "responseAt": "2026-11-21T16:27:36.930Z",
+    "sessionId": "a249a5e0-7cb7-421f-8e6c-515f25a47d59"
+  },
+  {
+    "turn": 2,
+    "user": "重新读任务和导入批次。分别说内部商品 ID、导入批次及状态、远端商品 ID／上架回执有哪些；不要再写。",
+    "userAt": "2026-11-21T16:27:36.930Z",
+    "reply": "已重新读取任务和导入批次。任务状态为 `submitted`。\n\n- **内部商品 ID**：`0ba72ee5-84bf-4d71-b53b-7572129aacb1`（棱镜暖光桌灯 · 内建草稿）。\n- **导入批次及状态**：`5146ac6c-86c0-4d38-afc6-d6b2801e9176`，状态为 `awaiting_confirmation`。0 行有效、1 行无效，尚未合并。\n- **远端商品 ID／上架回执**：均无。任务结果记录了 `NO_AUTHORIZED_STORE_SANDBOX`。`prism-import-01` 仅用于标识 CSV 导入来源。",
+    "visible": [
+      "我只读回任务和导入批次，核对商品 ID 与上架回执。",
+      "已重新读取任务和导入批次。任务状态为 `submitted`。\n\n- **内部商品 ID**：`0ba72ee5-84bf-4d71-b53b-7572129aacb1`（棱镜暖光桌灯 · 内建草稿）。\n- **导入批次及状态**：`5146ac6c-86c0-4d38-afc6-d6b2801e9176`，状态为 `awaiting_confirmation`。0 行有效、1 行无效，尚未合并。\n- **远端商品 ID／上架回执**：均无。任务结果记录了 `NO_AUTHORIZED_STORE_SANDBOX`。`prism-import-01` 仅用于标识 CSV 导入来源。"
+    ],
+    "status": "success",
+    "isError": false,
+    "responseAt": "2026-11-21T16:27:47.005Z",
+    "sessionId": "a249a5e0-7cb7-421f-8e6c-515f25a47d59"
+  }
+]

@@ -1,0 +1,74 @@
+{
+  "client": "Claude Code",
+  "version": "2.1.311",
+  "root": "agent-ops-lab",
+  "backend": "synthetic MCP fixture (not SmartSell service)",
+  "sessions": {
+    "video": {
+      "availableSkills": [
+        "smartsell-data-collection",
+        "smartsell-product-listing",
+        "smartsell-video-publish"
+      ],
+      "toolCalls": [
+        {
+          "tool": "Skill",
+          "skill": "smartsell-video-publish"
+        },
+        {
+          "tool": "mcp__smartsell__publishing_get_target"
+        }
+      ],
+      "result": "success"
+    },
+    "listing": {
+      "availableSkills": [
+        "smartsell-data-collection",
+        "smartsell-product-listing",
+        "smartsell-video-publish"
+      ],
+      "toolCalls": [
+        {
+          "tool": "Skill",
+          "skill": "smartsell-product-listing"
+        },
+        {
+          "tool": "mcp__smartsell__agent_jobs_get"
+        },
+        {
+          "tool": "mcp__smartsell__catalog_get_product"
+        },
+        {
+          "tool": "mcp__smartsell__commerce_store_list"
+        },
+        {
+          "tool": "mcp__smartsell__agent_jobs_get"
+        },
+        {
+          "tool": "mcp__smartsell__catalog_get_product"
+        },
+        {
+          "tool": "mcp__smartsell__agent_jobs_handoff"
+        }
+      ],
+      "result": "success"
+    },
+    "data": {
+      "availableSkills": [
+        "smartsell-data-collection",
+        "smartsell-product-listing",
+        "smartsell-video-publish"
+      ],
+      "toolCalls": [
+        {
+          "tool": "Skill",
+          "skill": "smartsell-data-collection"
+        },
+        {
+          "tool": "mcp__smartsell__metrics_query"
+        }
+      ],
+      "result": "success"
+    }
+  }
+}

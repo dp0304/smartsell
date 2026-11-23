@@ -1,0 +1,26 @@
+[
+  {
+    "access": "read",
+    "credentialId": "85a13bbf-516e-4953-b003-5ee2df0b30bb",
+    "status": 401,
+    "requestId": "25c59f9f-1e6b-469c-a57c-e6c72df3aa1f",
+    "evidence": {
+      "path": "/mcp-tool-calls?request_id=25c59f9f-1e6b-469c-a57c-e6c72df3aa1f",
+      "status": "missing_web_row",
+      "cohort": []
+    },
+    "passed": true
+  },
+  {
+    "access": "write",
+    "credentialId": "16905be7-a252-4605-8e52-ecb9331ed20c",
+    "status": 401,
+    "requestId": "a8b25267-de0e-481c-8e73-4533a40ea50a",
+    "evidence": {
+      "path": "/mcp-tool-calls?request_id=a8b25267-de0e-481c-8e73-4533a40ea50a",
+      "status": "missing_web_row",
+      "cohort": []
+    },
+    "passed": true
+  }
+]

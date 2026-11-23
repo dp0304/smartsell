@@ -1,0 +1,50 @@
+{
+  "at": "2026-11-21T16:29:44.994Z",
+  "nativeSummary": {
+    "02-shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "status": "success",
+          "reply": true
+        },
+        {
+          "turn": 2,
+          "status": "success",
+          "reply": true
+        }
+      ],
+      "calls": [
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_claim",
+        "mcp__smartsell_lab__commerce_store_list",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__catalog_search",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "mcp__smartsell_lab__commerce_product_create",
+        "mcp__smartsell_lab__commerce_product_create",
+        "mcp__smartsell_lab__import_create",
+        "mcp__smartsell_lab__catalog_get_product",
+        "mcp__smartsell_lab__import_rows",
+        "mcp__smartsell_lab__workspace_markets_list",
+        "mcp__smartsell_lab__import_get",
+        "mcp__smartsell_lab__smartsell_operations_describe",
+        "commerce_store_market_list",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__agent_jobs_submit_result",
+        "mcp__smartsell_lab__agent_jobs_get",
+        "mcp__smartsell_lab__import_get"
+      ]
+    }
+  },
+  "jobs": {
+    "02-shop": {
+      "id": "1478afa8-3bc9-482c-a0ca-f2b628625a8a",
+      "status": "submitted",
+      "result": {
+        "note": "测试店 9b996f76-5b24-4419-be4c-32fa1d593451。已创建并回读内部商品「棱镜暖光桌灯 · 内建草稿」97fb1f48-c48a-4ee7-952f-4652bebbee26，状态 draft。CSV 导入批次 60528548-ceec-43ab-961b-9d0b94263ddb，文件对象 5dfe0fab-ee32-4241-a5a9-944b561e6d56。import_rows 显示样品行 5ee2fd44-95df-4994-8572-67984152c8d1 报 Invalid store_market，店铺市场配置查询为空，CSV 指定市场 2810b535-2ecb-44e7-b144-24cba6af6f98。import_get 回读 awaiting_confirmation，1 行无效、0 行有效，未执行本地合并。prism-import-01 仅为 CSV 来源键。NO_AUTHORIZED_STORE_SANDBOX：测试店为 file_import / import_only，无已授权可写远端店铺，未上架。"
+      }
+    }
+  },
+  "posts": 0
+}

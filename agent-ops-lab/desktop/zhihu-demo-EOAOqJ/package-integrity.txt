@@ -1,0 +1,8 @@
+Verified running build === packaged dist/main.cjs: c50e0d12f455d5a48fbfcf5debae4ec9ac6a5eb0ed66aa48d99e6413806a6f73
+Verified running build === packaged dist/preload.cjs: c8c73e0e1f2a7c875e510c092fe7f3c0e5450ec1c4f8dd46ef4bf5cc3a97f352
+Verified running build === packaged dist/ui/index.html: bcc6194570a060b4ecf515bd5b3c7382c69b460165575c95eb5828524e853b14
+Verified running build === packaged dist/ui/renderer.js: 87dbe829550b0dc5f26cac7d031153b8eb65dfd1a6412fb19dd805f02a99bdfa
+Verified running build === packaged dist/skills/catalog.json: a6aeb9dc884e39dcbe8b9c3ebd7747abd891540cd89526dd847e25005b9c20f8
+Verified source === packed ASAR === Claude Code and Codex exports: smartsell-zhihu-stats/SKILL.md
+Verified source === packed ASAR === Claude Code and Codex exports: smartsell-video-publish/SKILL.md
+Verified source === packed ASAR === Claude Code and Codex exports: smartsell-product-listing/SKILL.md

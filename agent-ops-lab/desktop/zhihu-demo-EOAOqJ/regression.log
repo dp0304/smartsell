@@ -1,0 +1,61 @@
+
+> smartsell@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @smartsell/connector-desktop@0.1.0 typecheck
+> tsc -p tsconfig.json
+
+✔ login, off-origin, and wrong-profile pages never query metrics (3.679334ms)
+✔ login required needs a visible official sign-in form and yields to challenges and errors (4.190792ms)
+✔ visible official QR markup counts only on the sign-in route (0.726917ms)
+✔ login check recognizes the account entry without returning a slug or querying metrics (0.499875ms)
+✔ portaled profile link must be visible, unique, same origin, and from an opened menu (1.432ms)
+✔ verified profile extracts only unique visible metrics, preserving original formatting (1.49625ms)
+✔ sidebar cards ignore the leading layout marker and count nested copies once (0.914542ms)
+✔ manual pause sends nothing; completion retries the same signed report without retaining it in the trace (30.026167ms)
+✔ signed client requires the exact claim shape and validates both ownership fields (2.139042ms)
+✔ login check pauses challenges and signs the login_required report without stats (1.813459ms)
+✔ login check pauses challenges and signs the signed_in report without stats (0.709709ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Zhihu stats use curated MCP tools and fenced, signed device-only claims and reports (546.8035ms)
+✔ memory sessions accept a bounded TTL and expire independently of the default lifetime (0.474541ms)
+✔ development secrets persist under the owner-only preview key (12.184292ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ legacy tokens keep their Commands job tools and gain the generic Operation tools (81.900625ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ agent connections issue, list, survive logout, touch last use and revoke (50.586917ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ Agent job MCP schemas describe lease arguments and result shapes (70.176709ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ revoking a connection stops the Agent and returns its Operation job lease (57.463833ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ operation tools write through Operations with attribution, activity and detailed errors (66.680125ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ preserves a bounded unsupported desktop listing receipt and named audit after grant revocation (81.685583ms)
+(node:30011) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+✔ human-only decisions are refused for Agent credentials on MCP and in the shared runner (53.968125ms)
+✔ connection claims approved browser work, but neither opens nor submits publishing before manual handoff (31.53175ms)
+✔ idle tick accepts later work and heartbeats continue during one serial Zhihu operation (9.267ms)
+✔ automatic claim rejects cross-device responses without opening either browser (5.212833ms)
+✔ automatic retry resends only the frozen result, and stop requires explicit report retry after reconnect (5.544542ms)
+✔ emergency stop aborts an automatic Chrome observation without recording its late result (1.537666ms)
+✔ snapshot probes secure storage only when a service is configured (0.160583ms)
+✔ requires ownership, verifies signed browser handoff even for an auto claim, and submits evidence references only (2.622291ms)
+✔ rejects a claim for another device and reports an account mismatch before any ready request (2.236208ms)
+✔ blocks media mismatch and requires an observed identity for the browser session (4.088042ms)
+✔ emergency stop invalidates an in-flight ready and requires explicit resumed activity (2.927ms)
+✔ failed heartbeat stops handoff and preserves an unknown outcome (3.041041ms)
+✔ supports corrected evidence after 422 and retries an unacknowledged report unchanged (4.03975ms)
+✔ does not accept completion after the handoff window or keep stale leases (4.982958ms)
+✔ accepts only canonical HTTPS post links without credentials, tracking, or an ID mismatch (0.2615ms)
+✔ vault only writes ciphertext and fails closed when OS storage is unavailable (1.961166ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1731.017416

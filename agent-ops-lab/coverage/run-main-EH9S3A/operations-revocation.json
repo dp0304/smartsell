@@ -1,0 +1,18 @@
+[
+  {
+    "at": "2026-11-21T17:18:32.153Z",
+    "access": "read",
+    "credentialId": "f91c89a5-4711-456d-b461-8f2d6de3e901",
+    "status": 401,
+    "expected": 401,
+    "passed": true
+  },
+  {
+    "at": "2026-11-21T17:18:32.159Z",
+    "access": "write",
+    "credentialId": "440bddea-0a49-42f0-8f88-5613827e511e",
+    "status": 401,
+    "expected": 401,
+    "passed": true
+  }
+]

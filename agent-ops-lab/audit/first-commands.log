@@ -1,0 +1,9 @@
+Evidence directory: ./agent-ops-lab/audit/run-Dy5d7D
+./agent-ops-lab/audit/run.mjs:482
+  for (const runtime of selection.length ? selection : ['commands', 'operations']) {
+                        ^
+
+ReferenceError: selection is not defined
+    at <anonymous> (./agent-ops-lab/audit/run.mjs:482:25)
+
+Node.js v24.21.0

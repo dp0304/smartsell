@@ -1,0 +1,1087 @@
+# 通用网关调度文本记录
+
+MCP TypeScript SDK 执行的工具请求／结果，无模型参与。完整请求、响应和时间见 calls.jsonl。
+
+[2026-11-21T16:47:22.431Z] #1 SDK → smartsell_operation_call workspace_brand_create
+[2026-11-21T16:47:22.436Z] 网关 → business_verified
+审计 persisted b4bed8fa-921d-47fe-af0a-f0fb3e54c2d8 01814465-4f1a-4af1-b84f-f0761fe70d74
+
+[2026-11-21T16:47:22.437Z] #2 SDK → smartsell_operation_call workspace_brand_create
+[2026-11-21T16:47:22.440Z] 网关 → idempotent_replay
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.440Z] #3 SDK → smartsell_operation_call workspace_brand_get
+[2026-11-21T16:47:22.442Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.443Z] #4 SDK → smartsell_operation_call workspace_brands_list
+[2026-11-21T16:47:22.445Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.447Z] #5 SDK → smartsell_operation_call workspace_market_create
+[2026-11-21T16:47:22.455Z] 网关 → business_verified
+审计 persisted 00ebc15e-b733-4b69-9be1-209b612ce596 9f9165b8-a161-4f77-9572-450087b0c7aa
+
+[2026-11-21T16:47:22.455Z] #6 SDK → smartsell_operation_call workspace_market_get
+[2026-11-21T16:47:22.457Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.458Z] #7 SDK → smartsell_operation_call workspace_markets_list
+[2026-11-21T16:47:22.459Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.463Z] #8 SDK → smartsell_operation_call account_list_social_accounts
+[2026-11-21T16:47:22.465Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.554Z] #9 SDK → smartsell_operation_call file_begin_upload
+[2026-11-21T16:47:22.558Z] 网关 → business_verified
+审计 persisted 11bc5302-5208-4288-836a-ada938397a26 eabb4e04-81ab-43e3-a689-c8102ba6108b
+
+[2026-11-21T16:47:22.558Z] #10 SDK → smartsell_operation_call file_complete_upload
+[2026-11-21T16:47:22.601Z] 网关 → business_verified
+审计 persisted f31c7a6e-b552-405d-82b2-ea74328c24ec a5bb9750-4ecc-4809-a06b-6c90f556b9ec
+
+[2026-11-21T16:47:22.602Z] #11 SDK → smartsell_operation_call file_get
+[2026-11-21T16:47:22.605Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.605Z] #12 SDK → smartsell_operation_call file_download
+[2026-11-21T16:47:22.608Z] 网关 → boundary_confirmed (HUMAN_REQUIRED)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.608Z] #13 SDK → smartsell_operation_call asset_create
+[2026-11-21T16:47:22.612Z] 网关 → business_verified
+审计 persisted 94473a3a-1cf9-45bf-afd1-5b6732dab47b f3bdf39d-81ea-473a-a9bf-ef84c3919266
+
+[2026-11-21T16:47:22.612Z] #14 SDK → smartsell_operation_call asset_get
+[2026-11-21T16:47:22.615Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.616Z] #15 SDK → smartsell_operation_call asset_list_versions
+[2026-11-21T16:47:22.619Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.621Z] #16 SDK → smartsell_operation_call asset_update
+[2026-11-21T16:47:22.625Z] 网关 → business_verified
+审计 persisted 0623cc48-fdfa-4804-a729-a99bd40d519d 8e59b926-5084-477b-a9c5-40dd15770b5f
+
+[2026-11-21T16:47:22.637Z] #17 SDK → smartsell_operation_call content_create_item
+[2026-11-21T16:47:22.640Z] 网关 → business_verified
+审计 persisted 48a8b14a-6992-4d0c-be06-c1123a771e00 5796d1bd-83db-4b9c-a96b-404b1d5b5961
+
+[2026-11-21T16:47:22.641Z] #18 SDK → smartsell_operation_call content_create_variant
+[2026-11-21T16:47:22.645Z] 网关 → business_verified
+审计 persisted 4200b887-9e62-4646-8173-11cd014f708c 632b49fc-4ed2-42c3-8255-03101e70469e
+
+[2026-11-21T16:47:22.646Z] #19 SDK → smartsell_operation_call content_autosave_variant
+[2026-11-21T16:47:22.650Z] 网关 → business_verified
+审计 persisted 6aa46d7b-4c64-41b7-8ee3-337aaa76a512 8c9de23a-5e97-4b97-82f7-93fe44adfafd
+
+[2026-11-21T16:47:22.651Z] #20 SDK → smartsell_operation_call content_commit_revision
+[2026-11-21T16:47:22.656Z] 网关 → business_verified
+审计 persisted 770a9db0-2d61-4692-bd1b-40655a8133e7 a50cb2d8-405a-4ff2-9456-d1b94bccd478
+
+[2026-11-21T16:47:22.657Z] #21 SDK → smartsell_operation_call content_get_variant
+[2026-11-21T16:47:22.661Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.661Z] #22 SDK → smartsell_operation_call content_get
+[2026-11-21T16:47:22.665Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.665Z] #23 SDK → smartsell_operation_call content_list_revisions
+[2026-11-21T16:47:22.668Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.669Z] #24 SDK → smartsell_operation_call publishing_create_target
+[2026-11-21T16:47:22.673Z] 网关 → business_verified
+审计 persisted 5b4376dd-2bc5-46da-a574-efb7946b28aa ea66af9e-dd91-4e4e-9da1-424e52b1769f
+
+[2026-11-21T16:47:22.674Z] #25 SDK → smartsell_operation_call publishing_reschedule
+[2026-11-21T16:47:22.680Z] 网关 → business_verified
+审计 persisted cedbd0d2-42f0-434e-ae7f-eec90ed9ff4c a748fc19-f6aa-418d-a1df-fe6f205d8738
+
+[2026-11-21T16:47:22.681Z] #26 SDK → smartsell_operation_call publishing_request_approval
+[2026-11-21T16:47:22.686Z] 网关 → business_verified
+审计 persisted 8c1756b2-49d4-4557-b59e-71bd82bed58c e9d3128e-a942-4a99-9d24-754cfe184b4c
+
+[2026-11-21T16:47:22.687Z] #27 SDK → smartsell_operation_call publishing_approve
+[2026-11-21T16:47:22.690Z] 网关 → boundary_confirmed (HUMAN_REQUIRED)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.690Z] #28 SDK → smartsell_operation_call publishing_get_target
+[2026-11-21T16:47:22.694Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.695Z] #29 SDK → smartsell_operation_call publishing_list_targets
+[2026-11-21T16:47:22.698Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.703Z] #30 SDK → smartsell_operation_call commerce_store_create
+[2026-11-21T16:47:22.707Z] 网关 → business_verified
+审计 persisted 08d7f769-1d86-4606-825d-fa878989cd23 a23c2572-73ab-4f97-8490-a707a42b6d4b
+
+[2026-11-21T16:47:22.708Z] #31 SDK → smartsell_operation_call commerce_store_list
+[2026-11-21T16:47:22.711Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.712Z] #32 SDK → smartsell_operation_call commerce_store_market_configure
+[2026-11-21T16:47:22.715Z] 网关 → business_verified
+审计 persisted d2def737-6616-4f94-a05b-50a2e0d600b0 baa1dffe-af6c-4702-8b54-94cfad84c9e0
+
+[2026-11-21T16:47:22.716Z] #33 SDK → smartsell_operation_call commerce_store_market_list
+[2026-11-21T16:47:22.719Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.721Z] #34 SDK → smartsell_operation_call commerce_product_create
+[2026-11-21T16:47:22.725Z] 网关 → business_verified
+审计 persisted b8270459-1753-42f4-b174-ab68b77eb0da 5a02566e-570e-4585-94de-02a3280ce308
+
+[2026-11-21T16:47:22.726Z] #35 SDK → smartsell_operation_call commerce_product_update
+[2026-11-21T16:47:22.730Z] 网关 → business_verified
+审计 persisted b8e54c74-3240-4569-b23a-dc66afaff437 556472db-a976-427b-9f8d-f0b3f8355075
+
+[2026-11-21T16:47:22.731Z] #36 SDK → smartsell_operation_call commerce_variant_create
+[2026-11-21T16:47:22.735Z] 网关 → business_verified
+审计 persisted 695b746f-0121-4576-b8c2-6712194accf4 4a6f3c12-be21-457e-8acf-ecd12b0563c0
+
+[2026-11-21T16:47:22.736Z] #37 SDK → smartsell_operation_call commerce_variant_update
+[2026-11-21T16:47:22.740Z] 网关 → business_verified
+审计 persisted d9fb150c-30df-457b-9fe7-c4936b8b7b8e 860792dd-fb22-439f-a5f4-8a145e16ae22
+
+[2026-11-21T16:47:22.741Z] #38 SDK → smartsell_operation_call catalog_get_product
+[2026-11-21T16:47:22.744Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.745Z] #39 SDK → smartsell_operation_call catalog_search
+[2026-11-21T16:47:22.748Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.749Z] #40 SDK → smartsell_operation_call import_template_list
+[2026-11-21T16:47:22.751Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.752Z] #41 SDK → smartsell_operation_call import_create
+[2026-11-21T16:47:22.759Z] 网关 → business_verified
+审计 persisted 12d06c1e-722e-4b33-84f8-7e49b69f88d0 d3b8ea68-f13a-4eff-bbcb-f70941e7f1ee
+
+[2026-11-21T16:47:22.761Z] #42 SDK → smartsell_operation_call commerce_store_import
+[2026-11-21T16:47:22.766Z] 网关 → business_verified
+审计 persisted 4c3ff74c-a18b-4717-b518-98f1e724a860 0599860f-dd78-4bb9-a043-aecdc6799d6c
+
+[2026-11-21T16:47:22.767Z] #43 SDK → smartsell_operation_call import_rows
+[2026-11-21T16:47:22.770Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.771Z] #44 SDK → smartsell_operation_call import_confirm
+[2026-11-21T16:47:22.776Z] 网关 → business_verified
+审计 persisted a302a064-b849-4232-8467-92ad8cd38002 79fa7a32-8a22-4020-9879-aa113b91f5a2
+
+[2026-11-21T16:47:22.777Z] #45 SDK → smartsell_operation_call import_get
+[2026-11-21T16:47:22.780Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.791Z] #46 SDK → smartsell_operation_call research_board_create
+[2026-11-21T16:47:22.797Z] 网关 → business_verified
+审计 persisted 76d673fb-f11a-4773-afb3-339a341281c1 c666bdb3-acca-41fc-b567-f4a431bac3a9
+
+[2026-11-21T16:47:22.798Z] #47 SDK → smartsell_operation_call research_add_item
+[2026-11-21T16:47:22.803Z] 网关 → business_verified
+审计 persisted d5d7b688-7ef7-43ea-9bab-7ee50095fe5b ec74b27f-99fd-4f1d-b3da-c5ef0c277e44
+
+[2026-11-21T16:47:22.804Z] #48 SDK → smartsell_operation_call research_board_get
+[2026-11-21T16:47:22.807Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.808Z] #49 SDK → smartsell_operation_call research_boards_list
+[2026-11-21T16:47:22.810Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.811Z] #50 SDK → smartsell_operation_call research_create_note
+[2026-11-21T16:47:22.815Z] 网关 → business_verified
+审计 persisted bc1591ed-9792-4878-a201-5c74e7c8bc0f 037dc8a6-58fa-4868-aab8-73ba01296539
+
+[2026-11-21T16:47:22.887Z] #51 SDK → smartsell_operation_call account_list_devices
+[2026-11-21T16:47:22.891Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.894Z] #52 SDK → smartsell_operation_call desktop_request_capability
+[2026-11-21T16:47:22.902Z] 网关 → boundary_confirmed
+审计 persisted 88d3ab1d-c953-4099-86f2-3bd675c8da03 7d6cbef6-d53c-49dc-946f-2f09024dacca
+
+[2026-11-21T16:47:22.904Z] #53 SDK → smartsell_operation_call desktop_get_capability_request
+[2026-11-21T16:47:22.907Z] 网关 → boundary_confirmed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.912Z] #54 SDK → smartsell_operation_call workspace_brand_update
+[2026-11-21T16:47:22.917Z] 网关 → business_verified
+审计 persisted 3cd42e0b-cdb6-4ac7-9be8-3cf218498a2d fbfdb472-ebae-4e31-a6b9-a53b9781df5a
+
+[2026-11-21T16:47:22.920Z] #55 SDK → smartsell_operation_call workspace_market_update
+[2026-11-21T16:47:22.927Z] 网关 → business_verified
+审计 persisted 899a88e0-7a73-4f89-be05-cefe37c2ef45 c0fb9ede-1c4f-4488-8f59-f6f3b84bb1f7
+
+[2026-11-21T16:47:22.928Z] #56 SDK → smartsell_operation_call tasks_create
+[2026-11-21T16:47:22.933Z] 网关 → business_verified
+审计 persisted cb1f3920-14d4-4a0b-89e7-e7c43506d42c d903833b-5159-47d0-af21-a78d6411651b
+
+[2026-11-21T16:47:22.935Z] #57 SDK → smartsell_operation_call tasks_update
+[2026-11-21T16:47:22.940Z] 网关 → business_verified
+审计 persisted f9b150c0-9e93-429b-b7b0-e563f70d6428 0e38086f-120e-4beb-9729-4442c02499b4
+
+[2026-11-21T16:47:22.941Z] #58 SDK → smartsell_operation_call tasks_complete
+[2026-11-21T16:47:22.945Z] 网关 → business_error (CONFLICT)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.949Z] #59 SDK → smartsell_operation_call change_sets_create
+[2026-11-21T16:47:22.955Z] 网关 → business_verified
+审计 persisted ea4944b7-59e9-4d1e-853c-90f95adbba9e 80765f91-29fa-4e82-91d1-e69cb620d1c8
+
+[2026-11-21T16:47:22.960Z] #60 SDK → smartsell_operation_call agent_jobs_list
+[2026-11-21T16:47:22.964Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:22.965Z] #61 SDK → smartsell_operation_call agent_jobs_claim
+[2026-11-21T16:47:22.971Z] 网关 → business_verified
+审计 persisted 0b98b898-e741-407b-859c-548b20069462 e473542b-b700-4330-b15d-9d073abd1fa0
+
+[2026-11-21T16:47:22.973Z] #62 SDK → smartsell_operation_call agent_jobs_heartbeat
+[2026-11-21T16:47:23.083Z] 网关 → business_verified
+审计 persisted bdc2fc46-7fe8-4ac5-9d52-64f26dc39c9a d5602cd4-dce0-4263-a57f-70ef6baa9831
+
+[2026-11-21T16:47:23.084Z] #63 SDK → smartsell_operation_call agent_jobs_submit_result
+[2026-11-21T16:47:23.091Z] 网关 → business_verified
+审计 persisted e37077d7-5a24-446a-9331-17dff088dc48 76a8107c-1e3b-48f3-be39-5b3fbb92d117
+
+[2026-11-21T16:47:23.093Z] #64 SDK → smartsell_operation_call agent_jobs_get
+[2026-11-21T16:47:23.098Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.102Z] #65 SDK → smartsell_operation_call campaign_create_draft
+[2026-11-21T16:47:23.108Z] 网关 → business_verified
+审计 persisted 3d38df5e-6cbf-475d-a86e-858a0a74f60b ff5225f8-8586-4bd3-b65f-56834ad22d34
+
+[2026-11-21T16:47:23.110Z] #66 SDK → smartsell_operation_call campaign_goal_create
+[2026-11-21T16:47:23.117Z] 网关 → business_verified
+审计 persisted 21833541-2b34-4b79-bda2-7fc52fe0f73e 2273965e-6782-4543-bcec-6eade30ea899
+
+[2026-11-21T16:47:23.119Z] #67 SDK → smartsell_operation_call campaign_goal_update
+[2026-11-21T16:47:23.126Z] 网关 → business_verified
+审计 persisted dbe548bc-33f2-44b7-9657-84399b3b35b7 d173288d-7653-4cf2-bc24-8f292ee25052
+
+[2026-11-21T16:47:23.128Z] #68 SDK → smartsell_operation_call campaign_plan_slot_create
+[2026-11-21T16:47:23.134Z] 网关 → business_verified
+审计 persisted 8fe7386a-b82a-4289-8af8-2e239c6a6232 ad23337b-efe6-4a74-b973-75df2506cbed
+
+[2026-11-21T16:47:23.136Z] #69 SDK → smartsell_operation_call campaign_plan_slot_update
+[2026-11-21T16:47:23.143Z] 网关 → business_verified
+审计 persisted 964c14f8-3a0d-493e-95b5-2b0047e5b645 981d076f-deeb-4a04-a225-bfbf948244d2
+
+[2026-11-21T16:47:23.145Z] #70 SDK → smartsell_operation_call commerce_product_usage
+[2026-11-21T16:47:23.149Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.151Z] #71 SDK → smartsell_operation_call commerce_variant_group_create
+[2026-11-21T16:47:23.157Z] 网关 → business_verified
+审计 persisted d430c466-55ae-49d2-ad21-7c2b45b504e7 d5a8fc0f-7439-4512-bdad-8c0a774ae71f
+
+[2026-11-21T16:47:23.159Z] #72 SDK → smartsell_operation_call creators_create
+[2026-11-21T16:47:23.165Z] 网关 → business_verified
+审计 persisted 370369d2-54a9-4af8-8cac-d82ffbd0b114 868db532-3e1d-46fc-83d3-0070d2267422
+
+[2026-11-21T16:47:23.167Z] #73 SDK → smartsell_operation_call customers_create
+[2026-11-21T16:47:23.173Z] 网关 → business_verified
+审计 persisted 0d6b1fc4-7115-4e56-997e-831276142ef8 7c45e449-6e9d-40e3-ba52-4859a1eeb153
+
+[2026-11-21T16:47:23.175Z] #74 SDK → smartsell_operation_call watch_target_create
+[2026-11-21T16:47:23.181Z] 网关 → business_verified
+审计 persisted 0f9eef55-dcfc-4876-8b18-92c2769a9809 78dca8a6-30ce-4cd1-921a-09f5550887a0
+
+[2026-11-21T16:47:23.183Z] #75 SDK → smartsell_operation_call observation_record
+[2026-11-21T16:47:23.190Z] 网关 → business_verified
+审计 persisted 9ec6f0d4-2509-4149-9220-198c04363c94 871ad5a1-07e2-4ab2-9a00-03da3357ef22
+
+[2026-11-21T16:47:23.192Z] #76 SDK → smartsell_operation_call observations_list
+[2026-11-21T16:47:23.195Z] 网关 → business_verified
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.197Z] #77 SDK → smartsell_operation_call inbox_ingest_batch
+[2026-11-21T16:47:23.204Z] 网关 → business_verified
+审计 persisted 625502cd-9198-4df9-a1f3-48b2806834d4 39d71765-56b0-444b-bffe-80b9bc8b2de2
+
+[2026-11-21T16:47:23.208Z] #78 SDK → smartsell_operation_call inbox_claim
+[2026-11-21T16:47:23.225Z] 网关 → business_verified
+审计 persisted 2dcc7e19-0ab3-4d8e-a29b-f7e76f9951ea e9c3f637-b684-4ad4-872b-d2cd46ae6735
+
+[2026-11-21T16:47:23.228Z] #79 SDK → smartsell_operation_call inbox_release
+[2026-11-21T16:47:23.234Z] 网关 → business_verified
+审计 persisted e757004e-90d3-49f3-94d9-3c032f70cd33 5dcc77f2-2fa0-40c0-976e-3b5680a45f06
+
+[2026-11-21T16:47:23.238Z] #80 SDK → smartsell_operation_call views_home
+[2026-11-21T16:47:23.251Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.254Z] #81 SDK → smartsell_operation_call views_products_list
+[2026-11-21T16:47:23.260Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.263Z] #82 SDK → smartsell_operation_call views_product_get
+[2026-11-21T16:47:23.269Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.271Z] #83 SDK → smartsell_operation_call views_plans_list
+[2026-11-21T16:47:23.277Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.279Z] #84 SDK → smartsell_operation_call views_plan_get
+[2026-11-21T16:47:23.284Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.287Z] #85 SDK → smartsell_operation_call views_calendar
+[2026-11-21T16:47:23.291Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.293Z] #86 SDK → smartsell_operation_call views_social
+[2026-11-21T16:47:23.298Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.300Z] #87 SDK → smartsell_operation_call views_ads
+[2026-11-21T16:47:23.305Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.307Z] #88 SDK → smartsell_operation_call views_decisions_list
+[2026-11-21T16:47:23.314Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.316Z] #89 SDK → smartsell_operation_call views_decisions_summary
+[2026-11-21T16:47:23.320Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.322Z] #90 SDK → smartsell_operation_call views_activity
+[2026-11-21T16:47:23.327Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.330Z] #91 SDK → smartsell_operation_call views_agent_presence
+[2026-11-21T16:47:23.334Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.336Z] #92 SDK → smartsell_operation_call workspace_get
+[2026-11-21T16:47:23.340Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.342Z] #93 SDK → smartsell_operation_call workspace_get_context
+[2026-11-21T16:47:23.345Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.347Z] #94 SDK → smartsell_operation_call workspace_get_today
+[2026-11-21T16:47:23.353Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.356Z] #95 SDK → smartsell_operation_call workspace_get_summary
+[2026-11-21T16:47:23.362Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.364Z] #96 SDK → smartsell_operation_call tasks_list
+[2026-11-21T16:47:23.368Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.370Z] #97 SDK → smartsell_operation_call tasks_get
+[2026-11-21T16:47:23.376Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.378Z] #98 SDK → smartsell_operation_call workspace_get_personal_inbox
+[2026-11-21T16:47:23.381Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.383Z] #99 SDK → smartsell_operation_call notifications_list
+[2026-11-21T16:47:23.386Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.388Z] #100 SDK → smartsell_operation_call notifications_preferences_list
+[2026-11-21T16:47:23.393Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.396Z] #101 SDK → smartsell_operation_call workspace_subscriptions_list
+[2026-11-21T16:47:23.399Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.401Z] #102 SDK → smartsell_operation_call search_query
+[2026-11-21T16:47:23.406Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.408Z] #103 SDK → smartsell_operation_call workspace_saved_views_list
+[2026-11-21T16:47:23.411Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.413Z] #104 SDK → smartsell_operation_call account_get_social_account
+[2026-11-21T16:47:23.417Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.419Z] #105 SDK → smartsell_operation_call account_get_capabilities
+[2026-11-21T16:47:23.423Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.425Z] #106 SDK → smartsell_operation_call account_get_platform_catalog
+[2026-11-21T16:47:23.428Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.431Z] #107 SDK → smartsell_operation_call account_list_platform_apps
+[2026-11-21T16:47:23.435Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.437Z] #108 SDK → smartsell_operation_call account_list_connections
+[2026-11-21T16:47:23.441Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.442Z] #109 SDK → smartsell_operation_call account_list_mobile_devices
+[2026-11-21T16:47:23.446Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.448Z] #110 SDK → smartsell_operation_call account_list_mobile_app_bindings
+[2026-11-21T16:47:23.451Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.453Z] #111 SDK → smartsell_operation_call account_list_browser_sessions
+[2026-11-21T16:47:23.456Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.458Z] #112 SDK → smartsell_operation_call account_get_binding_migration
+[2026-11-21T16:47:23.461Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.462Z] #113 SDK → smartsell_operation_call account_get_connector_auto_policy
+[2026-11-21T16:47:23.466Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.467Z] #114 SDK → smartsell_operation_call account_list_account_blocks
+[2026-11-21T16:47:23.470Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.472Z] #115 SDK → smartsell_operation_call data_source_list
+[2026-11-21T16:47:23.475Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.477Z] #116 SDK → smartsell_operation_call import_list
+[2026-11-21T16:47:23.480Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.482Z] #117 SDK → smartsell_operation_call import_mapping_preset_list
+[2026-11-21T16:47:23.487Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.490Z] #118 SDK → smartsell_operation_call sync_run_list
+[2026-11-21T16:47:23.495Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.496Z] #119 SDK → smartsell_operation_call sync_schedule_list
+[2026-11-21T16:47:23.500Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.502Z] #120 SDK → smartsell_operation_call backfill_list
+[2026-11-21T16:47:23.506Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.508Z] #121 SDK → smartsell_operation_call data_gap_list
+[2026-11-21T16:47:23.512Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.513Z] #122 SDK → smartsell_operation_call webhook_delivery_list
+[2026-11-21T16:47:23.517Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.518Z] #123 SDK → smartsell_operation_call data_health_get
+[2026-11-21T16:47:23.522Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.524Z] #124 SDK → smartsell_operation_call data_quality_issue_list
+[2026-11-21T16:47:23.527Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.529Z] #125 SDK → smartsell_operation_call vendor_usage_list
+[2026-11-21T16:47:23.533Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.535Z] #126 SDK → smartsell_operation_call collection_budget_list
+[2026-11-21T16:47:23.538Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.540Z] #127 SDK → smartsell_operation_call data_provenance_get
+[2026-11-21T16:47:23.544Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.547Z] #128 SDK → smartsell_operation_call commerce_store_get
+[2026-11-21T16:47:23.551Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.553Z] #129 SDK → smartsell_operation_call market_snapshot
+[2026-11-21T16:47:23.558Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.560Z] #130 SDK → smartsell_operation_call commerce_variant_group_suggest
+[2026-11-21T16:47:23.564Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.566Z] #131 SDK → smartsell_operation_call commerce_variant_group_list
+[2026-11-21T16:47:23.569Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.571Z] #132 SDK → smartsell_operation_call commerce_variant_group_member_list
+[2026-11-21T16:47:23.577Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.579Z] #133 SDK → smartsell_operation_call catalog_list_facts
+[2026-11-21T16:47:23.582Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.584Z] #134 SDK → smartsell_operation_call commerce_localization_list
+[2026-11-21T16:47:23.588Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.589Z] #135 SDK → smartsell_operation_call commerce_list_changes
+[2026-11-21T16:47:23.593Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.595Z] #136 SDK → smartsell_operation_call commerce_promotion_list
+[2026-11-21T16:47:23.598Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.599Z] #137 SDK → smartsell_operation_call commerce_order_list
+[2026-11-21T16:47:23.603Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.604Z] #138 SDK → smartsell_operation_call commerce_refund_list
+[2026-11-21T16:47:23.608Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.610Z] #139 SDK → smartsell_operation_call orders_summary
+[2026-11-21T16:47:23.613Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.616Z] #140 SDK → smartsell_operation_call commerce_inventory_rule_list
+[2026-11-21T16:47:23.619Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.623Z] #141 SDK → smartsell_operation_call campaign_list
+[2026-11-21T16:47:23.627Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.629Z] #142 SDK → smartsell_operation_call campaign_goal_list
+[2026-11-21T16:47:23.633Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.635Z] #143 SDK → smartsell_operation_call campaign_goal_get
+[2026-11-21T16:47:23.638Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.640Z] #144 SDK → smartsell_operation_call campaign_plan_slot_list
+[2026-11-21T16:47:23.644Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.646Z] #145 SDK → smartsell_operation_call campaign_plan_slot_get
+[2026-11-21T16:47:23.650Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.652Z] #146 SDK → smartsell_operation_call campaign_brief_list
+[2026-11-21T16:47:23.656Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.658Z] #147 SDK → smartsell_operation_call campaign_budget_line_list
+[2026-11-21T16:47:23.663Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.666Z] #148 SDK → smartsell_operation_call campaign_cost_commitment_list
+[2026-11-21T16:47:23.670Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.671Z] #149 SDK → smartsell_operation_call campaign_cost_entry_list
+[2026-11-21T16:47:23.675Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.676Z] #150 SDK → smartsell_operation_call campaign_budget_summary
+[2026-11-21T16:47:23.680Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.681Z] #151 SDK → smartsell_operation_call campaign_budget_benchmarks
+[2026-11-21T16:47:23.684Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.685Z] #152 SDK → smartsell_operation_call campaign_budget_approval_list
+[2026-11-21T16:47:23.689Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.690Z] #153 SDK → smartsell_operation_call campaign_get_context
+[2026-11-21T16:47:23.694Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.696Z] #154 SDK → smartsell_operation_call campaign_matrix
+[2026-11-21T16:47:23.700Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.701Z] #155 SDK → smartsell_operation_call campaign_milestone_list
+[2026-11-21T16:47:23.705Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.707Z] #156 SDK → smartsell_operation_call campaign_tracking_summary
+[2026-11-21T16:47:23.711Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.713Z] #157 SDK → smartsell_operation_call campaign_link_list
+[2026-11-21T16:47:23.716Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.718Z] #158 SDK → smartsell_operation_call campaign_attribution_compare
+[2026-11-21T16:47:23.722Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.724Z] #159 SDK → smartsell_operation_call campaign_tracking_get
+[2026-11-21T16:47:23.727Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.729Z] #160 SDK → smartsell_operation_call campaign_closeout_get
+[2026-11-21T16:47:23.733Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.734Z] #161 SDK → smartsell_operation_call campaign_historical_baselines
+[2026-11-21T16:47:23.739Z] 网关 → business_error (VALIDATION_FAILED)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.741Z] #162 SDK → smartsell_operation_call campaign_report_list
+[2026-11-21T16:47:23.748Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.749Z] #163 SDK → smartsell_operation_call campaign_template_list
+[2026-11-21T16:47:23.755Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.756Z] #164 SDK → smartsell_operation_call watch_targets_list
+[2026-11-21T16:47:23.760Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.762Z] #165 SDK → smartsell_operation_call watch_target_get
+[2026-11-21T16:47:23.766Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.768Z] #166 SDK → smartsell_operation_call research_search
+[2026-11-21T16:47:23.772Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.774Z] #167 SDK → smartsell_operation_call research_item_evidence
+[2026-11-21T16:47:23.778Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.781Z] #168 SDK → smartsell_operation_call creative_references_list
+[2026-11-21T16:47:23.785Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.786Z] #169 SDK → smartsell_operation_call product_candidates_list
+[2026-11-21T16:47:23.790Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.791Z] #170 SDK → smartsell_operation_call research_topics_list
+[2026-11-21T16:47:23.796Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.798Z] #171 SDK → smartsell_operation_call alert_rules_list
+[2026-11-21T16:47:23.802Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.803Z] #172 SDK → smartsell_operation_call alerts_list
+[2026-11-21T16:47:23.807Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.809Z] #173 SDK → smartsell_operation_call mentions_query
+[2026-11-21T16:47:23.812Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.814Z] #174 SDK → smartsell_operation_call content_list_pillars
+[2026-11-21T16:47:23.818Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.823Z] #175 SDK → smartsell_operation_call idea_list
+[2026-11-21T16:47:23.828Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.830Z] #176 SDK → smartsell_operation_call content_list
+[2026-11-21T16:47:23.834Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.836Z] #177 SDK → smartsell_operation_call content_production_workload
+[2026-11-21T16:47:23.840Z] 网关 → business_error (FORBIDDEN)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.841Z] #178 SDK → smartsell_operation_call content_list_stale
+[2026-11-21T16:47:23.846Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.849Z] #179 SDK → smartsell_operation_call content_list_product_facts
+[2026-11-21T16:47:23.853Z] 网关 → business_error (INVALID_INPUT)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.854Z] #180 SDK → smartsell_operation_call content_list_product_prices
+[2026-11-21T16:47:23.860Z] 网关 → business_error (INVALID_INPUT)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.862Z] #181 SDK → smartsell_operation_call content_get_revision
+[2026-11-21T16:47:23.866Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.868Z] #182 SDK → smartsell_operation_call content_list_translations
+[2026-11-21T16:47:23.871Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.873Z] #183 SDK → smartsell_operation_call content_list_feeds
+[2026-11-21T16:47:23.877Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.879Z] #184 SDK → smartsell_operation_call asset_list_submission_boxes
+[2026-11-21T16:47:23.882Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.884Z] #185 SDK → smartsell_operation_call asset_list_external_sources
+[2026-11-21T16:47:23.887Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.889Z] #186 SDK → smartsell_operation_call asset_search
+[2026-11-21T16:47:23.893Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.894Z] #187 SDK → smartsell_operation_call asset_find_duplicates
+[2026-11-21T16:47:23.898Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.899Z] #188 SDK → smartsell_operation_call asset_usage
+[2026-11-21T16:47:23.903Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.905Z] #189 SDK → smartsell_operation_call asset_list_folders
+[2026-11-21T16:47:23.908Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.909Z] #190 SDK → smartsell_operation_call rights_list
+[2026-11-21T16:47:23.913Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.915Z] #191 SDK → smartsell_operation_call rights_list_impacts
+[2026-11-21T16:47:23.918Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.920Z] #192 SDK → smartsell_operation_call rights_get
+[2026-11-21T16:47:23.924Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.925Z] #193 SDK → smartsell_operation_call knowledge_list
+[2026-11-21T16:47:23.929Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.931Z] #194 SDK → smartsell_operation_call knowledge_get_context
+[2026-11-21T16:47:23.935Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.937Z] #195 SDK → smartsell_operation_call template_list
+[2026-11-21T16:47:23.940Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.942Z] #196 SDK → smartsell_operation_call publishing_get_calendar
+[2026-11-21T16:47:23.946Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.948Z] #197 SDK → smartsell_operation_call publishing_list_approvals
+[2026-11-21T16:47:23.951Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.952Z] #198 SDK → smartsell_operation_call publishing_list_pauses
+[2026-11-21T16:47:23.956Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.958Z] #199 SDK → smartsell_operation_call publishing_list_slot_templates
+[2026-11-21T16:47:23.961Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.963Z] #200 SDK → smartsell_operation_call publishing_list_schedule_rules
+[2026-11-21T16:47:23.967Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.968Z] #201 SDK → smartsell_operation_call publishing_list_evergreen_queues
+[2026-11-21T16:47:23.971Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:23.973Z] #202 SDK → smartsell_operation_call publishing_list_review_rounds
+[2026-11-21T16:47:24.117Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.119Z] #203 SDK → smartsell_operation_call publishing_list_post_matches
+[2026-11-21T16:47:24.123Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.125Z] #204 SDK → smartsell_operation_call publishing_suggest_slots
+[2026-11-21T16:47:24.130Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.131Z] #205 SDK → smartsell_operation_call publishing_list_execution
+[2026-11-21T16:47:24.135Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.136Z] #206 SDK → smartsell_operation_call publishing_list_exceptions
+[2026-11-21T16:47:24.140Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.142Z] #207 SDK → smartsell_operation_call posts_list
+[2026-11-21T16:47:24.145Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.147Z] #208 SDK → smartsell_operation_call inbox_list
+[2026-11-21T16:47:24.151Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.152Z] #209 SDK → smartsell_operation_call inbox_get_conversation
+[2026-11-21T16:47:24.156Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.159Z] #210 SDK → smartsell_operation_call inbox_coverage
+[2026-11-21T16:47:24.164Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.166Z] #211 SDK → smartsell_operation_call inbox_get_sla_sample
+[2026-11-21T16:47:24.170Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.174Z] #212 SDK → smartsell_operation_call inbox_get_participant_link
+[2026-11-21T16:47:24.179Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.181Z] #213 SDK → smartsell_operation_call inbox_list_moderation
+[2026-11-21T16:47:24.185Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.190Z] #214 SDK → smartsell_operation_call inbox_list_cases
+[2026-11-21T16:47:24.194Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.196Z] #215 SDK → smartsell_operation_call inbox_list_translations
+[2026-11-21T16:47:24.200Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.202Z] #216 SDK → smartsell_operation_call inbox_list_review_sources
+[2026-11-21T16:47:24.205Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.207Z] #217 SDK → smartsell_operation_call inbox_list_reviews
+[2026-11-21T16:47:24.210Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.212Z] #218 SDK → smartsell_operation_call inbox_get_review_summary
+[2026-11-21T16:47:24.217Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.218Z] #219 SDK → smartsell_operation_call inbox_list_business_hours
+[2026-11-21T16:47:24.223Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.224Z] #220 SDK → smartsell_operation_call inbox_list_sla_policies
+[2026-11-21T16:47:24.228Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.230Z] #221 SDK → smartsell_operation_call inbox_list_auto_rules
+[2026-11-21T16:47:24.234Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.235Z] #222 SDK → smartsell_operation_call inbox_list_auto_reply_review
+[2026-11-21T16:47:24.239Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.240Z] #223 SDK → smartsell_operation_call inbox_get_conversation_sla
+[2026-11-21T16:47:24.244Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.246Z] #224 SDK → smartsell_operation_call creators_search
+[2026-11-21T16:47:24.250Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.253Z] #225 SDK → smartsell_operation_call creators_get
+[2026-11-21T16:47:24.257Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.258Z] #226 SDK → smartsell_operation_call creators_list_contacts
+[2026-11-21T16:47:24.262Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.264Z] #227 SDK → smartsell_operation_call creators_list_associations
+[2026-11-21T16:47:24.268Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.270Z] #228 SDK → smartsell_operation_call collaborations_list
+[2026-11-21T16:47:24.274Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.275Z] #229 SDK → smartsell_operation_call deliverables_list_missing
+[2026-11-21T16:47:24.278Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.280Z] #230 SDK → smartsell_operation_call creators_list_shipments
+[2026-11-21T16:47:24.284Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.286Z] #231 SDK → smartsell_operation_call creators_list_live_sessions
+[2026-11-21T16:47:24.289Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.290Z] #232 SDK → smartsell_operation_call creators_list_evaluations
+[2026-11-21T16:47:24.293Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.295Z] #233 SDK → smartsell_operation_call commissions_list
+[2026-11-21T16:47:24.299Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.301Z] #234 SDK → smartsell_operation_call commissions_list_batches
+[2026-11-21T16:47:24.304Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.306Z] #235 SDK → smartsell_operation_call links_list
+[2026-11-21T16:47:24.309Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.311Z] #236 SDK → smartsell_operation_call links_allowlist_list
+[2026-11-21T16:47:24.315Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.316Z] #237 SDK → smartsell_operation_call links_domains_list
+[2026-11-21T16:47:24.320Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.321Z] #238 SDK → smartsell_operation_call utm_list
+[2026-11-21T16:47:24.325Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.326Z] #239 SDK → smartsell_operation_call links_destinations_list
+[2026-11-21T16:47:24.329Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.332Z] #240 SDK → smartsell_operation_call pages_list
+[2026-11-21T16:47:24.336Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.337Z] #241 SDK → smartsell_operation_call links_list_checks
+[2026-11-21T16:47:24.340Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.342Z] #242 SDK → smartsell_operation_call bio_list
+[2026-11-21T16:47:24.345Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.346Z] #243 SDK → smartsell_operation_call forms_list
+[2026-11-21T16:47:24.350Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.352Z] #244 SDK → smartsell_operation_call leads_list
+[2026-11-21T16:47:24.354Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.356Z] #245 SDK → smartsell_operation_call ads_list_accounts
+[2026-11-21T16:47:24.359Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.360Z] #246 SDK → smartsell_operation_call ads_list_entities
+[2026-11-21T16:47:24.363Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.365Z] #247 SDK → smartsell_operation_call ads_list_creatives
+[2026-11-21T16:47:24.368Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.370Z] #248 SDK → smartsell_operation_call ads_list_proposals
+[2026-11-21T16:47:24.373Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.375Z] #249 SDK → smartsell_operation_call ads_list_adjustments
+[2026-11-21T16:47:24.378Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.379Z] #250 SDK → smartsell_operation_call customers_list
+[2026-11-21T16:47:24.383Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.385Z] #251 SDK → smartsell_operation_call customers_get
+[2026-11-21T16:47:24.389Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.391Z] #252 SDK → smartsell_operation_call customers_get_consents
+[2026-11-21T16:47:24.395Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.397Z] #253 SDK → smartsell_operation_call lifecycle_list_consent_conflicts
+[2026-11-21T16:47:24.401Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.402Z] #254 SDK → smartsell_operation_call lifecycle_list_consent_texts
+[2026-11-21T16:47:24.406Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.408Z] #255 SDK → smartsell_operation_call segments_list
+[2026-11-21T16:47:24.411Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.413Z] #256 SDK → smartsell_operation_call lifecycle_list_esp_accounts
+[2026-11-21T16:47:24.417Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.419Z] #257 SDK → smartsell_operation_call lifecycle_list_campaigns
+[2026-11-21T16:47:24.422Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.424Z] #258 SDK → smartsell_operation_call lifecycle_list_flows
+[2026-11-21T16:47:24.427Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.428Z] #259 SDK → smartsell_operation_call lifecycle_get_health
+[2026-11-21T16:47:24.432Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.434Z] #260 SDK → smartsell_operation_call metric_definitions_get
+[2026-11-21T16:47:24.437Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.439Z] #261 SDK → smartsell_operation_call reports_list
+[2026-11-21T16:47:24.442Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.443Z] #262 SDK → smartsell_operation_call report_templates_list
+[2026-11-21T16:47:24.447Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.449Z] #263 SDK → smartsell_operation_call attribution_models_get
+[2026-11-21T16:47:24.452Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.454Z] #264 SDK → smartsell_operation_call revenue_reconciliation_list
+[2026-11-21T16:47:24.457Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.458Z] #265 SDK → smartsell_operation_call cohorts_list
+[2026-11-21T16:47:24.461Z] 网关 → business_error (INVALID_ANALYTICS_INPUT)
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.463Z] #266 SDK → smartsell_operation_call experiments_list
+[2026-11-21T16:47:24.468Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.470Z] #267 SDK → smartsell_operation_call change_sets_get
+[2026-11-21T16:47:24.474Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.475Z] #268 SDK → smartsell_operation_call workflow_templates_list
+[2026-11-21T16:47:24.479Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.481Z] #269 SDK → smartsell_operation_call agent_preview_context
+[2026-11-21T16:47:24.485Z] 网关 → fixture_reference_observed
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.488Z] #270 SDK → smartsell_operation_call ops_get_health
+[2026-11-21T16:47:24.492Z] 网关 → response_only
+审计 none_in_local_snapshot_delta
+
+[2026-11-21T16:47:24.494Z] #271 SDK → smartsell_operation_call audit_query
+[2026-11-21T16:47:24.498Z] 网关 → valid_empty
+审计 none_in_local_snapshot_delta

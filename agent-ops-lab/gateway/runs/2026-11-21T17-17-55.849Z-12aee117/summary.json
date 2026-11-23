@@ -1,0 +1,70 @@
+{
+  "discovered": 701,
+  "modules": {
+    "account": 23,
+    "ads": 21,
+    "agent": 16,
+    "analytics": 53,
+    "asset": 39,
+    "campaign": 64,
+    "commerce": 48,
+    "content": 55,
+    "creator": 50,
+    "execution": 12,
+    "files": 3,
+    "inbox": 65,
+    "ingest": 39,
+    "intel": 41,
+    "lifecycle": 41,
+    "ops": 2,
+    "planning": 32,
+    "traffic": 41,
+    "workspace": 56
+  },
+  "uniqueCalled": 346,
+  "discoveredCalled": 344,
+  "attempts": 351,
+  "observedBusinessSuccesses": 154,
+  "catalogStatuses": {
+    "boundary_confirmed": 4,
+    "business_verified": 154,
+    "computed_verified": 2,
+    "fixture_reference_observed": 68,
+    "not_exercised": 357,
+    "response_only": 23,
+    "valid_empty": 93
+  },
+  "callStatuses": {
+    "boundary_confirmed": 6,
+    "business_verified": 157,
+    "computed_verified": 2,
+    "fixture_reference_observed": 68,
+    "idempotent_replay": 1,
+    "response_only": 23,
+    "valid_empty": 94
+  },
+  "auditPersistedCalls": 107,
+  "auditRequestIdMatches": 351,
+  "observedNonemptyReadOperations": 63,
+  "observedZeroReadOperations": 94,
+  "untestedReasons": {
+    "external_unavailable": 4,
+    "fixture_unprepared": 75,
+    "missing_resource": 15,
+    "missing_state": 12,
+    "scope_excluded": 251
+  },
+  "callsOutsideCatalog": [
+    {
+      "seq": 15,
+      "operation": "file_download",
+      "status": "boundary_confirmed"
+    },
+    {
+      "seq": 35,
+      "operation": "publishing_approve",
+      "status": "boundary_confirmed"
+    }
+  ],
+  "gaps": {}
+}

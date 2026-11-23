@@ -1,0 +1,5526 @@
+{
+  "driver": "MCP TypeScript SDK",
+  "workspace": "41f73816-a10a-4055-b26a-4a95bcf2a31e",
+  "origin": "http://127.0.0.1:49563",
+  "pages": [
+    {
+      "at": "2026-11-21T17:18:29.464Z",
+      "received": 42,
+      "hasNext": false,
+      "result": {
+        "tools": [
+          {
+            "name": "workspace_get_context",
+            "description": "Read brand, market and account context",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "workspace_id": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "ui_locale": {
+                      "type": "string"
+                    },
+                    "task_scope": {
+                      "type": "string"
+                    },
+                    "brands": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "created_at",
+                          "updated_at",
+                          "name",
+                          "slug",
+                          "status"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "markets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          },
+                          "brand_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "country_code": {
+                            "type": "string"
+                          },
+                          "primary_language": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "created_at",
+                          "updated_at",
+                          "brand_id",
+                          "name",
+                          "country_code",
+                          "primary_language"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "brand_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "provider": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "provider",
+                          "status"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "workspace_id",
+                    "role",
+                    "timezone",
+                    "currency",
+                    "ui_locale",
+                    "brands",
+                    "markets",
+                    "accounts"
+                  ],
+                  "additionalProperties": {}
+                },
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "workspace_brands_list",
+            "description": "List workspace brands",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "created_at",
+                      "updated_at",
+                      "name",
+                      "slug",
+                      "status"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "workspace_brand_get",
+            "description": "Read a brand",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "name",
+                    "slug",
+                    "status"
+                  ],
+                  "additionalProperties": {}
+                },
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "workspace_markets_list",
+            "description": "List markets for a brand",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "workspace_market_get",
+            "description": "Read a market",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "tasks_get",
+            "description": "Read a work item",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "search_query",
+            "description": "Search accessible workspace resources",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "account_list_devices",
+            "description": "list devices",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "catalog_search",
+            "description": "Search catalog by store, SKU, market or availability",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "as_of": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "created_at",
+                      "updated_at",
+                      "title",
+                      "as_of"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "catalog_list_facts",
+            "description": "Read approved facts or review fact history",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "research_create_note",
+            "description": "Add a research note",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "research_search",
+            "description": "Search research evidence and creative references",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "research_item_evidence",
+            "description": "Resolve the exact evidence cited by a research item",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "creative_reference_annotate",
+            "description": "Annotate a creative reference",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "content_get_variant",
+            "description": "Get variant details and preview",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "content_autosave_variant",
+            "description": "Save a working draft",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "content_update_variant",
+            "description": "Commit a version-checked agent edit",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "content_commit_revision",
+            "description": "Commit an immutable revision",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "asset_search",
+            "description": "Search the asset library",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "asset_get",
+            "description": "Get an asset, versions, rights and usage",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "asset_list_versions",
+            "description": "List immutable file versions",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "knowledge_get_context",
+            "description": "Assemble scoped active brand context",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "brandId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "brandId"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "publishing_get_target",
+            "description": "publishing get target",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "inbox_claim",
+            "description": "Take or renew a processing lease",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "inbox_release",
+            "description": "Release or hand off processing lease",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "inbox_send_reply",
+            "description": "Queue an approved reply or stage a manual reply (requires expected version)",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "idempotency_key"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": true
+            }
+          },
+          {
+            "name": "agent_jobs_list",
+            "description": "List Agent jobs",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_jobs_get",
+            "description": "Read an Agent job and its history",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_jobs_claim",
+            "description": "claim an Agent job",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_jobs_heartbeat",
+            "description": "heartbeat an Agent job",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_jobs_handoff",
+            "description": "handoff an Agent job",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_jobs_submit_result",
+            "description": "submit an Agent job",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_jobs_confirm_cancel",
+            "description": "confirm-cancel an Agent job",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "jobs_get",
+            "description": "Resume querying a durable operation",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "operation_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "cancel_requested_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "result_ref": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "report_id": {
+                              "type": "string"
+                            },
+                            "version_id": {
+                              "type": "string"
+                            },
+                            "version_no": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "format": {
+                              "type": "string",
+                              "enum": [
+                                "pdf",
+                                "csv",
+                                "xlsx"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "report_id",
+                            "version_id",
+                            "version_no"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "research_digest_id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "research_digest_id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "error_code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation_id",
+                    "status",
+                    "version",
+                    "cancel_requested_at"
+                  ],
+                  "additionalProperties": {}
+                },
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "jobs_cancel",
+            "description": "Request durable operation cancellation",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params",
+                "expected_version"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "operation_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "cancel_requested_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "result_ref": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "report_id": {
+                              "type": "string"
+                            },
+                            "version_id": {
+                              "type": "string"
+                            },
+                            "version_no": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "format": {
+                              "type": "string",
+                              "enum": [
+                                "pdf",
+                                "csv",
+                                "xlsx"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "report_id",
+                            "version_id",
+                            "version_no"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "research_digest_id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "research_digest_id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "error_code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation_id",
+                    "status",
+                    "version",
+                    "cancel_requested_at"
+                  ],
+                  "additionalProperties": {}
+                },
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "change_sets_create",
+            "description": "Submit a version-pinned draft change set",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "change_sets_get",
+            "description": "Review field-by-field draft differences",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "workflow_templates_list",
+            "description": "List published workflow templates",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "workflow_templates_get",
+            "description": "Read the current published workflow revision",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "agent_preview_context",
+            "description": "Preview and search the approved knowledge supplied to Agent for a brand",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "brandId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "brandId"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "desktop_request_capability",
+            "description": "Record an unsupported product listing request without listing anything or scheduling a Worker",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "capability",
+                    "product_id"
+                  ],
+                  "properties": {
+                    "capability": {
+                      "type": "string",
+                      "const": "product_listing"
+                    },
+                    "product_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "variant_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "store_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "body"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": false,
+              "destructiveHint": true,
+              "idempotentHint": false,
+              "openWorldHint": false
+            }
+          },
+          {
+            "name": "desktop_get_capability_request",
+            "description": "Read your retained unsupported desktop capability receipt",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "workspace_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "expected_version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "pattern": "^[!-~]{1,200}$"
+                }
+              },
+              "required": [
+                "workspace_id",
+                "params"
+              ],
+              "additionalProperties": false
+            },
+            "outputSchema": {
+              "type": "object",
+              "properties": {
+                "data": {},
+                "next_cursor": "[redacted]",
+                "etag": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data"
+              ]
+            },
+            "annotations": {
+              "readOnlyHint": true,
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "openWorldHint": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "readOnlyPages": [
+    {
+      "at": "2026-11-21T17:18:29.475Z",
+      "received": 26,
+      "hasNext": false,
+      "names": [
+        "workspace_get_context",
+        "workspace_brands_list",
+        "workspace_brand_get",
+        "workspace_markets_list",
+        "workspace_market_get",
+        "tasks_get",
+        "search_query",
+        "account_list_devices",
+        "catalog_search",
+        "catalog_list_facts",
+        "research_search",
+        "research_item_evidence",
+        "content_get_variant",
+        "asset_search",
+        "asset_get",
+        "asset_list_versions",
+        "knowledge_get_context",
+        "publishing_get_target",
+        "agent_jobs_list",
+        "agent_jobs_get",
+        "jobs_get",
+        "change_sets_get",
+        "workflow_templates_list",
+        "workflow_templates_get",
+        "agent_preview_context",
+        "desktop_get_capability_request"
+      ],
+      "tools": [
+        {
+          "name": "workspace_get_context",
+          "description": "Read brand, market and account context",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "workspace_id": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "ui_locale": {
+                    "type": "string"
+                  },
+                  "task_scope": {
+                    "type": "string"
+                  },
+                  "brands": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "created_at",
+                        "updated_at",
+                        "name",
+                        "slug",
+                        "status"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  },
+                  "markets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "brand_id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "country_code": {
+                          "type": "string"
+                        },
+                        "primary_language": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "created_at",
+                        "updated_at",
+                        "brand_id",
+                        "name",
+                        "country_code",
+                        "primary_language"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  },
+                  "accounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "brand_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "provider": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "provider",
+                        "status"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  }
+                },
+                "required": [
+                  "workspace_id",
+                  "role",
+                  "timezone",
+                  "currency",
+                  "ui_locale",
+                  "brands",
+                  "markets",
+                  "accounts"
+                ],
+                "additionalProperties": {}
+              },
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "workspace_brands_list",
+          "description": "List workspace brands",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "name",
+                    "slug",
+                    "status"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "workspace_brand_get",
+          "description": "Read a brand",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "created_at",
+                  "updated_at",
+                  "name",
+                  "slug",
+                  "status"
+                ],
+                "additionalProperties": {}
+              },
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "workspace_markets_list",
+          "description": "List markets for a brand",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "workspace_market_get",
+          "description": "Read a market",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "tasks_get",
+          "description": "Read a work item",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "search_query",
+          "description": "Search accessible workspace resources",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "account_list_devices",
+          "description": "list devices",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "catalog_search",
+          "description": "Search catalog by store, SKU, market or availability",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "as_of": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "version",
+                    "created_at",
+                    "updated_at",
+                    "title",
+                    "as_of"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "catalog_list_facts",
+          "description": "Read approved facts or review fact history",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "research_search",
+          "description": "Search research evidence and creative references",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "research_item_evidence",
+          "description": "Resolve the exact evidence cited by a research item",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "content_get_variant",
+          "description": "Get variant details and preview",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "asset_search",
+          "description": "Search the asset library",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "asset_get",
+          "description": "Get an asset, versions, rights and usage",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "asset_list_versions",
+          "description": "List immutable file versions",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "knowledge_get_context",
+          "description": "Assemble scoped active brand context",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "brandId"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "publishing_get_target",
+          "description": "publishing get target",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "agent_jobs_list",
+          "description": "List Agent jobs",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "agent_jobs_get",
+          "description": "Read an Agent job and its history",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "jobs_get",
+          "description": "Resume querying a durable operation",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "operation_id": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cancel_requested_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "result_ref": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "report_id": {
+                            "type": "string"
+                          },
+                          "version_id": {
+                            "type": "string"
+                          },
+                          "version_no": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "format": {
+                            "type": "string",
+                            "enum": [
+                              "pdf",
+                              "csv",
+                              "xlsx"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "report_id",
+                          "version_id",
+                          "version_no"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "research_digest_id": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "research_digest_id"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "error_code": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "operation_id",
+                  "status",
+                  "version",
+                  "cancel_requested_at"
+                ],
+                "additionalProperties": {}
+              },
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "change_sets_get",
+          "description": "Review field-by-field draft differences",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "workflow_templates_list",
+          "description": "List published workflow templates",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "workflow_templates_get",
+          "description": "Read the current published workflow revision",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "agent_preview_context",
+          "description": "Preview and search the approved knowledge supplied to Agent for a brand",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "brandId"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        },
+        {
+          "name": "desktop_get_capability_request",
+          "description": "Read your retained unsupported desktop capability receipt",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "workspace_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "query": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "expected_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[!-~]{1,200}$"
+              }
+            },
+            "required": [
+              "workspace_id",
+              "params"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "data": {},
+              "next_cursor": "[redacted]",
+              "etag": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          },
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          }
+        }
+      ]
+    }
+  ]
+}

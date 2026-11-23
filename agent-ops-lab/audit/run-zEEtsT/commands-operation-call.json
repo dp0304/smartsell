@@ -1,0 +1,3548 @@
+{
+  "enumerated": [
+    {
+      "name": "views_home",
+      "method": "GET",
+      "path": "/views/home"
+    },
+    {
+      "name": "views_products_list",
+      "method": "GET",
+      "path": "/views/products"
+    },
+    {
+      "name": "views_product_get",
+      "method": "GET",
+      "path": "/views/products/:id"
+    },
+    {
+      "name": "views_plans_list",
+      "method": "GET",
+      "path": "/views/plans"
+    },
+    {
+      "name": "views_plan_get",
+      "method": "GET",
+      "path": "/views/plans/:id"
+    },
+    {
+      "name": "views_calendar",
+      "method": "GET",
+      "path": "/views/calendar"
+    },
+    {
+      "name": "views_social",
+      "method": "GET",
+      "path": "/views/social"
+    },
+    {
+      "name": "views_ads",
+      "method": "GET",
+      "path": "/views/ads"
+    },
+    {
+      "name": "views_decisions_list",
+      "method": "GET",
+      "path": "/views/decisions"
+    },
+    {
+      "name": "views_decisions_summary",
+      "method": "GET",
+      "path": "/views/decisions/summary"
+    },
+    {
+      "name": "views_activity",
+      "method": "GET",
+      "path": "/views/activity"
+    },
+    {
+      "name": "views_agent_presence",
+      "method": "GET",
+      "path": "/views/agent-presence"
+    },
+    {
+      "name": "zhihu_stats_create",
+      "method": "POST",
+      "path": "/zhihu-stats"
+    },
+    {
+      "name": "zhihu_stats_get",
+      "method": "GET",
+      "path": "/zhihu-stats/:id"
+    },
+    {
+      "name": "workspace_get",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "name": "workspace_update",
+      "method": "PATCH",
+      "path": "/"
+    },
+    {
+      "name": "workspace_get_context",
+      "method": "GET",
+      "path": "/context"
+    },
+    {
+      "name": "workspace_brands_list",
+      "method": "GET",
+      "path": "/brands"
+    },
+    {
+      "name": "workspace_brand_get",
+      "method": "GET",
+      "path": "/brands/:id"
+    },
+    {
+      "name": "workspace_brand_create",
+      "method": "POST",
+      "path": "/brands"
+    },
+    {
+      "name": "workspace_brand_update",
+      "method": "PATCH",
+      "path": "/brands/:id"
+    },
+    {
+      "name": "workspace_brand_archive",
+      "method": "POST",
+      "path": "/brands/:id/archive"
+    },
+    {
+      "name": "workspace_markets_list",
+      "method": "GET",
+      "path": "/brands/:id/markets"
+    },
+    {
+      "name": "workspace_market_get",
+      "method": "GET",
+      "path": "/markets/:id"
+    },
+    {
+      "name": "workspace_market_create",
+      "method": "POST",
+      "path": "/brands/:id/markets"
+    },
+    {
+      "name": "workspace_market_update",
+      "method": "PATCH",
+      "path": "/markets/:id"
+    },
+    {
+      "name": "workspace_get_today",
+      "method": "GET",
+      "path": "/overview/today"
+    },
+    {
+      "name": "workspace_get_summary",
+      "method": "GET",
+      "path": "/overview/summary"
+    },
+    {
+      "name": "tasks_list",
+      "method": "GET",
+      "path": "/work-items"
+    },
+    {
+      "name": "tasks_get",
+      "method": "GET",
+      "path": "/work-items/:id"
+    },
+    {
+      "name": "tasks_create",
+      "method": "POST",
+      "path": "/work-items"
+    },
+    {
+      "name": "tasks_update",
+      "method": "PATCH",
+      "path": "/work-items/:id"
+    },
+    {
+      "name": "tasks_batch",
+      "method": "POST",
+      "path": "/work-items/batch"
+    },
+    {
+      "name": "tasks_complete",
+      "method": "POST",
+      "path": "/work-items/:id/complete"
+    },
+    {
+      "name": "tasks_reopen",
+      "method": "POST",
+      "path": "/work-items/:id/reopen"
+    },
+    {
+      "name": "tasks_handover",
+      "method": "POST",
+      "path": "/work-items/:id/handover"
+    },
+    {
+      "name": "tasks_dependencies",
+      "method": "PUT",
+      "path": "/work-items/:id/dependencies"
+    },
+    {
+      "name": "workspace_get_personal_inbox",
+      "method": "GET",
+      "path": "/me/inbox"
+    },
+    {
+      "name": "notifications_list",
+      "method": "GET",
+      "path": "/notifications"
+    },
+    {
+      "name": "notifications_read",
+      "method": "POST",
+      "path": "/notifications/read"
+    },
+    {
+      "name": "notifications_archive",
+      "method": "POST",
+      "path": "/notifications/archive"
+    },
+    {
+      "name": "notifications_preferences_list",
+      "method": "GET",
+      "path": "/me/notification-preferences"
+    },
+    {
+      "name": "notifications_preferences_update",
+      "method": "PUT",
+      "path": "/me/notification-preferences"
+    },
+    {
+      "name": "workspace_subscriptions_list",
+      "method": "GET",
+      "path": "/subscriptions"
+    },
+    {
+      "name": "workspace_subscriptions_create",
+      "method": "POST",
+      "path": "/subscriptions"
+    },
+    {
+      "name": "workspace_subscriptions_remove",
+      "method": "DELETE",
+      "path": "/subscriptions"
+    },
+    {
+      "name": "workspace_subscriptions_delete",
+      "method": "DELETE",
+      "path": "/subscriptions/:id"
+    },
+    {
+      "name": "search_query",
+      "method": "GET",
+      "path": "/search"
+    },
+    {
+      "name": "workspace_saved_views_list",
+      "method": "GET",
+      "path": "/saved-views"
+    },
+    {
+      "name": "workspace_saved_views_create",
+      "method": "POST",
+      "path": "/saved-views"
+    },
+    {
+      "name": "workspace_saved_views_update",
+      "method": "PATCH",
+      "path": "/saved-views/:id"
+    },
+    {
+      "name": "workspace_onboarding_get",
+      "method": "GET",
+      "path": "/onboarding/:flow"
+    },
+    {
+      "name": "workspace_onboarding_check",
+      "method": "POST",
+      "path": "/onboarding/:flow/steps/:step/check"
+    },
+    {
+      "name": "workspace_onboarding_skip",
+      "method": "POST",
+      "path": "/onboarding/:flow/steps/:step/skip"
+    },
+    {
+      "name": "workspace_dashboard_get",
+      "method": "GET",
+      "path": "/dashboards/:id"
+    },
+    {
+      "name": "workspace_dashboard_save",
+      "method": "PUT",
+      "path": "/dashboards/:id"
+    },
+    {
+      "name": "account_list_social_accounts",
+      "method": "GET",
+      "path": "/social-accounts"
+    },
+    {
+      "name": "account_get_social_account",
+      "method": "GET",
+      "path": "/social-accounts/:id"
+    },
+    {
+      "name": "account_update_social_account",
+      "method": "PATCH",
+      "path": "/social-accounts/:id"
+    },
+    {
+      "name": "account_disable_social_account",
+      "method": "POST",
+      "path": "/social-accounts/:id/disable"
+    },
+    {
+      "name": "account_get_capabilities",
+      "method": "GET",
+      "path": "/social-accounts/:id/capabilities"
+    },
+    {
+      "name": "account_check_operation",
+      "method": "GET",
+      "path": "/social-accounts/:id/operation-check"
+    },
+    {
+      "name": "account_probe_capabilities",
+      "method": "POST",
+      "path": "/social-accounts/:id/capabilities/probe"
+    },
+    {
+      "name": "account_get_platform_catalog",
+      "method": "GET",
+      "path": "/platform-catalog"
+    },
+    {
+      "name": "account_list_platform_apps",
+      "method": "GET",
+      "path": "/platform-apps"
+    },
+    {
+      "name": "account_list_connections",
+      "method": "GET",
+      "path": "/connections"
+    },
+    {
+      "name": "account_get_store_capabilities",
+      "method": "GET",
+      "path": "/connections/:id/capabilities"
+    },
+    {
+      "name": "account_probe_store_capabilities",
+      "method": "POST",
+      "path": "/connections/:id/capabilities/probe"
+    },
+    {
+      "name": "account_list_connection_accounts",
+      "method": "GET",
+      "path": "/connections/:id/accounts"
+    },
+    {
+      "name": "account_list_devices",
+      "method": "GET",
+      "path": "/devices"
+    },
+    {
+      "name": "account_list_mobile_devices",
+      "method": "GET",
+      "path": "/mobile-devices"
+    },
+    {
+      "name": "account_list_mobile_app_bindings",
+      "method": "GET",
+      "path": "/mobile-app-bindings"
+    },
+    {
+      "name": "account_preview_mobile_app_unbind",
+      "method": "GET",
+      "path": "/mobile-app-bindings/:id/impact"
+    },
+    {
+      "name": "account_list_browser_sessions",
+      "method": "GET",
+      "path": "/browser-sessions"
+    },
+    {
+      "name": "account_preview_binding_migration",
+      "method": "GET",
+      "path": "/social-accounts/:id/execution-binding/migration/preview"
+    },
+    {
+      "name": "account_get_binding_migration",
+      "method": "GET",
+      "path": "/social-accounts/:id/execution-binding/migration"
+    },
+    {
+      "name": "account_get_connector_auto_policy",
+      "method": "GET",
+      "path": "/connector-auto-policy"
+    },
+    {
+      "name": "account_list_account_blocks",
+      "method": "GET",
+      "path": "/account-blocks"
+    },
+    {
+      "name": "account_assign_account_block",
+      "method": "PATCH",
+      "path": "/account-blocks/:id"
+    },
+    {
+      "name": "data_source_list",
+      "method": "GET",
+      "path": "/data-sources"
+    },
+    {
+      "name": "data_source_get",
+      "method": "GET",
+      "path": "/data-sources/:id"
+    },
+    {
+      "name": "data_source_create",
+      "method": "POST",
+      "path": "/data-sources"
+    },
+    {
+      "name": "data_source_update",
+      "method": "PATCH",
+      "path": "/data-sources/:id"
+    },
+    {
+      "name": "data_source_pause",
+      "method": "POST",
+      "path": "/data-sources/:id/pause"
+    },
+    {
+      "name": "import_template_list",
+      "method": "GET",
+      "path": "/import-templates"
+    },
+    {
+      "name": "import_list",
+      "method": "GET",
+      "path": "/imports"
+    },
+    {
+      "name": "import_create",
+      "method": "POST",
+      "path": "/imports"
+    },
+    {
+      "name": "import_get",
+      "method": "GET",
+      "path": "/imports/:id"
+    },
+    {
+      "name": "import_preview",
+      "method": "PATCH",
+      "path": "/imports/:id"
+    },
+    {
+      "name": "import_rows",
+      "method": "GET",
+      "path": "/imports/:id/rows"
+    },
+    {
+      "name": "import_error_file",
+      "method": "GET",
+      "path": "/imports/:id/error-file"
+    },
+    {
+      "name": "import_confirm",
+      "method": "POST",
+      "path": "/imports/:id/confirm"
+    },
+    {
+      "name": "import_cancel",
+      "method": "POST",
+      "path": "/imports/:id/cancel"
+    },
+    {
+      "name": "import_mapping_preset_list",
+      "method": "GET",
+      "path": "/import-mapping-presets"
+    },
+    {
+      "name": "import_mapping_preset_create",
+      "method": "POST",
+      "path": "/import-mapping-presets"
+    },
+    {
+      "name": "sync_refresh",
+      "method": "POST",
+      "path": "/data-sources/:id/refresh"
+    },
+    {
+      "name": "sync_reconcile",
+      "method": "POST",
+      "path": "/data-sources/:id/reconcile"
+    },
+    {
+      "name": "data_source_coverage",
+      "method": "GET",
+      "path": "/data-sources/:id/coverage"
+    },
+    {
+      "name": "sync_run_list",
+      "method": "GET",
+      "path": "/sync-runs"
+    },
+    {
+      "name": "sync_run_get",
+      "method": "GET",
+      "path": "/sync-runs/:id"
+    },
+    {
+      "name": "sync_run_retry",
+      "method": "POST",
+      "path": "/sync-runs/:id/retry"
+    },
+    {
+      "name": "sync_schedule_list",
+      "method": "GET",
+      "path": "/sync-schedules"
+    },
+    {
+      "name": "sync_schedule_create",
+      "method": "POST",
+      "path": "/sync-schedules"
+    },
+    {
+      "name": "sync_schedule_update",
+      "method": "PATCH",
+      "path": "/sync-schedules/:id"
+    },
+    {
+      "name": "backfill_plan",
+      "method": "POST",
+      "path": "/backfills"
+    },
+    {
+      "name": "backfill_list",
+      "method": "GET",
+      "path": "/backfills"
+    },
+    {
+      "name": "backfill_get",
+      "method": "GET",
+      "path": "/backfills/:id"
+    },
+    {
+      "name": "backfill_resume",
+      "method": "POST",
+      "path": "/backfills/:id/resume"
+    },
+    {
+      "name": "data_gap_list",
+      "method": "GET",
+      "path": "/data-gaps"
+    },
+    {
+      "name": "data_gap_backfill",
+      "method": "POST",
+      "path": "/data-gaps/:id/backfill"
+    },
+    {
+      "name": "webhook_delivery_list",
+      "method": "GET",
+      "path": "/webhook-deliveries"
+    },
+    {
+      "name": "data_health_get",
+      "method": "GET",
+      "path": "/data-health"
+    },
+    {
+      "name": "data_quality_issue_list",
+      "method": "GET",
+      "path": "/data-quality/issues"
+    },
+    {
+      "name": "data_quality_issue_update",
+      "method": "PATCH",
+      "path": "/data-quality/issues/:id"
+    },
+    {
+      "name": "vendor_usage_list",
+      "method": "GET",
+      "path": "/vendor-usage"
+    },
+    {
+      "name": "collection_budget_list",
+      "method": "GET",
+      "path": "/collection-budgets"
+    },
+    {
+      "name": "data_provenance_get",
+      "method": "GET",
+      "path": "/provenance"
+    },
+    {
+      "name": "raw_record_get",
+      "method": "GET",
+      "path": "/raw-records/:id"
+    },
+    {
+      "name": "commerce_store_list",
+      "method": "GET",
+      "path": "/stores"
+    },
+    {
+      "name": "commerce_store_create",
+      "method": "POST",
+      "path": "/stores"
+    },
+    {
+      "name": "commerce_store_get",
+      "method": "GET",
+      "path": "/stores/:id"
+    },
+    {
+      "name": "commerce_store_update",
+      "method": "PATCH",
+      "path": "/stores/:id"
+    },
+    {
+      "name": "commerce_store_sync",
+      "method": "POST",
+      "path": "/stores/:id/sync"
+    },
+    {
+      "name": "commerce_store_import",
+      "method": "POST",
+      "path": "/stores/:id/imports"
+    },
+    {
+      "name": "commerce_store_market_list",
+      "method": "GET",
+      "path": "/stores/:id/markets"
+    },
+    {
+      "name": "commerce_store_market_configure",
+      "method": "PUT",
+      "path": "/stores/:id/markets"
+    },
+    {
+      "name": "catalog_search",
+      "method": "GET",
+      "path": "/products"
+    },
+    {
+      "name": "commerce_product_create",
+      "method": "POST",
+      "path": "/products"
+    },
+    {
+      "name": "catalog_get_product",
+      "method": "GET",
+      "path": "/products/:id"
+    },
+    {
+      "name": "commerce_product_update",
+      "method": "PATCH",
+      "path": "/products/:id"
+    },
+    {
+      "name": "commerce_product_usage",
+      "method": "GET",
+      "path": "/products/:id/usage"
+    },
+    {
+      "name": "commerce_variant_create",
+      "method": "POST",
+      "path": "/products/:id/variants"
+    },
+    {
+      "name": "commerce_variant_update",
+      "method": "PATCH",
+      "path": "/variants/:id"
+    },
+    {
+      "name": "market_snapshot",
+      "method": "GET",
+      "path": "/variants/:id/listings"
+    },
+    {
+      "name": "commerce_record_listing",
+      "method": "POST",
+      "path": "/variants/:id/listings"
+    },
+    {
+      "name": "commerce_variant_group_suggest",
+      "method": "GET",
+      "path": "/variant-groups/suggestions"
+    },
+    {
+      "name": "commerce_variant_group_list",
+      "method": "GET",
+      "path": "/variant-groups"
+    },
+    {
+      "name": "commerce_variant_group_create",
+      "method": "POST",
+      "path": "/variant-groups"
+    },
+    {
+      "name": "commerce_variant_group_member_list",
+      "method": "GET",
+      "path": "/variant-groups/:id/members"
+    },
+    {
+      "name": "commerce_variant_group_link",
+      "method": "POST",
+      "path": "/variant-groups/:id/members"
+    },
+    {
+      "name": "commerce_variant_group_link_batch",
+      "method": "POST",
+      "path": "/variant-groups/:id/members/batch"
+    },
+    {
+      "name": "commerce_variant_group_unlink",
+      "method": "DELETE",
+      "path": "/variant-groups/:id/members/:memberId"
+    },
+    {
+      "name": "catalog_list_facts",
+      "method": "GET",
+      "path": "/products/:id/facts"
+    },
+    {
+      "name": "catalog_propose_fact",
+      "method": "POST",
+      "path": "/products/:id/facts"
+    },
+    {
+      "name": "commerce_fact_revise",
+      "method": "POST",
+      "path": "/facts/:id/revisions"
+    },
+    {
+      "name": "commerce_localization_list",
+      "method": "GET",
+      "path": "/products/:id/localizations"
+    },
+    {
+      "name": "catalog_update_localization",
+      "method": "PUT",
+      "path": "/products/:id/localizations"
+    },
+    {
+      "name": "commerce_localization_submit",
+      "method": "POST",
+      "path": "/localizations/:id/submit"
+    },
+    {
+      "name": "commerce_list_changes",
+      "method": "GET",
+      "path": "/change-events"
+    },
+    {
+      "name": "commerce_change_acknowledge",
+      "method": "POST",
+      "path": "/change-events/:id/acknowledge"
+    },
+    {
+      "name": "commerce_change_resolve",
+      "method": "POST",
+      "path": "/change-events/:id/resolve"
+    },
+    {
+      "name": "commerce_change_dismiss",
+      "method": "POST",
+      "path": "/change-events/:id/dismiss"
+    },
+    {
+      "name": "commerce_promotion_list",
+      "method": "GET",
+      "path": "/promotions"
+    },
+    {
+      "name": "commerce_promotion_create",
+      "method": "POST",
+      "path": "/promotions"
+    },
+    {
+      "name": "promotion_get",
+      "method": "GET",
+      "path": "/promotions/:id"
+    },
+    {
+      "name": "commerce_promotion_update",
+      "method": "PATCH",
+      "path": "/promotions/:id"
+    },
+    {
+      "name": "commerce_promotion_cancel",
+      "method": "DELETE",
+      "path": "/promotions/:id"
+    },
+    {
+      "name": "commerce_localization_export",
+      "method": "GET",
+      "path": "/localizations/:id/export"
+    },
+    {
+      "name": "commerce_order_list",
+      "method": "GET",
+      "path": "/orders"
+    },
+    {
+      "name": "commerce_order_get",
+      "method": "GET",
+      "path": "/orders/:id"
+    },
+    {
+      "name": "commerce_refund_list",
+      "method": "GET",
+      "path": "/refunds"
+    },
+    {
+      "name": "orders_summary",
+      "method": "GET",
+      "path": "/orders/summary"
+    },
+    {
+      "name": "commerce_inventory_rule_list",
+      "method": "GET",
+      "path": "/inventory-rules"
+    },
+    {
+      "name": "commerce_inventory_rule_create",
+      "method": "POST",
+      "path": "/inventory-rules"
+    },
+    {
+      "name": "campaign_list",
+      "method": "GET",
+      "path": "/campaigns"
+    },
+    {
+      "name": "campaign_create_draft",
+      "method": "POST",
+      "path": "/campaigns"
+    },
+    {
+      "name": "campaign_update",
+      "method": "PATCH",
+      "path": "/campaigns/:id"
+    },
+    {
+      "name": "campaign_transition",
+      "method": "POST",
+      "path": "/campaigns/:id/transition"
+    },
+    {
+      "name": "campaign_set_markets",
+      "method": "PUT",
+      "path": "/campaigns/:id/markets"
+    },
+    {
+      "name": "campaign_set_products",
+      "method": "PUT",
+      "path": "/campaigns/:id/products"
+    },
+    {
+      "name": "campaign_goal_list",
+      "method": "GET",
+      "path": "/campaigns/:id/goals"
+    },
+    {
+      "name": "campaign_goal_create",
+      "method": "POST",
+      "path": "/campaigns/:id/goals"
+    },
+    {
+      "name": "campaign_goal_get",
+      "method": "GET",
+      "path": "/campaigns/:id/goals/:goalId"
+    },
+    {
+      "name": "campaign_goal_update",
+      "method": "PATCH",
+      "path": "/campaigns/:id/goals/:goalId"
+    },
+    {
+      "name": "campaign_goal_withdraw",
+      "method": "DELETE",
+      "path": "/campaigns/:id/goals/:goalId"
+    },
+    {
+      "name": "campaign_plan_slot_list",
+      "method": "GET",
+      "path": "/campaigns/:id/plan-slots"
+    },
+    {
+      "name": "campaign_plan_slot_create",
+      "method": "POST",
+      "path": "/campaigns/:id/plan-slots"
+    },
+    {
+      "name": "campaign_plan_slot_get",
+      "method": "GET",
+      "path": "/campaigns/:id/plan-slots/:slotId"
+    },
+    {
+      "name": "campaign_plan_slot_update",
+      "method": "PATCH",
+      "path": "/campaigns/:id/plan-slots/:slotId"
+    },
+    {
+      "name": "campaign_plan_slot_delete",
+      "method": "DELETE",
+      "path": "/campaigns/:id/plan-slots/:slotId"
+    },
+    {
+      "name": "campaign_brief_list",
+      "method": "GET",
+      "path": "/campaigns/:id/briefs"
+    },
+    {
+      "name": "campaign_brief_create",
+      "method": "POST",
+      "path": "/campaigns/:id/briefs"
+    },
+    {
+      "name": "brief_revision_list",
+      "method": "GET",
+      "path": "/briefs/:id/revisions"
+    },
+    {
+      "name": "brief_update_draft",
+      "method": "POST",
+      "path": "/briefs/:id/revisions"
+    },
+    {
+      "name": "brief_revision_submit",
+      "method": "POST",
+      "path": "/brief-revisions/:id/submit"
+    },
+    {
+      "name": "campaign_budget_line_list",
+      "method": "GET",
+      "path": "/campaigns/:id/budget-lines"
+    },
+    {
+      "name": "campaign_budget_line_get",
+      "method": "GET",
+      "path": "/campaigns/:id/budget-lines/:budgetLineId"
+    },
+    {
+      "name": "campaign_budget_line_create",
+      "method": "POST",
+      "path": "/campaigns/:id/budget-lines"
+    },
+    {
+      "name": "campaign_budget_line_update",
+      "method": "PATCH",
+      "path": "/campaigns/:id/budget-lines/:budgetLineId"
+    },
+    {
+      "name": "campaign_budget_line_delete",
+      "method": "DELETE",
+      "path": "/campaigns/:id/budget-lines/:budgetLineId"
+    },
+    {
+      "name": "campaign_cost_commitment_list",
+      "method": "GET",
+      "path": "/campaigns/:id/cost-commitments"
+    },
+    {
+      "name": "campaign_cost_commitment_get",
+      "method": "GET",
+      "path": "/campaigns/:id/cost-commitments/:commitmentId"
+    },
+    {
+      "name": "campaign_cost_commitment_create",
+      "method": "POST",
+      "path": "/campaigns/:id/cost-commitments"
+    },
+    {
+      "name": "campaign_cost_commitment_update",
+      "method": "PATCH",
+      "path": "/campaigns/:id/cost-commitments/:commitmentId"
+    },
+    {
+      "name": "campaign_cost_commitment_delete",
+      "method": "DELETE",
+      "path": "/campaigns/:id/cost-commitments/:commitmentId"
+    },
+    {
+      "name": "campaign_cost_entry_list",
+      "method": "GET",
+      "path": "/campaigns/:id/cost-entries"
+    },
+    {
+      "name": "campaign_cost_entry_get",
+      "method": "GET",
+      "path": "/campaigns/:id/cost-entries/:entryId"
+    },
+    {
+      "name": "campaign_cost_entry_create",
+      "method": "POST",
+      "path": "/campaigns/:id/cost-entries"
+    },
+    {
+      "name": "campaign_cost_entry_update",
+      "method": "PATCH",
+      "path": "/campaigns/:id/cost-entries/:entryId"
+    },
+    {
+      "name": "campaign_cost_entry_delete",
+      "method": "DELETE",
+      "path": "/campaigns/:id/cost-entries/:entryId"
+    },
+    {
+      "name": "campaign_budget_summary",
+      "method": "GET",
+      "path": "/campaigns/:id/budget-summary"
+    },
+    {
+      "name": "campaign_budget_benchmarks",
+      "method": "GET",
+      "path": "/campaigns/:id/budget-benchmarks"
+    },
+    {
+      "name": "campaign_budget_reallocation_request",
+      "method": "POST",
+      "path": "/campaigns/:id/budget-reallocations"
+    },
+    {
+      "name": "campaign_budget_approval_list",
+      "method": "GET",
+      "path": "/campaigns/:id/budget-approvals"
+    },
+    {
+      "name": "campaign_get_context",
+      "method": "GET",
+      "path": "/campaigns/:id"
+    },
+    {
+      "name": "campaign_matrix",
+      "method": "GET",
+      "path": "/campaigns/:id/matrix"
+    },
+    {
+      "name": "campaign_create_gap_items",
+      "method": "POST",
+      "path": "/campaigns/:id/matrix/gaps/create-items"
+    },
+    {
+      "name": "campaign_milestone_list",
+      "method": "GET",
+      "path": "/campaigns/:id/milestones"
+    },
+    {
+      "name": "campaign_milestone_create",
+      "method": "POST",
+      "path": "/campaigns/:id/milestones"
+    },
+    {
+      "name": "campaign_create_tasks",
+      "method": "POST",
+      "path": "/campaigns/:id/tasks"
+    },
+    {
+      "name": "campaign_tracking_summary",
+      "method": "GET",
+      "path": "/campaigns/:id/tracking-summary"
+    },
+    {
+      "name": "campaign_link_list",
+      "method": "GET",
+      "path": "/campaigns/:id/links"
+    },
+    {
+      "name": "campaign_link_create",
+      "method": "POST",
+      "path": "/campaigns/:id/links"
+    },
+    {
+      "name": "campaign_attribution_compare",
+      "method": "GET",
+      "path": "/campaigns/:id/attribution"
+    },
+    {
+      "name": "campaign_tracking_get",
+      "method": "GET",
+      "path": "/campaigns/:id/tracking-config"
+    },
+    {
+      "name": "campaign_tracking_set",
+      "method": "PUT",
+      "path": "/campaigns/:id/tracking-config"
+    },
+    {
+      "name": "campaign_closeout_get",
+      "method": "GET",
+      "path": "/campaigns/:id/closeout"
+    },
+    {
+      "name": "campaign_historical_baselines",
+      "method": "GET",
+      "path": "/campaigns/:id/historical-baselines"
+    },
+    {
+      "name": "campaign_closeout_draft",
+      "method": "POST",
+      "path": "/campaigns/:id/closeout/draft"
+    },
+    {
+      "name": "campaign_report_list",
+      "method": "GET",
+      "path": "/campaigns/:id/reports"
+    },
+    {
+      "name": "campaign_report_backfill",
+      "method": "POST",
+      "path": "/campaigns/:id/reports/:reportId/backfill"
+    },
+    {
+      "name": "campaign_template_derive",
+      "method": "POST",
+      "path": "/campaigns/:id/templates"
+    },
+    {
+      "name": "campaign_template_list",
+      "method": "GET",
+      "path": "/campaign-templates"
+    },
+    {
+      "name": "campaign_template_get",
+      "method": "GET",
+      "path": "/campaign-templates/:id"
+    },
+    {
+      "name": "campaign_template_create",
+      "method": "POST",
+      "path": "/campaign-templates"
+    },
+    {
+      "name": "campaign_template_update",
+      "method": "PATCH",
+      "path": "/campaign-templates/:id"
+    },
+    {
+      "name": "campaign_template_delete",
+      "method": "DELETE",
+      "path": "/campaign-templates/:id"
+    },
+    {
+      "name": "campaign_template_instantiate",
+      "method": "POST",
+      "path": "/campaign-templates/:id/instantiate"
+    },
+    {
+      "name": "watch_targets_list",
+      "method": "GET",
+      "path": "/watch-targets"
+    },
+    {
+      "name": "watch_target_create",
+      "method": "POST",
+      "path": "/watch-targets"
+    },
+    {
+      "name": "watch_target_get",
+      "method": "GET",
+      "path": "/watch-targets/:id"
+    },
+    {
+      "name": "watch_target_update",
+      "method": "PATCH",
+      "path": "/watch-targets/:id"
+    },
+    {
+      "name": "observations_list",
+      "method": "GET",
+      "path": "/watch-targets/:id/observations"
+    },
+    {
+      "name": "observation_record",
+      "method": "POST",
+      "path": "/observations"
+    },
+    {
+      "name": "research_boards_list",
+      "method": "GET",
+      "path": "/research-boards"
+    },
+    {
+      "name": "research_board_create",
+      "method": "POST",
+      "path": "/research-boards"
+    },
+    {
+      "name": "research_board_get",
+      "method": "GET",
+      "path": "/research-boards/:id"
+    },
+    {
+      "name": "research_board_update",
+      "method": "PATCH",
+      "path": "/research-boards/:id"
+    },
+    {
+      "name": "research_add_item",
+      "method": "POST",
+      "path": "/research-boards/:id/items"
+    },
+    {
+      "name": "research_create_note",
+      "method": "POST",
+      "path": "/research-boards/:id/notes"
+    },
+    {
+      "name": "research_item_update",
+      "method": "PATCH",
+      "path": "/research-items/:id"
+    },
+    {
+      "name": "research_item_delete",
+      "method": "DELETE",
+      "path": "/research-items/:id"
+    },
+    {
+      "name": "research_item_convert",
+      "method": "POST",
+      "path": "/research-items/:id/convert"
+    },
+    {
+      "name": "research_search",
+      "method": "GET",
+      "path": "/research/search"
+    },
+    {
+      "name": "research_item_evidence",
+      "method": "GET",
+      "path": "/research-items/:id/evidence"
+    },
+    {
+      "name": "creative_references_list",
+      "method": "GET",
+      "path": "/creative-references"
+    },
+    {
+      "name": "creative_reference_create",
+      "method": "POST",
+      "path": "/creative-references"
+    },
+    {
+      "name": "creative_reference_annotate",
+      "method": "PATCH",
+      "path": "/creative-references/:id"
+    },
+    {
+      "name": "product_candidates_list",
+      "method": "GET",
+      "path": "/product-candidates"
+    },
+    {
+      "name": "product_candidate_create",
+      "method": "POST",
+      "path": "/product-candidates"
+    },
+    {
+      "name": "product_candidate_get",
+      "method": "GET",
+      "path": "/product-candidates/:id"
+    },
+    {
+      "name": "product_candidate_update",
+      "method": "PATCH",
+      "path": "/product-candidates/:id"
+    },
+    {
+      "name": "product_candidates_score",
+      "method": "POST",
+      "path": "/product-candidates/:id/scores"
+    },
+    {
+      "name": "observations_compare",
+      "method": "GET",
+      "path": "/research/compare"
+    },
+    {
+      "name": "research_topics_list",
+      "method": "GET",
+      "path": "/topics"
+    },
+    {
+      "name": "research_topic_create",
+      "method": "POST",
+      "path": "/topics"
+    },
+    {
+      "name": "research_topic_trend",
+      "method": "GET",
+      "path": "/topics/:id/trend"
+    },
+    {
+      "name": "alert_rules_list",
+      "method": "GET",
+      "path": "/alert-rules"
+    },
+    {
+      "name": "alert_rule_create",
+      "method": "POST",
+      "path": "/alert-rules"
+    },
+    {
+      "name": "alert_rule_update",
+      "method": "PATCH",
+      "path": "/alert-rules/:id"
+    },
+    {
+      "name": "alerts_list",
+      "method": "GET",
+      "path": "/alerts"
+    },
+    {
+      "name": "alerts_evaluate",
+      "method": "POST",
+      "path": "/alerts/evaluate"
+    },
+    {
+      "name": "alert_update",
+      "method": "PATCH",
+      "path": "/alerts/:id"
+    },
+    {
+      "name": "mentions_query",
+      "method": "GET",
+      "path": "/mentions"
+    },
+    {
+      "name": "mention_record",
+      "method": "POST",
+      "path": "/mentions"
+    },
+    {
+      "name": "mention_labels_list",
+      "method": "GET",
+      "path": "/mentions/:id/labels"
+    },
+    {
+      "name": "mention_label_update",
+      "method": "PATCH",
+      "path": "/mentions/:id/labels"
+    },
+    {
+      "name": "mention_escalate",
+      "method": "POST",
+      "path": "/mentions/:id/escalate"
+    },
+    {
+      "name": "share_of_voice_get",
+      "method": "GET",
+      "path": "/share-of-voice"
+    },
+    {
+      "name": "content_list_pillars",
+      "method": "GET",
+      "path": "/content-pillars"
+    },
+    {
+      "name": "content_create_pillar",
+      "method": "POST",
+      "path": "/content-pillars"
+    },
+    {
+      "name": "content_get_pillar",
+      "method": "GET",
+      "path": "/content-pillars/:id"
+    },
+    {
+      "name": "content_update_pillar",
+      "method": "PATCH",
+      "path": "/content-pillars/:id"
+    },
+    {
+      "name": "content_archive_pillar",
+      "method": "DELETE",
+      "path": "/content-pillars/:id"
+    },
+    {
+      "name": "idea_list",
+      "method": "GET",
+      "path": "/ideas"
+    },
+    {
+      "name": "idea_create",
+      "method": "POST",
+      "path": "/ideas"
+    },
+    {
+      "name": "idea_create_from_conversation",
+      "method": "POST",
+      "path": "/ideas/from-conversation"
+    },
+    {
+      "name": "idea_get",
+      "method": "GET",
+      "path": "/ideas/:id"
+    },
+    {
+      "name": "idea_update",
+      "method": "PATCH",
+      "path": "/ideas/:id"
+    },
+    {
+      "name": "idea_convert",
+      "method": "POST",
+      "path": "/ideas/:id/convert"
+    },
+    {
+      "name": "content_list",
+      "method": "GET",
+      "path": "/content-items"
+    },
+    {
+      "name": "content_production_workload",
+      "method": "GET",
+      "path": "/content-items/workload"
+    },
+    {
+      "name": "content_create_item",
+      "method": "POST",
+      "path": "/content-items"
+    },
+    {
+      "name": "content_create_draft",
+      "method": "POST",
+      "path": "/content-items/draft"
+    },
+    {
+      "name": "content_get",
+      "method": "GET",
+      "path": "/content-items/:id"
+    },
+    {
+      "name": "content_item_update",
+      "method": "PATCH",
+      "path": "/content-items/:id"
+    },
+    {
+      "name": "content_set_stage",
+      "method": "POST",
+      "path": "/content-items/:id/stage"
+    },
+    {
+      "name": "content_create_variant",
+      "method": "POST",
+      "path": "/content-items/:id/variants"
+    },
+    {
+      "name": "content_export_item",
+      "method": "GET",
+      "path": "/content-items/:id/export"
+    },
+    {
+      "name": "content_duplicate",
+      "method": "POST",
+      "path": "/content-items/:id/duplicate"
+    },
+    {
+      "name": "content_record_handoff_checklist",
+      "method": "POST",
+      "path": "/content-items/:id/handoff-checklist"
+    },
+    {
+      "name": "content_list_stale",
+      "method": "GET",
+      "path": "/content-variants/stale"
+    },
+    {
+      "name": "content_batch_variants",
+      "method": "POST",
+      "path": "/content-variants/batch"
+    },
+    {
+      "name": "content_get_variant",
+      "method": "GET",
+      "path": "/content-variants/:id"
+    },
+    {
+      "name": "content_list_product_facts",
+      "method": "GET",
+      "path": "/content-variants/:id/product-facts"
+    },
+    {
+      "name": "content_insert_product_fact",
+      "method": "POST",
+      "path": "/content-variants/:id/product-facts"
+    },
+    {
+      "name": "content_list_product_prices",
+      "method": "GET",
+      "path": "/content-variants/:id/product-prices"
+    },
+    {
+      "name": "content_insert_product_price",
+      "method": "POST",
+      "path": "/content-variants/:id/product-prices"
+    },
+    {
+      "name": "content_autosave_variant",
+      "method": "PATCH",
+      "path": "/content-variants/:id"
+    },
+    {
+      "name": "content_request_rendition",
+      "method": "POST",
+      "path": "/content-variants/:id/renditions"
+    },
+    {
+      "name": "content_update_variant",
+      "method": "POST",
+      "path": "/content-variants/:id/agent-edit"
+    },
+    {
+      "name": "content_commit_revision",
+      "method": "POST",
+      "path": "/content-variants/:id/revisions"
+    },
+    {
+      "name": "content_list_revisions",
+      "method": "GET",
+      "path": "/content-variants/:id/revisions"
+    },
+    {
+      "name": "content_get_revision",
+      "method": "GET",
+      "path": "/content-revisions/:id"
+    },
+    {
+      "name": "content_diff_revisions",
+      "method": "GET",
+      "path": "/content-revisions/:a/diff/:b"
+    },
+    {
+      "name": "content_restore_revision",
+      "method": "POST",
+      "path": "/content-revisions/:id/restore"
+    },
+    {
+      "name": "content_validate_variant",
+      "method": "POST",
+      "path": "/content-variants/:id/validate"
+    },
+    {
+      "name": "content_set_readiness",
+      "method": "POST",
+      "path": "/content-variants/:id/readiness"
+    },
+    {
+      "name": "content_list_translations",
+      "method": "GET",
+      "path": "/content-variants/:id/translations"
+    },
+    {
+      "name": "content_create_translation",
+      "method": "POST",
+      "path": "/content-variants/:id/translations"
+    },
+    {
+      "name": "content_accept_source_change",
+      "method": "POST",
+      "path": "/translation-links/:id/accept-source-change"
+    },
+    {
+      "name": "content_mark_divergence",
+      "method": "POST",
+      "path": "/translation-links/:id/mark-divergence"
+    },
+    {
+      "name": "content_list_feeds",
+      "method": "GET",
+      "path": "/feeds"
+    },
+    {
+      "name": "content_create_feed",
+      "method": "POST",
+      "path": "/feeds"
+    },
+    {
+      "name": "content_get_feed",
+      "method": "GET",
+      "path": "/feeds/:id"
+    },
+    {
+      "name": "content_update_feed",
+      "method": "PATCH",
+      "path": "/feeds/:id"
+    },
+    {
+      "name": "content_archive_feed",
+      "method": "DELETE",
+      "path": "/feeds/:id"
+    },
+    {
+      "name": "content_poll_feed",
+      "method": "POST",
+      "path": "/feeds/:id/poll"
+    },
+    {
+      "name": "content_preview_feed_import",
+      "method": "POST",
+      "path": "/feeds/:id/preview-import"
+    },
+    {
+      "name": "content_list_feed_items",
+      "method": "GET",
+      "path": "/feeds/:id/items"
+    },
+    {
+      "name": "content_import_feed_item",
+      "method": "POST",
+      "path": "/feed-items/:id/import"
+    },
+    {
+      "name": "content_request_post_maintenance",
+      "method": "POST",
+      "path": "/platform-posts/:id/maintenance"
+    },
+    {
+      "name": "content_get_transcript",
+      "method": "GET",
+      "path": "/content-transcripts/:id"
+    },
+    {
+      "name": "content_review_transcript",
+      "method": "PATCH",
+      "path": "/content-transcripts/:id"
+    },
+    {
+      "name": "content_request_transcript",
+      "method": "POST",
+      "path": "/content-transcripts"
+    },
+    {
+      "name": "asset_list_submission_boxes",
+      "method": "GET",
+      "path": "/submission-boxes"
+    },
+    {
+      "name": "asset_get_submission_box",
+      "method": "GET",
+      "path": "/submission-boxes/:id"
+    },
+    {
+      "name": "asset_list_external_sources",
+      "method": "GET",
+      "path": "/external-sources"
+    },
+    {
+      "name": "asset_begin_upload",
+      "method": "POST",
+      "path": "/assets/uploads"
+    },
+    {
+      "name": "asset_search",
+      "method": "GET",
+      "path": "/assets"
+    },
+    {
+      "name": "asset_create",
+      "method": "POST",
+      "path": "/assets"
+    },
+    {
+      "name": "asset_find_duplicates",
+      "method": "GET",
+      "path": "/assets/:id/duplicates"
+    },
+    {
+      "name": "asset_get",
+      "method": "GET",
+      "path": "/assets/:id"
+    },
+    {
+      "name": "asset_update",
+      "method": "PATCH",
+      "path": "/assets/:id"
+    },
+    {
+      "name": "asset_set_favorite",
+      "method": "POST",
+      "path": "/assets/:id/favorite"
+    },
+    {
+      "name": "asset_download_version",
+      "method": "GET",
+      "path": "/asset-versions/:id/download"
+    },
+    {
+      "name": "asset_list_versions",
+      "method": "GET",
+      "path": "/assets/:id/versions"
+    },
+    {
+      "name": "asset_add_version",
+      "method": "POST",
+      "path": "/assets/:id/versions"
+    },
+    {
+      "name": "asset_usage",
+      "method": "GET",
+      "path": "/assets/:id/usage"
+    },
+    {
+      "name": "asset_request_rendition",
+      "method": "POST",
+      "path": "/asset-versions/:id/renditions"
+    },
+    {
+      "name": "asset_request_rendition_batch",
+      "method": "POST",
+      "path": "/asset-versions/:id/rendition-batch"
+    },
+    {
+      "name": "asset_retry_rendition",
+      "method": "POST",
+      "path": "/renditions/:id/retry"
+    },
+    {
+      "name": "asset_get_rendition",
+      "method": "GET",
+      "path": "/renditions/:id"
+    },
+    {
+      "name": "asset_archive",
+      "method": "POST",
+      "path": "/assets/:id/archive"
+    },
+    {
+      "name": "asset_list_folders",
+      "method": "GET",
+      "path": "/asset-folders"
+    },
+    {
+      "name": "asset_get_folder",
+      "method": "GET",
+      "path": "/asset-folders/:id"
+    },
+    {
+      "name": "rights_list",
+      "method": "GET",
+      "path": "/rights-grants"
+    },
+    {
+      "name": "rights_list_impacts",
+      "method": "GET",
+      "path": "/rights-impacts"
+    },
+    {
+      "name": "rights_get",
+      "method": "GET",
+      "path": "/rights-grants/:id"
+    },
+    {
+      "name": "rights_create_draft",
+      "method": "POST",
+      "path": "/rights-grants"
+    },
+    {
+      "name": "rights_revise",
+      "method": "POST",
+      "path": "/rights-grants/:id/revisions"
+    },
+    {
+      "name": "asset_check_usage",
+      "method": "POST",
+      "path": "/rights/check"
+    },
+    {
+      "name": "knowledge_list",
+      "method": "GET",
+      "path": "/knowledge"
+    },
+    {
+      "name": "knowledge_import",
+      "method": "POST",
+      "path": "/knowledge/import"
+    },
+    {
+      "name": "knowledge_get",
+      "method": "GET",
+      "path": "/knowledge/:id"
+    },
+    {
+      "name": "knowledge_propose",
+      "method": "POST",
+      "path": "/knowledge"
+    },
+    {
+      "name": "knowledge_revise",
+      "method": "POST",
+      "path": "/knowledge/:id/revisions"
+    },
+    {
+      "name": "knowledge_get_context",
+      "method": "GET",
+      "path": "/brands/:brandId/context"
+    },
+    {
+      "name": "template_list",
+      "method": "GET",
+      "path": "/templates"
+    },
+    {
+      "name": "template_get",
+      "method": "GET",
+      "path": "/templates/:id"
+    },
+    {
+      "name": "template_create",
+      "method": "POST",
+      "path": "/templates"
+    },
+    {
+      "name": "template_update",
+      "method": "PATCH",
+      "path": "/templates/:id"
+    },
+    {
+      "name": "template_archive",
+      "method": "DELETE",
+      "path": "/templates/:id"
+    },
+    {
+      "name": "template_render",
+      "method": "POST",
+      "path": "/templates/:id/render"
+    },
+    {
+      "name": "publishing_get_calendar",
+      "method": "GET",
+      "path": "/calendar"
+    },
+    {
+      "name": "publishing_list_targets",
+      "method": "GET",
+      "path": "/publish-targets"
+    },
+    {
+      "name": "publishing_get_target",
+      "method": "GET",
+      "path": "/publish-targets/:id"
+    },
+    {
+      "name": "publishing_create_target",
+      "method": "POST",
+      "path": "/publish-targets"
+    },
+    {
+      "name": "publishing_update_target",
+      "method": "PATCH",
+      "path": "/publish-targets/:id"
+    },
+    {
+      "name": "publishing_request_approval",
+      "method": "POST",
+      "path": "/publish-targets/:id/submit"
+    },
+    {
+      "name": "publishing_run_precheck",
+      "method": "POST",
+      "path": "/publish-targets/:id/precheck"
+    },
+    {
+      "name": "publishing_reschedule",
+      "method": "POST",
+      "path": "/publish-targets/:id/reschedule"
+    },
+    {
+      "name": "publishing_cancel",
+      "method": "POST",
+      "path": "/publish-targets/:id/cancel"
+    },
+    {
+      "name": "publishing_list_approvals",
+      "method": "GET",
+      "path": "/approvals"
+    },
+    {
+      "name": "publishing_create_plan",
+      "method": "POST",
+      "path": "/publish-plans"
+    },
+    {
+      "name": "publishing_update_plan",
+      "method": "PATCH",
+      "path": "/publish-plans/:id"
+    },
+    {
+      "name": "publishing_preview_plan_items",
+      "method": "POST",
+      "path": "/publish-plans/preview"
+    },
+    {
+      "name": "publishing_preview_plan",
+      "method": "POST",
+      "path": "/publish-plans/:id/preview"
+    },
+    {
+      "name": "publishing_schedule",
+      "method": "POST",
+      "path": "/publish-plans/:id/commit"
+    },
+    {
+      "name": "publishing_get_plan",
+      "method": "GET",
+      "path": "/publish-plans/:id"
+    },
+    {
+      "name": "publishing_list_pauses",
+      "method": "GET",
+      "path": "/pause-switches"
+    },
+    {
+      "name": "publishing_get_pause",
+      "method": "GET",
+      "path": "/pause-switches/:id"
+    },
+    {
+      "name": "publishing_pause",
+      "method": "POST",
+      "path": "/pause-switches"
+    },
+    {
+      "name": "publishing_list_slot_templates",
+      "method": "GET",
+      "path": "/slot-templates"
+    },
+    {
+      "name": "publishing_get_slot_template",
+      "method": "GET",
+      "path": "/slot-templates/:id"
+    },
+    {
+      "name": "publishing_list_schedule_rules",
+      "method": "GET",
+      "path": "/schedule-rules"
+    },
+    {
+      "name": "publishing_get_schedule_rule",
+      "method": "GET",
+      "path": "/schedule-rules/:id"
+    },
+    {
+      "name": "publishing_list_evergreen_queues",
+      "method": "GET",
+      "path": "/evergreen-queues"
+    },
+    {
+      "name": "publishing_get_evergreen_queue",
+      "method": "GET",
+      "path": "/evergreen-queues/:id"
+    },
+    {
+      "name": "publishing_list_evergreen_items",
+      "method": "GET",
+      "path": "/evergreen-queues/:id/items"
+    },
+    {
+      "name": "publishing_list_review_rounds",
+      "method": "GET",
+      "path": "/review-rounds"
+    },
+    {
+      "name": "publishing_get_review_round",
+      "method": "GET",
+      "path": "/review-rounds/:id"
+    },
+    {
+      "name": "publishing_list_post_matches",
+      "method": "GET",
+      "path": "/reconciliation/candidates"
+    },
+    {
+      "name": "publishing_suggest_post_match",
+      "method": "GET",
+      "path": "/reconciliation/suggestions/:id"
+    },
+    {
+      "name": "publishing_suggest_evergreen_order",
+      "method": "GET",
+      "path": "/evergreen-queues/:id/suggestions"
+    },
+    {
+      "name": "publishing_suggest_slots",
+      "method": "GET",
+      "path": "/slot-suggestions"
+    },
+    {
+      "name": "publishing_list_execution",
+      "method": "GET",
+      "path": "/execution-tasks"
+    },
+    {
+      "name": "publishing_get_execution",
+      "method": "GET",
+      "path": "/execution-tasks/:id"
+    },
+    {
+      "name": "publishing_list_exceptions",
+      "method": "GET",
+      "path": "/execution-exceptions"
+    },
+    {
+      "name": "publishing_run_now",
+      "method": "POST",
+      "path": "/execution-tasks/:id/run-now"
+    },
+    {
+      "name": "publishing_retry",
+      "method": "POST",
+      "path": "/execution-tasks/:id/retry"
+    },
+    {
+      "name": "publishing_reconcile",
+      "method": "POST",
+      "path": "/execution-tasks/:id/reconcile"
+    },
+    {
+      "name": "execution_cancel_task",
+      "method": "POST",
+      "path": "/execution-tasks/:id/cancel"
+    },
+    {
+      "name": "posts_list",
+      "method": "GET",
+      "path": "/platform-posts"
+    },
+    {
+      "name": "posts_get",
+      "method": "GET",
+      "path": "/platform-posts/:id"
+    },
+    {
+      "name": "posts_register_manual",
+      "method": "POST",
+      "path": "/platform-posts/register"
+    },
+    {
+      "name": "publishing_preview_execution_batch",
+      "method": "POST",
+      "path": "/execution-batches/preview"
+    },
+    {
+      "name": "publishing_apply_execution_batch",
+      "method": "POST",
+      "path": "/execution-batches/:id/apply"
+    },
+    {
+      "name": "inbox_list",
+      "method": "GET",
+      "path": "/conversations"
+    },
+    {
+      "name": "inbox_get_conversation",
+      "method": "GET",
+      "path": "/conversations/:id"
+    },
+    {
+      "name": "inbox_ingest_batch",
+      "method": "POST",
+      "path": "/inbox/ingest"
+    },
+    {
+      "name": "inbox_update_conversation",
+      "method": "PATCH",
+      "path": "/conversations/:id"
+    },
+    {
+      "name": "inbox_batch_conversations",
+      "method": "POST",
+      "path": "/conversations/batch"
+    },
+    {
+      "name": "inbox_mark_read",
+      "method": "POST",
+      "path": "/conversations/:id/read"
+    },
+    {
+      "name": "inbox_claim",
+      "method": "POST",
+      "path": "/conversations/:id/occupancy"
+    },
+    {
+      "name": "inbox_release",
+      "method": "DELETE",
+      "path": "/conversations/:id/occupancy"
+    },
+    {
+      "name": "inbox_add_note",
+      "method": "POST",
+      "path": "/conversations/:id/notes"
+    },
+    {
+      "name": "inbox_draft_reply",
+      "method": "POST",
+      "path": "/conversations/:id/reply-drafts"
+    },
+    {
+      "name": "inbox_update_reply_draft",
+      "method": "PATCH",
+      "path": "/reply-drafts/:id"
+    },
+    {
+      "name": "inbox_submit_reply_approval",
+      "method": "POST",
+      "path": "/reply-drafts/:id/submit-approval"
+    },
+    {
+      "name": "inbox_send_reply",
+      "method": "POST",
+      "path": "/reply-drafts/:id/send"
+    },
+    {
+      "name": "inbox_get_reply_status",
+      "method": "GET",
+      "path": "/outbound-replies/:id"
+    },
+    {
+      "name": "inbox_reconcile_reply",
+      "method": "POST",
+      "path": "/outbound-replies/:id/reconcile"
+    },
+    {
+      "name": "inbox_manual_complete_reply",
+      "method": "POST",
+      "path": "/outbound-replies/:id/manual-complete"
+    },
+    {
+      "name": "inbox_cancel_reply",
+      "method": "POST",
+      "path": "/outbound-replies/:id/cancel"
+    },
+    {
+      "name": "inbox_create_sla_policy",
+      "method": "POST",
+      "path": "/inbox/sla-policies"
+    },
+    {
+      "name": "inbox_update_sla_policy",
+      "method": "PATCH",
+      "path": "/inbox/sla-policies/:id"
+    },
+    {
+      "name": "inbox_sla_tick",
+      "method": "POST",
+      "path": "/inbox/sla-policies/tick"
+    },
+    {
+      "name": "inbox_unsnooze",
+      "method": "POST",
+      "path": "/inbox/unsnooze"
+    },
+    {
+      "name": "inbox_evaluate_auto_rules",
+      "method": "POST",
+      "path": "/inbox/messages/:id/evaluate-rules"
+    },
+    {
+      "name": "inbox_coverage",
+      "method": "GET",
+      "path": "/inbox/coverage"
+    },
+    {
+      "name": "inbox_get_sla_sample",
+      "method": "GET",
+      "path": "/inbox/sla-sample"
+    },
+    {
+      "name": "inbox_get_participant_link",
+      "method": "GET",
+      "path": "/conversations/:id/customer-link"
+    },
+    {
+      "name": "inbox_list_moderation",
+      "method": "GET",
+      "path": "/conversations/:id/moderation"
+    },
+    {
+      "name": "inbox_record_manual_moderation",
+      "method": "POST",
+      "path": "/conversations/:id/moderation"
+    },
+    {
+      "name": "inbox_set_local_comment_access",
+      "method": "PUT",
+      "path": "/inbox/local-comment-access"
+    },
+    {
+      "name": "inbox_read_comment_state",
+      "method": "POST",
+      "path": "/conversations/:id/moderation/readback"
+    },
+    {
+      "name": "inbox_list_cases",
+      "method": "GET",
+      "path": "/cases"
+    },
+    {
+      "name": "inbox_get_case",
+      "method": "GET",
+      "path": "/cases/:id"
+    },
+    {
+      "name": "inbox_create_case",
+      "method": "POST",
+      "path": "/cases"
+    },
+    {
+      "name": "inbox_handoff_case",
+      "method": "POST",
+      "path": "/cases/:id/handoff"
+    },
+    {
+      "name": "inbox_update_case",
+      "method": "PATCH",
+      "path": "/cases/:id"
+    },
+    {
+      "name": "inbox_record_translation",
+      "method": "POST",
+      "path": "/messages/:id/translations"
+    },
+    {
+      "name": "inbox_list_translations",
+      "method": "GET",
+      "path": "/messages/:id/translations"
+    },
+    {
+      "name": "inbox_list_review_sources",
+      "method": "GET",
+      "path": "/inbox/review-sources"
+    },
+    {
+      "name": "inbox_register_review_source",
+      "method": "POST",
+      "path": "/inbox/review-sources"
+    },
+    {
+      "name": "inbox_import_review",
+      "method": "POST",
+      "path": "/inbox/review-sources/:id/import"
+    },
+    {
+      "name": "inbox_list_reviews",
+      "method": "GET",
+      "path": "/reviews"
+    },
+    {
+      "name": "inbox_get_review_summary",
+      "method": "GET",
+      "path": "/inbox/review-summary"
+    },
+    {
+      "name": "inbox_handoff_review",
+      "method": "POST",
+      "path": "/reviews/:id/handoff"
+    },
+    {
+      "name": "inbox_get_review",
+      "method": "GET",
+      "path": "/reviews/:id"
+    },
+    {
+      "name": "inbox_verify_review_reply",
+      "method": "POST",
+      "path": "/reviews/:id/verify-reply"
+    },
+    {
+      "name": "inbox_link_participant",
+      "method": "POST",
+      "path": "/inbox/participants/:id/link-customer"
+    },
+    {
+      "name": "inbox_unlink_participant",
+      "method": "DELETE",
+      "path": "/inbox/participants/:id/link-customer"
+    },
+    {
+      "name": "inbox_update_note",
+      "method": "PATCH",
+      "path": "/notes/:id"
+    },
+    {
+      "name": "inbox_delete_note",
+      "method": "DELETE",
+      "path": "/notes/:id"
+    },
+    {
+      "name": "inbox_list_business_hours",
+      "method": "GET",
+      "path": "/inbox/business-hours"
+    },
+    {
+      "name": "inbox_get_business_hours",
+      "method": "GET",
+      "path": "/inbox/business-hours/:id"
+    },
+    {
+      "name": "inbox_archive_business_hours",
+      "method": "DELETE",
+      "path": "/inbox/business-hours/:id"
+    },
+    {
+      "name": "inbox_list_sla_policies",
+      "method": "GET",
+      "path": "/inbox/sla-policies"
+    },
+    {
+      "name": "inbox_get_sla_policy",
+      "method": "GET",
+      "path": "/inbox/sla-policies/:id"
+    },
+    {
+      "name": "inbox_archive_sla_policy",
+      "method": "DELETE",
+      "path": "/inbox/sla-policies/:id"
+    },
+    {
+      "name": "inbox_list_auto_rules",
+      "method": "GET",
+      "path": "/inbox/auto-rules"
+    },
+    {
+      "name": "inbox_get_auto_rule",
+      "method": "GET",
+      "path": "/inbox/auto-rules/:id"
+    },
+    {
+      "name": "inbox_archive_auto_rule",
+      "method": "DELETE",
+      "path": "/inbox/auto-rules/:id"
+    },
+    {
+      "name": "inbox_create_business_hours",
+      "method": "POST",
+      "path": "/inbox/business-hours"
+    },
+    {
+      "name": "inbox_update_business_hours",
+      "method": "PATCH",
+      "path": "/inbox/business-hours/:id"
+    },
+    {
+      "name": "inbox_create_auto_rule",
+      "method": "POST",
+      "path": "/inbox/auto-rules"
+    },
+    {
+      "name": "inbox_enable_auto_rule",
+      "method": "PATCH",
+      "path": "/inbox/auto-rules/:id"
+    },
+    {
+      "name": "inbox_list_auto_rule_runs",
+      "method": "GET",
+      "path": "/inbox/auto-rules/:id/runs"
+    },
+    {
+      "name": "inbox_list_auto_reply_review",
+      "method": "GET",
+      "path": "/inbox/auto-reply-review"
+    },
+    {
+      "name": "inbox_get_reply_draft",
+      "method": "GET",
+      "path": "/reply-drafts/:id"
+    },
+    {
+      "name": "inbox_get_conversation_sla",
+      "method": "GET",
+      "path": "/conversations/:id/sla"
+    },
+    {
+      "name": "creators_search",
+      "method": "GET",
+      "path": "/creators"
+    },
+    {
+      "name": "creators_get",
+      "method": "GET",
+      "path": "/creators/:id"
+    },
+    {
+      "name": "creators_create",
+      "method": "POST",
+      "path": "/creators"
+    },
+    {
+      "name": "creators_update",
+      "method": "PATCH",
+      "path": "/creators/:id"
+    },
+    {
+      "name": "creators_record_audience",
+      "method": "POST",
+      "path": "/creators/:id/audience-observations"
+    },
+    {
+      "name": "creators_list_contacts",
+      "method": "GET",
+      "path": "/creators/:id/contacts"
+    },
+    {
+      "name": "creators_import_contacts",
+      "method": "POST",
+      "path": "/creators/:id/contacts/import"
+    },
+    {
+      "name": "creators_list_associations",
+      "method": "GET",
+      "path": "/creators/:id/associations"
+    },
+    {
+      "name": "creators_associate_profiles",
+      "method": "POST",
+      "path": "/creators/:id/associations"
+    },
+    {
+      "name": "creators_revoke_association",
+      "method": "POST",
+      "path": "/creator-associations/:id/revoke"
+    },
+    {
+      "name": "creators_link_account",
+      "method": "POST",
+      "path": "/creators/:id/accounts"
+    },
+    {
+      "name": "creators_verify_account",
+      "method": "POST",
+      "path": "/creator-accounts/:id/verify"
+    },
+    {
+      "name": "collaborations_list",
+      "method": "GET",
+      "path": "/collaborations"
+    },
+    {
+      "name": "collaborations_get",
+      "method": "GET",
+      "path": "/collaborations/:id"
+    },
+    {
+      "name": "collaborations_create",
+      "method": "POST",
+      "path": "/collaborations"
+    },
+    {
+      "name": "collaborations_update",
+      "method": "PATCH",
+      "path": "/collaborations/:id"
+    },
+    {
+      "name": "outreach_draft",
+      "method": "POST",
+      "path": "/collaborations/:id/outreach"
+    },
+    {
+      "name": "outreach_record_sent",
+      "method": "POST",
+      "path": "/outreach/:id/record-sent"
+    },
+    {
+      "name": "outreach_record_reply",
+      "method": "POST",
+      "path": "/collaborations/:id/outreach/reply"
+    },
+    {
+      "name": "collaborations_create_terms",
+      "method": "POST",
+      "path": "/collaborations/:id/terms"
+    },
+    {
+      "name": "collaborations_send_terms",
+      "method": "POST",
+      "path": "/terms/:id/send"
+    },
+    {
+      "name": "deliverables_create",
+      "method": "POST",
+      "path": "/collaborations/:id/deliverables"
+    },
+    {
+      "name": "deliverables_list",
+      "method": "GET",
+      "path": "/collaborations/:id/deliverables"
+    },
+    {
+      "name": "deliverables_get",
+      "method": "GET",
+      "path": "/deliverables/:id"
+    },
+    {
+      "name": "deliverables_change_deadline",
+      "method": "PATCH",
+      "path": "/deliverables/:id/deadline"
+    },
+    {
+      "name": "deliverables_list_missing",
+      "method": "GET",
+      "path": "/deliverables/missing"
+    },
+    {
+      "name": "deliverables_submit",
+      "method": "POST",
+      "path": "/deliverables/:id/versions"
+    },
+    {
+      "name": "deliverables_link_rights",
+      "method": "POST",
+      "path": "/deliverables/:id/link-rights"
+    },
+    {
+      "name": "creators_assign_affiliate",
+      "method": "POST",
+      "path": "/collaborations/:id/affiliate-assignments"
+    },
+    {
+      "name": "creators_list_shipments",
+      "method": "GET",
+      "path": "/sample-shipments"
+    },
+    {
+      "name": "creators_create_shipment",
+      "method": "POST",
+      "path": "/sample-shipments"
+    },
+    {
+      "name": "creators_update_shipment",
+      "method": "PATCH",
+      "path": "/sample-shipments/:id"
+    },
+    {
+      "name": "creators_list_live_sessions",
+      "method": "GET",
+      "path": "/live-sessions"
+    },
+    {
+      "name": "creators_get_live_session",
+      "method": "GET",
+      "path": "/live-sessions/:id"
+    },
+    {
+      "name": "creators_plan_live_session",
+      "method": "POST",
+      "path": "/live-sessions"
+    },
+    {
+      "name": "creators_update_live_session",
+      "method": "PATCH",
+      "path": "/live-sessions/:id"
+    },
+    {
+      "name": "creators_plan_clip_reuse",
+      "method": "POST",
+      "path": "/live-sessions/:id/clip-reuse"
+    },
+    {
+      "name": "creators_list_evaluations",
+      "method": "GET",
+      "path": "/campaigns/:id/creator-evaluations"
+    },
+    {
+      "name": "creators_evaluate",
+      "method": "POST",
+      "path": "/campaigns/:id/creator-evaluations"
+    },
+    {
+      "name": "creators_override_evaluation",
+      "method": "POST",
+      "path": "/creator-evaluations/:id/overrides"
+    },
+    {
+      "name": "commissions_list",
+      "method": "GET",
+      "path": "/commission-entries"
+    },
+    {
+      "name": "commissions_reconcile_attribution",
+      "method": "GET",
+      "path": "/collaborations/:id/attribution-reconciliation"
+    },
+    {
+      "name": "commissions_accrue",
+      "method": "POST",
+      "path": "/commission-entries"
+    },
+    {
+      "name": "commissions_import",
+      "method": "POST",
+      "path": "/commission-entries/import"
+    },
+    {
+      "name": "commissions_mature",
+      "method": "POST",
+      "path": "/commission-entries/mature"
+    },
+    {
+      "name": "commissions_reverse",
+      "method": "POST",
+      "path": "/commission-entries/:id/reverse"
+    },
+    {
+      "name": "commissions_record_platform_settlement",
+      "method": "POST",
+      "path": "/commission-entries/:id/platform-settlement"
+    },
+    {
+      "name": "commissions_list_batches",
+      "method": "GET",
+      "path": "/settlement-batches"
+    },
+    {
+      "name": "commissions_create_batch",
+      "method": "POST",
+      "path": "/settlement-batches"
+    },
+    {
+      "name": "commissions_batch_cancel",
+      "method": "POST",
+      "path": "/settlement-batches/:id/cancel"
+    },
+    {
+      "name": "links_list",
+      "method": "GET",
+      "path": "/short-links"
+    },
+    {
+      "name": "links_create",
+      "method": "POST",
+      "path": "/short-links"
+    },
+    {
+      "name": "links_get",
+      "method": "GET",
+      "path": "/short-links/:id"
+    },
+    {
+      "name": "links_update",
+      "method": "PATCH",
+      "path": "/short-links/:id"
+    },
+    {
+      "name": "links_change_destination",
+      "method": "POST",
+      "path": "/short-links/:id/destination"
+    },
+    {
+      "name": "links_get_stats",
+      "method": "GET",
+      "path": "/short-links/:id/stats"
+    },
+    {
+      "name": "links_batch",
+      "method": "POST",
+      "path": "/short-links/batch"
+    },
+    {
+      "name": "links_allowlist_list",
+      "method": "GET",
+      "path": "/redirect-allowlist"
+    },
+    {
+      "name": "links_domains_list",
+      "method": "GET",
+      "path": "/link-domains"
+    },
+    {
+      "name": "utm_list",
+      "method": "GET",
+      "path": "/utm-templates"
+    },
+    {
+      "name": "utm_create",
+      "method": "POST",
+      "path": "/utm-templates"
+    },
+    {
+      "name": "utm_update",
+      "method": "PATCH",
+      "path": "/utm-templates/:id"
+    },
+    {
+      "name": "utm_remove",
+      "method": "DELETE",
+      "path": "/utm-templates/:id"
+    },
+    {
+      "name": "utm_build",
+      "method": "POST",
+      "path": "/utm-templates/preview"
+    },
+    {
+      "name": "links_destinations_list",
+      "method": "GET",
+      "path": "/landing-destinations"
+    },
+    {
+      "name": "links_destination_create",
+      "method": "POST",
+      "path": "/landing-destinations"
+    },
+    {
+      "name": "links_destination_update",
+      "method": "PATCH",
+      "path": "/landing-destinations/:id"
+    },
+    {
+      "name": "pages_list",
+      "method": "GET",
+      "path": "/landing-pages"
+    },
+    {
+      "name": "pages_create_draft",
+      "method": "POST",
+      "path": "/landing-pages"
+    },
+    {
+      "name": "pages_versions",
+      "method": "GET",
+      "path": "/landing-pages/:id/versions"
+    },
+    {
+      "name": "pages_create_version",
+      "method": "POST",
+      "path": "/landing-pages/:id/versions"
+    },
+    {
+      "name": "pages_unpublish",
+      "method": "POST",
+      "path": "/landing-pages/:id/unpublish"
+    },
+    {
+      "name": "links_list_checks",
+      "method": "GET",
+      "path": "/page-checks"
+    },
+    {
+      "name": "links_probe",
+      "method": "POST",
+      "path": "/page-checks/probe"
+    },
+    {
+      "name": "links_check",
+      "method": "POST",
+      "path": "/page-checks"
+    },
+    {
+      "name": "bio_list",
+      "method": "GET",
+      "path": "/bio-pages"
+    },
+    {
+      "name": "bio_create",
+      "method": "POST",
+      "path": "/bio-pages"
+    },
+    {
+      "name": "bio_publish",
+      "method": "POST",
+      "path": "/bio-pages/:id/publish"
+    },
+    {
+      "name": "bio_items",
+      "method": "GET",
+      "path": "/bio-pages/:id/items"
+    },
+    {
+      "name": "pages_experiment_report",
+      "method": "GET",
+      "path": "/landing-pages/:id/experiment"
+    },
+    {
+      "name": "forms_list",
+      "method": "GET",
+      "path": "/forms"
+    },
+    {
+      "name": "forms_create",
+      "method": "POST",
+      "path": "/forms"
+    },
+    {
+      "name": "forms_versions",
+      "method": "GET",
+      "path": "/forms/:id/versions"
+    },
+    {
+      "name": "forms_create_version",
+      "method": "POST",
+      "path": "/forms/:id/versions"
+    },
+    {
+      "name": "forms_deactivate",
+      "method": "POST",
+      "path": "/forms/:id/deactivate"
+    },
+    {
+      "name": "leads_list",
+      "method": "GET",
+      "path": "/leads"
+    },
+    {
+      "name": "leads_get",
+      "method": "GET",
+      "path": "/leads/:id"
+    },
+    {
+      "name": "leads_update",
+      "method": "PATCH",
+      "path": "/leads/:id"
+    },
+    {
+      "name": "leads_handoff",
+      "method": "POST",
+      "path": "/leads/:id/handoff"
+    },
+    {
+      "name": "leads_record_handoff_receipt",
+      "method": "POST",
+      "path": "/leads/:id/handoff/receipt"
+    },
+    {
+      "name": "leads_export",
+      "method": "POST",
+      "path": "/leads/export"
+    },
+    {
+      "name": "ads_list_accounts",
+      "method": "GET",
+      "path": "/ad-accounts"
+    },
+    {
+      "name": "ads_register_account",
+      "method": "POST",
+      "path": "/ad-accounts"
+    },
+    {
+      "name": "ads_update_account",
+      "method": "PATCH",
+      "path": "/ad-accounts/:id"
+    },
+    {
+      "name": "ads_import_report",
+      "method": "POST",
+      "path": "/ad-accounts/:id/import"
+    },
+    {
+      "name": "ads_list_entities",
+      "method": "GET",
+      "path": "/ad-entities"
+    },
+    {
+      "name": "ads_query_performance",
+      "method": "GET",
+      "path": "/ads/performance"
+    },
+    {
+      "name": "ads_list_creatives",
+      "method": "GET",
+      "path": "/ad-creatives"
+    },
+    {
+      "name": "ads_create_creative",
+      "method": "POST",
+      "path": "/ad-creatives"
+    },
+    {
+      "name": "ads_list_creative_variants",
+      "method": "GET",
+      "path": "/ad-creatives/:id/variants"
+    },
+    {
+      "name": "ads_create_creative_variant",
+      "method": "POST",
+      "path": "/ad-creatives/:id/variants"
+    },
+    {
+      "name": "ads_archive_creative",
+      "method": "DELETE",
+      "path": "/ad-creatives/:id"
+    },
+    {
+      "name": "ads_list_proposals",
+      "method": "GET",
+      "path": "/ad-proposals"
+    },
+    {
+      "name": "ads_create_proposal",
+      "method": "POST",
+      "path": "/ad-proposals"
+    },
+    {
+      "name": "ads_get_proposal",
+      "method": "GET",
+      "path": "/ad-proposals/:id"
+    },
+    {
+      "name": "ads_revise_proposal",
+      "method": "POST",
+      "path": "/ad-proposals/:id/revisions"
+    },
+    {
+      "name": "ads_submit_proposal",
+      "method": "POST",
+      "path": "/ad-proposals/:id/submit-approval"
+    },
+    {
+      "name": "ads_export_proposal",
+      "method": "POST",
+      "path": "/ad-proposals/:id/export"
+    },
+    {
+      "name": "ads_record_manual_operation",
+      "method": "POST",
+      "path": "/ad-proposals/:id/manual-operations"
+    },
+    {
+      "name": "ads_get_operation",
+      "method": "GET",
+      "path": "/ad-operations/:id"
+    },
+    {
+      "name": "ads_list_adjustments",
+      "method": "GET",
+      "path": "/adjustment-suggestions"
+    },
+    {
+      "name": "ads_suggest_adjustments",
+      "method": "POST",
+      "path": "/adjustment-suggestions"
+    },
+    {
+      "name": "lifecycle_set_local_esp",
+      "method": "PUT",
+      "path": "/esp-accounts/:id/local-config"
+    },
+    {
+      "name": "lifecycle_sync_local_esp_suppressions",
+      "method": "POST",
+      "path": "/esp-accounts/:id/sync-suppressions"
+    },
+    {
+      "name": "lifecycle_reconcile_local_esp",
+      "method": "POST",
+      "path": "/esp-campaigns/:id/local-reconcile"
+    },
+    {
+      "name": "lifecycle_list_esp_attempts",
+      "method": "GET",
+      "path": "/esp-campaigns/:id/attempts"
+    },
+    {
+      "name": "lifecycle_read_local_esp_flow",
+      "method": "POST",
+      "path": "/esp-flows/:id/local-readback"
+    },
+    {
+      "name": "customers_list",
+      "method": "GET",
+      "path": "/customers"
+    },
+    {
+      "name": "customers_create",
+      "method": "POST",
+      "path": "/customers"
+    },
+    {
+      "name": "customers_get",
+      "method": "GET",
+      "path": "/customers/:id"
+    },
+    {
+      "name": "customers_link_identity",
+      "method": "POST",
+      "path": "/customers/:id/identities"
+    },
+    {
+      "name": "customers_unlink_identity",
+      "method": "DELETE",
+      "path": "/customer-identities/:id"
+    },
+    {
+      "name": "customers_merge",
+      "method": "POST",
+      "path": "/customers/merge"
+    },
+    {
+      "name": "customers_revert_merge",
+      "method": "POST",
+      "path": "/customer-merges/:id/revert"
+    },
+    {
+      "name": "customers_get_consents",
+      "method": "GET",
+      "path": "/customers/:id/consents"
+    },
+    {
+      "name": "lifecycle_record_consent",
+      "method": "POST",
+      "path": "/customers/:id/consents"
+    },
+    {
+      "name": "lifecycle_list_consent_conflicts",
+      "method": "GET",
+      "path": "/consent-conflicts"
+    },
+    {
+      "name": "lifecycle_list_consent_texts",
+      "method": "GET",
+      "path": "/consent-texts"
+    },
+    {
+      "name": "lifecycle_get_consent_text",
+      "method": "GET",
+      "path": "/consent-texts/:id"
+    },
+    {
+      "name": "lifecycle_create_consent_text",
+      "method": "POST",
+      "path": "/consent-texts"
+    },
+    {
+      "name": "lifecycle_record_suppression",
+      "method": "POST",
+      "path": "/lifecycle/suppressions"
+    },
+    {
+      "name": "segments_list",
+      "method": "GET",
+      "path": "/segments"
+    },
+    {
+      "name": "segments_get",
+      "method": "GET",
+      "path": "/segments/:id"
+    },
+    {
+      "name": "segments_create",
+      "method": "POST",
+      "path": "/segments"
+    },
+    {
+      "name": "segments_create_version",
+      "method": "POST",
+      "path": "/segments/:id/versions"
+    },
+    {
+      "name": "segments_preview",
+      "method": "POST",
+      "path": "/segments/:id/preview"
+    },
+    {
+      "name": "segments_list_snapshots",
+      "method": "GET",
+      "path": "/segments/:id/snapshots"
+    },
+    {
+      "name": "lifecycle_list_esp_accounts",
+      "method": "GET",
+      "path": "/esp-accounts"
+    },
+    {
+      "name": "lifecycle_create_esp_account",
+      "method": "POST",
+      "path": "/esp-accounts"
+    },
+    {
+      "name": "lifecycle_list_campaigns",
+      "method": "GET",
+      "path": "/esp-campaigns"
+    },
+    {
+      "name": "lifecycle_create_campaign_draft",
+      "method": "POST",
+      "path": "/esp-campaigns"
+    },
+    {
+      "name": "lifecycle_get_campaign",
+      "method": "GET",
+      "path": "/esp-campaigns/:id"
+    },
+    {
+      "name": "lifecycle_import_campaign_send",
+      "method": "POST",
+      "path": "/esp-campaigns/:id/send-observation"
+    },
+    {
+      "name": "lifecycle_export_campaign",
+      "method": "POST",
+      "path": "/esp-campaigns/:id/export"
+    },
+    {
+      "name": "lifecycle_cancel_campaign",
+      "method": "POST",
+      "path": "/esp-campaigns/:id/cancel"
+    },
+    {
+      "name": "lifecycle_list_flows",
+      "method": "GET",
+      "path": "/esp-flows"
+    },
+    {
+      "name": "lifecycle_create_flow_draft",
+      "method": "POST",
+      "path": "/esp-flows"
+    },
+    {
+      "name": "lifecycle_change_flow_status",
+      "method": "POST",
+      "path": "/esp-flows/:id/status"
+    },
+    {
+      "name": "lifecycle_get_health",
+      "method": "GET",
+      "path": "/lifecycle/health"
+    },
+    {
+      "name": "lifecycle_import_health",
+      "method": "POST",
+      "path": "/lifecycle/health"
+    },
+    {
+      "name": "lifecycle_create_frequency_rule",
+      "method": "POST",
+      "path": "/lifecycle/frequency-rules"
+    },
+    {
+      "name": "lifecycle_import_send_observation",
+      "method": "POST",
+      "path": "/lifecycle/send-observations"
+    },
+    {
+      "name": "lifecycle_request_customer_data",
+      "method": "POST",
+      "path": "/customers/:id/erasure-requests"
+    },
+    {
+      "name": "metric_definitions_get",
+      "method": "GET",
+      "path": "/metric-definitions"
+    },
+    {
+      "name": "metric_definition_get",
+      "method": "GET",
+      "path": "/metric-definitions/:id"
+    },
+    {
+      "name": "revise_metric_definition",
+      "method": "POST",
+      "path": "/metric-definitions"
+    },
+    {
+      "name": "analytics_record_observations",
+      "method": "POST",
+      "path": "/metrics/observations"
+    },
+    {
+      "name": "metrics_query",
+      "method": "POST",
+      "path": "/metrics/query"
+    },
+    {
+      "name": "posts_performance_get",
+      "method": "GET",
+      "path": "/performance/posts"
+    },
+    {
+      "name": "post_performance_history",
+      "method": "GET",
+      "path": "/performance/posts/:id/history"
+    },
+    {
+      "name": "accounts_performance_get",
+      "method": "GET",
+      "path": "/performance/accounts"
+    },
+    {
+      "name": "links_performance_get",
+      "method": "GET",
+      "path": "/performance/links"
+    },
+    {
+      "name": "reports_list",
+      "method": "GET",
+      "path": "/reports"
+    },
+    {
+      "name": "reports_create",
+      "method": "POST",
+      "path": "/reports"
+    },
+    {
+      "name": "report_definition_get",
+      "method": "GET",
+      "path": "/reports/:id"
+    },
+    {
+      "name": "reports_update",
+      "method": "PATCH",
+      "path": "/reports/:id"
+    },
+    {
+      "name": "report_versions_list",
+      "method": "GET",
+      "path": "/reports/:id/versions"
+    },
+    {
+      "name": "reports_generate_version",
+      "method": "POST",
+      "path": "/reports/:id/versions"
+    },
+    {
+      "name": "reports_get",
+      "method": "GET",
+      "path": "/report-versions/:id"
+    },
+    {
+      "name": "report_provenance_get",
+      "method": "GET",
+      "path": "/report-versions/:id/provenance"
+    },
+    {
+      "name": "report_commerce_provenance_get",
+      "method": "GET",
+      "path": "/report-versions/:id/commerce-provenance"
+    },
+    {
+      "name": "reports_update_narrative",
+      "method": "PATCH",
+      "path": "/report-versions/:id/narrative"
+    },
+    {
+      "name": "reports_finalize",
+      "method": "POST",
+      "path": "/report-versions/:id/finalize"
+    },
+    {
+      "name": "reports_export",
+      "method": "POST",
+      "path": "/report-versions/:id/export"
+    },
+    {
+      "name": "reports_queue_export",
+      "method": "POST",
+      "path": "/reports/:id/versions/:n/export"
+    },
+    {
+      "name": "report_exports_list",
+      "method": "GET",
+      "path": "/reports/:id/versions/:n/exports"
+    },
+    {
+      "name": "report_templates_list",
+      "method": "GET",
+      "path": "/report-templates"
+    },
+    {
+      "name": "report_templates_create",
+      "method": "POST",
+      "path": "/report-templates"
+    },
+    {
+      "name": "reports_generate_due",
+      "method": "POST",
+      "path": "/reports/scheduled/generate"
+    },
+    {
+      "name": "attribution_explain",
+      "method": "GET",
+      "path": "/attribution/orders/:id/explain"
+    },
+    {
+      "name": "attribution_query",
+      "method": "POST",
+      "path": "/attribution/query"
+    },
+    {
+      "name": "attribution_models_get",
+      "method": "GET",
+      "path": "/attribution-models"
+    },
+    {
+      "name": "attribution_models_revise",
+      "method": "PATCH",
+      "path": "/attribution-models/:id"
+    },
+    {
+      "name": "attribution_run",
+      "method": "POST",
+      "path": "/attribution/runs"
+    },
+    {
+      "name": "attribution_record_reported",
+      "method": "POST",
+      "path": "/attribution/reported"
+    },
+    {
+      "name": "revenue_query",
+      "method": "GET",
+      "path": "/revenue/daily"
+    },
+    {
+      "name": "revenue_reconciliation_list",
+      "method": "GET",
+      "path": "/revenue/reconciliation"
+    },
+    {
+      "name": "revenue_reconcile",
+      "method": "POST",
+      "path": "/revenue/reconciliation"
+    },
+    {
+      "name": "unit_costs_import",
+      "method": "POST",
+      "path": "/unit-costs/import"
+    },
+    {
+      "name": "contribution_record_inputs",
+      "method": "POST",
+      "path": "/contribution/inputs"
+    },
+    {
+      "name": "contribution_query",
+      "method": "GET",
+      "path": "/contribution"
+    },
+    {
+      "name": "cohorts_list",
+      "method": "GET",
+      "path": "/cohorts"
+    },
+    {
+      "name": "cohort_get",
+      "method": "GET",
+      "path": "/cohorts/:id"
+    },
+    {
+      "name": "experiments_list",
+      "method": "GET",
+      "path": "/experiments"
+    },
+    {
+      "name": "experiments_create",
+      "method": "POST",
+      "path": "/experiments"
+    },
+    {
+      "name": "experiment_get",
+      "method": "GET",
+      "path": "/experiments/:id"
+    },
+    {
+      "name": "experiment_update",
+      "method": "PATCH",
+      "path": "/experiments/:id"
+    },
+    {
+      "name": "experiment_stop",
+      "method": "POST",
+      "path": "/experiments/:id/stop"
+    },
+    {
+      "name": "experiment_conclude",
+      "method": "POST",
+      "path": "/experiments/:id/conclude"
+    },
+    {
+      "name": "experiment_archive",
+      "method": "POST",
+      "path": "/experiments/:id/archive"
+    },
+    {
+      "name": "experiment_record_result",
+      "method": "POST",
+      "path": "/experiments/:id/results"
+    },
+    {
+      "name": "audience_insights_get",
+      "method": "GET",
+      "path": "/audience-insights"
+    },
+    {
+      "name": "audience_insights_record",
+      "method": "POST",
+      "path": "/audience-insights"
+    },
+    {
+      "name": "posting_time_get",
+      "method": "GET",
+      "path": "/posting-time-recommendations"
+    },
+    {
+      "name": "posting_time_apply",
+      "method": "POST",
+      "path": "/posting-time-recommendations/:id/apply"
+    },
+    {
+      "name": "posting_time_suggest",
+      "method": "POST",
+      "path": "/posting-time-recommendations"
+    },
+    {
+      "name": "agent_jobs_list",
+      "method": "GET",
+      "path": "/agent-jobs"
+    },
+    {
+      "name": "agent_jobs_get",
+      "method": "GET",
+      "path": "/agent-jobs/:id"
+    },
+    {
+      "name": "agent_jobs_claim",
+      "method": "POST",
+      "path": "/agent-jobs/:id/claim"
+    },
+    {
+      "name": "agent_jobs_heartbeat",
+      "method": "POST",
+      "path": "/agent-jobs/:id/heartbeat"
+    },
+    {
+      "name": "agent_jobs_handoff",
+      "method": "POST",
+      "path": "/agent-jobs/:id/handoff"
+    },
+    {
+      "name": "agent_jobs_submit_result",
+      "method": "POST",
+      "path": "/agent-jobs/:id/submit"
+    },
+    {
+      "name": "agent_jobs_confirm_cancel",
+      "method": "POST",
+      "path": "/agent-jobs/:id/confirm-cancel"
+    },
+    {
+      "name": "jobs_get",
+      "method": "GET",
+      "path": "/jobs/:id"
+    },
+    {
+      "name": "jobs_cancel",
+      "method": "POST",
+      "path": "/jobs/:id/cancel"
+    },
+    {
+      "name": "change_sets_create",
+      "method": "POST",
+      "path": "/change-sets"
+    },
+    {
+      "name": "change_sets_get",
+      "method": "GET",
+      "path": "/change-sets/:id"
+    },
+    {
+      "name": "workflow_templates_list",
+      "method": "GET",
+      "path": "/workflow-templates"
+    },
+    {
+      "name": "workflow_templates_get",
+      "method": "GET",
+      "path": "/workflow-templates/:id"
+    },
+    {
+      "name": "agent_preview_context",
+      "method": "GET",
+      "path": "/brands/:brandId/agent-context"
+    },
+    {
+      "name": "desktop_request_capability",
+      "method": "POST",
+      "path": "/desktop-capability-requests"
+    },
+    {
+      "name": "desktop_get_capability_request",
+      "method": "GET",
+      "path": "/desktop-capability-requests/:id"
+    },
+    {
+      "name": "ops_get_health",
+      "method": "GET",
+      "path": "/admin/workspace-health"
+    },
+    {
+      "name": "audit_query",
+      "method": "GET",
+      "path": "/admin/audit-events"
+    },
+    {
+      "name": "file_begin_upload",
+      "method": "POST",
+      "path": "/files/uploads"
+    },
+    {
+      "name": "file_complete_upload",
+      "method": "POST",
+      "path": "/files/uploads/:id/complete"
+    },
+    {
+      "name": "file_get",
+      "method": "GET",
+      "path": "/files/:id"
+    }
+  ],
+  "called": [
+    {
+      "operation": "publishing_approve",
+      "id": "90d3adf6-296e-493e-b757-3a8d1fd0d1b6",
+      "conclusion": "预期拒绝",
+      "code": "HUMAN_REQUIRED"
+    },
+    {
+      "operation": "file_begin_upload",
+      "id": "59e0c823-deef-4262-ac49-41b1f149fc60",
+      "conclusion": "成功"
+    },
+    {
+      "operation": "file_complete_upload",
+      "id": "f3835c53-8eb1-491f-a6cf-545ed7316c9e",
+      "conclusion": "成功"
+    },
+    {
+      "operation": "asset_create",
+      "id": "596978f6-3384-4592-8725-3875f441a9dd",
+      "conclusion": "成功"
+    },
+    {
+      "operation": "ads_decide_proposal",
+      "id": "2dea4af0-c518-485c-b9c7-e4c188745b7b",
+      "conclusion": "预期拒绝",
+      "code": "HUMAN_REQUIRED"
+    },
+    {
+      "operation": "workspace_brand_get",
+      "id": "3e4f5117-5e13-4268-ad3e-69133dd5e033",
+      "conclusion": "成功"
+    },
+    {
+      "operation": "workspace_market_get",
+      "id": "8fc79288-c336-4e41-be3f-937d6fc1c8b9",
+      "conclusion": "成功"
+    },
+    {
+      "operation": "commerce_product_usage",
+      "id": "ab15ca53-66d3-4770-b67c-a38544aa5a2c",
+      "conclusion": "成功"
+    }
+  ]
+}

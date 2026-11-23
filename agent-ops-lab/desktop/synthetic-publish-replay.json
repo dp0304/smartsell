@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-21T16:49:09.178801+00:00",
+  "environment": "offline synthetic creator, disconnect and recover by attempt id",
+  "terminal": "node --experimental-transform-types --disable-warning=ExperimentalWarning apps/connector/src/cli.ts replay browser",
+  "status": "replay_verified",
+  "submissions": 1,
+  "reconciliation": {
+    "original": {
+      "kind": "outcome_unknown",
+      "submitted_by": "auto",
+      "attempt_id": "fixture-attempt"
+    },
+    "recovered": {
+      "kind": "result_captured",
+      "platform_post_id": "fixture-post-e123031a24cbbfb8",
+      "attempt_id": "fixture-recovery"
+    },
+    "visibility": "visible"
+  }
+}

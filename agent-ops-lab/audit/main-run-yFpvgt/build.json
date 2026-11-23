@@ -1,0 +1,19 @@
+{
+  "workspace": "./",
+  "node": "v24.21.0",
+  "server": [
+    "apps/server/src/bootstrap.ts",
+    "apps/server/src/server.ts"
+  ],
+  "web": "apps/web/dist (Vite preview)",
+  "assets": [
+    {
+      "path": "assets/index-CxeE2mpc.js",
+      "sha256": "debb3e8d4c71db75733622025704b6b15b5b833a40b11b813d0eef0407f8765c"
+    },
+    {
+      "path": "assets/index-DVaXrHuM.css",
+      "sha256": "0f024043c521f8fad3b10cce37e8fcc8ef20b5dcd0ff58ad8642381d0c40824e"
+    }
+  ]
+}

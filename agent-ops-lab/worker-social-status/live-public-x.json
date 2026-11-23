@@ -1,0 +1,97 @@
+{
+  "kind": "codex_mcp_contract_with_product_worker_and_live_public_x",
+  "started_at": "2026-11-23T09:11:00.127Z",
+  "signed_protocol": [
+    {
+      "route": "/api/v1/device/social-status/claim",
+      "http": 200,
+      "request_id": "622f9120-dcbb-44a6-bfcd-eebd5c1dd87d",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "signed": true
+    },
+    {
+      "route": "/api/v1/device/social-status/report",
+      "http": 200,
+      "request_id": "249309ad-b12f-4c7f-893b-b5a57311bb95",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "signed": true
+    }
+  ],
+  "outcome": "passed",
+  "queued": {
+    "data": {
+      "id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "workspace_id": "215cb2ae-ebaf-41c3-b641-ccae2f77aed0",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be",
+      "mode": "recent_posts",
+      "platform": "x",
+      "status": "queued"
+    },
+    "request_id": "a7fab05b-053d-49ec-9c89-1c4690ce1845"
+  },
+  "terminal": {
+    "data": {
+      "id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "workspace_id": "215cb2ae-ebaf-41c3-b641-ccae2f77aed0",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be",
+      "mode": "recent_posts",
+      "platform": "x",
+      "status": "blocked",
+      "lease_expires_at": "2026-11-23T09:13:00.527Z",
+      "result": {
+        "channels": [
+          {
+            "platform": "x",
+            "status": "login_required"
+          }
+        ]
+      },
+      "reported_at": "2026-11-23T09:11:01.950Z"
+    },
+    "request_id": "d07586d2-e479-47e9-9ef0-c5f1b6a29266"
+  },
+  "web_audit": [
+    {
+      "tool": "worker_social_status_get",
+      "request_id": "d07586d2-e479-47e9-9ef0-c5f1b6a29266",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be",
+      "status": "blocked"
+    },
+    {
+      "tool": "worker_social_status_report",
+      "request_id": "249309ad-b12f-4c7f-893b-b5a57311bb95",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be",
+      "status": "blocked"
+    },
+    {
+      "tool": "worker_social_status_get",
+      "request_id": "de619191-19c4-4c7b-8dd4-f2c4e2fe2ea1",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be"
+    },
+    {
+      "tool": "worker_social_status_get",
+      "request_id": "20e2feb9-0c76-45ee-be2e-8562445c5841",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be"
+    },
+    {
+      "tool": "worker_social_status_get",
+      "request_id": "541e088e-ae72-4efd-a888-69950fa6cd12",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be"
+    },
+    {
+      "tool": "worker_social_status_request",
+      "request_id": "a7fab05b-053d-49ec-9c89-1c4690ce1845",
+      "task_id": "da6ed9e9-03be-44ad-b280-870f1d086bcb",
+      "device_id": "7dc09ea2-f177-4f6f-891a-9193657c65be"
+    }
+  ],
+  "browser": "Google Chrome, isolated fresh profile, actual public X login landing",
+  "web_receipt_visible": true
+}

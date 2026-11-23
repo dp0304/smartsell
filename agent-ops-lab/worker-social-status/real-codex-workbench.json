@@ -1,0 +1,214 @@
+{
+  "verified_at": "2026-11-23T09:16:01.275132+00:00",
+  "runs": [
+    {
+      "prompt": "我的产品是一个独立站 makemylure.com 然后我社媒是 x 上面发布视频，你看看现有的发布",
+      "original_client_directory": "testsmarts",
+      "normal_browser_tool_settings": true,
+      "local_only": [
+        "uuidgen"
+      ],
+      "codex_tool_events": [
+        {
+          "tool": "worker_social_status_request",
+          "mode": "recent_posts",
+          "platform": "x",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "status": "queued",
+          "reported_at": null,
+          "channels": null
+        },
+        {
+          "tool": "worker_social_status_get",
+          "mode": null,
+          "platform": null,
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "status": "queued",
+          "reported_at": null,
+          "channels": null
+        },
+        {
+          "tool": "worker_social_status_get",
+          "mode": null,
+          "platform": null,
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "status": "queued",
+          "reported_at": null,
+          "channels": null
+        },
+        {
+          "tool": "worker_social_status_get",
+          "mode": null,
+          "platform": null,
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "status": "queued",
+          "reported_at": null,
+          "channels": null
+        },
+        {
+          "tool": "worker_social_status_get",
+          "mode": null,
+          "platform": null,
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "status": "blocked",
+          "reported_at": "2026-11-23T09:12:04.201Z",
+          "channels": [
+            {
+              "platform": "x",
+              "status": "login_required"
+            }
+          ]
+        }
+      ],
+      "web_audit": [
+        {
+          "request_id": "3659bc96-c70a-4194-9f90-fcb9a196cd93",
+          "tool": "worker_social_status_request",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": null
+        },
+        {
+          "request_id": "394c8ddb-7c53-41f9-993b-8b90da563482",
+          "tool": "worker_social_status_get",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": null
+        },
+        {
+          "request_id": "7ac8e278-a3c4-4d54-b579-e5562172a7c2",
+          "tool": "worker_social_status_get",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": null
+        },
+        {
+          "request_id": "dab61976-a983-44ea-ba1d-900334ae9b94",
+          "tool": "worker_social_status_get",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": null
+        },
+        {
+          "request_id": "75f6b77c-f0eb-4123-9fc5-e51dbe62c96d",
+          "tool": "worker_social_status_report",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": "blocked"
+        },
+        {
+          "request_id": "3daf9d00-acab-4211-9738-df7afc64ec0e",
+          "tool": "worker_social_status_get",
+          "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": "blocked"
+        }
+      ],
+      "task_id": "fc8aa51a-4ef7-4d96-a659-310660f46fc4",
+      "worker_opened_x": true
+    },
+    {
+      "prompt": "获取我的社媒状态",
+      "original_client_directory": "testsmarts",
+      "normal_browser_tool_settings": true,
+      "local_only": [
+        "uuidgen"
+      ],
+      "codex_tool_events": [
+        {
+          "tool": "worker_social_status_request",
+          "mode": "account_status",
+          "platform": null,
+          "task_id": "a0e638fa-9b3d-472d-8024-677dc27a3421",
+          "device_id": "paired-worker-1",
+          "status": "queued",
+          "reported_at": null,
+          "channels": null
+        },
+        {
+          "tool": "worker_social_status_get",
+          "mode": null,
+          "platform": null,
+          "task_id": "a0e638fa-9b3d-472d-8024-677dc27a3421",
+          "device_id": "paired-worker-1",
+          "status": "blocked",
+          "reported_at": "2026-11-23T09:13:04.207Z",
+          "channels": [
+            {
+              "platform": "x",
+              "status": "login_required"
+            },
+            {
+              "platform": "youtube",
+              "status": "unverified"
+            },
+            {
+              "platform": "facebook",
+              "status": "unverified"
+            },
+            {
+              "platform": "instagram",
+              "status": "unverified"
+            },
+            {
+              "platform": "reddit",
+              "status": "unverified"
+            },
+            {
+              "platform": "douyin",
+              "status": "unverified"
+            },
+            {
+              "platform": "xhs",
+              "status": "unverified"
+            },
+            {
+              "platform": "tiktok",
+              "status": "unverified"
+            }
+          ]
+        }
+      ],
+      "web_audit": [
+        {
+          "request_id": "8462a527-37f3-4d9b-b50d-032b79141036",
+          "tool": "worker_social_status_request",
+          "task_id": "a0e638fa-9b3d-472d-8024-677dc27a3421",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": null
+        },
+        {
+          "request_id": "c372f675-6505-4a00-9652-e7514367b5e3",
+          "tool": "worker_social_status_report",
+          "task_id": "a0e638fa-9b3d-472d-8024-677dc27a3421",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": "blocked"
+        },
+        {
+          "request_id": "4326a4a9-7871-447d-8c45-f9273a710d4b",
+          "tool": "worker_social_status_get",
+          "task_id": "a0e638fa-9b3d-472d-8024-677dc27a3421",
+          "device_id": "paired-worker-1",
+          "outcome": "success",
+          "status": "blocked"
+        }
+      ],
+      "task_id": "a0e638fa-9b3d-472d-8024-677dc27a3421",
+      "worker_opened_x": true
+    }
+  ],
+  "x_login_receipt_expanded_in_authenticated_workbench": true
+}

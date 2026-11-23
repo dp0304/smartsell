@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "run": "fixture",
+  "started_at": "2026-11-23T08:16:50.260Z",
+  "checks": [
+    {
+      "name": "failure",
+      "type": "Error",
+      "detail": {
+        "kind": "unclassified"
+      },
+      "source": [
+        "config.ts:38:11",
+        "accept.mjs:225:26"
+      ]
+    }
+  ],
+  "events": [],
+  "protocol": [],
+  "canary": {},
+  "outcome": "failed",
+  "finished_at": "2026-11-23T08:16:50.264Z"
+}

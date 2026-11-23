@@ -1,0 +1,13 @@
+# Local service and browser data used to replay a terminal session.
+**/runtime/
+**/.runtime/
+**/node_modules/
+**/playwright-artifacts-*/
+**/chrome-data/
+**/electron-data/
+**/.env
+**/.env.local
+**/*.sqlite*
+**/*.pem
+**/*.key
+.DS_Store

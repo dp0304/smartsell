@@ -1,0 +1,206 @@
+{
+  "at": "2026-11-21T16:27:47.555Z",
+  "deviceId": null,
+  "job": {
+    "title": "商品建品、导入与沙箱上架",
+    "kind": "custom",
+    "due_at": null,
+    "status": "submitted",
+    "fencing_token": "[REDACTED]",
+    "work_item_id": "41107897-a323-480f-86a4-8acc1ab80591",
+    "input_scope": {
+      "brand_ids": [
+        "f9b6afc3-16fd-45b5-baa9-eb07031d4847"
+      ],
+      "campaign_id": null,
+      "resource_refs": [],
+      "constraints": "仅隔离测试；保持人工审核；不得发布到任何真实社媒或店铺。"
+    },
+    "expected_output": {
+      "type": "note"
+    },
+    "created_by": "d7621bf0-c471-4c4f-b765-9e606f5ae6b6",
+    "assignee_id": "d7621bf0-c471-4c4f-b765-9e606f5ae6b6",
+    "assignee_type": "agent_client",
+    "source_rule_run_id": null,
+    "brand_id": "f9b6afc3-16fd-45b5-baa9-eb07031d4847",
+    "campaign_id": null,
+    "created_via": "human",
+    "id": "9ddd532c-bd89-4aa2-aa9c-55dab1e79210",
+    "version": 3,
+    "created_at": "2026-11-21T16:26:49.712Z",
+    "updated_at": "2026-11-21T16:27:30.962Z",
+    "lease_owner_id": null,
+    "lease_expires_at": null,
+    "result_ref": {
+      "note": "内部商品「棱镜暖光桌灯 · 内建草稿」已创建并回读，商品 ID 0ba72ee5-84bf-4d71-b53b-7572129aacb1，状态 draft。测试店 d44aaa57-8d4f-4ee0-941a-95594b8aa45e。CSV 批次 5146ac6c-86c0-4d38-afc6-d6b2801e9176，文件 fc6d91de-da50-43b0-bf09-88b53a4d6716，预览行 fb8aefa9-72ba-4628-afb2-5c1b4cc1381f。回读 awaiting_confirmation，0 行有效、1 行无效。第 2 行 available=true，校验报 available must be an integer in range。按仅在无错误时确认的要求，本地合并未执行。prism-import-01 是 CSV 来源键。NO_AUTHORIZED_STORE_SANDBOX：测试店仅支持 file_import，状态 import_only，无远端连接，未上架。"
+    },
+    "events": [
+      {
+        "agent_job_id": "9ddd532c-bd89-4aa2-aa9c-55dab1e79210",
+        "type": "created",
+        "actor_id": "d7621bf0-c471-4c4f-b765-9e606f5ae6b6",
+        "occurred_at": "2026-11-21T16:26:49.712Z",
+        "created_via": "human",
+        "id": "a641a2fc-8029-49ae-8ab3-e0ecc5dd5cc8",
+        "version": 1,
+        "created_at": "2026-11-21T16:26:49.712Z",
+        "updated_at": "2026-11-21T16:26:49.712Z"
+      },
+      {
+        "agent_job_id": "9ddd532c-bd89-4aa2-aa9c-55dab1e79210",
+        "type": "claimed",
+        "actor_id": "d7621bf0-c471-4c4f-b765-9e606f5ae6b6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:26:58.207Z",
+        "created_via": "agent",
+        "id": "05114633-7b52-4960-8f4c-685501961f6c",
+        "version": 1,
+        "created_at": "2026-11-21T16:26:58.207Z",
+        "updated_at": "2026-11-21T16:26:58.207Z"
+      },
+      {
+        "agent_job_id": "9ddd532c-bd89-4aa2-aa9c-55dab1e79210",
+        "type": "submitted",
+        "actor_id": "d7621bf0-c471-4c4f-b765-9e606f5ae6b6",
+        "fencing_token": "[REDACTED]",
+        "occurred_at": "2026-11-21T16:27:30.962Z",
+        "created_via": "agent",
+        "id": "0369d3d9-9d19-42b7-84bd-ab1f62dfbc15",
+        "version": 1,
+        "created_at": "2026-11-21T16:27:30.962Z",
+        "updated_at": "2026-11-21T16:27:30.962Z"
+      }
+    ]
+  },
+  "products": [
+    {
+      "store_id": "d44aaa57-8d4f-4ee0-941a-95594b8aa45e",
+      "brand_id": "f9b6afc3-16fd-45b5-baa9-eb07031d4847",
+      "external_product_id": null,
+      "source": {
+        "kind": "manual"
+      },
+      "title": "棱镜暖光桌灯 · 内建草稿",
+      "status": "draft",
+      "created_via": "agent",
+      "id": "0ba72ee5-84bf-4d71-b53b-7572129aacb1",
+      "version": 1,
+      "created_at": "2026-11-21T16:27:08.823Z",
+      "updated_at": "2026-11-21T16:27:08.823Z",
+      "as_of": "2026-11-21T16:27:47.541Z"
+    }
+  ],
+  "store": {
+    "brand_id": "f9b6afc3-16fd-45b5-baa9-eb07031d4847",
+    "provider": "file_import",
+    "external_store_id": "prism-file-996fb0ed-f9ba-4fdc-84d8-2034ac746ff1",
+    "name": "棱镜 CSV 测试店（非远端沙箱）",
+    "default_currency": "CNY",
+    "default_locale": "zh-CN",
+    "region": null,
+    "sync_scope": {},
+    "status": "import_only",
+    "status_reason": null,
+    "connection_id": null,
+    "data_source_id": null,
+    "last_snapshot_at": null,
+    "last_incremental_at": null,
+    "created_via": "human",
+    "id": "d44aaa57-8d4f-4ee0-941a-95594b8aa45e",
+    "version": 1,
+    "created_at": "2026-11-21T16:26:49.180Z",
+    "updated_at": "2026-11-21T16:26:49.180Z",
+    "data_source": null,
+    "initial_snapshot_pending": false
+  },
+  "imports": [
+    {
+      "file_object_id": "fc6d91de-da50-43b0-bf09-88b53a4d6716",
+      "file_sha256": "f1d5fc83ff0bdc5fbf65308b6add6124f6acbe93c75ba6edd5de1b08fa21db4e",
+      "data_source_id": null,
+      "store_id": "d44aaa57-8d4f-4ee0-941a-95594b8aa45e",
+      "provider": "file_import",
+      "template_key": "product_list",
+      "mapping": {
+        "external_product_id": "external_product_id",
+        "external_variant_id": "external_variant_id",
+        "title": "title",
+        "sku": "sku",
+        "currency": "currency",
+        "price": "price",
+        "available": "available",
+        "market_id": "market_id"
+      },
+      "mapping_version": 1,
+      "options": {},
+      "header": [
+        "external_product_id",
+        "external_variant_id",
+        "title",
+        "sku",
+        "currency",
+        "price",
+        "available",
+        "market_id"
+      ],
+      "column_count": 8,
+      "status": "awaiting_confirmation",
+      "supersedes_batch_id": null,
+      "actor_id": "d7621bf0-c471-4c4f-b765-9e606f5ae6b6",
+      "idempotency_key": "9ddd532c-import",
+      "request_fingerprint": "[\"product_list\",\"d44aaa57-8d4f-4ee0-941a-95594b8aa45e\",null,\"f1d5fc83ff0bdc5fbf65308b6add6124f6acbe93c75ba6edd5de1b08fa21db4e\",{\"external_product_id\":\"external_product_id\",\"external_variant_id\":\"external_variant_id\",\"title\":\"title\",\"sku\":\"sku\",\"currency\":\"currency\",\"price\":\"price\",\"available\":\"available\",\"market_id\":\"market_id\"},{},null]",
+      "expires_at": "2026-11-28T16:27:13.316Z",
+      "created_via": "agent",
+      "id": "5146ac6c-86c0-4d38-afc6-d6b2801e9176",
+      "version": 2,
+      "created_at": "2026-11-21T16:27:13.316Z",
+      "updated_at": "2026-11-21T16:27:13.316Z",
+      "stats": {
+        "rows": 1,
+        "valid": 0,
+        "invalid": 1,
+        "dup_in_file": 0,
+        "new": 0,
+        "changed": 0,
+        "unchanged": 0
+      }
+    }
+  ],
+  "importRows": [
+    {
+      "batchId": "5146ac6c-86c0-4d38-afc6-d6b2801e9176",
+      "rows": [
+        {
+          "raw": {
+            "external_product_id": "prism-import-01",
+            "external_variant_id": "prism-import-v1",
+            "title": "棱镜桌灯 · CSV 样品",
+            "sku": "PRISM-IMPORT-21",
+            "currency": "CNY",
+            "price": "129.00",
+            "available": "true",
+            "market_id": "5f6e5c96-1b54-4a1e-95fd-e435eb43e39c"
+          },
+          "row_no": 2,
+          "column_count": 8,
+          "batch_id": "5146ac6c-86c0-4d38-afc6-d6b2801e9176",
+          "status": "invalid",
+          "created_via": "agent",
+          "id": "fb8aefa9-72ba-4628-afb2-5c1b4cc1381f",
+          "version": 2,
+          "created_at": "2026-11-21T16:27:13.316Z",
+          "updated_at": "2026-11-21T16:27:13.316Z",
+          "normalized": null,
+          "dedupe_key": null,
+          "issues": [
+            {
+              "code": "INVALID_INPUT",
+              "message": "available must be an integer in range"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

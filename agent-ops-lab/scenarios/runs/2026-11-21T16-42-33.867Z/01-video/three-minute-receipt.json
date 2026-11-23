@@ -1,0 +1,86 @@
+{
+  "targetId": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63",
+  "jobId": "d54410b1-6d19-450f-b1e7-fc0e040c728d",
+  "scheduleTz": "Asia/Shanghai",
+  "targetCreatedAt": "2026-11-21T16:43:16.344Z",
+  "targetCreatedAtShanghai": "344",
+  "scheduleRequestAt": "2026-11-21T16:43:16.340Z",
+  "scheduledAt": "2026-11-21T16:46:16.340Z",
+  "scheduledAtShanghai": "340",
+  "expectedLeadMs": 180000,
+  "observedLeadMs": 179996,
+  "deviationMs": -4,
+  "samples": [
+    {
+      "phase": "before_due",
+      "targetId": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63",
+      "requestedAt": "2026-11-21T16:43:52.259Z",
+      "receivedAt": "2026-11-21T16:43:52.264Z",
+      "requestedAtShanghai": "259",
+      "requestOffsetMs": -144081,
+      "planStatus": "awaiting_approval",
+      "displayStatus": "awaiting_approval",
+      "approvalRequestId": "1420e266-d85e-4b72-9d99-aed3cc650e61",
+      "precheckSummary": "risk",
+      "executionStatus": null,
+      "executionSubstatus": null,
+      "platformPostId": null,
+      "publishedAt": null,
+      "platformPostCount": 0
+    },
+    {
+      "phase": "due",
+      "targetId": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63",
+      "requestedAt": "2026-11-21T16:46:16.343Z",
+      "receivedAt": "2026-11-21T16:46:16.349Z",
+      "requestedAtShanghai": "343",
+      "requestOffsetMs": 3,
+      "planStatus": "awaiting_approval",
+      "displayStatus": "awaiting_approval",
+      "approvalRequestId": "1420e266-d85e-4b72-9d99-aed3cc650e61",
+      "precheckSummary": "risk",
+      "executionStatus": null,
+      "executionSubstatus": null,
+      "platformPostId": null,
+      "publishedAt": null,
+      "platformPostCount": 0
+    },
+    {
+      "phase": "after_due",
+      "targetId": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63",
+      "requestedAt": "2026-11-21T16:46:31.341Z",
+      "receivedAt": "2026-11-21T16:46:31.347Z",
+      "requestedAtShanghai": "341",
+      "requestOffsetMs": 15001,
+      "planStatus": "awaiting_approval",
+      "displayStatus": "awaiting_approval",
+      "approvalRequestId": "1420e266-d85e-4b72-9d99-aed3cc650e61",
+      "precheckSummary": "risk",
+      "executionStatus": null,
+      "executionSubstatus": null,
+      "platformPostId": null,
+      "publishedAt": null,
+      "platformPostCount": 0
+    }
+  ],
+  "audit": [
+    {
+      "id": "bffd5621-7c3a-4be0-9e25-1a7520a74cb4",
+      "action": "publishing_request_approval",
+      "source": "mcp",
+      "actorType": "agent",
+      "occurredAt": "2026-11-21T16:43:19.421Z",
+      "count": 1,
+      "targetId": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63"
+    },
+    {
+      "id": "0e3433f8-a4c6-4941-954a-3fa85a4fd999",
+      "action": "publishing_create_target",
+      "source": "mcp",
+      "actorType": "agent",
+      "occurredAt": "2026-11-21T16:43:16.344Z",
+      "count": 1,
+      "targetId": "eb26df5a-cea0-46b9-b10b-ee5169ad7a63"
+    }
+  ]
+}
