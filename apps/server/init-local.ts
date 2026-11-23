@@ -5,6 +5,7 @@ import { Writable } from 'node:stream';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildApp } from './src/app.js';
 import { localStore } from './src/local.js';
+import { LOCAL_SETUP_PASSWORD_MIN } from './src/setup-policy.js';
 
 export type FirstOwner = { email: string; password: string; name: string; workspaceName: string };
 const defaultFile = fileURLToPath(new URL('../../.local/smartsell.sqlite', import.meta.url));
@@ -17,9 +18,12 @@ export async function initializeLocalOwner(input: FirstOwner, env: NodeJS.Proces
   }
   const store = localStore(resolve(env.SMARTSELL_DATA_FILE || defaultFile));
   const setupToken = randomBytes(32).toString('hex');
-  const { app } = buildApp({ store, registry: new Map(), secureCookie: false, origins: new Set(), setupToken });
+  const origin = 'http://127.0.0.1';
+  const localOrigins = new Set([origin]);
+  const { app } = buildApp({ store, registry: new Map(), secureCookie: false, origins: localOrigins, localSetupOrigins: localOrigins, setupToken });
   try {
-    const response = await app.inject({ method: 'POST', url: '/api/v1/setup', headers: { 'x-setup-token': setupToken }, payload: input });
+    const response = await app.inject({ method: 'POST', url: '/api/v1/setup', remoteAddress: '127.0.0.1',
+      headers: { host: '127.0.0.1', origin, 'x-setup-token': setupToken }, payload: input });
     if (response.statusCode === 409) throw new Error('此工作區已完成首次設定。請以既有帳號登入。');
     if (response.statusCode !== 201) throw new Error(response.json<{ error: { message: string } }>().error.message);
     const cookie = response.cookies[0];
@@ -40,7 +44,7 @@ async function promptForOwner() {
     const name = (await ask('顯示名稱 / Name: ')).trim();
     const workspaceName = (await ask('工作區名稱 / Workspace: ')).trim();
     hidden = true;
-    process.stdout.write('密碼（至少 12 個字元）/ Password: ');
+    process.stdout.write(`密碼（至少 ${LOCAL_SETUP_PASSWORD_MIN} 個字元）/ Password (at least ${LOCAL_SETUP_PASSWORD_MIN} characters): `);
     const password = await ask('');
     process.stdout.write('\n再輸入一次 / Confirm: ');
     const confirm = await ask('');

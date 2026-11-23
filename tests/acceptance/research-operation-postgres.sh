@@ -4,7 +4,7 @@ cd "$(dirname "$0")/../.."
 
 # Same isolated PostgreSQL roles as AI05. Reuse the cached image and discard the data on exit.
 container=$(docker run --rm --pull=never --detach --tmpfs /var/lib/postgresql/data \
-  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=research-local postgres:17-alpine)
+  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=research-local "${SMARTSELL_TEST_PG_IMAGE:-postgres:17-alpine}")
 trap 'docker stop "$container" >/dev/null' EXIT
 for ((attempt=0; attempt<30; attempt++)); do
   if docker exec "$container" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then break; fi

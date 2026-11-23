@@ -12,6 +12,7 @@ import { makeContext } from '../../apps/server/src/context.ts';
 import { discoverOperations } from '../../apps/server/src/operations.ts';
 import { createServer } from '../../apps/server/src/server.ts';
 import { metaPauseDrain } from '../../apps/server/src/modules/ads/meta-pause.ts';
+import { applyCampaignCostEvent } from '../../apps/server/src/modules/campaign/spend-operations.ts';
 import { createFetchTransport } from '../../packages/adapters/src/fetch-transport.ts';
 
 async function fixture(t) {
@@ -40,7 +41,8 @@ async function fixture(t) {
   const owner = session(setup);
   const inspect = fn => store.transaction({ identityWrite: true }, async tx => {
     const scope = { actorId: user.id, tenantId: tx.identity.get(`workspace/${workspace.id}`).tenantId, workspaceId: workspace.id };
-    return fn(makeContext(await tx.workspace(scope), scope, 'owner'), tx.identity);
+    const records = await tx.workspace(scope);
+    return fn(makeContext(records, scope, 'owner'), tx.identity, records);
   });
   const actorId = randomUUID();
   const editorEmail = 'ads-editor@example.invalid';
@@ -96,6 +98,70 @@ test('AD01 workspace editor sees only granted accounts and grant revocation bloc
   await grant([]);
   assert.deepEqual(await op('/ad-accounts', { headers: editor }), []);
   await op('/ad-proposals', { data: visibleDraft, headers: editor, key, status: 404 });
+});
+
+test('AD02 concurrent report retries and late observations preserve spend, coverage and event counts', async t => {
+  const { op, account, inspect } = await fixture(t);
+  const ads = await account('Pacing');
+  const campaign = await op('/campaigns', { data: { brand_id: ads.brand_id, name: 'Budget test', kind: 'launch', timezone: 'UTC' } });
+  await op(`/campaigns/${campaign.id}/budget-lines`, { data: { category: 'ads', currency: 'USD', amount_minor: 100, fx_date: '2025-03-01' } });
+  await op(`/campaigns/${campaign.id}/budget-lines`, { data: { category: 'ads', currency: 'EUR', amount_minor: 400, fx_date: '2025-03-01' } });
+  const path = `/ad-accounts/${ads.id}/import`;
+  const entity = { campaign_id: campaign.id, level: 'campaign', external_id: 'platform-campaign', name: 'Initial structure' };
+  const day = '2025-03-01';
+  const zeroDay = '2025-03-02';
+  const spend = (value, date = day) => ({ metric_key: 'spend', date, value, availability: 'observed', definition: 'Native daily spend in cents' });
+  const report = (source_ref, observed_at, observations, changes = {}) => ({ source_ref, entity: { ...entity, observed_at, ...changes }, observations });
+  const first = report('initial-report', '2025-03-04T08:00:00Z', [spend(120)]);
+  const key = randomUUID();
+  const [initial, sameKey, newKey] = await Promise.all([
+    op(path, { data: first, key }), op(path, { data: first, key }), op(path, { data: first }),
+  ]);
+  assert.deepEqual([sameKey, newKey].map(result => result.observations[0].id), [initial.observations[0].id, initial.observations[0].id]);
+  const observationEvents = records => records.list('outbox/').filter(row => row.type === 'analytics.observations.recorded');
+  const deliver = event => inspect(ctx => applyCampaignCostEvent(ctx, { type: event.type, data: event.payload }));
+  const usdBudget = async () => (await op(`/campaigns/${campaign.id}/budget-summary`)).currencies.find(row => row.currency === 'USD');
+  const initialEvent = await inspect((_ctx, _identity, records) => observationEvents(records)[0]);
+  await deliver(initialEvent);
+  assert.equal((await usdBudget()).actual_minor, 120);
+  const correctedAt = '2025-03-04T10:00:00Z';
+  const correction = report('corrected-report', correctedAt, [spend(150)], { name: 'Corrected structure' });
+  const corrected = await op(path, { data: correction });
+  const mixed = await op(path, { data: { ...correction, observations: [spend(150), spend(0, zeroDay)] } });
+  assert.equal(mixed.observations[0].id, corrected.observations[0].id);
+  const late = await op(path, { data: report('delayed-report', '2025-03-04T09:00:00Z', [spend(90)]) });
+  assert.equal(late.entity.name, 'Corrected structure');
+  await op(path, { data: correction });
+  const { entity: group } = await op(path, { data: report('child-report', correctedAt, [spend(25)], {
+    level: 'ad_group', external_id: 'platform-group', name: 'Child included in campaign total', parent_entity_id: initial.entity.id,
+  }) });
+  const { pacing, timezone } = await op(`/ads/performance?ad_account_id=${ads.id}&campaign_id=${campaign.id}&from=${day}&until=2025-03-03`);
+  assert.equal(timezone, 'UTC');
+  assert.deepEqual(pacing.find(row => row.currency === 'USD'), {
+    currency: 'USD', actual_spend_minor: 150, budget_minor: 100, observed_pacing: 1.5,
+    coverage_ratio: 2 / 3, unreported_days: 1, delayed: true, as_of: '2025-03-04T10:00:00.000Z',
+  });
+  assert.equal(pacing.find(row => row.currency === 'EUR').budget_minor, 400);
+  assert.equal(pacing.find(row => row.currency === 'EUR').actual_spend_minor, null);
+  const evidence = await inspect((ctx, _identity, records) => ({
+    observationCount: ctx.list('metric_observation').filter(row => row.ad_account_id === ads.id).length,
+    parentEvents: observationEvents(records).filter(row => row.payload.subject_id === initial.entity.id),
+    childEvents: observationEvents(records).filter(row => row.payload.subject_id === group.id),
+  }));
+  assert.equal(evidence.observationCount, 5);
+  assert.deepEqual(evidence.parentEvents.map(event => event.payload.count), [1, 1, 1, 1]);
+  assert.deepEqual(evidence.childEvents.map(event => event.payload.count), [1]);
+  assert.equal(newKey.entity.version, initial.entity.version);
+  assert.equal(late.entity.version, corrected.entity.version);
+
+  // Deliver in reverse emission order, then replay the already processed initial event again.
+  for (const event of [...evidence.parentEvents].reverse().concat(evidence.childEvents, initialEvent)) await deliver(event);
+  const ledger = await usdBudget();
+  assert.equal(ledger.actual_minor, 150);
+  assert.equal(ledger.overrun_minor, 50);
+  const ledgerEvents = await inspect((_ctx, _identity, records) => records.list('outbox/').filter(row =>
+    row.type === 'campaign.cost_entry.changed' && row.payload.campaign_id === campaign.id));
+  assert.deepEqual(ledgerEvents.map(event => event.payload.action).sort(), ['created', 'created', 'updated']);
 });
 
 test('CR06 and AD03 creator material requires paid rights at selection and after approval', async t => {

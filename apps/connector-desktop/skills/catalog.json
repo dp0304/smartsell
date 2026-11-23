@@ -1,0 +1,5 @@
+[
+  { "id": "smartsell-video-publish", "title": "视频发布与查回", "description": "由 Codex 或 Claude 核对账号和视频版本、排期送审，并查回已授权的官方执行结果或当前人工处理步骤。" },
+  { "id": "smartsell-product-listing", "title": "商品上架核对与导入", "description": "由 Codex 或 Claude 核对商品、SKU 和店铺，按绑定设备发起受支持的目录导入，并查回暂不支持的上架请求。" },
+  { "id": "smartsell-data-collection", "title": "数据采集与核对", "description": "由 Codex 或 Claude 发起已授权的只读采集、查回任务和来源观测，并区分零值、缺失和权限限制。" }
+]

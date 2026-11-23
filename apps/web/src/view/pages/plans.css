@@ -38,9 +38,9 @@
 .pl-metric-head > :first-child { color: var(--muted); }
 .pl-metric-head strong { font-variant-numeric: tabular-nums; }
 .pl-metric-foot { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.pl-stack, .pl-bar { position: relative; display: flex; height: 10px; overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-input); }
+.pl-stack, .pl-bar { position: relative; display: flex; height: 10px; overflow: hidden; border-radius: var(--radius-pill); background: var(--line); }
 .pl-bar > span { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--series-1); }
-.pl-bar.empty { background: repeating-linear-gradient(90deg, var(--surface-input) 0 6px, transparent 6px 10px); }
+.pl-bar.empty { background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px); }
 .pl-bar.small { display: block; width: 72px; height: 6px; }
 .pl-seg { flex: 0 0 auto; height: 100%; }
 .pl-seg + .pl-seg { box-shadow: inset 2px 0 var(--vs-surface); }

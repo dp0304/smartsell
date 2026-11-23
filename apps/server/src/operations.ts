@@ -66,6 +66,7 @@ export async function discoverOperations() {
     for (const operation of imported.operations as Operation[]) operations.push({ ...operation, module,
       ...(module === 'team' && /^\/templates(?:\/|$)/.test(operation.path) && { path: `/team${operation.path}` }),
       ...(module === 'analytics' && operation.name === 'report_export_download' && { mcp: false }),
+      ...(module === 'content' && operation.name === 'content_production_workload' && { mcp: false }),
       ...(module === 'execution' && operation.name === 'publishing_cancel' && { name: 'execution_cancel_task' }),
       ...(module === 'account' && operation.method !== 'GET' && /^\/(?:devices|mobile-devices|mobile-app-bindings|browser-sessions|connector-auto-policy)(?:\/|$)|\/execution-binding(?:\/|$)/.test(operation.path) && { mcp: false }),
     });
@@ -119,7 +120,7 @@ export const HUMAN_ONLY: ReadonlySet<string> = new Set([
   'submission_accept', 'submission_accept_batch', 'submission_reject', 'commissions_approve', 'commissions_batch_approve',
   'commissions_batch_record_payment', 'product_candidate_decide', 'account_enable_auto_mode', 'account_update_auto_mode',
   'account_release_account_auto', 'account_release_workspace_auto', 'account_approve_mobile_device',
-  'account_register_owned_social_account', 'account_revoke_connection', 'account_revoke_device', 'publishing_release_pause',
+  'account_register_owned_social_account', 'account_revoke_connection', 'account_revoke_device', 'account_set_device_channel_registration', 'publishing_release_pause',
   'team_member_remove', 'publishing_manual_complete', 'posts_complete_operation', 'publishing_confirm_post_match',
   'publishing_reject_post_match', 'campaign_closeout', 'data_gap_accept', 'collaborations_mark_terms_signed',
   // Releases outside an approval queue: going live in public, mailing customers, re-approving, and security settings.
@@ -129,6 +130,7 @@ export const HUMAN_ONLY: ReadonlySet<string> = new Set([
   'commerce_localization_accept', 'commerce_localization_writeback', 'deliverables_review', 'deliverables_verify_publication',
   'account_enable_social_account', 'account_resolve_account_block', 'account_link_accounts', 'account_start_oauth',
   'account_connect_shopify_merchant', 'account_register_platform_app', 'account_update_platform_app', 'commerce_store_connect',
+  'worker_catalog_bind',
   // Starting a test sends live page traffic to its arms; a budget cap bounds paid collection.
   'experiment_start', 'collection_budget_set',
   // Undoing a person's pause or archive. A retracted fact cannot be revised and its key cannot be reused, so it is not a stop.
@@ -205,7 +207,7 @@ export function canonical(value: unknown): string {
   return JSON.stringify(value) ?? 'null';
 }
 
-interface Outcome { body: { data: unknown; next_cursor?: string | null }; etag?: string; status: number }
+interface Outcome { body: { data: unknown; next_cursor?: string | null }; etag?: string; status: number; replayed?: true }
 interface IdempotencyRecord { fingerprint: string; access?: string; grantId?: string; expires: number; outcome: Outcome }
 
 function paginate(data: unknown[], query: Record<string, string>, cursorScope: string, secret: string): Outcome['body'] {
@@ -234,7 +236,7 @@ const resourcePrefixes: [RegExp, string][] = [
   [/^publishing_(?:create|update|request|cancel|submit).*target|^publishing_request_approval$/, 'publish_target'],
   [/^ads_.*proposal$/, 'ad_proposal'], [/^links_/, 'short_link'], [/^analytics_record_observations$/, 'metric_observation'],
   [/^posts_|^publishing_register_post$/, 'platform_post'], [/^agent_jobs_/, 'agent_job'], [/^change_sets_/, 'change_set'],
-  [/^agent_connection_/, 'agent_connection'],
+  [/^agent_connection_/, 'agent_connection'], [/^worker_social_status_request$/, 'worker_social_status_task'],
 ];
 
 function resultRow(data: unknown) {
@@ -287,9 +289,12 @@ export async function runScopedOperation(records: Records, scope: Scope, princip
   if (existing && existing.expires > nowSeconds()) {
     if (existing.grantId !== principal.grantId || (existing.access === undefined ? scopes?.length : existing.access !== access)) throw denied();
     if (existing.fingerprint !== fingerprint) throw new Problem(422, 'IDEMPOTENCY_MISMATCH', 'Idempotency key was used for a different request');
-    return existing.outcome;
+    return { ...existing.outcome, replayed: true };
   }
-  if (operation.external && !readOnly && !input.idempotencyKey) throw invalid('An idempotency key is required for external operations');
+  if (!readOnly && !input.idempotencyKey) {
+    if (operation.external) throw invalid('An idempotency key is required for external operations');
+    if (operation.idempotencyRequired) throw invalid('An idempotency key is required');
+  }
   if (operation.versionKind) {
     if (input.expectedVersion === undefined) throw new Problem(428, 'VERSION_REQUIRED', 'If-Match or expected_version is required');
     const resourceId = input.params.id ?? scope.workspaceId;

@@ -1,16 +1,17 @@
 import { Fragment, Suspense, lazy, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Activity, Archive, BarChart3, CalendarDays, CheckSquare, ChevronDown, ChevronRight, Code2, Database, Globe, KeyRound, LayoutGrid, Link2, LogOut, Mail, Megaphone, Package, Pencil, RefreshCw, Search, Settings, Shield, Sparkles, Store, Users, UsersRound, Zap } from 'lucide-react';
-import { ApiError, readSession, request, setupWorkspace, workspacePath, type Operation, type Session } from '@smartsell/sdk';
+import { ApiError, readSession, request, workspacePath, type Operation, type Session } from '@smartsell/sdk';
 import { Busy, EmptyState } from '@smartsell/ui';
 import { ApiContext, ProblemNotice, sessionKey, wsKey } from './api';
 import { useCopy } from './i18n';
 import { modules } from './modules';
 import { ModulePage } from './WorkspaceViews';
-import { AccountSecurity, FactorFields, finishLogin, readLoginChallenge, readTotpStatus } from './account-security';
+import { AccountSecurity, readTotpStatus } from './account-security';
 import { AccountRecovery } from './account-recovery';
+import { AuthenticationForm } from './authentication-form';
 import { resolveModuleRoute } from './module-routes';
 import { Dashboard } from './dashboard';
 import { WorkspaceOnboarding } from './workspace-onboarding';
@@ -25,6 +26,7 @@ import { CommandFailure, CommandLanguage, WorkspaceTools } from './workspace-too
 import { compatibilityPath, sharedWorkspacePath } from './workspace-entry-paths';
 import { setDeveloperMode, useDeveloperMode, usePreference } from './preferences';
 import { PrimarySearch } from './primary-search';
+import { parseWorkerConnect, WorkerConnectCard, WorkerConnectPage } from './worker-connect';
 import './styles.css';
 
 const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 15000 } } });
@@ -53,52 +55,21 @@ function Language() {
   return <label className="language"><Globe size={15} /><select aria-label={t('language')} value={locale} onChange={event => setLanguage(event.target.value)}><option value="zh-Hant">繁體中文</option><option value="en">English</option></select></label>;
 }
 
-function Authentication({ setup }: { setup: boolean }) {
+function Authentication({ setupPath, registerToMain, workerConnection }: { setupPath: boolean; registerToMain: boolean; workerConnection?: boolean }) {
   const { t } = useCopy();
   const developer = useDeveloperMode();
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<unknown>();
-  const [challenge, setChallenge] = useState<string>();
-  const flight = useRef(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (flight.current) return;
-    const { setupToken, ...body } = Object.fromEntries([...new FormData(event.currentTarget)].filter(([, value]) => value !== ''));
-    flight.current = true; setPending(true); setError(undefined);
-    try {
-      if (challenge) await finishLogin(challenge, body);
-      else {
-        if (setup) await setupWorkspace(body, typeof setupToken === 'string' ? setupToken : undefined);
-        else {
-          const gate = readLoginChallenge(await request('/api/v1/session', { method: 'POST', body }));
-          if (gate) { setChallenge(gate); return; }
-        }
-      }
-      await client.cancelQueries({ queryKey: sessionKey });
-      const next = await getSession();
-      client.setQueryData(sessionKey, next);
-      if (!next.data?.user) {
-        if (setup) navigate(`/login?${params}`, { replace: true });
-        else throw new ApiError(401, { code: 'SESSION_NOT_ESTABLISHED' });
-      }
-    } catch (failure) { setChallenge(undefined); setError(failure); }
-    finally { flight.current = false; setPending(false); }
-  }
-  return <div className="auth-page"><aside className="auth-side"><Brand /><div className="hero-orbit" aria-hidden="true" /><h1>{t('authWelcome')}</h1></aside>
-    <main className="auth-main"><Language /><section className="auth-card"><h2>{t(setup ? 'setup' : 'login')}</h2><p>{t(setup ? 'authSetup' : 'authLogin')}</p>
-      <form className="fields" onSubmit={submit}><fieldset key={challenge ?? 'password'} disabled={pending}>
-        {challenge ? <FactorFields /> : <>
-          <label className="field">{t('email')}<input name="email" type="email" required autoComplete="email" /></label>
-          <label className="field">{t('password')}<input name="password" type="password" required minLength={setup ? 12 : undefined} autoComplete={setup ? 'new-password' : 'current-password'} /></label>
-        </>}
-        {setup && <><label className="field">{t('workspace_name')}<input name="workspaceName" required maxLength={120} autoComplete="organization" /></label><label className="field">{t('displayName')}<input name="name" maxLength={120} autoComplete="name" /></label><label className="field">{t('setupToken')}<input name="setupToken" type="password" autoComplete="off" /></label></>}
-        <button className="primary" type="submit">{t(pending ? 'saving' : challenge ? 'security.verify' : setup ? 'setup' : 'login')}</button>
-        {challenge && <button type="button" onClick={() => { setChallenge(undefined); setError(undefined); }}>{t('security.restart')}</button>}
-      </fieldset></form>{error !== undefined && <ProblemNotice error={error} />}
-      <Link className="auth-switch" to={{ pathname: setup ? '/login' : '/setup', search: params.toString() }}>{t(setup ? 'login' : 'setupLink')}</Link>
-      {developer && <><br /><a href={`/compat/workbench/${setup ? 'setup' : 'login'}`}>{t('compatibilityWorkbench')}</a></>}
+  return <div className={workerConnection ? 'auth-page worker-connect-login' : 'auth-page'}><aside className="auth-side"><Brand /><h1>{t('authWelcome')}</h1></aside>
+    <main className="auth-main"><Language /><section className="auth-card">
+      <AuthenticationForm setupPath={setupPath} showCompatibility={developer}
+        readSession={async () => (await getSession()).data}
+        onSession={async (session, mode) => {
+          if (registerToMain && mode === 'register') {
+            window.location.replace('/login');
+            return;
+          }
+          await client.cancelQueries({ queryKey: sessionKey });
+          client.setQueryData(sessionKey, { data: session });
+        }} />
     </section></main></div>;
 }
 
@@ -131,7 +102,7 @@ function MemberInvitation() {
     finally { flight.current = false; setPending(false); }
   }
 
-  return <div className="auth-page"><aside className="auth-side"><Brand /><div className="hero-orbit" aria-hidden="true" /><h1>{t('authWelcome')}</h1></aside>
+  return <div className="auth-page"><aside className="auth-side"><Brand /><h1>{t('authWelcome')}</h1></aside>
     <main className="auth-main"><Language /><section className="auth-card"><h2>{title}</h2>
       <form className="fields" onSubmit={submit}><fieldset disabled={pending}>
         {!tokenFromLink && <label className="field">{label(['邀請權杖', 'Invitation token'])}<input name="token" type="password" autoComplete="off" required pattern="[A-Za-z0-9_\-]{43}" maxLength={43} /></label>}
@@ -275,23 +246,37 @@ function RecordsRoute({ ws, workspace, userId, path, module }: {
 }
 
 function App({ compatibility }: { compatibility: boolean }) {
-  const { t } = useCopy();
+  const { t, label } = useCopy();
   const location = useLocation();
   const returnable = (path?: string | null) => Boolean(path && (path.startsWith('/w/') || path.startsWith('/app/')));
-  const next = returnable(location.pathname) ? `?next=${encodeURIComponent(location.pathname + location.search)}` : '';
+  const workerIntent = location.pathname === '/worker-connect' && !location.hash ? parseWorkerConnect(location.search) : undefined;
+  const returnHash = location.hash.startsWith('#worker-pair=') ? '' : location.hash;
+  const next = returnable(location.pathname) || workerIntent
+    ? `?next=${encodeURIComponent(location.pathname + location.search + returnHash)}` : '';
   const returnTo = new URLSearchParams(location.search).get('next');
-  const signedInDestination = returnable(returnTo) ? returnTo! : '/';
+  const workerReturn = returnTo?.startsWith('/worker-connect?') && !returnTo.includes('#') && parseWorkerConnect(returnTo.slice('/worker-connect'.length));
+  const signedInDestination = returnable(returnTo) || workerReturn ? returnTo! : '/';
   const session = useQuery({ queryKey: sessionKey, queryFn: ({ signal }) => getSession(signal) });
   const data = session.data?.data;
   const ws = data?.workspaces?.[0]?.id;
+  const auth = (setupPath: boolean) => data?.user ? <Navigate to={signedInDestination} replace /> :
+    session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand />
+      <ProblemNotice error={session.error} retry={() => void session.refetch()} /><Language /></main> :
+        <Authentication setupPath={setupPath} registerToMain={compatibility && signedInDestination === '/'} workerConnection={Boolean(workerReturn)} />;
   return <><div className="narrow-notice">{t('narrow')}</div><Routes>
-    <Route path="/setup" element={data?.user ? <Navigate to={signedInDestination} replace /> : <Authentication key="setup" setup />} />
-    <Route path="/login" element={data?.user ? <Navigate to={signedInDestination} replace /> : <Authentication key="login" setup={false} />} />
+    <Route path="/setup" element={auth(true)} />
+    <Route path="/login" element={auth(false)} />
+    <Route path="/worker-connect" element={!workerIntent ? <WorkerConnectCard language={<Language />}>
+      <p role="alert">{label(['連接請求無效，請回到桌面程式重新開始。', 'Invalid connection request. Start again from the desktop app.'])}</p>
+    </WorkerConnectCard> : session.isPending ? <div className="worker-connect"><Busy label={t('loading')} /></div> : session.isError ? <WorkerConnectCard language={<Language />}>
+      <ProblemNotice error={session.error} retry={() => void session.refetch()} />
+    </WorkerConnectCard> : data?.user ? <WorkerConnectPage key={location.key} session={data} intent={workerIntent} language={<Language />} />
+      : <Navigate to={`/login${next}`} replace />} />
     <Route path="/invite" element={<MemberInvitation />} />
-    {ws && data && <Route path="/app/:ws/*" element={<Suspense fallback={<Busy label={t('loading')} />}><ViewApp session={data} /></Suspense>} />}
+    {ws && data && <Route path="/app/:ws/*" element={<Suspense fallback={<Busy label={t('loading')} />}><ViewApp session={data} compatibility={compatibility} /></Suspense>} />}
     {ws && data && <Route path="/w/:ws/*" element={<Workspace session={data} compatibility={compatibility} />} />}
     {ws && data && <Route path="/admin/*" element={<Workspace session={data} compatibility={compatibility} administrative />} />}
-    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
+    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} state={location.pathname === '/' ? undefined : { skipSetupCheck: true }} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
   </Routes></>;
 }
 

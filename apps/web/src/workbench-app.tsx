@@ -1,6 +1,6 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Boxes, Globe2, LogOut, Monitor, Search, Wrench } from 'lucide-react';
+import { Boxes, Globe2, LogOut, Monitor, Search, Wrench } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useOutletContext, useHref, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, type Command, type Entity, type Session } from './workbench-api';
 import { sections } from './catalog';
@@ -13,8 +13,7 @@ import { AccessPage } from './access-page';
 import { SearchPanel } from './search-panel';
 import { has } from './workbench-data';
 import { sharedWorkspacePath } from './workspace-entry-paths';
-import { FactorFields, finishLogin, readLoginChallenge } from './account-security';
-import { useCopy } from './i18n';
+import { AuthenticationForm } from './authentication-form';
 
 const sessionKey = ['workbench-session'];
 const base = (id: string) => `/w/${encodeURIComponent(id)}`;
@@ -25,59 +24,25 @@ function Language() {
 function Brand() {
   return <div className="wb-brand"><span><Boxes size={22} /></span><strong>SmartSell</strong></div>;
 }
-function Authentication({ setup }: { setup: boolean }) {
-  const { t, locale } = useFormat();
-  const { t: primaryCopy } = useCopy();
+async function readWorkbenchSession(signal?: AbortSignal) {
+  try { return await api.session(signal); }
+  catch (error) { if (error instanceof ApiError && error.status === 401) return null; throw error; }
+}
+
+function Authentication({ setupPath, registerToMain }: { setupPath: boolean; registerToMain: boolean }) {
+  const { locale } = useFormat();
   const client = useQueryClient();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [pending, setPending] = useState(false);
-  const running = useRef(false);
-  const [failure, setFailure] = useState<unknown>();
-  const [challenge, setChallenge] = useState<string>();
-  const title = t(setup ? 'ui.setup' : 'ui.signin');
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (running.current) return;
-    const fields = new FormData(event.currentTarget);
-    const { setupToken, ...body } = Object.fromEntries(fields.entries());
-    running.current = true;
-    setPending(true);
-    setFailure(undefined);
-    try {
-      if (challenge) await finishLogin(challenge, body);
-      else {
-        let response: unknown;
-        if (setup) {
-          await api.setup({ ...body, name: String(body.name ?? '').trim(), workspaceName: String(body.workspaceName ?? '').trim() },
-            typeof setupToken === 'string' ? setupToken.trim() : undefined);
-          try { await api.session(); } catch (error) {
-            if (!(error instanceof ApiError && error.status === 401)) throw error;
-            response = await api.signIn({ email: body.email, password: body.password });
-          }
-        } else response = await api.signIn(body);
-        const gate = readLoginChallenge(response);
-        if (gate) { setChallenge(gate); return; }
-      }
-      const session = await api.session();
-      await client.cancelQueries({ queryKey: sessionKey });
-      client.setQueryData(sessionKey, session);
-      const next = new URLSearchParams(location.search).get('next');
-      navigate(next?.startsWith('/w/') ? next : '/', { replace: true });
-    } catch (error) {
-      setFailure(error);
-    } finally { running.current = false; setPending(false); }
-  }
-  return <div className="wb-auth"><header><Brand /><Language /></header><main><section className="wb-auth-card"><h1>{title}</h1><p>{t(setup ? 'ui.setupHelp' : 'ui.signinHelp')}</p>
-    <form className="wb-form" onSubmit={submit}><fieldset disabled={pending}>
-      {setup && <><label>{t('ui.name')}<input name="name" autoComplete="name" required maxLength={120} pattern=".*\S.*" /></label><label>{t('ui.workspaceName')}<input name="workspaceName" autoComplete="organization" required maxLength={120} pattern=".*\S.*" /></label></>}
-      <label>{t('ui.email')}<input name="email" type="email" autoComplete="email" required /></label>
-      <label>{t('ui.password')}<input name="password" type="password" autoComplete={setup ? 'new-password' : 'current-password'} minLength={setup ? 12 : undefined} maxLength={256} required /></label>
-      {setup && <label>{t('ui.setupToken')}<input name="setupToken" type="password" autoComplete="off" /></label>}
-      {failure != null && <Failure error={failure} />}
-      <button className="wb-primary" type="submit">{pending ? t('ui.loading') : title}<ArrowRight size={17} /></button>
-    </fieldset></form><Link to={{ pathname: setup ? '/login' : '/setup', search: location.search }}>{t(setup ? 'ui.loginLink' : 'ui.setupLink')}</Link><br />
-    <a href={setup ? '/setup' : '/login'}>{t('ui.defaultWorkspace')}</a>
+  return <div className="wb-auth"><header><Brand /><Language /></header><main><section className="wb-auth-card">
+    <AuthenticationForm setupPath={setupPath} compatibility locale={locale}
+      readSession={readWorkbenchSession}
+      onSession={async (session, mode) => {
+        if (registerToMain && mode === 'register') {
+          window.location.replace('/login');
+          return;
+        }
+        await client.cancelQueries({ queryKey: sessionKey });
+        client.setQueryData(sessionKey, session);
+      }} />
   </section></main></div>;
 }
 
@@ -135,16 +100,14 @@ function AdminRoute({ session }: { session: Session }) {
 export function Workbench() {
   const { t } = useFormat();
   const location = useLocation();
-  const session = useQuery({ queryKey: sessionKey, queryFn: async ({ signal }) => {
-    try { return await api.session(signal); }
-    catch (error) { if (error instanceof ApiError && error.status === 401) return null; throw error; }
-  }, retry: false });
+  const session = useQuery({ queryKey: sessionKey, queryFn: ({ signal }) => readWorkbenchSession(signal), retry: false });
+  const returnTo = new URLSearchParams(location.search).get('next');
+  const next = returnTo?.startsWith('/w/') ? returnTo : undefined;
   const ws = session.data?.workspaces[0]?.id;
   const home = ws ? `${base(ws)}/home` : '/w/-/home';
-  const authRoute = ['/login', '/setup'].includes(location.pathname);
-  return <><div className="wb-narrow" role="status"><Monitor size={16} />{t('ui.desktop')}</div>{session.isPending ? <div className="wb-boot" role="status">{t('ui.loading')}</div> : session.isError && !authRoute ? <div className="wb-boot"><Failure error={session.error} retry={() => void session.refetch()} /><Link to="/login">{t('ui.signin')}</Link></div> : <Routes>
-    <Route path="/login" element={session.data ? <Navigate to={home} replace /> : <Authentication key="login" setup={false} />} />
-    <Route path="/setup" element={session.data ? <Navigate to={home} replace /> : <Authentication key="setup" setup />} />
-    {session.data ? <><Route path="/w/:wid" element={<Shell session={session.data} />}><Route index element={<Navigate to="home" replace />} /><Route path="home/*" element={<OverviewRoute />} />{sections.filter(section => 'module' in section).map(section => <Route key={section.path} path={`${section.path}/*`} element={<ModuleRoute section={section} />} />)}<Route path="settings/members/*" element={<ModuleRoute section={sections.find(section => section.path === 'access')!} />} /><Route path="posts/*" element={<ModuleRoute section={sections.find(section => section.path === 'execution')!} />} /><Route path="*" element={<Navigate to="home" replace />} /></Route><Route path="/admin/*" element={<AdminRoute session={session.data} />} /><Route path="*" element={<Navigate to={home} replace />} /></> : <Route path="*" element={<Navigate to={`/login${location.pathname.startsWith('/w/') ? `?next=${encodeURIComponent(location.pathname + location.search)}` : ''}`} replace />} />}
+  return <><div className="wb-narrow" role="status"><Monitor size={16} />{t('ui.desktop')}</div>{session.isPending ? <div className="wb-boot" role="status">{t('ui.loading')}</div> : session.isError ? <div className="wb-boot"><Failure error={session.error} retry={() => void session.refetch()} /><Link to="/login">{t('ui.signin')}</Link></div> : <Routes>
+    <Route path="/login" element={session.data ? <Navigate to={next ?? home} replace /> : <Authentication setupPath={false} registerToMain={!next} />} />
+    <Route path="/setup" element={session.data ? <Navigate to={next ?? home} replace /> : <Authentication setupPath registerToMain={!next} />} />
+    {session.data ? <><Route path="/w/:wid" element={<Shell session={session.data} />}><Route index element={<Navigate to="home" replace />} /><Route path="home/*" element={<OverviewRoute />} />{sections.filter(section => 'module' in section).map(section => <Route key={section.path} path={`${section.path}/*`} element={<ModuleRoute section={section} />} />)}<Route path="settings/members/*" element={<ModuleRoute section={sections.find(section => section.path === 'access')!} />} /><Route path="posts/*" element={<ModuleRoute section={sections.find(section => section.path === 'execution')!} />} /><Route path="*" element={<Navigate to="home" replace />} /></Route><Route path="/admin/*" element={<AdminRoute session={session.data} />} /><Route path="*" element={<Navigate to={home} replace />} /></> : <Route path="*" element={<Navigate to={`/login${location.pathname.startsWith('/w/') ? `?next=${encodeURIComponent(location.pathname + location.search + location.hash)}` : ''}`} replace />} />}
   </Routes>}</>;
 }

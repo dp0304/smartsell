@@ -87,6 +87,9 @@ importers:
       yauzl:
         specifier: ^3.4.0
         version: 3.4.0
+      yazl:
+        specifier: ^3.3.1
+        version: 3.3.1
       zod:
         specifier: ^4.0.0
         version: 4.6.7
@@ -98,9 +101,6 @@ importers:
         specifier: ^3.4.0
         version: 3.4.0
       '@types/yazl':
-        specifier: ^3.3.1
-        version: 3.3.1
-      yazl:
         specifier: ^3.3.1
         version: 3.3.1
 

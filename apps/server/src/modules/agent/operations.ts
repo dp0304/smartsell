@@ -1,5 +1,6 @@
 import { ADMIN, Problem, READ, type Operation } from '@smartsell/contracts';
 import { changeOperations } from './changes.js';
+import { desktopCapabilityNames, desktopCapabilityOperations } from './desktop-capability.js';
 import { jobOperations, type AgentRequestContext } from './jobs.js';
 import { modelOperations } from './models.js';
 import { approvedBrandContext, runnerOperation } from './runner.js';
@@ -11,6 +12,7 @@ export { availableModelPurposes, requestModel, type AgentModelServices, type Mod
 export { processAgentEvent, processAgentSchedule, publishedWorkflow } from './rules.js';
 
 const mcpTools = new Set([
+  ...desktopCapabilityNames,
   'agent_jobs_list', 'agent_jobs_get', 'agent_jobs_claim', 'agent_jobs_heartbeat', 'agent_jobs_submit_result',
   'agent_jobs_handoff', 'agent_jobs_confirm_cancel', 'change_sets_create', 'change_sets_get', 'jobs_get', 'jobs_cancel', 'workflow_templates_list', 'workflow_templates_get', 'agent_preview_context',
 ]);
@@ -39,7 +41,8 @@ const contextPreview: Operation = {
   },
 };
 
-export const operations: Operation[] = [...jobOperations, ...changeOperations, ...ruleOperations, ...modelOperations, runnerOperation, toolCalls, contextPreview]
+export const operations: Operation[] = [...jobOperations, ...changeOperations, ...ruleOperations, ...modelOperations, runnerOperation, toolCalls, contextPreview,
+  ...desktopCapabilityOperations]
   .map((op) => ({
     ...op,
     mcp: mcpTools.has(op.name),

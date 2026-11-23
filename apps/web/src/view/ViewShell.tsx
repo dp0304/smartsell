@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { BarChart3, Bot, CalendarDays, Globe, LayoutDashboard, ListChecks, LogOut, Megaphone, Menu, Package, Settings, Target, Wrench, X, Zap } from 'lucide-react';
+import { BarChart3, Bot, BriefcaseBusiness, CalendarDays, Globe, LayoutDashboard, ListChecks, LogOut, Megaphone, Menu, Package, Settings, SlidersHorizontal, Target, Wrench, X, Zap } from 'lucide-react';
 import { asRecord, request } from '@smartsell/sdk';
 import { isNum, type Tuple } from '@smartsell/ui';
 import { useCopy } from '../i18n';
@@ -10,6 +10,9 @@ import { useView, useViewContext, workspaceZone } from './data/use-view';
 import { agentState, periodDefaults, sectionOf } from './data/logic';
 import type { AgentConnection, DecisionSummary } from './data/types';
 import { useText } from './parts';
+import { setupText } from './pages/setup-copy';
+import { canSetUp } from './pages/setup-data';
+import './setup-entry.css';
 
 export const navEntries = [
   { path: '', icon: LayoutDashboard, label: copy.nav.overview },
@@ -21,6 +24,7 @@ export const navEntries = [
   { path: 'decisions', icon: ListChecks, label: copy.nav.decisions },
   { path: 'agent', icon: Bot, label: copy.nav.agent },
   { path: 'settings', icon: Settings, label: copy.nav.settings },
+  { path: 'get-started', icon: SlidersHorizontal, label: setupText.title },
 ] as const;
 
 // Read by every page, so it is a small read model rather than the whole home view.
@@ -87,34 +91,67 @@ function SignOut() {
   return <button type="button" className="vs-icon-button" disabled={pending} aria-label={l(copy.shell.signOut)} title={l(copy.shell.signOut)} onClick={() => void logout()}><LogOut size={16} /></button>;
 }
 
+function WorkspaceSelector() {
+  const { ws, session, workspace } = useViewContext();
+  const { l } = useText();
+  const navigate = useNavigate();
+  return session.workspaces.length > 1 ? <label className="vs-select vs-workspace"><BriefcaseBusiness size={16} aria-hidden="true" /><span className="vs-sr">{l(copy.shell.workspace)}</span>
+    <select value={ws} onChange={event => navigate(`/app/${encodeURIComponent(event.target.value)}`)}>{session.workspaces.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+  </label> : <strong className="vs-workspace" title={workspace.name}><BriefcaseBusiness size={16} aria-hidden="true" /><span>{workspace.name}</span></strong>;
+}
+
+export function SetupShell() {
+  const { workspace } = useViewContext();
+  if (!canSetUp(workspace.role)) return <ViewShell />;
+  return <div className="view-shell vs-setup-shell">
+    <header className="vs-top">
+      <strong className="vs-brand"><span><Zap size={17} fill="currentColor" aria-hidden="true" /></span>SmartSell</strong>
+      <WorkspaceSelector />
+      <span className="vs-top-spacer" />
+      <Language />
+      <SignOut />
+    </header>
+    <main className="vs-content"><Outlet /></main>
+  </div>;
+}
+
 export function ViewShell() {
   const { ws, session, workspace, base } = useViewContext();
   const { l } = useText();
   const { pathname } = useLocation();
   const [params] = useSearchParams();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const content = useRef<HTMLElement>(null);
   const section = sectionOf(pathname);
   const summary = useView<DecisionSummary>('/views/decisions/summary');
   const pending = summary.value?.total;
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    closeButton.current?.focus();
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') closeMenu(); };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [open]);
+  function closeMenu() {
+    setOpen(false);
+    menuButton.current?.focus();
+  }
   const carry = new URLSearchParams([...params].filter(([key]) => ['brand', 'from', 'to'].includes(key))).toString();
   const user = session.user.name ?? session.user.email ?? '';
   return <div className="view-shell" data-menu={open ? 'open' : 'closed'}>
+    <a className="vs-skip" href="#vs-content" onClick={event => { event.preventDefault(); setOpen(false); content.current?.focus(); }}>{l(copy.shell.skipToContent)}</a>
     <aside className="vs-nav" id="vs-nav">
-      <Link className="vs-brand" to={base}><span><Zap size={17} fill="currentColor" /></span>SmartSell</Link>
-      <button type="button" className="vs-icon-button vs-nav-close" aria-label={l(copy.nav.close)} onClick={() => setOpen(false)}><X size={18} /></button>
+      <Link className="vs-brand" to={{ pathname: base, search: carry }} onClick={open ? closeMenu : undefined}><span><Zap size={17} fill="currentColor" aria-hidden="true" /></span>SmartSell</Link>
+      <button type="button" ref={closeButton} className="vs-icon-button vs-nav-close" aria-label={l(copy.nav.close)} onClick={closeMenu}><X size={18} /></button>
       <nav aria-label={l(copy.nav.label)}>
         {navEntries.map(entry => {
+          if (entry.path === 'get-started' && !canSetUp(workspace.role)) return null;
           const current = section === entry.path;
           const Icon = entry.icon;
-          return <Link key={entry.path} to={{ pathname: entry.path ? `${base}/${entry.path}` : base, search: carry ? `?${carry}` : '' }} aria-current={current ? 'page' : undefined} className={current ? 'active' : undefined}>
+          return <Link key={entry.path} to={{ pathname: entry.path ? `${base}/${entry.path}` : base, search: carry ? `?${carry}` : '' }} aria-current={current ? 'page' : undefined} className={current ? 'active' : undefined} onClick={open ? closeMenu : undefined}>
             <Icon size={17} aria-hidden="true" /><span>{l(entry.label)}</span>
             {entry.path === 'decisions' && isNum(pending) && pending > 0 && <span className="vs-badge" aria-label={`${pending} ${l(copy.nav.pending)}`}>{pending > 99 ? '99+' : pending}</span>}
           </Link>;
@@ -127,17 +164,15 @@ export function ViewShell() {
     </aside>
     <div className="vs-frame">
       <header className="vs-top">
-        <button type="button" className="vs-icon-button vs-menu" aria-expanded={open} aria-controls="vs-nav" aria-label={l(open ? copy.nav.close : copy.nav.menu)} onClick={() => setOpen(!open)}>{open ? <X size={18} /> : <Menu size={18} />}</button>
-        {session.workspaces.length > 1 ? <label className="vs-select"><span className="vs-sr">{l(copy.shell.workspace)}</span>
-          <select value={ws} onChange={event => navigate(`/app/${encodeURIComponent(event.target.value)}`)}>{session.workspaces.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-        </label> : <strong className="vs-workspace">{workspace.name}</strong>}
+        <button type="button" ref={menuButton} className="vs-icon-button vs-menu" aria-expanded={open} aria-controls="vs-nav" aria-label={l(open ? copy.nav.close : copy.nav.menu)} onClick={open ? closeMenu : () => setOpen(true)}>{open ? <X size={18} /> : <Menu size={18} />}</button>
+        <WorkspaceSelector />
         <BrandFilter />
         {Object.hasOwn(periodDefaults, section) && <PeriodPicker defaultDays={periodDefaults[section]} />}
         <span className="vs-top-spacer" />
         <AgentDot to={`${base}/agent`} />
         <Language />
       </header>
-      <main className="vs-content"><Outlet /></main>
+      <main className="vs-content" id="vs-content" ref={content} tabIndex={-1}><Outlet /></main>
     </div>
   </div>;
 }

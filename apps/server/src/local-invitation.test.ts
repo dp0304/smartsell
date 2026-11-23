@@ -50,6 +50,9 @@ test('file preview persists member invitations and enforces the invited role aft
     assert.equal(wrongEmail.statusCode, 403, wrongEmail.body);
     assert.equal(wrongEmail.json().error.code, 'invalid_invitation');
     const payload = { ...reviewer, email: ' Reviewer@Example.Test ', token };
+    const shortPassword = await accept({ ...payload, password: '123456' });
+    assert.equal(shortPassword.statusCode, 422, shortPassword.body);
+    assert.match(shortPassword.json().error.message, /at least 12 characters/);
     const responses = await Promise.all([accept(payload), accept(payload)]);
     assert.deepEqual(responses.map(response => response.statusCode).sort(), [204, 403]);
     assert.equal(responses.find(response => response.statusCode === 204)!.cookies.length, 0);

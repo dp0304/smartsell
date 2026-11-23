@@ -45,6 +45,8 @@ export interface Operation {
   /** If set, server requires If-Match against this kind's :id before executing. */
   versionKind?: string;
   external?: boolean;
+  /** Require a caller idempotency key for this write. */
+  idempotencyRequired?: boolean;
   /** The operation durably accepts asynchronous work. */
   accepted?: boolean | ((result: unknown) => boolean);
   /** Wire schema from a shared contract or resource factory. */

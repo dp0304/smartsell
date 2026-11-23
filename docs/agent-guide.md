@@ -8,10 +8,19 @@ SmartSell 是品牌團隊的行銷與電商工作區：商品與各市場價格�
 
 分工很簡單：
 
-- **你（Agent）負責所有錄入與提交**：建商品、匯入、建推廣計劃、寫內容、排期、送審、登記成效、建投放方案。
-- **人在 Web 看板上看現況，並做決定**：審批、退回、核准投放、啟用授權、緊急停止。
+- **主 Agent** 負責建商品、安排匯入、建推廣計劃、寫內容、排期、送審、登記成效和建投放方案。
+- **桌面 Worker** 在指定的電腦上核對社群帳號，或從商家後台匯出商品並送回工作區。
+- **人在 Web 工作區** 指派帳號和店鋪使用哪台 Worker，也在這裡審批、退回、核准投放、啟用授權和緊急停止。
 
 你寫入的每一筆資料，Web 上都看得到，並標示「由 Agent 建立」。你做過的每一件事也會出現在 Agent 活動流。
+
+## 接入本機 Agent
+
+在 SmartSell Web 的「開始設定」選擇 Claude Code 或 Codex，依頁面指示在 Agent 電腦的互動式終端機執行設定指令。需要原生 CLI 和 Python 3.9 或更新版本。只在終端機的隱藏輸入提示貼上一次性接入碼。設定會為這條連線建立私有的本機 MCP stdio relay，用 HTTPS 連到工作區。僅同一機器和網路環境上的 loopback 開發網址可用 HTTP。請把憑證留在該連線的本機私有設定，不要貼到對話、終端輸出或日誌，也不要手動修改全域設定。
+
+安裝程式的預檢只確認端點和工具目錄可達。完成後關閉舊會話，在同一專案目錄以平常方式重新啟動原生 `claude` 或 `codex`，透過該連線的 MCP 用空參數實際呼叫 `smartsell_operations_describe` 並確認成功，再回 Web 按「重新檢查狀態」。如果 Codex 使用舊版接入設定，依工作台提供的修復提示更新同一條連線。修復沿用該連線既有的本機憑證。只有憑證遺失、失效或撤銷而無法修復時，才依工作台提示重新授權。
+
+Codex 接入與修復會把本人或自有品牌的社媒查詢路由附加到 `CODEX_HOME/AGENTS.md`（預設 `$HOME/.codex/AGENTS.md`）。若 `AGENTS.override.md` 已有內容，則使用該檔並保留原有文字。已經使用本版 SmartSell stdio relay 的連線也可執行「修復 Codex 連線或補上社媒路由」。指令核對既有註冊後只補規則。已安裝且內容完全符合上一版的托管區塊會自動升級。手動改過或重複的區塊會保留原文。要移除路由，刪除 `BEGIN SmartSell managed social routing` 與 `END SmartSell managed social routing` 標記及其中的段落，再完整重開 Codex。此區塊是 Codex 的路由指引。專案可能有更具體的規則，其他工具的可用性由 Codex 控制。
 
 ## 工具怎麼用
 
@@ -50,6 +59,10 @@ SmartSell 是品牌團隊的行銷與電商工作區：商品與各市場價格�
 以下只列重點欄位。完整欄位請先查 `smartsell_operations_describe({"operation": "<名稱>"})`。
 
 ### 1. 匯入商品
+
+店鋪綁定固定電腦時，在 `worker_catalog_list` 查店鋪、Worker 及最近的任務。以 `worker_catalog_request_import` 建立任務，在 `params.id` 放店鋪 ID，`body` 留空物件，並帶 `idempotency_key`。指定的 Worker 領取後，操作者核對商家後台的實際店鋪 ID，再送出商品檔案。任務達到 `previewed` 時可以用 `import_id` 與 `import_rows` 查看預覽。工作區操作者可在「開始設定」打開這一批並確認匯入。若匯入檔案包括價格和庫存，先請管理員為店鋪設定市場和適合的價格來源。
+
+手上已有可直接匯入的商品檔案時，可沿用以下流程。
 
 1. 用 `commerce_store_list` 找店鋪。沒有的話，用 `commerce_store_create` 建一個匯入型店鋪。
 2. 用 `import_template_list` 確認 `product_list` 範本的欄位：`external_product_id`、`external_variant_id`、`title`、`sku`、`currency`、`price`、`available`、`market_id` 等。
@@ -92,6 +105,16 @@ SmartSell 是品牌團隊的行銷與電商工作區：商品與各市場價格�
 2. `publishing_create_target`：`body: {social_account_id, content_variant_id, revision_id, scheduled_at}`。時間用含時區的 ISO 8601。
 3. `publishing_request_approval`：`params.id` 填排期 id。
 4. 到這裡就停。核准與發布由人決定。告訴使用者：「已送審 N 則，請到『待你決定』核准。」
+
+### 查自己的社群帳號狀態或近期作品
+
+「查我的社媒狀態」或「我的 X 帳號現在有哪些影片」一律從已授權的 SmartSell MCP 交給自己已配對的 Worker 查。先確認 `worker_social_status_request` 和 `worker_social_status_get` 及其輸入格式在目前連線可用。
+
+1. 每個新的即時查詢都先為 `worker_social_status_request` 產生新的高熵隨機 `idempotency_key`，例如 UUID v4。可以只為產生 ID 執行本機 `uuidgen`，無需連網。勿使用品牌、日期、固定序號或其他會話的鍵。只有同一次提交的網路重試沿用原鍵和參數。在 `body` 用 `mode: "account_status"` 查登入或可觀測的帳號狀態。查 X 近期作品時用 `mode: "recent_posts"` 和 `platform: "x"`，目前近期作品只支援 X。只有一台符合條件且屬於使用者的已配對 Worker 時可省略 `device_id`，有多台符合條件則用已確認的裝置 ID。知道預期的帳號識別值時可帶 `expected_identity`，X 請用帳號 handle。
+2. 用 `worker_social_status_get` 的 `params.id` 輪詢同一個任務。較早查詢的任務 ID（含重播該任務）須標為歷史回執，並保留原始觀測時間。回報任務 ID、裝置、各平台觀測到的狀態，以及 Worker 回執的 `reported_at` 時間。查影片時只列出回執中 `has_video: true` 的近期貼文及連結。仍在排隊或執行時回報進度。若欠缺工具、配對、連線、登入或權限，或者遇到驗證挑戰、身分不符、作業過期或平台不支援，就保留實際回傳的狀態、錯誤碼及具體原因，說明需要處理的步驟。若 Worker 要求登入，請使用者在指定 Worker 的 Chrome 中完成。尚無回執時，註明目前沒有可回報的觀測。
+3. 缺結果時不要切到外部工具、主 Agent 的本機瀏覽器、網路搜尋、shell、`curl`、代理或爬蟲。已存的貼文和指標只能標示為工作區快取，附上原觀測時間及涵蓋範圍。只有成功回執能證實當次觀測，未知數值保持未知。若只讀到部分近期作品，就只回報觀測到的範圍。
+
+要查 SmartSell 中某一條既有排期是否發出，用 `publishing_get_target` 讀同一條目標，再用已授權的 `publishing_get_execution` 或 `posts_get` 核對關聯執行與貼文回執。待審、已領取和平台已接受分別回報。只有同一目標的確認回執可證實發布，`outcome_unknown` 保持未知。近期作品回執只證實 Worker 當時在帳號中看到的內容。
 
 ### 5. 登記已存在的貼文，並匯入每日成效
 

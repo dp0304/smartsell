@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --experimental-transform-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test ../../tests/connector-desktop/*.test.ts",
+    "test": "node --experimental-transform-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"../../tests/connector-desktop/*.test.{ts,mts}\"",
     "start": "electron .",
     "package:mac": "npm run build && node scripts/package.mjs mac",
     "package:win": "npm run build && node scripts/package.mjs win"

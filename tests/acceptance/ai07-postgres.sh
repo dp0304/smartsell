@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 [[ $(node -v) == v24.21.0 ]]
-: "${SMARTSELL_AI07_CHROMIUM:?Provide the path to preinstalled Chromium headless shell}"
+: "${SMARTSELL_AI07_CHROMIUM:?Provide the path to the preinstalled Playwright Chromium executable}"
 [[ -x "$SMARTSELL_AI07_CHROMIUM" ]]
 socket=${SMARTSELL_AI07_DOCKER_SOCKET:-/var/run/docker.sock}
 [[ -S "$socket" ]]
@@ -19,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 container=$(local_docker run --rm --pull=never --detach --tmpfs /var/lib/postgresql/data \
-  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=ai07-local postgres:17-alpine)
+  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=ai07-local "${SMARTSELL_TEST_PG_IMAGE:-postgres:17-alpine}")
 for ((attempt=0; attempt<30; attempt++)); do
   if local_docker exec "$container" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then break; fi
   sleep 1

@@ -516,9 +516,12 @@ function importReport(ctx: Context, input: Input) {
     name:text(entity.name,'name'), objective:optional(entity.objective,'objective'), status_snapshot:optional(entity.status_snapshot,'status_snapshot'),
     observed_at, source:'report_import' };
   const previous = rows(ctx,'ad_entity','ad_account_id',account.id).find(r => r.level === level && r.external_id === external_id);
-  const row = previous ? (Date.parse(String(previous.observed_at)) <= Date.parse(observed_at) ? ctx.update('ad_entity',previous.id,values) : previous) : ctx.create('ad_entity',values);
+  const changed = previous && Date.parse(String(previous.observed_at)) <= Date.parse(observed_at) &&
+    Object.entries(values).some(([field, value]) => previous[field] !== value);
+  const row = !previous ? ctx.create('ad_entity',values) : changed ? ctx.update('ad_entity',previous.id,values) : previous;
   const inputs = body.observations ?? [];
   if (!Array.isArray(inputs) || inputs.length > 1000) invalid('Invalid observations');
+  let recorded = 0;
   const imported = inputs.map(value => {
     const item = dto(value,['metric_key','value','date','availability','definition']);
     const metric = oneOf(item.metric_key,metrics,'metric_key');
@@ -533,10 +536,14 @@ function importReport(ctx: Context, input: Input) {
       platform:account.provider, period_kind:'day', native_date:date, availability, value:amount, currency:metric === 'spend' ? account.currency : undefined,
       timezone:account.timezone, observed_at, source_ref, definition:text(item.definition,'definition') };
     const existing = rows(ctx,'metric_observation','subject_id',row.id).find(r => r.native_date === date && r.metric_key === payload.metric_key && r.source_ref === source_ref);
-    if (existing && (existing.value !== amount || existing.availability !== availability || existing.definition !== payload.definition)) conflict('Report observation conflicts with an earlier import');
-    return existing ?? ctx.create('metric_observation',payload);
+    if (existing) {
+      if (existing.value !== amount || existing.availability !== availability || existing.definition !== payload.definition) conflict('Report observation conflicts with an earlier import');
+      return existing;
+    }
+    recorded += 1;
+    return ctx.create('metric_observation',payload);
   });
-  if (imported.length) ctx.emit('analytics.observations.recorded',{ subject_type:'ads.ad_entity', subject_id:row.id, count:imported.length });
+  if (recorded) ctx.emit('analytics.observations.recorded',{ subject_type:'ads.ad_entity', subject_id:row.id, count:recorded });
   return {entity:row, observations:imported};
 }
 function reportDay(value: unknown) {

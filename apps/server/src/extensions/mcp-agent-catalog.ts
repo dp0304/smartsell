@@ -8,6 +8,7 @@ const businessTools = new Set([
   'research_search', 'research_item_evidence', 'research_create_note', 'creative_reference_annotate',
   'items_get', 'tasks_get', 'publishing_get_target',
   'content_get_variant', 'content_autosave_variant', 'content_commit_revision', 'content_update_variant',
+  'worker_social_status_request', 'worker_social_status_get',
   'inbox_claim', 'inbox_release', 'inbox_send_reply',
 ]);
 

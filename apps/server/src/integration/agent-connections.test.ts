@@ -10,6 +10,8 @@ import { developmentSecret } from '../bootstrap.js';
 import { configuration } from '../config.js';
 import { makeContext } from '../context.js';
 import { MemoryStore } from '../memory.js';
+import { PostgresStore } from '../postgres.js';
+import type { Store } from '../store.js';
 import { registerOperationRoutes } from '../operation-server.js';
 import { discoverOperations, runScopedOperation } from '../operations.js';
 import { discover } from '../registry.js';
@@ -18,9 +20,8 @@ import { operationRecords } from './operation-records.js';
 type Json = Record<string, any>;
 const accept = 'application/json, text/event-stream';
 
-async function fixture(t: TestContext) {
+async function fixture(t: TestContext, store: Store = new MemoryStore()) {
   const config = configuration({ SETUP_TOKEN: 'agent-connection-setup-token' });
-  const store = new MemoryStore();
   const [{ operations }, discovered] = await Promise.all([discoverOperations(), discover()]);
   const { app } = buildApp({ ...config, ...discovered, store, operationApi: { config, operations, register: registerOperationRoutes } });
   t.after(() => app.close());
@@ -29,7 +30,7 @@ async function fixture(t: TestContext) {
     const response = await fetch(base + path, { method, headers: { ...headers, ...body !== undefined && { 'content-type': 'application/json' } },
       body: body === undefined ? undefined : JSON.stringify(body) });
     const raw = await response.text();
-    assert.equal(response.status, status, `${method} ${path}: ${raw}`);
+    assert.equal(response.status, status, `${method} ${path}`);
     return raw ? JSON.parse(raw) : undefined;
   }
   const setup = await fetch(`${base}/api/v1/setup`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-setup-token': config.setupToken! },
@@ -55,7 +56,9 @@ async function fixture(t: TestContext) {
     const { records } = await operationRecords(context, true);
     return makeContext(records, context, context.role);
   });
-  return { config, store, request, rpc, call, connect, records, owner, cookie, root, wid, session };
+  const requestEnrollment = (path: string, code: string) => fetch(base + path, { method: 'POST',
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) });
+  return { config, store, request, requestEnrollment, rpc, call, connect, records, owner, cookie, root, wid, session };
 }
 
 const ok = (result: Json) => {
@@ -105,6 +108,27 @@ test('legacy tokens keep their Commands job tools and gain the generic Operation
   assert.ok(!read.includes('smartsell_operation_call') && !read.includes('workspace_brand_create'));
 });
 
+test('Codex can find both Worker social status tools and gets a specific pairing error', async t => {
+  const { rpc, call, connect } = await fixture(t);
+  const { token } = await connect({ label: 'Codex', client: 'codex' });
+  const init = await rpc(token, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'Codex fixture', version: '1' } });
+  assert.match(init.instructions, /worker_social_status_request.*recent_posts.*worker_social_status_get/);
+  const tools = (await rpc(token, 'tools/list')).tools as Json[];
+  for (const name of ['worker_social_status_request', 'worker_social_status_get']) {
+    const tool = tools.find(item => item.name === name);
+    assert.match(tool?.description, /paired SmartSell Worker.*recent_posts.*local Chrome/);
+  }
+  const requestTool = tools.find(tool => tool.name === 'worker_social_status_request')!;
+  const genericTool = tools.find(tool => tool.name === 'smartsell_operation_call')!;
+  const described = ok(await call(token, 'smartsell_operations_describe', { operation: requestTool.name }));
+  assert.match(init.instructions, /UUID v4.*network retry.*historical receipts/);
+  for (const schema of [requestTool.inputSchema, genericTool.inputSchema, described.data[0].input_schema]) {
+    assert.match(schema.properties.idempotency_key.description, /UUID v4.*Never derive.*network retry/);
+  }
+  const result = await call(token, 'worker_social_status_request', { idempotency_key: 'social-status-fixture' });
+  assert.equal(failure(result).code, 'SOCIAL_STATUS_WORKER_UNPAIRED');
+});
+
 test('agent connections issue, list, survive logout, touch last use and revoke', async t => {
   const { request, rpc, connect, owner, cookie, root, records } = await fixture(t);
   await request(`${root}/agent-connections`, { method: 'POST', status: 403, body: { label: 'No CSRF' }, headers: { cookie } });
@@ -114,12 +138,8 @@ test('agent connections issue, list, survive logout, touch last use and revoke',
   assert.match(created.token, /^ss_command_/);
   assert.equal(created.mcp_url, 'http://127.0.0.1:3401/mcp');
   assert.ok(Math.abs(Date.parse(created.expires_at) - Date.now() - 30 * 86_400_000) < 60_000);
-  assert.equal(created.setup.claude_code_command,
-    `claude mcp add --transport http smartsell ${created.mcp_url} --scope user --header "Authorization: Bearer ${created.token}"`);
-  assert.equal(created.setup.codex_command, `codex mcp add smartsell --url ${created.mcp_url} --bearer-token-env-var SMARTSELL_TOKEN`);
-  assert.deepEqual(JSON.parse(created.setup.claude_code_json).mcpServers.smartsell,
-    { type: 'http', url: created.mcp_url, headers: { Authorization: 'Bearer ${SMARTSELL_TOKEN}' } });
-  assert.match(created.setup.codex_toml, /^\[mcp_servers\.smartsell\]\nurl = "http:\/\/127\.0\.0\.1:3401\/mcp"\nbearer_token_env_var = "SMARTSELL_TOKEN"/);
+  assert.deepEqual(Object.keys(created.setup), ['agents_md']);
+  assert.ok(!JSON.stringify(created.setup).includes(created.token));
   assert.match(created.setup.agents_md, /smartsell_operations_describe/);
 
   const [listed] = (await request(`${root}/agent-connections`, { headers: { cookie } })).data;
@@ -142,6 +162,82 @@ test('agent connections issue, list, survive logout, touch last use and revoke',
   await request('/api/v1/session', { method: 'DELETE', status: 204, headers: { cookie } });
   assert.ok((await rpc(created.token, 'tools/list')).tools.length > 10);
 });
+
+async function testEnrollment(t: TestContext, backingStore?: Store) {
+  const { request, requestEnrollment, rpc, call, connect, owner, cookie, root, store, session, wid } = await fixture(t, backingStore);
+  const old = await connect();
+  const path = `${root}/agent-connections`;
+  const issue = async () => (await request(`${path}/enroll`, {
+    method: 'POST', status: 201, headers: owner, body: { client: 'codex' },
+  })).data;
+  const redeem = (code: string, status: number, url = `${path}/redeem`) => request(url, { method: 'POST', status, body: { code } });
+  const list = async () => (await request(path, { headers: { cookie } })).data as Json[];
+  await request(`${path}/enroll`, { method: 'POST', status: 403, headers: { cookie }, body: { client: 'codex' } });
+  const first = await issue();
+  const next = await issue();
+  assert.ok(!('token' in next) && !('setup' in next));
+  assert.ok(!(await list()).some(row => row.id === next.id));
+  const stored = await store.workspace(session, wid, async ({ context }) => context.get('mcp_runtime', 'codex_enrollment', context.actorId));
+  assert.ok(stored?.data.code_hash === createHash('sha256').update(next.code).digest('hex'));
+  assert.ok(!JSON.stringify(stored).includes(next.code));
+  await redeem(first.code, 401);
+  await redeem(next.code, 401, `/api/v1/workspaces/${randomUUID()}/agent-connections/redeem`);
+  await redeem(next.code.slice(0, -3), 401);
+
+  const rolledBackHash = createHash('sha256').update(randomUUID()).digest('hex');
+  await store.workspace(session, wid, async unit => {
+    await assert.rejects(unit.command({ module: 'agent', action: 'rollback_fixture', key: randomUUID(), fingerprint: '' }, async () => {
+      await unit.issueAgentSession!(rolledBackHash, 86_400);
+      throw new Error('abort enrollment transaction');
+    }), /abort enrollment transaction/);
+  });
+  assert.equal(await store.session(rolledBackHash), undefined);
+
+  const redemption = new URL(next.redeem_url).pathname;
+  assert.equal(redemption, `${path}/redeem`);
+  const raced = await Promise.all(Array.from({ length: 5 }, () => requestEnrollment(redemption, next.code)));
+  assert.deepEqual(raced.map(response => response.status).sort(), [201, 401, 401, 401, 401]);
+  const { data: { token } } = await raced.find(response => response.status === 201)!.json();
+  assert.ok(/^ss_command_/.test(token));
+  const fresh = async () => (await list()).find(row => row.id === next.id)!;
+  assert.equal((await fresh()).label, 'Codex');
+  assert.equal((await fresh()).last_used_at, null);
+  assert.equal((await fresh()).mcp_verified_at, undefined);
+  await request('/healthz', { headers: { authorization: `Bearer ${token}` } });
+  await rpc(token, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
+  assert.equal((await fresh()).mcp_verified_at, undefined);
+  const rejected = await request('/mcp', { method: 'POST', body: { jsonrpc: '2.0', id: 1, method: 'tools/list', params: { cursor: 'invalid' } },
+    headers: { authorization: `Bearer ${token}`, accept } });
+  assert.equal(rejected.error.code, -32602);
+  assert.equal((await fresh()).mcp_verified_at, undefined);
+  assert.ok((await rpc(token, 'tools/list')).tools.length > 0);
+  assert.equal((await fresh()).mcp_client_verified_at, undefined);
+  await store.workspace(session, wid, unit => unit.command({ module: 'agent', action: 'verify_agent_connection',
+    key: `agent-connection-verify/${next.id}`, fingerprint: '' }, async () => {
+    const row = await unit.context.get('mcp_runtime', 'credential', next.id);
+    await unit.context.update('mcp_runtime', 'credential', next.id, { mcp_verified_at: unit.context.now }, row!.version);
+  }));
+  assert.equal((await fresh()).mcp_client_verified_at, undefined);
+  assert.equal((await fresh()).mcp_verified_at, undefined);
+  assert.ok((await call(token, 'publishing_approve')).isError);
+  assert.equal((await fresh()).mcp_client_verified_at, undefined);
+  ok(await call(token, 'smartsell_operations_describe'));
+  assert.ok((await fresh()).mcp_client_verified_at);
+  assert.ok((await list()).some(row => row.id === old.id && !row.revoked && !row.last_used_at));
+  assert.ok((await rpc(old.token, 'tools/list')).tools.length > 0);
+
+  const expiring = await issue();
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse(expiring.expires_at) + 1 });
+  await redeem(expiring.code, 401);
+  assert.ok(!(await list()).some(row => row.id === expiring.id));
+}
+
+test('guided enrollment is workspace-bound, expiring, single-use and verified by an authorized tool call, not preflight or old stamps', t => testEnrollment(t));
+
+// Point this at a freshly migrated disposable database using the request role.
+const enrollmentPostgres = process.env.SMARTSELL_TEST_AGENT_PG_URL;
+test('guided enrollment handles concurrent redemption with the PostgreSQL request role', { skip: !enrollmentPostgres },
+  t => testEnrollment(t, new PostgresStore(enrollmentPostgres!)));
 
 test('revoking a connection stops the Agent and returns its Operation job lease', async t => {
   const { request, rpc, call, connect, owner, root, records } = await fixture(t);
@@ -227,6 +323,11 @@ test('human-only decisions are refused for Agent credentials on MCP and in the s
   assert.equal(one.length, 1);
   assert.ok(one[0].input_schema.properties.body);
   assert.ok(!one[0].input_schema.required.includes('workspace_id'));
+
+  const workload = 'content_production_workload';
+  assert.deepEqual(ok(await call(token, 'smartsell_operations_describe', { operation: workload })).data, []);
+  assert.equal(failure(await call(token, 'smartsell_operation_call', { operation: workload })).code, 'HUMAN_REQUIRED');
+  assert.deepEqual((await request(`${root}/content-items/workload`, { headers: owner })).data, []);
 
   const catalog = (await request(`${root}/catalog`, { headers: owner })).data;
   const entry = (name: string) => catalog.find((op: Json) => op.name === name);

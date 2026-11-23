@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -192,11 +192,12 @@ test('authenticated command endpoint commits a revision and safely replays the r
 
 test('PC04 REST pins approved facts and rejects speculative writes atomically', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'smartsell-pc04-'));
-  const config = configuration({ PORT: '3401' });
+  const setupToken = randomBytes(32).toString('hex');
+  const config = configuration({ PORT: '3401', SETUP_TOKEN: setupToken });
   const discovery = await discoverOperations();
   const app = createServer({ config, store: await fileStore(join(directory, 'test.sqlite')), ...discovery });
   t.after(async () => { await app.close(); await rm(directory, { recursive: true, force: true }); });
-  const setup = await app.inject({ method: 'POST', url: '/api/v1/setup', payload: {
+  const setup = await app.inject({ method: 'POST', url: '/api/v1/setup', headers: { 'x-setup-token': setupToken }, payload: {
     email: 'pc04@example.test', password: 'fixture-password-123', workspace_name: 'PC04 test',
   } });
   assert.equal(setup.statusCode, 201, setup.body);

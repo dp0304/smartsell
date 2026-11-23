@@ -4,6 +4,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { DomainError, type Fields } from './modules/types';
 import { SESSION_SECONDS, unauthenticated, type Store } from './store';
 import type { commandIdentity } from './integration/command-identity.js';
+import { DEFAULT_PASSWORD_MIN, loginIdentifier, setupRequirements, setupStatus, type SetupPolicy } from './setup-policy.js';
 
 const digest = (text: string) => createHash('sha256').update(text).digest();
 const opaque = () => randomBytes(32).toString('base64url');
@@ -52,12 +53,14 @@ export function requestObject(body: unknown): Fields {
   return body as Fields;
 }
 
-function credentials(input: Fields) {
-  const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+function credentials(input: Fields, allowUsername = false) {
+  const useUsername = allowUsername && input.username !== undefined;
+  const identifier = loginIdentifier(useUsername ? input.username : input.email, useUsername);
   const password = input.password;
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.includes('\0') ||
-    typeof password !== 'string' || !password || Buffer.byteLength(password) > 1024) throw invalid('A valid email and password are required');
-  return { email, password };
+  if (!identifier || typeof password !== 'string' || !password || Buffer.byteLength(password) > 1024) {
+    throw invalid(useUsername ? 'A valid username and password are required' : 'A valid email and password are required');
+  }
+  return { identifier, password };
 }
 
 function name(value: unknown) {
@@ -65,12 +68,12 @@ function name(value: unknown) {
   return value.trim();
 }
 
-async function newPasswordHash(password: string) {
-  if (password.length < 12) throw invalid('Password must be at least 12 characters');
+async function newPasswordHash(password: string, minimum = DEFAULT_PASSWORD_MIN) {
+  if (password.length < minimum) throw invalid(`Password must be at least ${minimum} characters`);
   return passwordSlot(() => argonHash(password, argonOptions));
 }
 
-export type AuthOptions = { secureCookie: boolean; setupToken?: string; origins: ReadonlySet<string> };
+export type AuthOptions = SetupPolicy & { secureCookie: boolean; origins: ReadonlySet<string> };
 
 export function auth(store: Store, options: AuthOptions, identity?: ReturnType<typeof commandIdentity>,
   csrfToken?: (hash: string) => string | undefined) {
@@ -127,11 +130,11 @@ export function auth(store: Store, options: AuthOptions, identity?: ReturnType<t
     },
     async login(request: FastifyRequest, reply: FastifyReply) {
       throttle(request.ip);
-      const { email, password } = credentials(requestObject(request.body));
-      const user = await store.credentials(email);
+      const { identifier, password } = credentials(requestObject(request.body), true);
+      const user = await store.credentials(identifier);
       const matches = await passwordMatches(user?.passwordHash, password);
       if (!user || !matches) {
-        throw new DomainError('invalid_credentials', 'Invalid email or password', 401);
+        throw new DomainError('invalid_credentials', 'Invalid sign-in credentials', 401);
       }
       const token = opaque();
       const hash = digest(token).toString('hex');
@@ -151,19 +154,26 @@ export function auth(store: Store, options: AuthOptions, identity?: ReturnType<t
       await identity.finish(requestObject(request.body), hash, tokenHash(request));
       return openSession(reply, token, hash);
     },
+    async setupStatus(request: FastifyRequest) {
+      return setupStatus(request, options, await store.initialized());
+    },
     async setup(request: FastifyRequest, reply: FastifyReply) {
       throttle(request.ip);
       const supplied = header(request, 'x-setup-token');
-      if (!options.setupToken || !supplied || !timingSafeEqual(digest(supplied), digest(options.setupToken))) throw forbidden();
+      const requirements = setupRequirements(request, options);
+      if (requirements.token_required &&
+        (!options.setupToken || !supplied || !timingSafeEqual(digest(supplied), digest(options.setupToken)))) throw forbidden();
       const input = requestObject(request.body);
-      const { email, password } = credentials(input);
-      const workspaceName = name(input.workspaceName);
-      const displayName = name(input.name);
-      const passwordHash = await newPasswordHash(password);
+      const { identifier, password } = credentials(input, true);
+      const workspaceName = name(input.workspaceName ?? (input.username === undefined ? undefined : 'SmartSell'));
+      const displayName = name(input.name ?? (input.username === undefined ? undefined : identifier.username ?? identifier.email.split('@')[0].slice(0, 120)));
+      const alreadyConfigured = () => new DomainError('already_configured', 'Setup has already completed', 409);
+      if (await store.initialized()) throw alreadyConfigured();
+      const passwordHash = await newPasswordHash(password, requirements.password_min_length);
       const token = opaque();
       const hash = digest(token).toString('hex');
-      if (!await store.setup({ email, name: displayName, passwordHash, workspaceName }, hash, tokenHash(request))) {
-        throw new DomainError('already_configured', 'Setup has already completed', 409);
+      if (!await store.setup({ ...identifier, name: displayName, passwordHash, workspaceName }, hash, tokenHash(request))) {
+        throw alreadyConfigured();
       }
       const data = await session(hash);
       setCookie(reply, token);
@@ -174,7 +184,9 @@ export function auth(store: Store, options: AuthOptions, identity?: ReturnType<t
       const accept = store.acceptMemberInvitation?.bind(store);
       if (!accept) throw new DomainError('not_configured', 'Member invitations are unavailable', 503);
       const input = requestObject(request.body);
-      const { email, password } = credentials(input);
+      const { identifier, password } = credentials(input);
+      const { email } = identifier;
+      if (!email) throw invalid('A valid email is required');
       if (typeof input.token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(input.token)) throw invalid('Invalid invitation token');
       const displayName = name(input.name);
       const passwordHash = await newPasswordHash(password);

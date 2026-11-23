@@ -1,7 +1,7 @@
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
@@ -53,6 +53,18 @@ export async function localDev({}, use) {
   return launchLocalDev(use);
 }
 
+export async function localRegistration({}, use) {
+  return launchLocalDev(use, { registration: true });
+}
+
+export async function localWorkerOnboarding({}, use) {
+  return launchLocalDev(use, { registration: true, workerDownloads: true });
+}
+
+export async function localTokenRegistration({}, use) {
+  return launchLocalDev(use, { registration: true, requireToken: true });
+}
+
 export async function localWithoutWorker({}, use) {
   return launchLocalDev(use, { worker: false });
 }
@@ -73,7 +85,7 @@ export async function localCommercePromotions({}, use) {
   return launchLocalDev(use, { operations: true, commerceStore: 'promotions' });
 }
 
-async function launchLocalDev(use, { operations = false, workspaceAccount = false, commerceStore = false, worker = true } = {}) {
+async function launchLocalDev(use, { operations = false, workspaceAccount = false, commerceStore = false, worker = true, registration = false, workerDownloads = false, requireToken = !registration } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'smartsell-web-e2e-'));
   const readiness = new AbortController();
   let child;
@@ -82,12 +94,16 @@ async function launchLocalDev(use, { operations = false, workspaceAccount = fals
   try {
     const setupToken = secret();
     const stateFile = join(directory, 'state.sqlite');
+    const downloadDir = join(directory, 'worker-downloads');
     const env = {
       PATH: process.env.PATH,
       HOME: process.env.HOME, TMPDIR: directory,
       NODE_ENV: 'development', ROLE: 'all', HOST: '127.0.0.1',
-      APP_SECRET: secret(), SETUP_TOKEN: setupToken,
+      APP_SECRET: secret(),
+      ...(registration && { SMARTSELL_LOCAL_SETUP: '1' }),
+      ...(requireToken && { SETUP_TOKEN: setupToken }),
       SMARTSELL_DATA_FILE: stateFile, MEDIA_DIRECTORY: join(directory, 'media'),
+      ...(workerDownloads && { SMARTSELL_WORKER_DOWNLOAD_DIR: downloadDir }),
       SMARTSELL_VITE_CACHE_DIR: join(directory, 'vite-cache'),
       SMARTSELL_E2E_PAUSE_WORKER: worker ? undefined : '1',
       SMARTSELL_E2E_PREVIEW: process.env.SMARTSELL_E2E_PREVIEW,
@@ -117,6 +133,10 @@ async function launchLocalDev(use, { operations = false, workspaceAccount = fals
     }
     for (const stream of [child.stdout, child.stderr]) stream.off('data', capture).resume();
     await use({ origin, setupToken, password: secret, ...(commerceStore && { browserFixture }),
+      ...(workerDownloads && { async writeMacWorkerPackage(bytes) {
+        await mkdir(downloadDir, { recursive: true });
+        await writeFile(join(downloadDir, 'SmartSell-Worker-mac-arm64.zip'), bytes);
+      } }),
       async setTime(testTime) {
         const reply = once(child, 'message', { signal: AbortSignal.timeout(5000) });
         child.send({ testTime });

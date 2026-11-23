@@ -187,11 +187,14 @@ async function verifyAi07Ui(s, task, job, enabled = false) {
   const { chromium, expect } = await import('@playwright/test');
   const directory = await mkdtemp(join(tmpdir(), 'smartsell-ai07-web-'));
   let vite, browser;
+  const front = httpServer((req, res) => vite.middlewares(req, res));
   try {
-    vite = await createServer({ root: fileURLToPath(webRoot), cacheDir: directory, envDir: false,
-      server: { host: '127.0.0.1', port: 0, proxy: { '/api': s.base } } });
-    await vite.listen();
-    const origin = `http://127.0.0.1:${vite.httpServer.address().port}`;
+    vite = await createServer({ configFile: false, root: fileURLToPath(webRoot), cacheDir: directory, envDir: false,
+      server: { middlewareMode: true, watch: null, hmr: { server: front }, proxy: { '/api': s.base } } });
+    // Give Node ownership of port 0 so Vite never selects its development port.
+    front.listen(0, '127.0.0.1');
+    await once(front, 'listening');
+    const origin = `http://127.0.0.1:${front.address().port}`;
     s.origins.add(origin);
     browser = await chromium.launch({ executablePath: process.env.SMARTSELL_AI07_CHROMIUM, args: ['--disable-background-networking', '--use-mock-keychain'] });
     const context = await browser.newContext({ serviceWorkers: 'block' });
@@ -229,9 +232,21 @@ async function verifyAi07Ui(s, task, job, enabled = false) {
     assert.deepEqual(pageErrors, []);
     assert.deepEqual(offOrigin, []);
   } finally {
-    await browser?.close();
-    await vite?.close();
-    await rm(directory, { force: true, recursive: true });
+    try {
+      await browser?.close();
+    } finally {
+      try {
+        await Promise.all([
+          vite?.close(),
+          new Promise(resolve => {
+            front.close(() => resolve());
+            front.closeAllConnections();
+          }),
+        ]);
+      } finally {
+        await rm(directory, { force: true, recursive: true });
+      }
+    }
   }
 }
 

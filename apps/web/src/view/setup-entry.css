@@ -1,0 +1,19 @@
+.view-shell.vs-setup-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.vs-setup-shell .vs-content {
+  max-width: 1120px;
+}
+
+.vs-setup-shell .vs-brand {
+  padding-inline: 0;
+  margin-inline-end: 6px;
+  font-size: 18px;
+}
+
+@media (width < 520px) {
+  .vs-setup-shell .vs-top { padding-inline: 16px; }
+  .vs-setup-shell .vs-workspace { order: 1; max-width: 100%; flex-basis: 100%; }
+}

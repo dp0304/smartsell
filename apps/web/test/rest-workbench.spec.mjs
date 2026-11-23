@@ -15,12 +15,18 @@ test('default workbench performs real versioned writes and renders all module en
   await page.locator('[name=password]').fill(password);
   await page.locator('[autocomplete=organization]').fill('Workbench QA');
   await page.locator('[name=setupToken]').fill(setupToken);
-  const setupSent = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/api/v1/setup'));
+  const setupResponse = page.waitForResponse(response => response.request().method() === 'POST' && response.url().endsWith('/api/v1/setup'));
   await page.getByRole('button', { name: '首次設定', exact: true }).click();
-  expect((await setupSent).postDataJSON().workspaceName).toBe('Workbench QA');
-  // Setup lands on the dashboard; this test drives the advanced workbench.
-  await expect(page).toHaveURL(/\/app\/[^/]+$/);
-  await page.goto(`${origin}/w/${new URL(page.url()).pathname.split('/')[2]}/home`);
+  const setup = await setupResponse;
+  expect(setup.request().postDataJSON().workspaceName).toBe('Workbench QA');
+  expect(setup.status()).toBe(201);
+  const { data: { workspaces: [{ id: wid }] } } = await setup.json();
+  const dashboard = `/app/${wid}`;
+  // Explicit deployment setup also enters the guide for an empty workspace. Leave it
+  // undismissed while exercising the advanced workbench through its direct route.
+  await expect(page.getByRole('heading', { name: '開始設定', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
+  await page.goto(`${origin}/w/${wid}/home`);
   await expect(page.getByRole('heading', { name: '今日營運' })).toBeVisible();
   await page.getByLabel('介面語言').selectOption('en');
   await expect(page.getByText('No items need attention')).toBeVisible();
@@ -67,9 +73,15 @@ test('default workbench performs real versioned writes and renders all module en
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
-  await page.locator('[name=email]').fill(email);
+  await page.getByLabel('Username or email').fill(email);
   await page.locator('[name=password]').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page).toHaveURL(/\/app\/[^/]+$/);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
+  const agentStep = main.getByRole('region', { name: 'Main agent', exact: true });
+  await expect(agentStep.getByText('Step 1 of 2', { exact: true })).toBeVisible();
+  await main.getByRole('link', { name: 'Finish later and go to overview', exact: true }).click();
+  await expect(main.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(origin + dashboard);
 });

@@ -104,7 +104,7 @@ const test = base.extend({
     const { createServer } = await import(pathToFileURL(requireWeb.resolve('vite')).href);
     const web = await createServer({
       root: fileURLToPath(webRoot), configLoader: 'runner', cacheDir: join(traffic.root, 'vite-cache'),
-      server: { port: 0, https: traffic.tls, watch: null, proxy: { '/api': traffic.address } },
+      server: { strictPort: false, https: traffic.tls, watch: null, proxy: { '/api': traffic.address } },
     });
     try {
       await web.listen();

@@ -36,8 +36,6 @@ const part = encodeURIComponent;
 const workspace = (id: string) => `/workspaces/${part(id)}`;
 export const api = {
   session: (signal?: AbortSignal) => request<Session>('/session', { signal }),
-  signIn: (body: Payload) => request('/session', { method: 'POST', body: JSON.stringify(body) }),
-  setup: (body: Payload, token?: string) => request('/setup', { method: 'POST', body: JSON.stringify(body), headers: token ? { 'X-Setup-Token': token } : undefined }),
   signOut: () => request('/session', { method: 'DELETE' }),
   commands: (id: string, signal?: AbortSignal) => request<{ items: Command[] }>(`${workspace(id)}/commands`, { signal }),
   permissionOperations: async (id: string, signal?: AbortSignal) => (await request<{ data: { name: string }[] }>(`${workspace(id)}/catalog`, { signal })).data,

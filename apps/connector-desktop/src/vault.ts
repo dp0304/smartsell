@@ -1,4 +1,4 @@
-import { createPrivateKey, type KeyObject } from 'node:crypto';
+import { createPrivateKey, randomBytes, type KeyObject } from 'node:crypto';
 import { readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { fields, opaqueId } from '../../../packages/connector-tasks/src/tasks.ts';
 
@@ -8,6 +8,7 @@ export interface Vault {
   save(pairing: Pairing): void;
   clear(): void;
   available(): boolean;
+  check?(): void;
 }
 
 type SafeStorage = {
@@ -23,6 +24,14 @@ export function deviceVault(path: string, safe: SafeStorage, platform: string): 
   }
   return {
     available,
+    check() {
+      requireEncryption();
+      const probe = randomBytes(24).toString('hex');
+      const encrypted = safe.encryptString(probe);
+      if (!encrypted.length || encrypted.includes(probe) || safe.decryptString(encrypted) !== probe) {
+        throw new Error('系统安全存储验证失败。');
+      }
+    },
     load() {
       let ciphertext: Buffer;
       try { ciphertext = readFileSync(path); }

@@ -38,7 +38,7 @@ function watchPost(page, path) {
 async function signIn(page, user, wid, role) {
   await page.goto(`${origin}${compat}/login`);
   await page.getByRole('combobox', { name: '介面語言', ...exact }).selectOption('en');
-  await page.getByLabel('Email', exact).fill(user.email);
+  await page.getByLabel('Username or email', exact).fill(user.email);
   await page.locator('input[name=password]').fill(user.password);
   const pending = watchPost(page, '/session');
   await page.getByRole('button', { name: 'Sign in', ...exact }).click();

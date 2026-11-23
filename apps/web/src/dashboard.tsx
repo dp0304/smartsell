@@ -114,11 +114,11 @@ export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) 
   }
 
   const overview = <>
-    <header className="overview-hero dashboard-hero"><div className="hero-orbit" aria-hidden="true" /><div>
+    <header className="dashboard-hero">
       <p>{workspace?.name} · {fullDate.format(new Date())}</p>
       <h1>{t(summary ? 'dashboardSummary' : view === 'personal' ? 'dashboardPersonal' : 'today')}</h1>
       <span>{t(summary ? 'dashboardSummaryHint' : view === 'personal' ? 'dashboardPersonalHint' : 'dashboardHint')}</span>
-    </div></header>
+    </header>
     <nav className="tabs dashboard-tabs" aria-label={t('home')}>
       {([['today', 'home', 'today'], ['needs', 'home?tab=needs', 'attention'], ['health', 'home?tab=health', 'workspaceStatus'], ['personal', 'me', 'dashboardPersonal'], ['summary', 'home/summary', 'dashboardSummary']] as const).map(([key, path, label]) => {
         const selected = (tab ?? view) === key;
@@ -136,7 +136,7 @@ export function Dashboard({ view }: { view: 'today' | 'summary' | 'personal' }) 
   </>;
 
   return <>
-    {view === 'today' && tab === null ? <section className="dashboard-aurora">{overview}</section> : overview}
+    <div className="dashboard-aurora">{overview}</div>
     {summary && read.op && <Panel><form className="panel-head summary-filter" key={`${from}/${to}/${read.data ? "ready" : "pending"}`} onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);

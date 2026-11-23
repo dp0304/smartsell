@@ -11,6 +11,8 @@ import { AccountsSection } from './settings-accounts';
 import { roleText, scopeNames, setupTones, splitPauses, type CheckTone, type PauseSwitch, type Row } from './settings-logic';
 import { PauseSection } from './settings-pause';
 import { text } from './settings-text';
+import { setupText } from './setup-copy';
+import { canSetUp } from './setup-data';
 import './settings.css';
 
 interface ContextView { role?: string; timezone?: string | null; brands?: Row[]; markets?: Row[] }
@@ -172,7 +174,7 @@ function AdvancedSection() {
 /** Settings: the few things only a person does (register owned accounts, pause and release publishing) plus read-only setup facts. */
 export function SettingsPage() {
   const { l } = useText();
-  const { workspace } = useViewContext();
+  const { workspace, base } = useViewContext();
   const { brandId } = useFilters();
   const context = useView<ContextView>('/context', { brand_id: brandId });
   const brands = useView<Row[]>('/brands');
@@ -189,12 +191,14 @@ export function SettingsPage() {
   const paused = new Set(splitPauses(pauses.value).active.filter(row => row.scope_type === 'social_account').map(row => String(row.scope_id)));
   return <>
     <PageHeader title={l(copy.pages.settingsTitle)} subtitle={l(text.subtitle)}>
+      {canSetUp(workspace.role) && <Link className="vs-btn" to={`${base}/get-started`}>{l(setupText.title)}</Link>}
       {role && <span className="vs-tag st-role">{l(text.role)}：{roleText[role] ? l(roleText[role]) : role}</span>}
     </PageHeader>
     <div className="vs-columns st-page">
       <Summary context={context} accounts={accounts} pauses={pauses} connections={connections} />
       <PauseSection pauses={pauses} brands={brandRows} accounts={accountRows} role={role} timeZone={timeZone} />
       <BrandsSection brandId={brandId} />
+      {canSetUp(workspace.role) && <div className="vs-actions"><Link className="vs-btn" to={`${base}/settings/worker-accounts`}>{l(['社群帳號與固定 Worker', 'Social accounts and dedicated workers'])}</Link></div>}
       <AccountsSection accounts={accounts} brands={brandRows} brandsLoaded={Array.isArray(brands.value)} markets={rows(context.value?.markets)} role={role} brandId={brandId}
         workspaceZone={context.value?.timezone} pausedAccounts={paused} />
       <MembersSection brandNames={brandNames} role={role} />

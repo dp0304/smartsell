@@ -172,6 +172,35 @@ test('signed device transport binds body, action, workspace, device and nonce', 
   assert.equal(nonces.size, 4);
 });
 
+test('channel registration signs just the confirmed selections and rejects inconsistent acknowledgements', async () => {
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const selection = { kind: 'social' as const, platform: 'tiktok', external_id: '1234567890123456789', observed_at: '2026-11-21T12:00:00.000Z' };
+  const receipt = { kind: selection.kind, platform: selection.platform, external_id: selection.external_id, resource_id: 'account', device_id: 'device' };
+  let reply: unknown = [receipt];
+  let requests = 0;
+  const client = new SignedDeviceClient('workspace', 'device', privateKey, createSignedHttpTransport('https://workbench.example.test', async (input, init) => {
+    requests++;
+    assert.equal(String(input), 'https://workbench.example.test/api/v1/device/channels/register');
+    const raw = Buffer.from(init!.body as Uint8Array);
+    assert.deepEqual(JSON.parse(raw.toString()), { confirmed: true, selections: [selection] });
+    const headers = new Headers(init!.headers);
+    assert.equal(headers.get('x-smartsell-device'), 'device');
+    assert.equal(headers.get('x-smartsell-workspace'), 'workspace');
+    const signed = ['smartsell.device.v1', 'workspace', 'device', 'channels.register', headers.get('x-smartsell-timestamp'),
+      headers.get('x-smartsell-nonce'), createHash('sha256').update(raw).digest('hex')];
+    assert(verify(null, Buffer.from(JSON.stringify(signed)), publicKey, Buffer.from(headers.get('x-smartsell-signature')!, 'base64url')));
+    return Response.json({ data: { registrations: reply } });
+  }));
+  await assert.rejects(client.registerChannels([]), /count/);
+  await assert.rejects(client.registerChannels([selection, selection]), /selection/);
+  assert.equal(requests, 0);
+  assert.deepEqual(await client.registerChannels([selection]), [receipt]);
+  for (const bad of [[], [{ ...receipt, device_id: 'other-device' }], [{ ...receipt, external_id: '987654321' }]]) {
+    reply = bad;
+    await assert.rejects(client.registerChannels([selection]), /Unexpected channel registration/);
+  }
+});
+
 test('HTTP permit transport enforces fixed endpoints, origin, and no redirects', async () => {
   const entry = scenario();
   const input = { attempt_id: entry.task.attempt_id, fencing_token: 1, write_slot_token: 1, request_hash: entry.task.payload.frozen_hash };

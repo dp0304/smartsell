@@ -32,8 +32,8 @@ async function submit(page, button, path, status) {
   return response;
 }
 
-async function fillCredentials(page, email, password) {
-  await field(page, 'email').fill(email);
+async function fillCredentials(page, email, password, identifier = 'identifier') {
+  await field(page, identifier).fill(email);
   await field(page, 'password').fill(password);
 }
 
@@ -108,7 +108,7 @@ test('Commands invitation acceptance leaves the owner and invited reviewer in se
     const reviewer = await fresh.newPage();
     await reviewer.goto(`${dev.origin}/invite#${token}`);
     await language(reviewer).selectOption('en');
-    await fillCredentials(reviewer, reviewerEmail, reviewerPassword);
+    await fillCredentials(reviewer, reviewerEmail, reviewerPassword, 'email');
     await field(reviewer, 'name').fill('Invited reviewer');
     await submit(reviewer, 'Accept member invitation', '/api/v1/member-invitations/accept', 204);
     await expect(reviewer).toHaveURL(`${dev.origin}/login`);

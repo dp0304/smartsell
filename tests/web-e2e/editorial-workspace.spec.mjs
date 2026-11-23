@@ -29,7 +29,7 @@ async function setup(page, dev, password = dev.password()) {
 async function signIn(page, dev, email, password) {
   await page.context().clearCookies();
   await page.goto(`${dev.origin}/login`);
-  await page.locator('input[name=email]').fill(email);
+  await page.locator('input[name=identifier]').fill(email);
   await page.locator('input[name=password]').fill(password);
   await page.getByRole('button', { name: /^(登入|Sign in)$/ }).click();
   // Sign-in lands on the dashboard; these checks cover the advanced workbench, so open it directly.
@@ -46,9 +46,10 @@ async function fits(page) {
 
 test('WS01 | Desktop route inventory fits 1280px in both interface languages', async ({ page, dev, browser }, info) => {
   test.setTimeout(180_000);
-  for (const route of ['login', 'setup']) {
-    await page.goto(`${dev.origin}/${route}`);
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  for (const [route, heading] of [['/', '註冊'], ['/setup', '首次設定']]) {
+    await page.goto(dev.origin + route);
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+    await expect(page.getByLabel('部署初始設定權杖')).toBeVisible();
     await fits(page);
   }
   const { url, post, password } = await setup(page, dev);

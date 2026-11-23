@@ -159,8 +159,12 @@ function prepareProduct(ctx: Context, store: Row, row: Data, source: Data, mode:
           const fields = [...config.purchase_url_template.matchAll(/\{([^}]+)\}/g)].map(match => match[1]!);
           if (fields.every(field => components[field] != null)) listing.purchase_url = config.purchase_url_template.replace(/\{([^}]+)\}/g, (_match, key: string) => encodeURIComponent(String(components[key])));
         }
-        if ((store.sync_scope as Data | undefined)?.inventory_source === 'inventory_list' && mode === 'file') {
-          for (const field of ['inventory_quantity', 'inventory_status', 'available_for_sale']) Object.assign(listing, { [field]: previous?.[field] ?? null });
+        // A partial product export can update price without reporting any stock.
+        const inventoryFields = ['inventory_quantity', 'inventory_status', 'available_for_sale'];
+        const inventoryUnreported = (listing.availability == null || listing.availability === 'observed') &&
+          inventoryFields.every(field => listing[field] === undefined);
+        if (mode === 'file' && ((store.sync_scope as Data | undefined)?.inventory_source === 'inventory_list' || inventoryUnreported)) {
+          for (const field of inventoryFields) listing[field] = previous?.[field] ?? null;
         }
         const listingSource = { ...source };
         if (input.price_basis != null) listingSource.price_basis = enumValue(input.price_basis, ['base', 'includes_promotion', 'contextual', 'unknown'], 'price_basis');

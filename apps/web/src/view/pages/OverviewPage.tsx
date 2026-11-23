@@ -1,18 +1,77 @@
+import { useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
-import { ActivityList, AgentPrompt, Glyph, KpiTile, StatusChip, decisionKindText, formatDateTime, formatDay, isNum, pick, relativeTime, type Tuple } from '@smartsell/ui';
+import { ArrowUpRight, CalendarDays, ChartNoAxesCombined, CircleDollarSign, Eye, ListChecks, MousePointerClick, Users } from 'lucide-react';
+import { ActivityList, AgentPrompt, Glyph, KpiTile, LineChart, StatusChip, decisionKindText, formatDateTime, formatDay, isNum, pick, relativeTime, type Tuple } from '@smartsell/ui';
 import { copy, fill } from '../copy';
 import { useView, useViewContext } from '../data/use-view';
 import type { HomeView, Kpi, LivePlan } from '../data/types';
 import { Loaded, PageHeader, Section, resourcePath, useFilters, useText } from '../parts';
+import { canSetUp } from './setup-data';
 
-const kpiLink: Record<string, string> = { views: 'social', engagements: 'social', followers: 'social', ad_spend: 'ads' };
+const primaryMetrics = {
+  views: { page: 'social', icon: Eye },
+  engagements: { page: 'social', icon: MousePointerClick },
+  followers: { page: 'social', icon: Users },
+  ad_spend: { page: 'ads', icon: CircleDollarSign },
+};
+const metricLabel = (key: string): Tuple => (copy.kpi as Record<string, Tuple>)[key] ?? [key, key];
+const hasPoints = (kpi: Kpi) => kpi.sparkline?.some(point => isNum(point.value)) ?? false;
+const hasCurrency = (kpi: Kpi) => kpi.unit !== 'currency' || Boolean(kpi.currency);
+type OverviewLink = (section: string, filters?: Record<string, string>) => string;
+const approvalStatuses = new Set(['approval', 'awaiting_approval', 'pending_approval']);
 
-function KpiGrid({ kpis }: { kpis: Kpi[] }) {
+// Match the grid breakpoint so DOM, reading and keyboard order follow the layout.
+const narrowFocus = '(width < 1120px)';
+function subscribeToFocusWidth(notify: () => void) {
+  const query = window.matchMedia(narrowFocus);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+}
+const isFocusNarrow = () => window.matchMedia(narrowFocus).matches;
+
+function KpiGrid({ kpis, range, link }: { kpis: Kpi[]; range: HomeView['period']; link: OverviewLink }) {
+  const { l, lang } = useText();
+  const available = Object.entries(primaryMetrics).flatMap(([key, config]) => {
+    const kpi = kpis.find(item => item.key === key);
+    return kpi ? [{ kpi, ...config }] : [];
+  });
+  const date = (day: string) => formatDay(day, lang, { year: 'numeric', month: 'short', day: 'numeric' });
+  return <section className="vs-overview-kpis">
+    <header className="vs-overview-kpi-head"><h2>{l(copy.overview.kpis)}</h2>
+      {range && <span className="vs-overview-period"><CalendarDays size={14} aria-hidden="true" /><time dateTime={range.from}>{date(range.from)}</time> – <time dateTime={range.to}>{date(range.to)}</time></span>}
+    </header>
+    {available.length ? <div className="vs-kpi-grid">{available.map(({ kpi, page, icon: Icon }) => <KpiTile key={kpi.key}
+      label={l(metricLabel(kpi.key))} metric={kpi} icon={<Icon size={17} aria-hidden="true" />}
+      unit={kpi.unit} currency={kpi.currency} goodDirection={kpi.key === 'ad_spend' ? 'none' : 'up'}
+      href={link(page, { ...range, ...(kpi.key === 'engagements' ? { metric: kpi.key } : {}) })} />)}</div>
+      : <p className="vs-notice muted">{l(copy.overview.noMetrics)}</p>}
+  </section>;
+}
+
+function DailyTrend({ kpis, adsHref }: { kpis: Kpi[]; adsHref: string }) {
   const { l } = useText();
-  const { base } = useViewContext();
-  return <div className="vs-kpi-grid">{kpis.map(kpi => <KpiTile key={kpi.key} label={l((copy.kpi as Record<string, Tuple>)[kpi.key] ?? [kpi.key, kpi.key])} metric={kpi}
-    unit={kpi.unit} currency={kpi.currency} sparkline={kpi.sparkline} goodDirection={kpi.key === 'ad_spend' ? 'none' : 'up'}
-    href={kpiLink[kpi.key] ? `${base}/${kpiLink[kpi.key]}` : undefined} />)}</div>;
+  const [metric, setMetric] = useState('');
+  const selected = kpis.find(kpi => kpi.key === metric)
+    ?? kpis.find(kpi => hasPoints(kpi) && hasCurrency(kpi)) ?? kpis.find(hasPoints) ?? kpis[0];
+  const heading = l(copy.overview.trend);
+  const unit = selected?.unit === 'currency' ? selected.currency ?? undefined : selected?.unit === 'count' ? l(copy.overview.countUnit) : '%';
+  const label = selected && l(metricLabel(selected.key));
+  const supplementary = kpis.filter(kpi => !Object.hasOwn(primaryMetrics, kpi.key));
+  return <Section title={<><ChartNoAxesCombined size={17} aria-hidden="true" />{heading}</>} className="vs-overview-trend"
+    action={selected && <label className="vs-select"><span className="vs-sr">{heading}</span>
+      <select value={selected.key} onChange={event => setMetric(event.target.value)}>
+        {kpis.map(kpi => <option key={kpi.key} value={kpi.key}>{l(metricLabel(kpi.key))}</option>)}
+      </select></label>}>
+    {selected && label ? <>
+      <p className="vs-trend-unit">{label}{unit && <> · {unit}</>}</p>
+      {!hasCurrency(selected) && hasPoints(selected) ? <div className="vs-overview-quiet vs-trend-unavailable">
+        <p className="muted">{l(copy.overview.spendByCurrency)}</p><Link to={adsHref}>{l(copy.nav.ads)} <ArrowUpRight size={13} aria-hidden="true" /></Link>
+      </div> : <LineChart key={selected.key} title={`${heading} · ${label}${unit ? ` (${unit})` : ''}`} height={236}
+        series={[{ key: selected.key, label, points: selected.sparkline ?? [] }]} unit={selected.unit} currency={selected.currency} />}
+    </> : <p className="vs-overview-quiet muted">{l(copy.overview.noMetrics)}</p>}
+    {supplementary.length > 0 && <div className="vs-overview-extra">{supplementary.map(kpi => <KpiTile key={kpi.key} label={l(metricLabel(kpi.key))} metric={kpi}
+      unit={kpi.unit} currency={kpi.currency} />)}</div>}
+  </Section>;
 }
 
 function Count({ label, value, tone }: { label: Tuple; value: number | null | undefined; tone?: string }) {
@@ -36,30 +95,45 @@ function PlanRow({ plan }: { plan: LivePlan }) {
 
 export function OverviewPage() {
   const { l, lang } = useText();
-  const { base } = useViewContext();
+  const { base, workspace } = useViewContext();
   const { brandId, from, to } = useFilters(7);
   const read = useView<HomeView>('/views/home', { brand_id: brandId, from, to });
+  const narrow = useSyncExternalStore(subscribeToFocusWidth, isFocusNarrow, () => false);
+  function link(section: string, filters: Record<string, string> = {}) {
+    const query = new URLSearchParams({ ...(brandId ? { brand: brandId } : {}), ...filters }).toString();
+    return `${base}/${section}${query ? `?${query}` : ''}`;
+  }
   return <>
-    <PageHeader title={l(copy.overview.title)} asOf={read.isPending ? undefined : read.asOf ?? null} timeZone={read.value?.timezone} />
+    <PageHeader title={l(copy.overview.title)} asOf={read.isPending ? undefined : read.asOf ?? null} timeZone={read.value?.timezone}>
+      {canSetUp(workspace.role) && <Link className="vs-btn" to={`${base}/get-started`}>{l(['繼續設定', 'Continue setup'])}</Link>}
+    </PageHeader>
     <Loaded read={read}>{home => {
       const tz = home.timezone;
       const needs = home.needs_you;
       const week = home.this_week;
       const agent = home.agent;
+      const kpis = home.kpis ?? [];
+      const range = home.period ?? (from && to ? { from, to } : undefined);
+      const trend = <DailyTrend key="trend" kpis={kpis} adsHref={link('ads', range)} />;
+      const decisions = <Section key="decisions" title={<><ListChecks size={17} aria-hidden="true" />{l(copy.overview.needsYou)}{needs && needs.total > 0 && <span className="vs-badge">{needs.total}</span>}</>}
+        action={needs && needs.total > 0 ? <Link to={link('decisions')}>{l(copy.common.viewAll)}</Link> : undefined} className="vs-overview-decisions">
+        {!needs ? <p className="vs-overview-quiet muted">{l(copy.common.unknown)}</p> : needs.items.length === 0
+          ? <p className="vs-overview-quiet vs-all-clear"><Glyph name="check" />{l(copy.overview.nothingToDecide)}</p>
+          : <ul className="vs-needs-list">{needs.items.slice(0, 5).map(item => <li key={item.id}>
+            <div className="vs-needs-main"><strong>{item.title}</strong>
+              <small>{[pick(decisionKindText[item.kind] ?? [item.kind, item.kind], lang), item.requested_by?.type === 'agent' ? item.requested_by.label ?? 'Agent' : null,
+                item.due_at ? `${l(['期限', 'Due'])} ${formatDateTime(item.due_at, lang, tz)}` : null].filter(Boolean).join(' · ')}</small>
+              {item.severity !== 'normal' && <StatusChip status={item.severity} />}
+            </div>
+            <Link className="vs-btn primary-soft" to={link('decisions', { kind: item.kind })} aria-label={`${l(['去決定', 'Decide'])} · ${item.title}`}>
+              {l(['去決定', 'Decide'])}<ArrowUpRight size={13} aria-hidden="true" />
+            </Link>
+          </li>)}</ul>}
+      </Section>;
       return <div className="vs-overview">
-        <Section title={<>{l(copy.overview.needsYou)}{needs && isNum(needs.total) && needs.total > 0 && <span className="vs-badge">{needs.total}</span>}</>}
-          action={needs && needs.total > 0 ? <Link to={`${base}/decisions`}>{l(copy.common.viewAll)}</Link> : undefined} className="vs-span-2">
-          {!needs ? <p className="muted">{l(copy.common.unknown)}</p> : needs.items.length === 0
-            ? <p className="vs-all-clear"><Glyph name="check" />{l(copy.overview.nothingToDecide)}</p>
-            : <ul className="vs-needs-list">{needs.items.slice(0, 5).map(item => <li key={item.id} className={`severity-${item.severity}`}>
-              <span className="vs-decision-kind">{pick(decisionKindText[item.kind] ?? [item.kind, item.kind], lang)}</span>
-              <span className="vs-needs-main"><strong>{item.title}</strong>
-                <small>{[item.requested_by?.type === 'agent' ? item.requested_by.label ?? 'Agent' : null, item.due_at ? `${l(['期限', 'Due'])} ${formatDateTime(item.due_at, lang, tz)}` : null].filter(Boolean).join(' · ')}</small></span>
-              <Link className="vs-btn primary-soft" to={`${base}/decisions?kind=${encodeURIComponent(item.kind)}`}>{l(['去決定', 'Decide'])}</Link>
-            </li>)}</ul>}
-        </Section>
-        {home.kpis && home.kpis.length > 0 && <Section title={l(copy.overview.kpis)} className="vs-span-2"><KpiGrid kpis={home.kpis} /></Section>}
-        <Section title={l(copy.overview.thisWeek)} action={<Link to={`${base}/calendar`}>{l(copy.nav.calendar)}</Link>}>
+        <KpiGrid kpis={kpis} range={range} link={link} />
+        <div className="vs-overview-focus">{narrow ? [decisions, trend] : [trend, decisions]}</div>
+        <Section title={l(copy.overview.thisWeek)} action={<Link to={link('calendar')}>{l(copy.nav.calendar)}</Link>}>
           {week ? <>
             <div className="vs-count-row">
               <Count label={copy.overview.scheduled} value={week.scheduled} /><Count label={copy.overview.published} value={week.published} />
@@ -68,11 +142,13 @@ export function OverviewPage() {
             {week.upcoming.length ? <ul className="vs-list">{week.upcoming.slice(0, 8).map(event => <li key={event.id}>
               <time className="vs-when">{formatDateTime(event.starts_at, lang, tz)}</time>
               <span className="vs-grow">{event.platform && <small className="muted">{event.platform} · </small>}{event.title}</span>
-              {event.needs_human && <StatusChip status={event.needs_human} tone="warning" />}{event.status && <StatusChip status={event.status} />}
+              {event.needs_human && !(event.needs_human === 'approval' && approvalStatuses.has(event.status ?? '')) &&
+                <StatusChip status={event.needs_human} tone="warning" />}
+              {event.status && <StatusChip status={event.status} />}
             </li>)}</ul> : <AgentPrompt title={l(copy.overview.noUpcoming)} prompt={l(copy.overview.noUpcomingPrompt)} agentHref={`${base}/agent`} />}
           </> : <p className="muted">{l(copy.common.unknown)}</p>}
         </Section>
-        <Section title={l(copy.overview.livePlans)} action={<Link to={`${base}/plans`}>{l(copy.nav.plans)}</Link>}>
+        <Section title={l(copy.overview.livePlans)} action={<Link to={link('plans')}>{l(copy.nav.plans)}</Link>}>
           {home.live_plans?.length ? <ul className="vs-list vs-plans">{home.live_plans.map(plan => <PlanRow key={plan.id} plan={plan} />)}</ul>
             : <AgentPrompt title={l(copy.overview.noPlans)} prompt={l(copy.overview.noPlansPrompt)} agentHref={`${base}/agent`} />}
         </Section>

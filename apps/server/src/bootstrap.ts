@@ -57,7 +57,7 @@ export async function start(config = configuration()) {
   if (mode === 'postgres' && !config.databaseUrl) throw new Error('Set DATABASE_URL to a migrated PostgreSQL 17+ request login');
   // Development without APP_SECRET keeps Agent tokens, CSRF tokens and cursors valid across watch restarts.
   if (!config.production && config.generatedSecret && mode !== 'memory') config = { ...config, secret: developmentSecret(config.statePath) };
-  if (!config.production && !config.setupToken) {
+  if (!config.production && !config.setupToken && !config.localSetupOrigins?.size) {
     console.warn('Initial setup is disabled until SETUP_TOKEN is configured');
   }
   const reportMissing = config.production ? undefined : (name: string, error: Error) => {

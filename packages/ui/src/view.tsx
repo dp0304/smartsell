@@ -290,9 +290,9 @@ export function AvailabilityTag({ availability }: { availability: string | null 
   return <span className={`vs-tag tone-${tone}`} data-availability={availability ?? 'not_collected'}>{availabilityLabel(availability, lang)}</span>;
 }
 
-export function KpiTile({ label, metric, unit = 'count', currency, sparkline, goodDirection = 'up', href }: {
+export function KpiTile({ label, metric, unit = 'count', currency, sparkline, goodDirection = 'up', href, icon }: {
   label: string; metric: Metric | null | undefined; unit?: Unit; currency?: string | null; sparkline?: readonly Point[];
-  goodDirection?: 'up' | 'down' | 'none'; href?: string;
+  goodDirection?: 'up' | 'down' | 'none'; href?: string; icon?: ReactNode;
 }) {
   const lang = useLang();
   const value = metric?.value;
@@ -302,7 +302,7 @@ export function KpiTile({ label, metric, unit = 'count', currency, sparkline, go
   const direction = delta === null || delta === 0 ? null : delta > 0 ? 'up' : 'down';
   const deltaTone = !direction || goodDirection === 'none' ? 'neutral' : direction === goodDirection ? 'good' : 'serious';
   const body = <>
-    <span className="vs-kpi-label">{label}</span>
+    <span className="vs-kpi-label">{icon && <span className="vs-kpi-icon">{icon}</span>}{label}</span>
     <strong className={known ? 'vs-kpi-value' : 'vs-kpi-value unknown'}>{known ? formatMeasure(value, unit, currency, lang, true) : '—'}</strong>
     <span className="vs-kpi-meta">
       {(!known || availability !== 'observed') && <AvailabilityTag availability={availability} />}
@@ -340,16 +340,19 @@ export function Sparkline({ points, label, width = 132, height = 36 }: { points:
   </svg>;
 }
 
-function useWidth(fallback = 640) {
+function useWidth(visible: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(fallback);
+  const [width, setWidth] = useState(240);
   useLayoutEffect(() => {
     const element = ref.current;
-    if (!element || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) => { if (entry) setWidth(Math.max(240, Math.round(entry.contentRect.width))); });
+    if (!visible || !element) return;
+    const measure = (size: number) => { if (size >= 1) setWidth(Math.floor(size)); };
+    measure(element.clientWidth);
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => { if (entry) measure(entry.contentRect.width); });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [visible]);
   return [ref, width] as const;
 }
 
@@ -358,12 +361,22 @@ function ChartToggle({ table, setTable }: { table: boolean; setTable: (value: bo
   return <button type="button" className="vs-chart-toggle" aria-pressed={table} onClick={() => setTable(!table)}>{pick(table ? ui.chart : ui.table, lang)}</button>;
 }
 
+// Place the violet series after blue in line charts without changing calendar kind colors.
+const lineColorOrder = [0, 6, 1, 2, 3, 4, 5, 7];
+const lineColor = (index: number) => seriesColor(lineColorOrder[index]);
+const lineDash = (index: number) => index === 1 ? '4 3' : undefined;
+
+function LineKey({ index }: { index: number }) {
+  return <svg width={14} height={8} viewBox="0 0 14 8" aria-hidden="true">
+    <line className="vs-line" x1={1} x2={13} y1={4} y2={4} stroke={lineColor(index)} strokeDasharray={lineDash(index)} />
+  </svg>;
+}
+
 export interface LineSeries { key: string; label: string; points: readonly Point[] }
 export function LineChart({ series, title, height = 220, unit = 'count', currency }: {
   series: readonly LineSeries[]; title: string; height?: number; unit?: Unit; currency?: string | null;
 }) {
   const lang = useLang();
-  const [ref, width] = useWidth();
   const [table, setTable] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
   const dates = [...new Set(series.flatMap(item => item.points.map(point => point.date)))].sort();
@@ -371,17 +384,20 @@ export function LineChart({ series, title, height = 220, unit = 'count', currenc
     const byDate = new Map(item.points.map(point => [point.date, point]));
     return dates.map(date => byDate.get(date) ?? null);
   });
-  const shown = series.slice(0, seriesPalette.length);
+  const shown = series.slice(0, lineColorOrder.length);
   const known = aligned.slice(0, shown.length).flat().map(point => point?.value).filter(isNum);
-  const integer = unit === 'count' && known.every(Number.isInteger);
-  const ticks = known.length ? niceTicks(Math.min(0, ...known), Math.max(0, ...known), 4, integer) : [0, 1];
+  const hasData = known.length > 0;
+  const [ref, width] = useWidth(hasData && !table);
+  const integer = (unit === 'count' || unit === 'currency') && known.every(Number.isInteger);
+  const ticks = hasData ? niceTicks(Math.min(0, ...known), Math.max(0, ...known), 4, integer) : [0, 1];
   const lo = ticks[0], hi = ticks[ticks.length - 1];
-  const format = (value: number) => formatMeasure(value, unit, currency, lang, true);
-  const left = clamp(14 + Math.max(...ticks.map(value => format(value).length)) * 7, 34, 88), right = 16, top = 12, bottom = 26;
+  const formatAxis = (value: number) => unit === 'currency' && !currency ? formatNumber(value, lang, true) : formatMeasure(value, unit, currency, lang, true);
+  const left = clamp(14 + Math.max(...ticks.map(value => formatAxis(value).length)) * 7, 34, 110), right = 16, top = 12, bottom = 26;
   const plotW = Math.max(40, width - left - right), plotH = Math.max(40, height - top - bottom);
   const x = (index: number) => left + (dates.length <= 1 ? plotW / 2 : index * plotW / (dates.length - 1));
   const y = (value: number) => top + plotH - ((value - lo) / (hi - lo || 1)) * plotH;
-  const every = Math.max(1, Math.ceil(dates.length / Math.max(2, Math.floor(plotW / 64))));
+  const tickCount = Math.min(dates.length, Math.max(2, Math.floor(plotW / 70) + 1));
+  const dateTicks = Array.from({ length: tickCount }, (_, index) => Math.round(index * (dates.length - 1) / Math.max(1, tickCount - 1)));
   const nearest = (event: PointerEvent<SVGSVGElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
     return clamp(Math.round(((event.clientX - box.left - left) / plotW) * (dates.length - 1)), 0, dates.length - 1);
@@ -395,34 +411,36 @@ export function LineChart({ series, title, height = 220, unit = 'count', currenc
     event.preventDefault();
     setHover(clamp(next, 0, dates.length - 1));
   };
-  const cell = (entry: Point | null) => entry && isNum(entry.value) ? format(entry.value) : availabilityLabel(entry?.availability, lang);
+  const cell = (entry: Point | null) => entry && isNum(entry.value) ? formatMeasure(entry.value, unit, currency, lang) : availabilityLabel(entry?.availability, lang);
+  const active = hover !== null && dates[hover] ? hover : null;
+  const pointer = (event: PointerEvent<SVGSVGElement>) => setHover(nearest(event));
   return <figure className="vs-chart" aria-label={title}>
-    <div className="vs-chart-head">
-      {series.length >= 2 ? <ul className="vs-legend">{shown.map((item, index) => <li key={item.key}><span className="vs-key-line" style={{ background: seriesColor(index) }} />{item.label}</li>)}
-        {series.length > shown.length && <li className="muted">{pick(ui.hiddenSeries, lang)}</li>}</ul> : <span />}
-      <ChartToggle table={table} setTable={setTable} />
-    </div>
-    {table ? <div className="vs-table-scroll"><table className="vs-table"><caption className="vs-sr">{title}</caption>
+    {(series.length >= 2 || dates.length > 0) && <div className="vs-chart-head">
+      {series.length >= 2 && <ul className="vs-legend">{shown.map((item, index) => <li key={item.key}><LineKey index={index} />{item.label}</li>)}
+        {series.length > shown.length && <li className="muted">{pick(ui.hiddenSeries, lang)}</li>}</ul>}
+      {dates.length > 0 && <ChartToggle table={table} setTable={setTable} />}
+    </div>}
+    {table && dates.length > 0 ? <div className="vs-table-scroll" tabIndex={0} role="region" aria-label={title}><table className="vs-table"><caption className="vs-sr">{title}</caption>
       <thead><tr><th scope="col">{pick(ui.date, lang)}</th>{series.map(item => <th scope="col" key={item.key}>{item.label}</th>)}</tr></thead>
       <tbody>{dates.map((date, row) => <tr key={date}><th scope="row">{date}</th>{aligned.map((column, index) => <td key={series[index].key}>{cell(column[row])}</td>)}</tr>)}</tbody>
-    </table></div> : <div className="vs-chart-body" ref={ref}>
-      <svg width={width} height={height} role="img" aria-label={title} tabIndex={dates.length ? 0 : -1}
-        onPointerMove={event => { if (dates.length) setHover(nearest(event)); }} onPointerLeave={() => setHover(null)}
-        onFocus={() => setHover(current => current ?? (dates.length ? dates.length - 1 : null))} onBlur={() => setHover(null)} onKeyDown={keys}>
+    </table></div> : !hasData ? <p className="vs-chart-empty muted">{pick(ui.noData, lang)}</p> : <div className="vs-chart-body" ref={ref}>
+      <svg width={width} height={height} role="img" aria-label={title} tabIndex={0}
+        onPointerMove={pointer} onPointerDown={pointer} onPointerLeave={() => setHover(null)}
+        onFocus={() => setHover(current => current ?? dates.length - 1)} onBlur={() => setHover(null)} onKeyDown={keys}>
         {ticks.map(value => <g key={value}><line className="vs-grid" x1={left} x2={left + plotW} y1={y(value)} y2={y(value)} />
-          <text className="vs-axis" x={left - 6} y={y(value)} dy="0.32em" textAnchor="end">{format(value)}</text></g>)}
-        {dates.map((date, index) => index % every === 0 && <text key={date} className="vs-axis" x={x(index)} y={top + plotH + 18} textAnchor={dates.length === 1 ? 'middle' : index === 0 ? 'start' : 'middle'}>{formatDay(date, lang)}</text>)}
+          <text className="vs-axis" x={left - 6} y={y(value)} dy="0.32em" textAnchor="end">{formatAxis(value)}</text></g>)}
+        {dateTicks.map(index => <text key={dates[index]} className="vs-axis" x={x(index)} y={top + plotH + 18}
+          textAnchor={dates.length === 1 ? 'middle' : index === 0 ? 'start' : index === dates.length - 1 ? 'end' : 'middle'}>{formatDay(dates[index], lang)}</text>)}
         {shown.map((item, index) => lineSegments(aligned[index].map(entry => entry?.value)).map(segment => segment.length > 1
-          ? <path key={`${item.key}-${segment[0][0]}`} className="vs-line" stroke={seriesColor(index)} d={segment.map(([at, value], i) => `${i ? 'L' : 'M'}${x(at).toFixed(1)},${y(value).toFixed(1)}`).join('')} />
-          : <circle key={`${item.key}-${segment[0][0]}`} className="vs-dot" r={4} cx={x(segment[0][0])} cy={y(segment[0][1])} fill={seriesColor(index)} />))}
-        {hover !== null && <g className="vs-crosshair"><line x1={x(hover)} x2={x(hover)} y1={top} y2={top + plotH} />
-          {shown.map((item, index) => { const entry = aligned[index][hover]; return entry && isNum(entry.value) ? <circle key={item.key} className="vs-dot" r={4} cx={x(hover)} cy={y(entry.value)} fill={seriesColor(index)} /> : null; })}</g>}
-        {!known.length && <text className="vs-axis vs-chart-empty" x={left + plotW / 2} y={top + plotH / 2} textAnchor="middle">{pick(ui.noData, lang)}</text>}
+          ? <path key={`${item.key}-${segment[0][0]}`} className="vs-line" stroke={lineColor(index)} strokeDasharray={lineDash(index)} d={segment.map(([at, value], i) => `${i ? 'L' : 'M'}${x(at).toFixed(1)},${y(value).toFixed(1)}`).join('')} />
+          : <circle key={`${item.key}-${segment[0][0]}`} className="vs-dot" r={4} cx={x(segment[0][0])} cy={y(segment[0][1])} fill={lineColor(index)} />))}
+        {active !== null && <g className="vs-crosshair"><line x1={x(active)} x2={x(active)} y1={top} y2={top + plotH} />
+          {shown.map((item, index) => { const entry = aligned[index][active]; return entry && isNum(entry.value) ? <circle key={item.key} className="vs-dot" r={4} cx={x(active)} cy={y(entry.value)} fill={lineColor(index)} /> : null; })}</g>}
       </svg>
-      {hover !== null && dates[hover] && <div className={`vs-tooltip${x(hover) > width - 170 ? ' end' : ''}`} style={{ left: x(hover), top }} role="status">
-        <small>{formatDay(dates[hover], lang, { year: 'numeric', month: 'numeric', day: 'numeric' })}</small>
-        {shown.map((item, index) => <div key={item.key} className="vs-tooltip-row"><span className="vs-key-line" style={{ background: seriesColor(index) }} />
-          <strong>{cell(aligned[index][hover])}</strong><span>{item.label}</span></div>)}
+      {active !== null && <div className="vs-tooltip vs-line-tooltip" style={{ left: clamp(x(active) + (x(active) < width / 2 ? 10 : -250), 0, Math.max(0, width - 240)), top }} role="status">
+        <small>{formatDay(dates[active], lang, { year: 'numeric', month: 'numeric', day: 'numeric' })}</small>
+        {shown.map((item, index) => <div key={item.key} className="vs-tooltip-row"><LineKey index={index} />
+          <strong>{cell(aligned[index][active])}</strong><span>{item.label}</span></div>)}
       </div>}
     </div>}
   </figure>;
@@ -439,8 +457,8 @@ function fit(text: string, max: number) {
 /** Horizontal bars with the value at the tip; unknown values draw no bar. */
 export function BarChart({ bars, title, unit = 'count', currency }: { bars: readonly Bar[]; title: string; unit?: Unit; currency?: string | null }) {
   const lang = useLang();
-  const [ref, width] = useWidth();
   const [table, setTable] = useState(false);
+  const [ref, width] = useWidth(!table);
   const known = bars.map(bar => bar.value).filter(isNum);
   const lo = Math.min(0, ...known), hi = Math.max(0, ...known);
   const format = (value: number) => formatMeasure(value, unit, currency, lang, true);

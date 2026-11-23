@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg';
 import { opaque, type IdentityState } from '../../../../packages/identity/src/state.ts';
-import type { User } from '../store.js';
+import { postgresSessionUser } from '../session-user.js';
 import type { CommandIdentityUnit } from './command-identity-state.js';
 
 const totpKey = /^totp:([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i;
@@ -47,10 +47,7 @@ export function postgresCommandIdentityUnit(client: PoolClient): CommandIdentity
         'SELECT ss.command_identity_password_hash($1) AS hash', [accountId]);
       return row?.hash ?? undefined;
     },
-    async sessionUser(tokenHash) {
-      const { rows: [user] } = await client.query<User>('SELECT * FROM ss.session_user($1)', [tokenHash]);
-      return user;
-    },
+    sessionUser: tokenHash => postgresSessionUser(client, tokenHash),
     async issueSession(userId, tokenHash, replace) {
       await client.query('SELECT ss.issue_session($1,$2,$3)', [tokenHash, userId, replace]);
     },

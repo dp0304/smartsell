@@ -6,12 +6,13 @@ import type { Store } from '@smartsell/db';
 import type { FastifyRequest } from 'fastify';
 import type { Config } from './config.js';
 import { auth, bodyObject, header, membership, missing, originGuard } from './identity.js';
-import { mcpRoutes } from './mcp.js';
+import { mcpRoutes, mcpToolCallRoutes } from './mcp.js';
 import { oauthRoutes, tokenRoutes } from './oauth.js';
 import { allowed, metadata, operationRunner, restInput, type Registered, type Schedule, type Subscriber } from './operations.js';
 import { kernelBackgroundStore, runBackground, runOperationsHeartbeat } from './runtime.js';
 import { streamRoutes } from './stream.js';
 import { workspaceOpenApi, workspaceOpenApiRoute } from './workspace-openapi.js';
+import { registerWorkerDownloads } from './worker-downloads.js';
 import { customerEgress } from './integration/customer-egress.js';
 import { createSignedWebhookHost } from './integration/signed-webhook-host.js';
 import { createPortalHost } from './integration/portal-host.js';
@@ -154,6 +155,8 @@ export function createServer({ config, store, operations, subscribers = [], sche
     const key = identityKey ?? (config.identityKey ? Buffer.from(config.identityKey, 'hex') :
       createHash('sha256').update(config.secret).digest());
     enterprise = enterpriseHost(app, store, config, key, () => sessions, testOidcTransport);
+    registerWorkerDownloads(app, config.workerDownloadDirectory, req =>
+      store.transaction({ readOnly: true }, ({ identity }) => sessions.authenticate(identity, req, 'session')));
     app.get('/api/v1/session', async req => store.transaction({ readOnly: true }, ({ identity }) => {
       const data = sessions.sessionData(identity, sessions.authenticate(identity, req));
       return { data, ...data };
@@ -162,6 +165,7 @@ export function createServer({ config, store, operations, subscribers = [], sche
       const { csrf_token } = sessions.sessionData(identity, sessions.authenticate(identity, req, 'session'));
       return { csrf_token };
     }));
+    app.get('/api/v1/setup/status', sessions.readSetupStatus);
     app.post('/api/v1/setup', { bodyLimit: 8192 }, async (req, reply) => {
       throttleLogin(req.ip);
       const result = await sessions.setup(req, jsonBody(req));
@@ -178,6 +182,7 @@ export function createServer({ config, store, operations, subscribers = [], sche
     app.post('/api/v1/logout', sessions.logout);
     app.delete('/api/v1/session', sessions.logout);
     tokenRoutes(app, store, sessions, operations);
+    mcpToolCallRoutes(app, store, sessions);
     streamRoutes(app, store, sessions, config);
     app.get<{ Params: { ws: string } }>(`${prefix}/catalog`, async req => store.transaction({ readOnly: true }, ({ identity }) => {
       const principal = sessions.authenticate(identity, req);

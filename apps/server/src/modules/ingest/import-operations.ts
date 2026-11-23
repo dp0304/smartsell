@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { ADMIN, Problem, type Context, type Data, type Operation, type Role, type Row } from '@smartsell/contracts';
+import { catalogExportMapping } from '../commerce/csv-import.js';
 import { csvCell, importTable, maxImportRows, parseCsv } from './csv';
 import { readXlsx, XlsxError } from './xlsx';
 import { asData, day, integer, invalid, iso, object, text, timezone } from './ingest-input';
@@ -12,6 +13,7 @@ const importRoles: readonly Role[] = ['owner', 'admin', 'manager', 'editor', 'an
 const batchKind = 'import_batch';
 const rowKind = 'import_row';
 const mappingVersion = 1;
+const maxWorkerCatalogRows = 5_000;
 const transactional = new Set(['order_list', 'refund_list', 'logistics', 'commission']);
 export function importAccess(ctx: Pick<Context, 'role'>, template: string) {
   if ((transactional.has(template) || template === 'ad_report') && !ADMIN.includes(ctx.role)) {
@@ -132,7 +134,7 @@ function preview(ctx: Context, batch: Row, sourceRows: Row[]) {
   return result;
 }
 
-export function createImportBatch(ctx: Context, body: Data, idempotencyKey?: string) {
+export function createImportBatch(ctx: Context, body: Data, idempotencyKey?: string, { workerCatalog = false } = {}) {
   const template = templateKey(body.template_key);
   const source = body.data_source_id ? ctx.get('data_source', text(body.data_source_id, 'data_source_id')) : undefined;
   if (source) checkUse(ctx, [source.id], 'display');
@@ -145,7 +147,7 @@ export function createImportBatch(ctx: Context, body: Data, idempotencyKey?: str
   const provider = marketProvider(store, source);
   providerTemplate(template, provider);
   const amazonPrivacy = provider === AMAZON || source?.provider === AMAZON;
-  const protectedInput = amazonPrivacy || transactional.has(template) || ['douyin', 'xiaohongshu'].includes(provider);
+  const protectedInput = workerCatalog || amazonPrivacy || transactional.has(template) || ['douyin', 'xiaohongshu'].includes(provider);
   if (protectedInput && body.file_object_id) invalid('Upload report content directly so unfiltered data is never written to file storage', 'INLINE_PROTECTED_IMPORT_REQUIRED');
   const xlsx = body.xlsx_base64 !== undefined;
   const inlineCsv = body.csv_text !== undefined || body.csv !== undefined;
@@ -153,9 +155,9 @@ export function createImportBatch(ctx: Context, body: Data, idempotencyKey?: str
   const file = body.file_object_id ? ctx.get('file_object', text(body.file_object_id, 'file_object_id')) : undefined;
   const accountId = template === 'ad_report' ? text(body.ad_account_id ?? source?.ad_account_id, 'ad_account_id') : undefined;
   if (accountId && source?.ad_account_id && source.ad_account_id !== accountId) invalid('Ad account differs from the source ad account');
-  const scope = { template, source, store, accountId, provider, protectedInput, file, idempotencyKey };
+  const scope = { template, source, store, accountId, provider, protectedInput, file, idempotencyKey, workerCatalog };
   if (xlsx) {
-    return readXlsx(body.xlsx_base64, maxImportRows).then(rows => stageImport(ctx, body, scope, importTable(rows)), error => {
+    return readXlsx(body.xlsx_base64, workerCatalog ? maxWorkerCatalogRows : maxImportRows).then(rows => stageImport(ctx, body, scope, importTable(rows)), error => {
       if (error instanceof XlsxError) {
         const code = error.code === 'xlsx_too_large' ? 'IMPORT_TOO_LARGE' : error.code.toUpperCase();
         throw new Problem(error.status, code, error.message);
@@ -168,11 +170,32 @@ export function createImportBatch(ctx: Context, body: Data, idempotencyKey?: str
   return stageImport(ctx, body, scope, parseCsv(input));
 }
 
+const workerExportFields = {
+  external_product_id: 'external_product_id', external_variant_id: 'external_variant_id', handle: 'handle', title: 'title', sku: 'sku',
+  option_1_value: 'option1', option_2_value: 'option2', option_3_value: 'option3',
+  price_major: 'price', price_amount_minor: 'price_minor', currency: 'currency', inventory_quantity: 'available',
+};
+
+function workerExportMapping(provider: string, header: string[]) {
+  const supported = new Set(Object.values(workerExportFields));
+  const columns = header.filter(column => column.length <= 128 && !forbiddenColumn(column) && !privateValue(column));
+  const mapping = Object.fromEntries(Object.entries(builtinMapping('product_list', provider, columns)).filter(([, field]) => supported.has(field)));
+  const selected = new Set(Object.values(mapping));
+  for (const [column, field] of Object.entries(catalogExportMapping(provider, columns, workerExportFields))) {
+    if (!Object.hasOwn(mapping, column) && !selected.has(field)) mapping[column] = field;
+  }
+  if (!Object.values(mapping).some(field => ['external_product_id', 'handle', 'sku'].includes(field))) {
+    invalid('Product export requires a product ID, handle, or SKU column', 'INVALID_HEADER');
+  }
+  return mapping;
+}
+
 function stageImport(ctx: Context, body: Data, scope: {
-  template: Template; source?: Row; store?: Row; accountId?: string; provider: string; protectedInput: boolean; file?: Row; idempotencyKey?: string;
+  template: Template; source?: Row; store?: Row; accountId?: string; provider: string; protectedInput: boolean; file?: Row; idempotencyKey?: string; workerCatalog: boolean;
 }, { header, records }: ReturnType<typeof importTable>) {
-  const { template, source, store, accountId, provider, protectedInput, file, idempotencyKey } = scope;
-  const suggested = builtinMapping(template, provider, header);
+  const { template, source, store, accountId, provider, protectedInput, file, idempotencyKey, workerCatalog } = scope;
+  if (workerCatalog && records.length > maxWorkerCatalogRows) invalid('Worker catalog exports may contain up to 5,000 rows', 'INVALID_ROW_COUNT');
+  const suggested = workerCatalog ? workerExportMapping(provider, header) : builtinMapping(template, provider, header);
   const amazonPrivacy = provider === AMAZON || source?.provider === AMAZON;
   const allowed = header.filter(column => !forbiddenColumn(column) && (!protectedInput || Object.hasOwn(suggested, column))
     && !privateValue(column) && (!amazonPrivacy || !amazonPrivateColumn(column)));
@@ -180,7 +203,7 @@ function stageImport(ctx: Context, body: Data, scope: {
   const saved = body.mapping_preset_id ? ctx.get('import_mapping_preset', text(body.mapping_preset_id, 'mapping_preset_id')) : undefined;
   if (saved && (saved.template_key !== template || saved.provider !== provider)) invalid('Mapping preset has a different template or provider');
   const mapping = body.mapping !== undefined || saved ? mappingOf(template, allowed, body.mapping ?? saved?.mapping) : defaultMapping;
-  const options = importOptions(ctx, body.options ?? saved?.options, accountId);
+  const options = importOptions(ctx, workerCatalog ? { currency: store?.default_currency } : body.options ?? saved?.options, accountId);
   const supersedes = body.supersedes_batch_id ? accessibleBatch(ctx, text(body.supersedes_batch_id, 'supersedes_batch_id')) : undefined;
   if (supersedes && (supersedes.template_key !== template || supersedes.store_id !== (store?.id ?? null) || supersedes.data_source_id !== (source?.id ?? null) || (supersedes.ad_account_id ?? undefined) !== accountId)) {
     invalid('The previous batch has a different source, template, or store');
@@ -190,6 +213,9 @@ function stageImport(ctx: Context, body: Data, scope: {
   const filtered = records.map(({ cells, line }) => {
     const raw = Object.fromEntries(allowedIndexes.map(([column, index]) => {
       const value = cells[index] ?? '';
+      if (workerCatalog && (value.length > 4096 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\p{Cs}]/u.test(value))) {
+        invalid('Product export contains an invalid or oversized cell', 'INVALID_WORKER_CATALOG_FILE');
+      }
       return [column, privateValue(value) ? '' : value];
     }));
     digest.update(JSON.stringify([line, cells.length, raw]));

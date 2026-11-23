@@ -5342,7 +5342,7 @@
         },
         {
           "file": "tests/acceptance/ai05-postgres.sh",
-          "shellAssertion": "node --import tsx --test tests/acceptance/ai05-postgres.test.mjs",
+          "shellAssertion": "node --import tsx --test --test-isolation=none tests/acceptance/ai05-postgres.test.mjs &",
           "surface": "MCP",
           "result": "pass",
           "assertion": "正式 Commands 與 Operations 在獨立 PostgreSQL 查回原 Agent/採集作業，重啟和同鍵重送仍同一筆。實測單 SSE 連續 checkpoint 與取消、Last-Event-ID、授權及 Tasks 協商。",

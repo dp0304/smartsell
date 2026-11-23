@@ -19,37 +19,37 @@ const staticFiles = new Map([
 const secret = () => randomBytes(32).toString('hex');
 
 const test = base.extend({
-  databaseUrl: [undefined, { option: true }],
+  databaseUrl: [process.env.SMARTSELL_CLIENT_DELIVERY_PG_URL, { option: true }],
   customHosts: [[], { option: true }],
   async localPortal({ databaseUrl, customHosts }, use) {
     const directory = await mkdtemp(join(tmpdir(), 'smartsell-portal-e2e-'));
     const keyFile = join(directory, 'key.pem');
     const certFile = join(directory, 'cert.pem');
-    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=127.0.0.1',
-      '-days', '1', '-keyout', keyFile, '-out', certFile], { stdio: 'ignore' });
-    let api, apiOrigin;
-    const portal = createHttpsServer({ key: await readFile(keyFile), cert: await readFile(certFile) }, async (req, res) => {
-      const { pathname } = new URL(req.url, 'http://localhost');
-      if (pathname.startsWith('/api/v1/portal/')) {
-        const upstream = httpRequest(`${apiOrigin}${req.url}`, { method: req.method, headers: req.headers }, response => {
-          res.writeHead(response.statusCode, response.headers);
-          response.pipe(res);
-        });
-        upstream.on('error', () => res.writeHead(502).end());
-        req.pipe(upstream);
-        return;
-      }
-      const page = pathname === '/' || /^\/(?:s|invite)\/[a-f0-9-]+$/.test(pathname);
-      const type = page ? 'text/html' : staticFiles.get(pathname);
-      if (req.method !== 'GET' || !type) return res.writeHead(404).end();
-      try {
-        const bytes = await readFile(new URL(page ? 'index.html' : pathname.slice(1), portalRoot));
-        res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' }).end(bytes);
-      } catch {
-        res.writeHead(500).end();
-      }
-    });
+    let api, apiOrigin, portal;
     try {
+      execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=127.0.0.1',
+        '-days', '1', '-keyout', keyFile, '-out', certFile], { stdio: 'ignore' });
+      portal = createHttpsServer({ key: await readFile(keyFile), cert: await readFile(certFile) }, async (req, res) => {
+        const { pathname } = new URL(req.url, 'http://localhost');
+        if (pathname.startsWith('/api/v1/portal/')) {
+          const upstream = httpRequest(`${apiOrigin}${req.url}`, { method: req.method, headers: req.headers }, response => {
+            res.writeHead(response.statusCode, response.headers);
+            response.pipe(res);
+          });
+          upstream.on('error', () => res.writeHead(502).end());
+          req.pipe(upstream);
+          return;
+        }
+        const page = pathname === '/' || /^\/(?:s|invite)\/[a-f0-9-]+$/.test(pathname);
+        const type = page ? 'text/html' : staticFiles.get(pathname);
+        if (req.method !== 'GET' || !type) return res.writeHead(404).end();
+        try {
+          const bytes = await readFile(new URL(page ? 'index.html' : pathname.slice(1), portalRoot));
+          res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' }).end(bytes);
+        } catch {
+          res.writeHead(500).end();
+        }
+      });
       portal.listen(0, host);
       await once(portal, 'listening');
       const portalOrigin = `https://${host}:${portal.address().port}`;
@@ -64,7 +64,7 @@ const test = base.extend({
       await use({ apiOrigin, staffOrigin: backend.staffOrigin, portalOrigin, setupToken, assertionKey, customOrigins, store: backend.store });
     } finally {
       try {
-        if (portal.listening) await new Promise(resolve => portal.close(resolve));
+        if (portal?.listening) await new Promise(resolve => portal.close(resolve));
         await api?.close();
       } finally {
         await rm(directory, { recursive: true, force: true });
@@ -84,7 +84,7 @@ function clientAssertion({ portalOrigin, assertionKey }, sub, email) {
   return `${payload}.${createHmac('sha256', assertionKey).update(`smartsell:portal-session:v1:${payload}`).digest('base64url')}`;
 }
 
-test.use({ ignoreHTTPSErrors: true, databaseUrl: process.env.SMARTSELL_CLIENT_DELIVERY_PG_URL });
+test.use({ ignoreHTTPSErrors: true });
 
 const exact = { exact: true };
 
@@ -214,6 +214,8 @@ test('PL06 | the client portal keeps the pinned revision visible and rejects sta
 });
 
 test.describe('Client delivery', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
   test('TE03 TE04 TE05 | named client searches, downloads and reopens the confirmed report after backfill', async ({ page, request, localPortal }) => {
     const operation = await staffOperations(request, localPortal);
     const post = (path, data, version) => operation('POST', path, data, version);

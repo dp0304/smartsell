@@ -30,7 +30,7 @@
 .vsx-table-wrap { min-width: 0; overflow-x: auto; }
 .vsx-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 .vsx-table :is(th, td) { padding: 9px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
-.vsx-table thead th { color: var(--muted); font-size: 12px; font-weight: 650; white-space: nowrap; }
+.vsx-table thead th { color: var(--muted); background: var(--surface-inset); font-size: 12px; font-weight: 650; white-space: nowrap; }
 .vsx-table :is(th, td).num { text-align: right; }
 .vsx-table td.num .vsx-value { justify-content: flex-end; }
 .vsx-table td > small { display: block; margin-top: 2px; font-size: 11px; }

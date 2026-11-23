@@ -39,7 +39,7 @@ for (const mode of ['SQLite', 'PostgreSQL'] as const) test(`Commands ${mode}: lo
         cwd: new URL('../../../../', import.meta.url),
         env: { ...process.env, NODE_ENV: secure ? 'production' : 'development', PORT: String(port), HOST: '127.0.0.1',
           PUBLIC_ORIGIN: origin, SMARTSELL_ROLES: 'api', SMARTSELL_STORE: secure ? 'postgres' : 'local', SMARTSELL_DATA_FILE: state,
-          SMARTSELL_MEDIA_ROOT: join(dir, 'media'), SMARTSELL_OPERATION_API: '0', SMARTSELL_IDENTITY_DEPLOYMENT: 'private',
+          SMARTSELL_MEDIA_ROOT: join(dir, 'media'), SMARTSELL_OPERATION_API: '0', SMARTSELL_IDENTITY_DEPLOYMENT: 'private', SMARTSELL_LOCAL_SETUP: '1',
           IDENTITY_ENCRYPTION_KEY: undefined, DATABASE_URL: secure ? pg : undefined, BACKGROUND_DATABASE_URL: undefined,
           SETUP_TOKEN: '1ee07e3b69f0a1229890e26c1bab32e1a054889764d00dd668f8cce73016d823',
           APP_SECRET: secure ? 'f57ef9374266ea4f889f93b832f76d60451f1181842f20d0a201e8841a209f39' : undefined },
@@ -71,11 +71,21 @@ for (const mode of ['SQLite', 'PostgreSQL'] as const) test(`Commands ${mode}: lo
       return { body: await response.json(), cookie: response.headers.get('set-cookie')?.split(';')[0] };
     }
     const first = await launch(port);
-    const setup = await request(base, '/api/v1/setup', 201, { ...credentials, name: 'Owner', workspaceName: 'Identity QA' },
+    const status = await request(base, '/api/v1/setup/status', 200);
+    assert.deepEqual(status.body, { data: { initialized: false, token_required: true, registration_enabled: true, password_min_length: secure ? 12 : 6 } });
+    const input = { ...credentials, name: 'Owner', workspaceName: 'Identity QA' };
+    await request(base, '/api/v1/setup', 403, input);
+    await request(base, '/api/v1/setup', 403, input, { 'x-setup-token': 'incorrect-token' });
+    const setup = await request(base, '/api/v1/setup', 201, input,
       { 'x-setup-token': '1ee07e3b69f0a1229890e26c1bab32e1a054889764d00dd668f8cce73016d823' });
     assert(setup.cookie);
-    const alternate = await request(base, '/api/v1/session', 200, credentials);
+    const expectedUser = { id: setup.body.data.user.id, email: credentials.email, name: input.name };
+    assert.deepEqual(setup.body.data.user, expectedUser);
+    const alternate = await request(base, '/api/v1/session', 200, { username: credentials.email.toUpperCase(), password });
     assert(alternate.cookie);
+    assert.deepEqual(alternate.body.data.user, expectedUser);
+    const alternateSession = await request(base, '/api/v1/session', 200, undefined, { cookie: alternate.cookie });
+    assert.deepEqual(alternateSession.body.data.user, expectedUser);
     const auth = { cookie: setup.cookie, 'x-csrf-token': setup.body.data.csrf_token };
     await request(base, `${path}/enroll`, 403, { password }, { cookie: setup.cookie });
     await request(base, `${path}/enroll`, 401, { password: 'invalid password' }, auth);

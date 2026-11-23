@@ -31,18 +31,70 @@ async function launch(t, entry) {
   const other = { workspaceId: randomUUID(), tenantId: randomUUID(), actorId: randomUUID(), brandId: randomUUID() };
   let child;
   let exited;
+  async function stop() {
+    const running = child;
+    if (!running) return;
+    child = undefined;
+    running.kill('SIGTERM');
+    const timer = setTimeout(() => running.kill('SIGKILL'), 3000).unref();
+    try { await exited; } finally { clearTimeout(timer); }
+  }
   t.after(async () => {
-    try {
-      if (child) {
-        child.kill('SIGTERM');
-        const timer = setTimeout(() => child.kill('SIGKILL'), 3000).unref();
-        try { await exited; } finally { clearTimeout(timer); }
-      }
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
+    try { await stop(); } finally { await rm(directory, { recursive: true, force: true }); }
   });
+  const reservation = createServer();
+  reservation.listen(0, '127.0.0.1');
+  await once(reservation, 'listening');
+  const { port } = reservation.address();
+  await new Promise((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
+  const origin = `http://127.0.0.1:${port}`;
+  const setupToken = randomUUID();
+  async function start() {
+    const running = spawn(process.execPath, ['--import', 'tsx', `apps/server/src/${entry}.ts`], {
+      cwd, env: { PATH: process.env.PATH, CLAUDECODE: process.env.CLAUDECODE, NODE_ENV: 'test', ROLE: 'all', HOST: '127.0.0.1', PORT: String(port),
+        PUBLIC_ORIGIN: origin, SMARTSELL_DATA_FILE: state, SETUP_TOKEN: setupToken },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    child = running;
+    let logs = '';
+    for (const stream of [running.stdout, running.stderr]) stream.on('data', chunk => { logs = (logs + chunk).slice(-5000); });
+    exited = once(running, 'close');
+    const deadline = Date.now() + 15_000;
+    while (true) {
+      assert.ok(running.exitCode === null && running.signalCode === null && Date.now() < deadline, `${entry} did not become ready\n${logs}`);
+      const ready = await fetch(`${origin}/readyz`, { signal: AbortSignal.timeout(1000) }).catch(() => undefined);
+      await ready?.body?.cancel();
+      if (ready?.ok) break;
+      await delay(100);
+    }
+  }
+  await start();
+  async function request(path, { method = 'GET', headers, body, status = 200 } = {}) {
+    const response = await fetch(`${origin}${path}`, { method, redirect: 'error', signal: AbortSignal.timeout(5000),
+      headers: { ...(body !== undefined && { 'content-type': 'application/json' }), ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body) });
+    const payload = await response.text();
+    assert.equal(response.status, status, `${method} ${path}: ${payload}`);
+    return { payload: payload && JSON.parse(payload), headers: response.headers };
+  }
   if (entry === 'kernel-main') {
+    const uninitialized = { initialized: false, token_required: true, registration_enabled: true, password_min_length: 12 };
+    assert.deepEqual((await request('/api/v1/setup/status')).payload.data, uninitialized);
+    await request('/oauth/register', { method: 'POST', status: 201,
+      body: { redirect_uris: ['http://127.0.0.1:8765/callback'] } });
+    assert.deepEqual((await request('/api/v1/setup/status')).payload.data, uninitialized);
+  }
+  const owner = { email: 'owner@example.invalid', name: 'Owner', workspaceName: 'OP08 fixture' };
+  const setupHeaders = { 'x-setup-token': setupToken };
+  await request('/api/v1/setup', { method: 'POST', status: 422,
+    headers: setupHeaders, body: { ...owner, password: '123456' } });
+  const password = 'op08-local-fixture-password';
+  const { payload, headers } = await request('/api/v1/setup', { method: 'POST', status: 201,
+    headers: setupHeaders, body: { ...owner, password } });
+  const ws = payload.data.workspaces[0].id;
+  if (entry === 'kernel-main') {
+    // Seed the cross-tenant fixture after setup, once the server has released the file store lock.
+    await stop();
     const store = await fileStore(state);
     try {
       await store.transaction({ identityWrite: true }, async tx => {
@@ -54,42 +106,8 @@ async function launch(t, entry) {
     } finally {
       await store.close();
     }
+    await start();
   }
-  const reservation = createServer();
-  reservation.listen(0, '127.0.0.1');
-  await once(reservation, 'listening');
-  const { port } = reservation.address();
-  await new Promise((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
-  const origin = `http://127.0.0.1:${port}`;
-  const setupToken = randomUUID();
-  child = spawn(process.execPath, ['--import', 'tsx', `apps/server/src/${entry}.ts`], {
-    cwd, env: { PATH: process.env.PATH, CLAUDECODE: process.env.CLAUDECODE, NODE_ENV: 'test', ROLE: 'all', HOST: '127.0.0.1', PORT: String(port),
-      PUBLIC_ORIGIN: origin, SMARTSELL_DATA_FILE: state, SETUP_TOKEN: setupToken },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  let logs = '';
-  for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { logs = (logs + chunk).slice(-5000); });
-  exited = once(child, 'close');
-  const deadline = Date.now() + 15_000;
-  while (true) {
-    assert.ok(child.exitCode === null && child.signalCode === null && Date.now() < deadline, `${entry} did not become ready\n${logs}`);
-    const ready = await fetch(`${origin}/readyz`, { signal: AbortSignal.timeout(1000) }).catch(() => undefined);
-    await ready?.body?.cancel();
-    if (ready?.ok) break;
-    await delay(100);
-  }
-  async function request(path, { method = 'GET', headers, body, status = 200 } = {}) {
-    const response = await fetch(`${origin}${path}`, { method, redirect: 'error', signal: AbortSignal.timeout(5000),
-      headers: { ...(body !== undefined && { 'content-type': 'application/json' }), ...headers },
-      body: body === undefined ? undefined : JSON.stringify(body) });
-    const payload = await response.text();
-    assert.equal(response.status, status, `${method} ${path}: ${payload}`);
-    return { payload: payload && JSON.parse(payload), headers: response.headers };
-  }
-  const password = 'op08-local-fixture-password';
-  const { payload, headers } = await request('/api/v1/setup', { method: 'POST', status: 201,
-    headers: { 'x-setup-token': setupToken }, body: { email: 'owner@example.invalid', name: 'Owner', password, workspaceName: 'OP08 fixture' } });
-  const ws = payload.data.workspaces[0].id;
   async function session(headers, data) {
     const cookie = headers.get('set-cookie').split(';')[0];
     const csrf = data?.csrf_token ?? (await request('/api/v1/session/csrf', { headers: { cookie } })).payload.csrf_token;

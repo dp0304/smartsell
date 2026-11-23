@@ -119,6 +119,25 @@ function catalogStatus(ctx: Context, store: Row, connection?: Row): Data {
   };
 }
 
+function createStore(ctx: Context, fields: Data) {
+  return ctx.create('store', {
+    status: 'import_only', status_reason: null, connection_id: null, data_source_id: null,
+    last_snapshot_at: null, last_incremental_at: null, ...fields,
+  });
+}
+
+export function createWorkerStore(ctx: Context, fields: {
+  brand_id: string; provider: typeof storeProviders[number]; external_store_id: string; name: string;
+}) {
+  requirePlatformPhase(ctx, fields.provider);
+  checkStoreIdentity(ctx, fields.provider, fields.external_store_id);
+  const settings = ctx.list('workspace')[0];
+  const store = createStore(ctx, { ...fields, region: null, default_currency: settings?.reporting_currency ?? 'USD',
+    default_locale: settings?.default_ui_locale ?? 'en-US', sync_scope: { products: true } });
+  ctx.emit('commerce.store.status_changed', { store_id: store.id, status: store.status });
+  return store;
+}
+
 export function storeOperations(services: CommerceServices): Operation[] {
   return [
     { path: '/stores', method: 'GET', name: 'commerce_store_list', roles: READ, summary: 'List workspace stores', run(ctx, { query }) {
@@ -136,10 +155,9 @@ export function storeOperations(services: CommerceServices): Operation[] {
       if (mode === 'authorize' && !body.connection_id && !services.account) return unavailable('Account authorization service is unavailable');
       let locale: string;
       try { locale = Intl.getCanonicalLocales(text(body.default_locale, 'default_locale', 35))[0] ?? invalid('default_locale'); } catch { invalid('default_locale'); }
-      const store = ctx.create('store', {
+      const store = createStore(ctx, {
         brand_id: brand.id, provider, external_store_id: externalId, name: text(body.name, 'name', 256), default_currency: currency(body.default_currency), default_locale: locale,
-        region: optional(body.region, 'region'), sync_scope: syncScope(ctx, body.sync_scope), status: 'import_only', status_reason: null, connection_id: null, data_source_id: null,
-        last_snapshot_at: null, last_incremental_at: null,
+        region: optional(body.region, 'region'), sync_scope: syncScope(ctx, body.sync_scope),
       });
       if (mode === 'authorize') return startConnection(ctx, store, body, services);
       ctx.emit('commerce.store.status_changed', { store_id: store.id, status: store.status });

@@ -5,6 +5,13 @@ import { idempotencyPattern, jsonSchema, openObject, Problem, workspaceDto, type
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { bodyObject, invalid } from '../identity.js';
 import { expectedVersion, idempotencyKey, parameterNames, stringMap, type Registered } from '../operations.js';
+import { workerSocialStatusToolNames } from '../modules/account/worker-social-status.js';
+import { workerSocialRequestKey, workerSocialStatusInstructions } from './agent-connections.js';
+
+export function operationToolDescription(op: Registered) {
+  return workerSocialStatusToolNames.has(op.name)
+    ? `${op.summary}. ${workerSocialStatusInstructions}` : op.summary;
+}
 
 export function describeOperationTool(op: Registered): Tool {
   const params = parameterNames(op);
@@ -13,19 +20,22 @@ export function describeOperationTool(op: Registered): Tool {
   if (params.length) required.push('params');
   if (op.versionKind || dto?.version === 'required') required.push('expected_version');
   if (dto?.bodyRequired || op.contract?.bodyRequired) required.push('body');
-  if (op.external && op.method !== 'GET') required.push('idempotency_key');
+  if ((op.external || op.idempotencyRequired) && op.method !== 'GET') required.push('idempotency_key');
+  const socialStatus = workerSocialStatusToolNames.has(op.name);
   return {
     name: op.name,
-    description: op.summary,
+    description: operationToolDescription(op),
     inputSchema: {
       type: 'object', required, additionalProperties: false,
       properties: {
         workspace_id: { type: 'string', format: 'uuid' },
-        params: { type: 'object', properties: Object.fromEntries(params.map(name => [name, { type: 'string' }])), required: params, additionalProperties: false },
-        query: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] } },
-        body: dto?.input ? jsonSchema(dto.input, 'input') : op.contract?.body ?? openObject,
-        expected_version: { type: 'integer', minimum: 1 },
-        idempotency_key: { type: 'string', pattern: idempotencyPattern },
+        ...((!socialStatus || params.length > 0) && { params: { type: 'object', properties: Object.fromEntries(params.map(name => [name, { type: 'string' }])), required: params, additionalProperties: false } }),
+        ...(!socialStatus && { query: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] } }, expected_version: { type: 'integer', minimum: 1 } }),
+        ...((!socialStatus || op.method !== 'GET') && {
+          body: dto?.input ? jsonSchema(dto.input, 'input') : op.contract?.body ?? openObject,
+          idempotency_key: { type: 'string', pattern: idempotencyPattern,
+            ...(op.name === 'worker_social_status_request' && { description: workerSocialRequestKey }) },
+        }),
       },
     },
     outputSchema: { type: 'object', properties: { data: dto ? jsonSchema(dto.output, 'output') : op.contract?.output ?? {}, next_cursor: { type: ['string', 'null'] }, etag: { type: 'string' } }, required: ['data'] },

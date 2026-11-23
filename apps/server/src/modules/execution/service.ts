@@ -408,7 +408,8 @@ export function registerManualPost(ctx: Context, target: Row, body: Data) {
   let task = taskFor(ctx, target) ?? ensureTask(ctx, target);
   if (task.status === 'published' && task.platform_post_id) {
     const post = ctx.get(POST, String(task.platform_post_id));
-    if (post.permalink === url(body.permalink)) return post;
+    const externalPostId = body.external_post_id == null ? null : text(body.external_post_id, 'external_post_id');
+    if (post.permalink === url(body.permalink) && (!externalPostId || !post.external_post_id || post.external_post_id === externalPostId)) return post;
     throw conflict('POST_ALREADY_LINKED', 'The target has a different platform post');
   }
   if (REFROZEN.includes(status(task)) && !task.restore_hold && !task.active_attempt_id && !pending(ctx, task)) {

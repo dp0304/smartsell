@@ -22,11 +22,17 @@ CREATE DATABASE domain_full OWNER domain_owner;
 CREATE DATABASE domain_flow OWNER domain_owner;
 CREATE DATABASE domain_rollback OWNER domain_owner;
 CREATE DATABASE domain_upgrade OWNER domain_owner;
+CREATE DATABASE legacy_identity_upgrade OWNER domain_owner;
 SQL
 address=$(docker port "$container" 5432/tcp)
 owner="postgresql://domain_owner:domain-owner@${address}"
 request="postgresql://app_rw:domain-request@${address}"
 migrate() { MIGRATION_DATABASE_URL="$owner/$1" pnpm --filter @smartsell/db migrate:all; }
+
+SMARTSELL_LEGACY_PG_MIGRATION_URL="$owner/legacy_identity_upgrade" \
+  SMARTSELL_LEGACY_PG_ADMIN_URL="postgresql://postgres:domain-local@${address}/legacy_identity_upgrade" \
+  SMARTSELL_LEGACY_PG_REQUEST_URL="$request/legacy_identity_upgrade" \
+  node --import tsx --test apps/server/src/integration/legacy-identity-upgrade.test.ts
 
 # Create a collision late in the new schema migration. Earlier core DDL and the
 # ledger must roll back as a unit while the preexisting object survives.

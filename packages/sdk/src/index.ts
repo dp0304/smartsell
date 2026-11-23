@@ -4,7 +4,7 @@ export { ApiError, asRecord, bindPath, type Envelope, type RecordData } from './
 export { callWorkspace, getWorkspaceOpenApi, type WorkspaceOpenApiDocument } from './workspace-api.js';
 
 export interface Session {
-  user: { id?: string; name?: string; email?: string; locale?: string };
+  user: { id?: string; name?: string; email?: string; username?: string; locale?: string };
   workspaces: { id: string; name: string; locale?: string; role?: string }[];
   csrf_token?: string;
 }
@@ -133,7 +133,33 @@ export async function readSession(signal?: AbortSignal): Promise<Envelope<Sessio
   }
 }
 
+export interface SetupStatus {
+  initialized: boolean;
+  token_required: boolean;
+  registration_enabled: boolean;
+  password_min_length?: number;
+}
+
+export async function readSetupStatus(signal?: AbortSignal): Promise<SetupStatus> {
+  const { data } = await request<SetupStatus>('/api/v1/setup/status', { signal });
+  if (typeof data?.initialized !== 'boolean' || typeof data.token_required !== 'boolean' || typeof data.registration_enabled !== 'boolean') {
+    throw new ApiError(502, { code: 'INVALID_RESPONSE' });
+  }
+  const { password_min_length: minimum, ...status } = data;
+  return typeof minimum === 'number' && Number.isSafeInteger(minimum) && minimum > 0
+    ? { ...status, password_min_length: minimum } : status;
+}
+
+export function signIn(input: { email: string; password: string } | { username: string; password: string }) {
+  return request<unknown>('/api/v1/session', { method: 'POST', body: input });
+}
+
 export async function setupWorkspace(input: RecordData, setupToken?: string) {
+  if (typeof input.username === 'string') {
+    return request<Session>('/api/v1/setup', {
+      method: 'POST', setupToken: setupToken?.trim(), body: { username: input.username.trim(), password: input.password },
+    });
+  }
   const email = typeof input.email === 'string' ? input.email.trim() : '';
   const workspace = input.workspace_name ?? input.workspaceName;
   const workspaceName = typeof workspace === 'string' ? workspace.trim() : '';

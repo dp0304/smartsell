@@ -7,10 +7,13 @@ on:
 permissions:
   contents: read
 
+env:
+  NODE_VERSION: '24.21.0'
+
 jobs:
   verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,30 +21,79 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-      - name: Install workspace dependencies
-        id: install
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm verify
-      - name: Validate Compose and pull the pinned PostgreSQL image
-        id: postgres
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: |
-          export POSTGRES_PASSWORD="$(openssl rand -hex 32)"
-          export SMARTSELL_MIGRATION_PASSWORD="$(openssl rand -hex 32)"
-          export SMARTSELL_RUNTIME_PASSWORD="$(openssl rand -hex 32)"
-          export SMARTSELL_BACKGROUND_PASSWORD="$(openssl rand -hex 32)"
-          docker compose -f infra/compose.yaml --profile server config --quiet
-          docker compose -f infra/compose.yaml pull postgres
-      - name: Run local PostgreSQL and curl smoke
-        if: ${{ !cancelled() && steps.postgres.outcome == 'success' }}
-        run: bash infra/smoke.sh
-      - name: Verify domain migrations and PostgreSQL workflows
-        if: ${{ !cancelled() && steps.postgres.outcome == 'success' }}
-        run: |
-          export POSTGRES_PASSWORD="$(openssl rand -hex 32)"
-          export SMARTSELL_MIGRATION_PASSWORD="$(openssl rand -hex 32)"
-          export SMARTSELL_RUNTIME_PASSWORD="$(openssl rand -hex 32)"
-          SMARTSELL_TEST_PG_IMAGE="$(docker compose -f infra/compose.yaml --profile server config --images | grep '^postgres:')" bash tests/acceptance/domain-postgres.sh
+
+  services:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: sudo apt-get install -y ffmpeg
+      - run: pnpm verify:services integration
+
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:services recovery
+
+  desktop-package:
+    name: Desktop development package (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: mac
+          - os: windows-2025
+            target: win
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node apps/connector-desktop/node_modules/electron/install.js
+      - run: pnpm --filter @smartsell/connector-desktop build
+      - run: pnpm exec node apps/connector-desktop/scripts/package.mjs ${{ matrix.target }} --local-dir
+      - run: node scripts/verify-desktop-package.mjs
+      - name: Verify the macOS development signature
+        if: matrix.target == 'mac'
+        shell: bash
+        run: codesign --verify --deep --strict apps/connector-desktop/release-local/mac*/'SmartSell Connector.app'

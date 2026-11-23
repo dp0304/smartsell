@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { DomainError, type Context, type Fields, type Role } from './modules/types';
+import type { LoginIdentifier } from './setup-policy.js';
+import type { SessionUser } from './session-user.js';
 
-export type User = { id: string; email: string; name: string };
+export type User = SessionUser;
 export type Workspace = { id: string; name: string; role: Role };
 export type Scope = { tenantId: string; workspaceId: string; actorId: string; role: Role };
-export type Setup = { email: string; name: string; workspaceName: string; passwordHash: string };
+export type Setup = LoginIdentifier & { name: string; workspaceName: string; passwordHash: string };
 export type CommandInfo = { module: string; action: string; key: string; fingerprint: string };
 
 export type PublicLocator = 'team.share' | 'traffic.landing_page' | 'traffic.short_link' | 'traffic.workspace' | 'lifecycle.unsubscribe_link';
@@ -13,6 +15,7 @@ export type MembershipChange = { memberId: string } & ({ action: 'set_role'; rol
 export interface Unit {
   context: Context;
   brandScopes?: readonly string[];
+  issueAgentSession?(tokenHash: string, ttlSeconds: number): Promise<void>;
   command(info: CommandInfo, run: () => Promise<unknown>): Promise<unknown>;
   changeMembership?(change: MembershipChange): Promise<void>;
   listMembers?(): Promise<{ user_id: string; role: Role; scopes?: string[] }[]>;
@@ -21,8 +24,9 @@ export interface Unit {
 }
 
 export interface Store {
+  initialized(): Promise<boolean>;
   setup(input: Setup, tokenHash: string, replace?: string): Promise<boolean>;
-  credentials(email: string): Promise<{ id: string; passwordHash: string } | undefined>;
+  credentials(identifier: LoginIdentifier | string): Promise<{ id: string; passwordHash: string } | undefined>;
   acceptMemberInvitation?(input: { tokenHash: string; email: string; name: string; passwordHash: string }): Promise<boolean>;
   /** ttlSeconds defaults to SESSION_SECONDS. Agent connections pass their own lifetime and no replace hash. */
   issueSession(userId: string, tokenHash: string, replace?: string, ttlSeconds?: number): Promise<void>;

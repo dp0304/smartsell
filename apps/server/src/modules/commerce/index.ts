@@ -4,6 +4,7 @@ import { requestStoreSync } from '../ingest/sync-operations.js';
 import { catalogOperations } from './catalog-operations.js';
 import { storeOperations, type CommerceServices } from './store-operations.js';
 import { tradeOperations } from './trade-operations.js';
+import { workerCatalogOperations } from './worker-catalog.js';
 
 export { applyCatalogPage, reconcileStoreCatalog } from './catalog-sync.js';
 export { prepareImport, type ImportTemplate, type ImportMetadata, type PreparedImport } from './imports.js';
@@ -18,6 +19,7 @@ export function createCommerceOperations(services: CommerceServices = {}): Opera
     }),
     ...catalogOperations,
     ...tradeOperations(services),
+    ...workerCatalogOperations,
   ];
 }
 

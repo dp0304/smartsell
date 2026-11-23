@@ -1,5 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { setupText } from './setup-copy';
+import { canSetUp } from './setup-data';
 import { AgentPrompt, AvailabilityTag, Glyph, StatusChip, ViewLink, formatDateTime, formatMeasure, formatMinor, isNum, type Tone, type Tuple } from '@smartsell/ui';
 import { copy, fill } from '../copy';
 import { useView, useViewContext, workspaceZone } from '../data/use-view';
@@ -159,7 +161,7 @@ function ProductGrid({ items, filter, sort, base, query, onClear }: { items: Pro
 
 export function ProductsPage() {
   const { l } = useText();
-  const { base } = useViewContext();
+  const { base, workspace } = useViewContext();
   const { brandId } = useFilters();
   const [params, setParams] = useSearchParams();
   const searchId = useId();
@@ -185,7 +187,9 @@ export function ProductsPage() {
   const searched = useView<ProductItem[]>('/views/products', { brand_id: brandId, q: query }, { enabled: Boolean(query), allPages: true });
   const list = (value: unknown) => Array.isArray(value) ? value as ProductItem[] : [];
   return <>
-    <PageHeader title={l(copy.pages.productsTitle)} subtitle={l(text.subtitle)} asOf={all.isPending ? undefined : all.asOf ?? null} />
+    <PageHeader title={l(copy.pages.productsTitle)} subtitle={l(text.subtitle)} asOf={all.isPending ? undefined : all.asOf ?? null}>
+      {canSetUp(workspace.role) && <Link className="vs-btn" to={`${base}/products/stores`}>{l(setupText.store)}</Link>}
+    </PageHeader>
     <Loaded read={all}>{value => {
       const items = list(value);
       if (!items.length) return <AgentPrompt title={l(copy.pages.productsEmpty)} prompt={l(copy.pages.productsPrompt)} agentHref={`${base}/agent`} />;

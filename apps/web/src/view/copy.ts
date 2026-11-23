@@ -10,7 +10,7 @@ export const copy = {
   },
   shell: {
     workspace: ['工作區', 'Workspace'], brand: ['品牌', 'Brand'], allBrands: ['全部品牌', 'All brands'], language: ['語言', 'Language'],
-    signOut: ['登出', 'Sign out'], period: ['期間', 'Period'], loading: ['載入中…', 'Loading…'],
+    signOut: ['登出', 'Sign out'], period: ['期間', 'Period'], loading: ['載入中…', 'Loading…'], skipToContent: ['跳到主要內容', 'Skip to main content'],
   },
   period: {
     days7: ['近 7 天', 'Last 7 days'], days30: ['近 30 天', 'Last 30 days'], days90: ['近 90 天', 'Last 90 days'], custom: ['自訂期間', 'Custom range'],
@@ -28,7 +28,10 @@ export const copy = {
   },
   overview: {
     title: ['總覽', 'Overview'], needsYou: ['待你決定', 'Needs your decision'], nothingToDecide: ['沒有需要你決定的事', 'Nothing needs your decision'],
-    kpis: ['核心指標', 'Key metrics'], thisWeek: ['本週發布', 'Publishing this week'], upcoming: ['接下來的發布', 'Upcoming posts'],
+    kpis: ['核心指標', 'Key metrics'], trend: ['每日趨勢', 'Daily trend'], countUnit: ['計數', 'Count'],
+    noMetrics: ['此期間沒有可顯示的指標', 'No metrics are available for this period'],
+    spendByCurrency: ['此期間沒有單一可用幣別，請在投放頁查看分幣別數據。', 'There is no single currency for this period. See spend by currency on the Ads page.'],
+    thisWeek: ['發布概況', 'Publishing'], upcoming: ['接下來的發布', 'Upcoming posts'],
     scheduled: ['已排程', 'Scheduled'], published: ['已發布', 'Published'], failed: ['失敗', 'Failed'], outcomeUnknown: ['結果待核實', 'Outcome unknown'],
     livePlans: ['進行中的推廣計劃', 'Live plans'], completeness: ['內容完成度', 'Content completeness'], completenessUnknown: ['完成度未知', 'Completeness unknown'],
     publishedOfPlanned: ['已發布 {a} / 規劃 {b}', '{a} published of {b} planned'], agentRecent: ['Agent 最近做了什麼', 'What your agent did recently'],

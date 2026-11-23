@@ -5,6 +5,7 @@ import { type Limits, type Terms, countAutoGrants, defaultLimits, haltSources, l
 import { drainConnectorTasks } from './connector-service.ts';
 import { bindingFor, blocked, connectorReady, issuePairingCode, online, sessionFor } from './device-control.ts';
 import { activeMigration, completeMigration, migrationImpact, migrationStatus, startMigration } from './migration.ts';
+import { createOwnedSocialAccount, ownedSocialProviders } from './social-accounts.js';
 import { providerCatalog } from '../../../../../packages/adapters/src/provider-catalog.ts';
 import type { CapabilityReport, ProviderKey } from '../../../../../packages/adapters/src/adapter-types.ts';
 
@@ -187,13 +188,12 @@ export function createOperations(services: Services = {}): Operation[] {
       .filter(row => !query.q || [row.display_name, row.external_account_id].some(value => String(value).toLowerCase().includes(query.q.toLowerCase())))
       .map(row => select(row, accountFields))),
     op('POST', '/social-accounts', 'register_owned_social_account', ADMIN, (ctx, { body }) => {
-      const provider = one(body.provider, ['douyin', 'xiaohongshu', 'tiktok', 'meta_instagram', 'meta_facebook', 'youtube'] as const);
+      const provider = one(body.provider, ownedSocialProviders);
       const externalId = text(body.external_account_id);
       if (body.owned_account_confirmed !== true) fail('ACCOUNT_OWNERSHIP_REQUIRED', 422);
       if (find(ctx, 'social_account', { provider, external_account_id: externalId })) fail('ACCOUNT_ALREADY_REGISTERED');
-      const row = ctx.create('social_account', { provider, external_account_id: externalId, display_name: text(body.display_name),
-        brand_id: activeBrand(ctx, body.brand_id), owner_id: ctx.actorId, default_timezone: zone(body.default_timezone ?? 'UTC'), status: 'active' });
-      audit(ctx, 'account.social_account.registered', { social_account_id: row.id, source: 'ownership_attested' });
+      const row = createOwnedSocialAccount(ctx, { provider, external_account_id: externalId, display_name: text(body.display_name),
+        brand_id: activeBrand(ctx, body.brand_id), owner_id: ctx.actorId, default_timezone: zone(body.default_timezone ?? 'UTC') }, 'ownership_attested');
       return select(row, accountFields);
     }),
     op('GET', accountPath, 'get_social_account', READ, (ctx, { params }) => select(ctx.get('social_account', params.id), accountFields)),
@@ -331,8 +331,29 @@ export function createOperations(services: Services = {}): Operation[] {
       }
       return { ...affected, revocation_scope: 'local' };
     }),
-    op('GET', '/devices', 'list_devices', ADMIN, ctx => ctx.list('connector_device').map(row => ({ ...select(row, ['name', 'platform', 'owner_id', 'last_seen_at', 'status', 'client_version']), online: online(ctx, row) }))),
+    op('GET', '/devices', 'list_devices', ADMIN, ctx => ctx.list('connector_device').map(row => ({ ...select(row, ['name', 'platform', 'owner_id', 'last_seen_at', 'status', 'client_version']), allow_channel_registration: row.allow_channel_registration === true, online: online(ctx, row) }))),
     op('POST', '/devices/pairing-codes', 'issue_device_pairing_code', ADMIN, (ctx, { body }) => issuePairingCode(ctx, body)),
+    {
+      method: 'PUT', path: '/devices/:id/channel-registration', name: 'account_set_device_channel_registration', roles: ADMIN,
+      summary: 'Authorize or revoke channel registration on one paired Worker',
+      contract: { bodyRequired: true, body: { type: 'object', additionalProperties: false, required: ['enabled'], properties: { enabled: { type: 'boolean' } } } },
+      run(ctx, { params, body }) {
+        if (!ADMIN.includes(ctx.role) || services.humanSession?.(ctx) !== true) fail('HUMAN_SESSION_REQUIRED', 403);
+        if (typeof body.enabled !== 'boolean' || Object.keys(body).length !== 1) fail('INVALID_INPUT', 422);
+        const device = ctx.get('connector_device', params.id!);
+        if (device.status !== 'active') fail('DEVICE_INACTIVE', 409);
+        const enabled = body.enabled;
+        const previous = device.allow_channel_registration === true;
+        const previousAuthorizer = previous ? device.channel_registration_authorized_by ?? device.owner_id : null;
+        const authorizer = enabled ? ctx.actorId : null;
+        if (previous !== enabled || previousAuthorizer !== authorizer) {
+          ctx.update('connector_device', device.id, { allow_channel_registration: enabled, channel_registration_authorized_by: authorizer });
+          audit(ctx, 'account.device.channel_registration_changed', { device_id: device.id, owner_id: device.owner_id,
+            enabled, authorized_by: authorizer, previous_authorized_by: previousAuthorizer });
+        }
+        return { device_id: device.id, allow_channel_registration: enabled, authorized_by: authorizer };
+      },
+    },
     ...(['disable', 'revoke'] as const).map(action => op('POST', `/devices/:id/${action}`, `${action}_device`, ADMIN, (ctx, { params, body }) => {
       const device = ctx.get('connector_device', params.id);
       const bindings = ctx.list('account_execution_binding').filter(row => row.device_id === device.id);

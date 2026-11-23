@@ -181,6 +181,8 @@ test('AI01 | after removing model settings, humans complete the launch', async (
     ]);
     expect(response.status()).toBe(201);
     const { workspaces: [{ id: wid }] } = await response.json();
+    const home = `/w/${wid}/home`;
+    await page.goto(`${origin}${home}`);
     const operator = await currentUser(page, owner, 'owner', wid);
     const call = await seedAccess(page, wid);
     const invite = await call('POST', '/members/invite', { email: reviewer.email, role: 'reviewer' });
@@ -189,9 +191,9 @@ test('AI01 | after removing model settings, humans complete the launch', async (
     });
     expect(accepted.status()).toBe(204);
     const reviewPage = await reviewContext.newPage();
-    await reviewPage.goto(`${origin}/login`);
+    await reviewPage.goto(`${origin}/login?${new URLSearchParams({ next: home })}`);
     await english(reviewPage);
-    await fill(reviewPage, 'email', reviewer.email);
+    await fill(reviewPage, 'identifier', reviewer.email);
     await fill(reviewPage, 'password', reviewer.password);
     await button(reviewPage, 'Sign in').click();
     const approver = await currentUser(reviewPage, reviewer, 'reviewer', wid);
@@ -220,11 +222,12 @@ test('AI01 | after removing model settings, humans complete the launch', async (
         AND rule->>'destination_kind' = 'model_provider'`);
     expect(modelEgressRules()).toBe(provider.id);
 
-    await nav(page, 'AI & automation');
-    await button(page, 'Model routes').click();
+    // The API restart can leave the old workbench catalog cache stale. Reopen the model pages after it is ready.
+    const automation = `${origin}/w/${wid}/automation`;
+    await page.goto(`${automation}?tab=modelRoutes`);
     await button(page, route.id).click();
     await form(page, 'Remove model route', 'DELETE', `/model-routes/${route.id}`);
-    await button(page, 'Model providers').click();
+    await page.goto(`${automation}?tab=models`);
     await button(page, provider.name).click();
     await form(page, 'Remove model provider', 'DELETE', `/model-providers/${provider.id}`);
     await assertNoModels(call);
@@ -240,6 +243,8 @@ test('AI01 | after removing model settings, humans complete the launch', async (
     await call('POST', `/products/${product.id}/variants`, { sku: 'AI01-MUG-300' });
     const account = await call('POST', '/social-accounts', { brand_id: brand.id, provider: 'meta_facebook', external_account_id: '9011', display_name: accountName, owned_account_confirmed: true });
 
+    // Both sessions were open during the restart and fixture writes; read their reference lists afresh.
+    await Promise.all([page.reload(), reviewPage.reload()]);
     await nav(page, 'Campaigns');
     const campaign = await form(page, 'Create campaign', 'POST', '/campaigns', async drawer => {
       await fill(drawer, 'brand_id', brand.id);
@@ -271,6 +276,7 @@ test('AI01 | after removing model settings, humans complete the launch', async (
     const target = await form(page, 'Create schedule', 'POST', '/publish-targets', async drawer => {
       await expect(drawer.locator('[name=variant_revision_id]')).toHaveValue(revision.id);
       await chooseReference(drawer, 'social_account_id', 'Synthetic launch account');
+      await pick(drawer, 'content_format', 'text');
       await fill(drawer, 'local_scheduled_at', scheduleAt);
       await fill(drawer, 'schedule_tz', 'UTC');
     }, { follow: true, trigger: 'Schedule revision 1' });

@@ -1,4 +1,6 @@
 import { ADMIN, READ, type Operation } from '@smartsell/contracts';
+import { workerSocialStatusOperations } from '../account/worker-social-status.js';
+import { zhihuStatsOperations } from '../account/zhihu-stats.js';
 import { archiveBrand, restoreBrand, saveBrand, saveMarket, updateWorkspace, workspace } from './brands.js';
 import { modifyStep, onboarding, readDashboard, savedViews, saveDashboard, saveView } from './configuration.js';
 import { listNotifications, listPreferences, markNotifications, notificationDigestSchedule, notificationDigestSubscriber,
@@ -11,6 +13,8 @@ import { viewOperations } from './views/index.js';
 
 export const operations: Operation[] = [
   ...viewOperations,
+  ...zhihuStatsOperations,
+  ...workerSocialStatusOperations,
   { method: 'GET', path: '/', name: 'workspace_get', roles: READ, summary: 'Read workspace settings', run: workspace },
   { method: 'PATCH', path: '/', name: 'workspace_update', roles: ADMIN, summary: 'Update workspace settings', run: updateWorkspace },
   { method: 'GET', path: '/context', name: 'workspace_get_context', roles: READ, summary: 'Read brand, market and account context', run: workspaceContext },

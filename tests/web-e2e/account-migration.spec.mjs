@@ -36,13 +36,18 @@ async function recoveryFixture(page, dev, request) {
   await page.goto(`${dev.origin}/`);
   // The launcher can serve HTML before Vite finishes loading the application.
   await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible({ timeout: 35_000 });
-  await page.getByRole('textbox', { name: '電子郵件', exact: true }).fill(email);
+  await page.getByRole('textbox', { name: '使用者名稱或電子郵件', exact: true }).fill(email);
   await page.getByLabel('密碼', { exact: true }).fill(password);
   const login = await clickForResponse(page, page.getByRole('button', { name: '登入', exact: true }), 'POST', `${dev.origin}/api/v1/session`);
   expect(login.status()).toBe(200);
-  // Sign-in lands on the dashboard; account recovery lives in the advanced workbench.
-  await expect(page).toHaveURL(`${dev.origin}/app/${workspace.id}`);
-  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  // The empty workspace opens setup. Leave it to reach the advanced workbench from the overview.
+  const dashboard = `/app/${workspace.id}`;
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: '開始設定', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
+  await main.getByRole('link', { name: '稍後設定，前往總覽', exact: true }).click();
+  await expect(page).toHaveURL(dev.origin + dashboard);
+  await expect(main.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
   const home = `/w/${workspace.id}/home`;
   const advanced = page.getByRole('link', { name: '進階工作台', exact: true });

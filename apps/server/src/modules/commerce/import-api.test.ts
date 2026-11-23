@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -80,7 +80,8 @@ test('HTTP CSV preview and commit replay preserve sanitized state', async t => {
 
 test('REST XLSX import shares mapping, preview, checkpoint, and rerun behavior with CSV', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'xlsx-import-'));
-  const config = configuration({ PORT: '3401' });
+  const setupToken = randomBytes(32).toString('hex');
+  const config = configuration({ PORT: '3401', SETUP_TOKEN: setupToken });
   const store = await fileStore(join(directory, 'store.json'));
   const app = createServer({ config, store, operations: [
     ...commerceOperations.filter(op => ['commerce_store_create', 'commerce_store_import'].includes(op.name)).map(op => ({ ...op, module: 'commerce' })),
@@ -88,7 +89,7 @@ test('REST XLSX import shares mapping, preview, checkpoint, and rerun behavior w
     ...workspaceOperations.filter(op => op.name === 'workspace_brand_create').map(op => ({ ...op, module: 'workspace' })),
   ] });
   t.after(async () => { await app.close(); await rm(directory, { recursive: true, force: true }); });
-  const setup = await app.inject({ method: 'POST', url: '/api/v1/setup', payload: {
+  const setup = await app.inject({ method: 'POST', url: '/api/v1/setup', headers: { 'x-setup-token': setupToken }, payload: {
     email: 'owner@example.test', password: 'fixture-password-123', workspace_name: 'Import test',
   } });
   assert.equal(setup.statusCode, 201, setup.body);

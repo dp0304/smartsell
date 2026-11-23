@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DomainError, type Entity, type Fields } from './modules/types';
+import type { LoginIdentifier } from './setup-policy.js';
+import { publicUser } from './session-user.js';
 import { previewIdentityState, type CommandIdentitySnapshot, type CommandIdentityUnit } from './integration/command-identity-state.js';
 import {
   MAX_SESSION_SECONDS, SESSION_SECONDS, checkVersion, duplicateRecord, json, keyConflict, missingWorkspace, newEntity, unauthenticated, versionConflict,
@@ -24,11 +26,12 @@ type PreviewMemberships = {
   members: (Account & { role: Scope['role'] })[];
   invitations: MemberInvitation[];
 };
-type Snapshot = State & {
+export type Snapshot = State & {
   user?: Account;
   scope?: Scope;
   workspaceInfo?: Workspace;
   sessions: Map<string, Session>;
+  recoveredMcpSessions?: Record<string, Session>;
   previewMemberships?: PreviewMemberships;
   commandIdentity?: CommandIdentitySnapshot;
 };
@@ -36,6 +39,10 @@ type Snapshot = State & {
 export function canInviteMember(actorRole: Scope['role'] | undefined, role: Scope['role']) {
   return (role === 'admin' || role === 'editor' || role === 'reviewer' || role === 'viewer') &&
     (actorRole === 'owner' || (actorRole === 'admin' && role !== 'admin'));
+}
+
+function hasAccounts(state: Snapshot) {
+  return !!(state.user || state.scope || state.workspaceInfo || state.previewMemberships?.members.length);
 }
 
 export function accountByEmail(state: Snapshot, email: string) {
@@ -153,14 +160,20 @@ function decode(encoded: string): Snapshot {
   return { ...state, records: new Map(records), responses: new Map(state.responses), sessions: new Map(state.sessions) };
 }
 
-function userSession(state: Snapshot, hash: string) {
-  const session = state.sessions.get(hash);
+function userSession(state: Snapshot, hash: string, credentialId?: string) {
+  let session = state.sessions.get(hash);
+  if (!session && credentialId && state.recoveredMcpSessions && Object.hasOwn(state.recoveredMcpSessions, hash)) {
+    // Sealed MCP credentials may reference the same token hash as a revoked browser cookie.
+    const retained = state.recoveredMcpSessions[hash];
+    const credential = state.records.get(JSON.stringify(['mcp_runtime', 'credential', credentialId]));
+    if (credential?.data.actor_id === retained.userId && credential.data.revoked !== true &&
+      credential.data.workspace_removed !== true && credential.data.expires > Date.now()) session = retained;
+  }
   if (!session || session.expires <= Date.now() || !state.workspaceInfo) return;
   const account = accountById(state, session.userId);
   const role = roleForActor(state, session.userId);
   if (!account || !role) return;
-  const { id, email, name } = account;
-  return { user: { id, email, name }, workspaces: [{ ...state.workspaceInfo, role }] };
+  return { user: publicUser(account), workspaces: [{ ...state.workspaceInfo, role }] };
 }
 
 function replaceSession(state: Snapshot, userId: string, tokenHash: string, replace?: string, ttlSeconds = SESSION_SECONDS) {
@@ -217,13 +230,15 @@ export class MemoryStore implements Store {
   async ready() { await this.transact(false, () => {}); }
   async close() { await this.queue; this.persistence?.close(); }
 
+  initialized() { return this.transact(false, hasAccounts); }
+
   setup(input: Setup, tokenHash: string, replace?: string) {
     return this.transact(true, state => {
-      if (state.user) return false;
-      const { email, name, passwordHash } = input;
+      if (hasAccounts(state)) return false;
+      const { email, username, name, passwordHash } = input;
       const id = randomUUID();
       const workspaceId = randomUUID();
-      state.user = { email, name, passwordHash, id };
+      state.user = { email: email ?? `username:${id}`, username, name, passwordHash, id };
       state.scope = { workspaceId, tenantId: randomUUID(), actorId: id, role: 'owner' };
       state.workspaceInfo = { id: workspaceId, name: input.workspaceName, role: 'owner' };
       replaceSession(state, id, tokenHash, replace);
@@ -231,9 +246,12 @@ export class MemoryStore implements Store {
     });
   }
 
-  credentials(email: string) {
+  credentials(input: LoginIdentifier | string) {
+    const identifier = typeof input === 'string' ? { email: input } : input;
     return this.transact(false, state => {
-      const user = accountByEmail(state, email);
+      const user = identifier.email === undefined
+        ? (state.user?.username === identifier.username ? state.user : undefined)
+        : accountByEmail(state, identifier.email);
       return user && { id: user.id, passwordHash: user.passwordHash };
     });
   }
@@ -289,9 +307,9 @@ export class MemoryStore implements Store {
     });
   }
 
-  workspace<T>(tokenHash: string | undefined, workspaceId: string, run: (unit: Unit) => Promise<T>) {
+  workspace<T>(tokenHash: string | undefined, workspaceId: string, run: (unit: Unit) => Promise<T>, credentialId?: string) {
     return this.transact(true, async state => {
-      const session = tokenHash && userSession(state, tokenHash);
+      const session = tokenHash && userSession(state, tokenHash, credentialId);
       if (!session) throw unauthenticated();
       if (state.scope?.workspaceId !== workspaceId) throw missingWorkspace();
       return run(unitOfWork(state, { ...state.scope, actorId: session.user.id, role: session.workspaces[0].role }, Boolean(this.persistence)));
@@ -317,6 +335,10 @@ function unitOfWork(state: Snapshot, scope: Scope, allowInvites = false): Unit {
   }
 
   return {
+    async issueAgentSession(hash, ttlSeconds) {
+      requireCommand();
+      replaceSession(state, scope.actorId, hash, undefined, ttlSeconds);
+    },
     ...(allowInvites && {
       async listMembers() { return workspaceMembers(state); },
       async inviteMember(input: Parameters<NonNullable<Unit['inviteMember']>>[0]) {
@@ -380,7 +402,7 @@ function unitOfWork(state: Snapshot, scope: Scope, allowInvites = false): Unit {
       }
       if (auditId) throw new Error('Commands cannot be nested');
       const snapshot = {
-        records: new Map(state.records), responses: new Map(state.responses),
+        records: new Map(state.records), responses: new Map(state.responses), sessions: new Map(state.sessions),
         audit: state.audit.slice(), events: state.events.slice(), outbox: state.outbox.slice(),
         previewMemberships: state.previewMemberships,
       };

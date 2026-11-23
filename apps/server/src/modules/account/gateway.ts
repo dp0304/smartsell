@@ -4,6 +4,7 @@ import { handleDeviceRequest, type ConnectorServices, type DeviceAction } from '
 import { pairDevice, type SignedDeviceRequest } from './device-control.ts';
 import { fail, object, text } from './input.ts';
 import { acceptWebhook, completeOAuth, digest, type AccountServices } from './oauth.ts';
+import { WorkerCatalogRequestError, workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
 
 export interface AccountGatewayDependencies {
   account: AccountServices;
@@ -45,8 +46,8 @@ export function createAccountGateway(deps: AccountGatewayDependencies) {
       if (!workspace) fail('PAIRING_CODE_INVALID', 401);
       return deps.transaction(workspace, ctx => pairDevice(ctx, body));
     },
-    async device(action: DeviceAction, rawBody: Uint8Array, signed: SignedDeviceRequest, attemptId?: string, workspaceHint?: string) {
-      if (rawBody.byteLength > 128_000) fail('DEVICE_BODY_TOO_LARGE', 413);
+    async device(action: DeviceAction, rawBody: Uint8Array, signed: SignedDeviceRequest, attemptId?: string, workspaceHint?: string, requestId?: string) {
+      if (rawBody.byteLength > (action === 'catalog.upload' ? workerCatalogUploadBodyLimit : 128_000)) fail('DEVICE_BODY_TOO_LARGE', 413);
       if (attemptId !== undefined) {
         let body: unknown;
         try { body = JSON.parse(Buffer.from(rawBody).toString('utf8')); } catch { fail('INVALID_DEVICE_BODY', 422); }
@@ -54,7 +55,16 @@ export function createAccountGateway(deps: AccountGatewayDependencies) {
       }
       const workspace = await deps.deviceWorkspace(text(signed.device_id), workspaceHint);
       if (!workspace) fail('DEVICE_NOT_FOUND', 401);
-      return deps.transaction(workspace, ctx => handleDeviceRequest(ctx, action, rawBody, signed, deps.connector));
+      const outcome = await deps.transaction(workspace, async ctx => {
+        try {
+          return { data: await handleDeviceRequest(ctx, action, rawBody, signed, deps.connector, requestId) };
+        } catch (error) {
+          if ((action === 'catalog.claim' || action === 'catalog.upload') && error instanceof WorkerCatalogRequestError) return { error };
+          throw error;
+        }
+      });
+      if ('error' in outcome) throw outcome.error;
+      return outcome.data;
     },
   };
 }

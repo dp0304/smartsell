@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline';
 import test from 'node:test';
 import { promisify } from 'node:util';
 import { Client } from '../../apps/server/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
@@ -87,35 +88,71 @@ async function runClaudeHost(t, base, token) {
   }
 }
 
-async function exportServer(config, standalone, worker) {
+async function exportServer(t, config, standalone, worker) {
+  t.signal.throwIfAborted();
   const module = standalone ? './apps/server/src/integration/kernel-runtime.ts' : './apps/server/src/bootstrap.ts';
+  const label = `Export server (${worker ? 'worker' : 'API'})`;
+  const started = performance.now();
   const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '--eval', `
     import { once } from 'node:events';
     const [config] = await once(process, 'message');
     const service = await import(${JSON.stringify(module)});
     const app = await (service.startKernel ?? service.start)(config);
-    process.once('disconnect', () => void app.close());
-    process.send(app.server.address().port);
-  `], { stdio: ['ignore', 'ignore', 'ignore', 'ipc'], serialization: 'advanced' });
+    if (process.connected) {
+      process.once('disconnect', () => void app.close());
+      process.send(app.server.address().port);
+    } else await app.close();
+  `], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], serialization: 'advanced' });
+  let stderr = '';
+  child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-4000); });
+  const errors = new Set();
+  createInterface({ input: child.stdout }).on('line', line => {
+    try {
+      const { level, msg, err } = JSON.parse(line);
+      if (level >= 50 && ['Outbox job failed', 'Background cycle failed'].includes(msg)) {
+        errors.add(`${msg} (${err?.code ?? 'no error code'})`);
+      }
+    } catch { /* Ignore non-JSON output. */ }
+  });
+  // Explicit IPC disconnect can leave Node's child-process `close` event pending.
   const exited = once(child, 'exit');
-  async function close() {
-    if (child.connected) child.disconnect();
-    const timer = setTimeout(() => child.kill('SIGKILL'), 8000).unref();
-    try { await exited; } finally { clearTimeout(timer); }
+  let closing;
+  function close() {
+    return closing ??= (async () => {
+      const started = performance.now();
+      if (child.connected) child.disconnect();
+      const timer = setTimeout(() => child.kill('SIGKILL'), 8000).unref();
+      try {
+        const [code, signal] = await exited;
+        t.diagnostic(`${label} stopped in ${Math.round(performance.now() - started)}ms (${signal ?? code})`);
+        for (const error of errors) t.diagnostic(error);
+        assert.equal(code, 0, `${label} stopped with ${signal ?? code}\n${stderr}`);
+      } finally { clearTimeout(timer); }
+    })();
   }
+  t.after(close);
   try {
-    child.send({ ...config, port: 0, roles: new Set([...config.roles, ...(worker ? ['worker'] : [])]),
-      backgroundDatabaseUrl: process.env.SMARTSELL_AI05_BACKGROUND_PG_URL });
-    const [port] = await Promise.race([once(child, 'message', { signal: AbortSignal.timeout(15_000) }), exited.then(([code]) => {
-      throw new Error(`Export server exited during startup (${code})`);
+    const signal = AbortSignal.any([t.signal, AbortSignal.timeout(15_000)]);
+    const ready = once(child, 'message', { signal });
+    const sent = new Promise((resolve, reject) => {
+      child.send({ ...config, port: 0, roles: new Set([...config.roles, ...(worker ? ['worker'] : [])]),
+        backgroundDatabaseUrl: process.env.SMARTSELL_AI05_BACKGROUND_PG_URL }, error => error ? reject(error) : resolve());
+    });
+    const [[port]] = await Promise.race([Promise.all([ready, sent]), exited.then(([code, signal]) => {
+      throw new Error(`${label} exited during startup (${signal ?? code})\n${stderr}`);
     })]);
+    t.diagnostic(`${label} ready in ${Math.round(performance.now() - started)}ms`);
     return { base: `http://127.0.0.1:${port}`, pid: child.pid, close };
-  } catch (error) { await close(); throw error; }
+  } catch (error) {
+    throw new Error(`${label} failed to start\n${stderr}`, { cause: error });
+  }
 }
 
 for (const surface of ['commands', 'operations']) {
   const database = process.env[`SMARTSELL_AI05_${surface.toUpperCase()}_PG_URL`];
-  test(`AI05 ${surface} PostgreSQL stable operations and MCP Tasks`, { skip: !database && 'Run ai05-postgres.sh', timeout: 80_000 }, async t => {
+  // This is a ceiling for the full matrix, not a readiness or request deadline. Commands
+  // can spend over a minute on the export phase alone on a busy host.
+  test(`AI05 ${surface} PostgreSQL stable operations and MCP Tasks`, { skip: !database && 'Run ai05-postgres.sh', timeout: 180_000 }, async t => {
     const url = new URL(database);
     assert.equal(url.hostname, '127.0.0.1');
     assert.equal(url.pathname, `/ai05_${surface}`);
@@ -125,15 +162,32 @@ for (const surface of ['commands', 'operations']) {
     const config = configuration({ DATABASE_URL: database, HOST: '127.0.0.1', ROLE: 'api,mcp',
       SETUP_TOKEN: randomBytes(32).toString('hex'), IDENTITY_ENCRYPTION_KEY: randomBytes(32).toString('hex') });
     let app, base;
+    const clients = new Set();
     async function launch(worker = false) {
-      app = await start({ ...config, port: 0, ...(worker && { roles: new Set([...config.roles, 'worker']),
+      t.signal.throwIfAborted();
+      const next = await start({ ...config, port: 0, ...(worker && { roles: new Set([...config.roles, 'worker']),
         backgroundDatabaseUrl: process.env.SMARTSELL_AI05_BACKGROUND_PG_URL }) });
+      if (t.signal.aborted) {
+        await next.close();
+        t.signal.throwIfAborted();
+      }
+      app = next;
       base = `http://127.0.0.1:${app.server.address().port}`;
     }
-    t.after(async () => { await app?.close(); });
+    async function stop() {
+      const current = app;
+      app = undefined;
+      try {
+        await Promise.all([...clients].map(client => client.close()));
+      } finally {
+        clients.clear();
+        await current?.close();
+      }
+    }
+    t.after(stop);
     await launch();
     async function request(path, { method = 'GET', body, headers, status = 200 } = {}) {
-      const response = await fetch(base + path, { method, signal: AbortSignal.timeout(10_000),
+      const response = await fetch(base + path, { method, signal: AbortSignal.any([t.signal, AbortSignal.timeout(10_000)]),
         headers: { connection: 'close', origin: config.origin, ...(body !== undefined && { 'content-type': 'application/json' }), ...headers },
         body: body === undefined ? undefined : JSON.stringify(body) });
       const raw = await response.text();
@@ -166,8 +220,9 @@ for (const surface of ['commands', 'operations']) {
     async function connect(token, advertise = true) {
       const client = new Client({ name: 'ai05-sdk-host', version: '1' }, { capabilities: advertise ? { tasks: {} } : {} });
       const transport = new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${token}`, connection: 'close' } } });
+      t.signal.throwIfAborted();
+      clients.add(client);
       await client.connect(transport);
-      t.after(() => client.close());
       return { client, transport };
     }
     const taskCall = ({ client }, operation_id, workspace_id = workspace) => client.request({ method: 'tools/call', params: {
@@ -221,8 +276,7 @@ for (const surface of ['commands', 'operations']) {
       const { operation_id: mcpStopped } = await submit(randomUUID());
       const nativeStopped = native && (await submitNative(randomUUID())).operation_id;
       assert.deepEqual(await rest(`/reports/${report.id}/versions`), []);
-      await app.close();
-      app = undefined;
+      await stop();
       await launch();
       assert.equal((await submit()).operation_id, reportJob);
       await submit(key, { data_cutoff_at: '2026-01-02T00:00:00Z' }, 422);
@@ -240,10 +294,7 @@ for (const surface of ['commands', 'operations']) {
         const current = await rest(`/operations/${nativeStopped}`);
         assert.equal(data(await call(mcpWriter, 'jobs_cancel', { operation_id: nativeStopped, expected_version: current.version })).status, 'cancelled');
       }
-      await mcpReader.client.close();
-      await mcpWriter.client.close();
-      await app.close();
-      app = undefined;
+      await stop();
       await launch(true);
       const wait = async operationId => {
         for (let i = 0; i < 60; i++) {
@@ -282,8 +333,7 @@ for (const surface of ['commands', 'operations']) {
         await observe(99);
         assert.deepEqual((await command('reports_get', { version_id: draft.id })).data.results, draft.data.results);
       }
-      await app.close();
-      app = undefined;
+      await stop();
       await launch();
       const replay = await connect(reader.token);
       assert.deepEqual(data(await call(replay, 'jobs_get', { operation_id: reportJob })).result_ref, completed.result_ref);
@@ -292,7 +342,7 @@ for (const surface of ['commands', 'operations']) {
       if (native) assert.equal((await submitNative()).operation_id, nativeJob);
       await replay.client.close();
     });
-    await t.test('Report exports pin the version and keep bytes and policy across restarts', async () => {
+    await t.test('Report exports pin the version and keep bytes and policy across restarts', async exportTest => {
       const background = standalone
         ? await (await import('../../packages/db/src/index.ts')).postgresStore(database)
         : new PostgresStore(process.env.SMARTSELL_AI05_BACKGROUND_PG_URL);
@@ -359,25 +409,32 @@ for (const surface of ['commands', 'operations']) {
         await writeFile(object(ids.csv), legacyCsv, { flag: 'wx' });
         await writeFile(object(cancelled), 'orphaned cancelled bytes', { flag: 'wx' });
         const originalObject = await stat(object(ids.csv));
-        await app.close(); app = undefined;
-        child = await exportServer(config, standalone, true);
+        await stop();
+        child = await exportServer(exportTest, config, standalone, true);
         base = child.base;
         const wait = async (id, status) => {
-          for (let i = 0; i < 80; i++) {
-            const job = await rest(`/operations/${id}`);
-            if (job.status !== 'queued') { assert.equal(job.status, status, JSON.stringify(job)); return job; }
-            await new Promise(resolve => setTimeout(resolve, 100));
+          let job;
+          // The worker drains earlier outbox jobs first; don't compete with it at 10 requests/sec.
+          for (let i = 0; i < 60; i++) {
+            job = await rest(`/operations/${id}`);
+            if (['succeeded', 'failed', 'cancelled'].includes(job.status)) break;
+            await new Promise(resolve => setTimeout(resolve, 250));
           }
-          assert.fail('Report export stayed queued');
+          assert.equal(job.status, status, `Report export ${id}: ${job.status} (${job.error_code ?? 'no error code'})`);
+          return job;
         };
         assert.equal((await wait(denied, 'failed')).error_code, 'EGRESS_BLOCKED');
         assert.equal((await wait(lostRole, 'failed')).error_code, 'FORBIDDEN');
-        await Promise.all(Object.values(ids).map(id => wait(id, 'succeeded')));
+        for (const id of Object.values(ids)) await wait(id, 'succeeded');
         assert.equal((await stat(object(ids.csv))).ino, originalObject.ino);
         const read = async (id, status = 200) => {
-          const response = await fetch(base + root + `/report-exports/${id}/download`, { headers: { ...owner, origin: config.origin } });
+          const response = await fetch(base + root + `/report-exports/${id}/download`, {
+            signal: AbortSignal.any([exportTest.signal, AbortSignal.timeout(10_000)]),
+            headers: { ...owner, origin: config.origin, connection: 'close' },
+          });
+          const data = Buffer.from(await response.arrayBuffer());
           assert.equal(response.status, status);
-          return { data: Buffer.from(await response.arrayBuffer()), headers: response.headers };
+          return { data, headers: response.headers };
         };
         await rest(`/report-exports/${ids.xlsx}/download`, { status: 403, headers: editor });
         const csv = await read(ids.csv);
@@ -411,7 +468,7 @@ for (const surface of ['commands', 'operations']) {
         await setExport(true, revoked.version);
         const workerPid = child.pid;
         await child.close();
-        child = await exportServer(config, standalone, false);
+        child = await exportServer(exportTest, config, standalone, false);
         assert.notEqual(child.pid, workerPid);
         base = child.base;
         assert.equal((await queue('csv', key)).operation_id, ids.csv);
@@ -422,11 +479,16 @@ for (const surface of ['commands', 'operations']) {
           { report_id: report.id, version_id: v1.id, version_no: 1, format: 'xlsx' });
         await mcp.client.close();
       } finally {
-        await child?.close();
-        await background.close();
-        if (!app) await launch();
+        try {
+          if (child) {
+            try { await stop(); } finally { await child.close(); }
+          }
+        } finally {
+          await background.close();
+        }
       }
     });
+    if (!app) await launch();
     const legacy = await connect(writer.token, false);
     assert.equal(legacy.client.getServerCapabilities().tasks, undefined);
     assert.equal(legacy.transport.sessionId, undefined);
@@ -454,8 +516,7 @@ for (const surface of ['commands', 'operations']) {
     await assert.rejects(getTask(operating, task.taskId), { code: -32602 });
     await assert.rejects(getTask(watching, `${task.taskId}x`), { code: -32602 });
     await watching.client.close();
-    await app.close();
-    app = undefined;
+    await stop();
     await launch();
     const resumed = await connect(reader.token);
     assert.equal((await getTask(resumed, task.taskId)).statusMessage, 'claimed');
@@ -548,8 +609,7 @@ for (const surface of ['commands', 'operations']) {
         const before = await connect(publicationReader.token);
         const { task: tracking } = await taskCall(before, firstId);
         await before.client.close();
-        await app.close();
-        app = undefined;
+        await stop();
         await launch();
         await verify();
         assert.deepEqual(await commit(), committed);
@@ -640,8 +700,7 @@ for (const surface of ['commands', 'operations']) {
     assert.equal((await rest(`/sync-runs?data_source_id=${source.id}`)).length, 1);
     assert.equal(data(await call(resumed, 'jobs_get', { operation_id: syncId })).status, 'queued');
     const { task: queued } = await taskCall(resumed, syncId);
-    await app.close();
-    app = undefined;
+    await stop();
     await launch();
     const syncReader = await connect(reader.token);
     const syncWriter = await connect(writer.token);
@@ -660,7 +719,7 @@ for (const surface of ['commands', 'operations']) {
     const checkpoint = index => record(sync.sync_run_id, { index, cursor: `page-${index + 1}`, result: 'more' });
     const abort = new AbortController();
     t.after(() => abort.abort());
-    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(15_000)]);
+    const signal = AbortSignal.any([t.signal, abort.signal, AbortSignal.timeout(15_000)]);
     const updates = frames(await fetch(base + root + '/stream', { headers: { cookie, connection: 'close' }, signal }));
     assert.match((await updates.next()).value, /connected/);
     const progress = frames(await fetch(base + '/mcp', { method: 'POST', signal, headers: {

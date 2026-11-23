@@ -4,9 +4,14 @@ import { constants } from 'node:fs';
 import { open, readFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { DesktopConnector } from './controller.ts';
-import { creators, httpsOrigin, mediaExtensions } from './policy.ts';
+import { httpsOrigin, mediaExtensions } from './policy.ts';
+import { catalogExtensions, readCatalogFile } from './catalog-file.ts';
+import { serviceSettings, setupChannelSettings, workbenchOrigin } from './service-settings.ts';
 import { desktopUpdates, type UpdateConfig } from './updates.ts';
 import { deviceVault } from './vault.ts';
+import { ChromeBrowser } from './chrome.ts';
+import { channelRows } from './channels.ts';
+import { ChannelSessions } from './channel-sessions.ts';
 
 const page = 'connector://desktop/index.html';
 const csp = "default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; object-src 'none'";
@@ -45,12 +50,33 @@ function show() { if (win?.isMinimized()) win.restore(); win?.show(); win?.focus
 async function run() {
   const platform = process.platform;
   if (platform !== 'darwin' && platform !== 'win32') { app.quit(); return; }
-  const origin = httpsOrigin(RELEASE.api);
-  const workbench = httpsOrigin(RELEASE.workbench);
+  const userData = app.getPath('userData');
+  const defaultOrigin = httpsOrigin(RELEASE.api);
+  const defaultWorkbench = workbenchOrigin(httpsOrigin(RELEASE.workbench));
+  const settings = serviceSettings(join(userData, 'service-origin.txt'));
+  const savedOrigin = settings.load();
+  const setupSettings = setupChannelSettings(join(userData, 'setup-channels.json'));
+  let setupChannels = setupSettings.load();
   const updates = desktopUpdates(platform, app.isPackaged ? RELEASE.update : undefined);
+  const chrome = new ChromeBrowser(join(userData, 'platform-chrome'));
+  const channels = new ChannelSessions(chrome);
   const controller = new DesktopConnector({
-    origin, platform, version: app.getVersion(), vault: deviceVault(join(app.getPath('userData'), 'pairing.enc'), safeStorage, platform),
-    openExternal: url => shell.openExternal(url),
+    origin: savedOrigin ?? defaultOrigin, saveOrigin: settings.save, channels,
+    openAuthorization: url => shell.openExternal(url),
+    platform, version: app.getVersion(), vault: deviceVault(join(userData, 'pairing.enc'), safeStorage, platform), zhihu: chrome.zhihu,
+    openPlatform: (id, url, signal) => channels.openTask(id, url, signal),
+    async pickCatalog(signal) {
+      const selection = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: '商品导出表', extensions: catalogExtensions }] });
+      signal.throwIfAborted();
+      if (!selection.canceled && selection.filePaths.length === 1) {
+        try { return await readCatalogFile(selection.filePaths[0], signal); }
+        catch (error) {
+          signal.throwIfAborted();
+          if (error instanceof Error && 'code' in error) throw new Error('无法读取选中的商品导出表。请检查文件权限后重试。');
+          throw error;
+        }
+      }
+    },
     async pickMedia(signal) {
       const selection = await dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], filters: [{ name: '图片与视频', extensions: mediaExtensions }] });
       signal.throwIfAborted();
@@ -85,9 +111,19 @@ async function run() {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-frame-navigate', event => event.preventDefault());
   win.webContents.on('will-attach-webview', event => event.preventDefault());
-  win.webContents.on('render-process-gone', () => controller.stop());
+  function stop() { channels.suspend(); controller.stop(); }
+  function disconnect() { channels.suspend(); controller.disconnect(); }
+  win.webContents.on('render-process-gone', stop);
   win.on('close', event => { if (!quit) { event.preventDefault(); win?.hide(); } });
-  function state() { return { ...controller.snapshot(), updates: updates.snapshot(), workbench }; }
+  function workbench(origin: string | undefined, serviceMatches: boolean) {
+    if (!serviceMatches) return;
+    return origin === defaultOrigin && defaultWorkbench ? defaultWorkbench : workbenchOrigin(origin);
+  }
+  function state() {
+    const snapshot = controller.snapshot();
+    return { ...snapshot, updates: updates.snapshot(), workbench: workbench(snapshot.origin, snapshot.serviceMatches),
+      chromeSetup: channels.chromeSetup(), setupChannels, channelRows, channelStates: channels.snapshot() };
+  }
   function register(name: string, action: (body: unknown) => unknown) {
     ipcMain.handle(`connector:${name}`, async (event, body) => {
       const frame = event.senderFrame;
@@ -100,32 +136,47 @@ async function run() {
     });
   }
   register('state', () => {});
-  register('pair', body => controller.pair(body));
+  register('check-storage', () => controller.checkStorage());
+  register('connect-chrome', () => controller.connectChrome());
+  register('setup-channels', body => { setupChannels = setupSettings.save(body); });
+  register('channel-open', id => channels.open(id));
+  register('channel-verify', id => channels.verify(id));
+  register('channel-scan', () => controller.scanChannels());
+  register('channel-register', body => controller.registerChannels(body));
+  register('cancel-authorization', () => controller.cancelAuthorization());
+  register('catalog-portal', () => controller.openCatalogPortal());
+  register('catalog-file', () => controller.selectCatalogFile());
+  register('catalog-upload', body => controller.uploadCatalog(body));
+  register('pair', body => controller.pairWorkbench(body));
   register('connect', () => controller.connect());
-  register('stop', () => controller.stop());
-  register('disconnect', () => controller.disconnect());
+  register('stop', stop);
+  register('disconnect', disconnect);
   register('forget', async () => {
     const { response } = await dialog.showMessageBox(win!, { type: 'warning', buttons: ['取消', '注销本机配对'], defaultId: 0, cancelId: 0,
       message: '删除本机配对密钥？', detail: '请先回填当前任务。服务端设备仍需在工作台撤销。' });
-    if (response === 1) controller.forget();
+    if (response === 1) { channels.suspend(); controller.forget(); }
   });
-  register('claim', () => controller.claim());
   register('creator', () => controller.openCreator());
-  register('session-creator', app => {
-    if (app !== 'douyin' && app !== 'xhs') throw new Error('平台无效。');
-    const snapshot = controller.snapshot();
-    if (!snapshot.connected || snapshot.task) throw new Error('请先连接服务并处理当前任务。');
-    return shell.openExternal(creators[app]);
-  });
-  register('verify-session', body => controller.verifySession(body));
+
   register('media', () => controller.selectMedia());
   register('confirm', body => controller.confirm(body));
   register('finish', body => controller.finish(body));
   register('block', body => controller.block(body));
   register('report', () => controller.retryReport());
-  register('workbench', () => { if (workbench) return shell.openExternal(workbench); });
+  register('workbench', () => {
+    const { origin, serviceMatches } = controller.snapshot();
+    const url = workbench(origin, serviceMatches);
+    if (url) return shell.openExternal(url);
+  });
   register('update-check', () => updates.check());
-  register('update-install', () => { if (!controller.snapshot().task && updates.snapshot().ready) { controller.stop(); updates.install(); } });
+  register('update-install', () => {
+    const { task, catalog, zhihu, socialStatus, busy } = controller.snapshot();
+    if (!busy && !task && !zhihu && !socialStatus && (!catalog || catalog.expired) && updates.snapshot().ready) {
+      stop();
+      chrome.close();
+      updates.install();
+    }
+  });
 
   const icon = nativeImage.createFromBitmap(trayPixels(), { width: 18, height: 18 });
   icon.setTemplateImage(true);
@@ -133,13 +184,22 @@ async function run() {
   tray.setToolTip('SmartSell Connector');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '显示连接器', click: show },
-    { label: '紧急停止', click: () => { controller.stop(); show(); } },
-    { label: '断开', click: () => { controller.disconnect(); show(); } },
+    { label: '紧急停止', click: () => { stop(); show(); } },
+    { label: '断开', click: () => { disconnect(); show(); } },
     { label: '退出', click: () => app.quit() },
   ]));
   tray.on('click', show);
   const heartbeat = setInterval(() => { void controller.tick(); }, 15_000);
-  app.on('before-quit', () => { quit = true; clearInterval(heartbeat); controller.stop(); tray?.destroy(); tray = undefined; });
+  const channelWatch = setInterval(() => { void channels.poll(); }, 3000);
+  app.on('before-quit', () => {
+    quit = true;
+    clearInterval(heartbeat);
+    clearInterval(channelWatch);
+    stop();
+    chrome.close();
+    tray?.destroy();
+    tray = undefined;
+  });
   app.on('activate', show);
   app.on('second-instance', show);
   await win.loadURL(page);

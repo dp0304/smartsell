@@ -13,6 +13,29 @@ export function httpsOrigin(input: string | undefined): string | undefined {
   return url.origin;
 }
 
+const sellerHosts: Record<string, readonly string[]> = {
+  shopify: ['admin.shopify.com'],
+  tiktok_shop: ['seller.tiktok.com', 'seller-us.tiktok.com', 'seller-uk.tiktok.com', 'seller-sg.tiktok.com', 'seller-id.tiktok.com', 'seller-ph.tiktok.com', 'seller-vn.tiktok.com', 'seller-th.tiktok.com', 'seller-my.tiktok.com', 'seller.tiktokglobalshop.com'],
+  amazon_sp: ['sellercentral.amazon.com', 'sellercentral.amazon.co.uk', 'sellercentral.amazon.de', 'sellercentral.amazon.co.jp', 'sellercentral.amazon.ca', 'sellercentral.amazon.com.au', 'sellercentral.amazon.com.mx', 'sellercentral.amazon.com.br', 'sellercentral.amazon.fr', 'sellercentral.amazon.it', 'sellercentral.amazon.es', 'sellercentral.amazon.in'],
+  shopee: ['seller.shopee.sg', 'seller.shopee.com.my', 'seller.shopee.ph', 'seller.shopee.co.id', 'seller.shopee.co.th', 'seller.shopee.vn', 'seller.shopee.tw', 'seller.shopee.com.br'],
+  lazada: ['sellercenter.lazada.sg', 'sellercenter.lazada.com.my', 'sellercenter.lazada.co.id', 'sellercenter.lazada.co.th', 'sellercenter.lazada.vn', 'sellercenter.lazada.com.ph'],
+};
+
+export function sellerPortal(job: { provider: string; external_store_id: string; portal_url?: string }) {
+  const url = job.portal_url && URL.parse(job.portal_url);
+  if (!url || url.protocol !== 'https:' || url.username || url.password || url.port || url.search || url.hash) return;
+  const shopDomain = job.provider === 'shopify' && /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(job.external_store_id)
+    ? job.external_store_id : undefined;
+  if (url.hostname === shopDomain) return `${url.origin}/admin`;
+  if (!Object.hasOwn(sellerHosts, job.provider) || !sellerHosts[job.provider].includes(url.hostname)) return;
+  const storePath = job.provider === 'shopify' && /^\/store\/([a-z0-9][a-z0-9-]*)(?:\/|$)/.exec(url.pathname);
+  if (storePath) {
+    if (shopDomain && `${storePath[1]}.myshopify.com` !== shopDomain) return;
+    return `${url.origin}/store/${storePath[1]}`;
+  }
+  return `${url.origin}/`;
+}
+
 export function isPublish(task: ConnectorTask): task is PublishTask {
   return task.kind === 'douyin.video.publish' || task.kind === 'xhs.note.publish';
 }

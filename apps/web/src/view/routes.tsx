@@ -7,8 +7,11 @@ import { useCopy } from '../i18n';
 import { useViewStream } from './data/stream';
 import { ViewContext } from './data/use-view';
 import { RouterLink } from './parts';
-import { ViewShell } from './ViewShell';
+import { SetupShell, ViewShell } from './ViewShell';
+import { GetStartedPage } from './pages/GetStartedPage';
+import { ManageStoresPage, ManageWorkerAccountsPage } from './pages/worker-management';
 import { OverviewPage } from './pages/OverviewPage';
+import { SetupLanding } from './pages/setup-landing';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductPage } from './pages/ProductPage';
 import { PlansPage } from './pages/PlansPage';
@@ -24,7 +27,7 @@ import './view.css';
 export const appPath = (ws: string) => `/app/${encodeURIComponent(ws)}`;
 
 /** The dashboard mounted at /app/:ws/*; it owns its own stream subscription and query keys. */
-export function ViewApp({ session }: { session: Session }) {
+export function ViewApp({ session, compatibility = false }: { session: Session; compatibility?: boolean }) {
   const { ws = '' } = useParams();
   const { locale } = useCopy();
   const [params] = useSearchParams();
@@ -42,19 +45,27 @@ export function ViewApp({ session }: { session: Session }) {
     <ViewContext.Provider value={{ ws, session, workspace, base }}>
       <ApiContext.Provider value={{ ws, session, catalog: catalog.data ?? [], brandId: params.get('brand') ?? undefined, compatibility: false }}>
         <Routes>
-          <Route element={<ViewShell />}>
-            <Route index element={<OverviewPage />} />
-            <Route path="products" element={<ProductsPage />} />
-            <Route path="products/:id" element={<ProductPage />} />
-            <Route path="plans" element={<PlansPage />} />
-            <Route path="plans/:id" element={<PlanPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="social" element={<SocialPage />} />
-            <Route path="ads" element={<AdsPage />} />
-            <Route path="decisions" element={<DecisionsPage />} />
-            <Route path="agent" element={<AgentPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to={base} replace />} />
+          <Route element={<SetupShell />}>
+            <Route path="get-started" element={<GetStartedPage />} />
+          </Route>
+          <Route element={compatibility ? undefined : <SetupLanding />}>
+            <Route element={<ViewShell />}>
+              <Route index element={<OverviewPage />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="products/stores" element={<ManageStoresPage phase="store" />} />
+              <Route path="products/stores/imports" element={<ManageStoresPage key="imports" phase="import" />} />
+              <Route path="products/:id" element={<ProductPage />} />
+              <Route path="plans" element={<PlansPage />} />
+              <Route path="plans/:id" element={<PlanPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="social" element={<SocialPage />} />
+              <Route path="ads" element={<AdsPage />} />
+              <Route path="decisions" element={<DecisionsPage />} />
+              <Route path="agent" element={<AgentPage />} />
+              <Route path="settings/worker-accounts" element={<ManageWorkerAccountsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to={base} state={{ skipSetupCheck: true }} replace />} />
+            </Route>
           </Route>
         </Routes>
       </ApiContext.Provider>

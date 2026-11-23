@@ -260,11 +260,12 @@ test('signed SAML response and assertion use the tenant ACS, persistent subject 
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const store = await fileStore(join(directory, 'state.json'));
   const identityKey = randomBytes(32);
-  const config = configuration({ PUBLIC_ORIGIN: origin, SMARTSELL_IDENTITY_DEPLOYMENT: 'saas' });
+  const setupToken = randomBytes(32).toString('hex');
+  const config = configuration({ PUBLIC_ORIGIN: origin, SMARTSELL_IDENTITY_DEPLOYMENT: 'saas', SETUP_TOKEN: setupToken });
   const app = createServer({ config, store, identityKey, operations: [] });
   t.after(() => app.close());
   const base = await app.listen({ host: '127.0.0.1', port: 0 });
-  const setup = await fetch(`${base}/api/v1/setup`, { method: 'POST', headers: { origin, 'content-type': 'application/json' },
+  const setup = await fetch(`${base}/api/v1/setup`, { method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-setup-token': setupToken },
     body: JSON.stringify({ email: 'owner@example.test', password: 'saml-test-password', workspaceName: 'SAML test' }),
   });
   assert.equal(setup.status, 201);

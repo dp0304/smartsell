@@ -56,12 +56,12 @@
 /* Dialog and forms */
 .st-dialog {
   width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); padding: 0; overflow: auto; color: var(--ink);
-  border: 1px solid var(--line); border-radius: 18px; background: var(--vs-surface, #231f52); box-shadow: var(--shadow-glass);
+  border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--vs-surface); box-shadow: var(--shadow-glass);
 }
-.st-dialog::backdrop { background: rgba(8, 6, 32, .69); }
+.st-dialog::backdrop { background: var(--vs-backdrop); }
 .st-dialog-head {
   position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--vs-surface, #231f52);
+  padding: 16px 20px; border-bottom: 1px solid var(--line); background: var(--vs-surface);
 }
 .st-dialog-head h2 { font-size: 17px; }
 .st-dialog-body { padding: 16px; }

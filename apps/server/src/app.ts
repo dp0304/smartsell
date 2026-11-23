@@ -2,7 +2,9 @@ import { Problem } from '@smartsell/contracts';
 import { createHash, randomUUID } from 'node:crypto';
 import Fastify, { type FastifyRequest } from 'fastify';
 import { auth, forbidden, header, invalid, requestObject, type AuthOptions } from './auth';
-import { DomainError } from './modules/types';
+import { admins, DomainError } from './modules/types';
+import { mcpCallAuditWithCommits, operationWriteAuditPrefix, workerSocialStatusAuditRows, type McpWriteReceipt } from './integration/mcp-call-audit.js';
+import { operationRecords } from './integration/operation-records.js';
 import { readProjection } from './read-policy';
 import { activeAccountGrant } from './modules/ads/domain.js';
 import { operationName, type Extension, type Registry } from './registry';
@@ -13,6 +15,7 @@ import { createOperationCsrf } from './operation-auth.js';
 import type { registerOperationRoutes } from './operation-server.js';
 import { registerCommandMcp, type OperationHost } from './integration/command-mcp.js';
 import { commandTraffic, type TrafficHostConfig } from './integration/traffic-host.js';
+import { registerWorkerDownloads } from './worker-downloads.js';
 import { commandIdentity } from './integration/command-identity.js';
 
 const notFound = () => new DomainError('not_found', 'Resource not found', 404);
@@ -34,10 +37,11 @@ type Options = AuthOptions & {
   roles?: ReadonlySet<string>;
   commandIdentityKey?: Uint8Array;
   origin?: string;
+  workerDownloadDirectory?: string;
 };
 
-export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, logger = false, ...options }: Options) {
-  const app = Fastify({ logger, disableRequestLogging: true, bodyLimit: 1024 * 1024, requestTimeout: 30_000, requestIdHeader: false });
+export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, workerDownloadDirectory, logger = false, ...options }: Options) {
+  const app = Fastify({ logger, disableRequestLogging: true, bodyLimit: 1024 * 1024, requestTimeout: 30_000, requestIdHeader: false, genReqId: () => randomUUID() });
   const identity = commandIdentityKey && commandIdentity(store, commandIdentityKey);
   const csrfSecret = operationApi?.config.secret ?? secret;
   const csrf = csrfSecret ? createOperationCsrf(csrfSecret) : undefined;
@@ -54,7 +58,7 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
   const publicTraffic = traffic && commandTraffic(traffic, store, roles?.has('public') ?? true);
   app.addHook('onClose', () => store.close());
   app.addHook('onRequest', async (request, reply) => {
-    reply.header('cache-control', 'no-store').header('x-content-type-options', 'nosniff').header('referrer-policy', 'no-referrer');
+    reply.header('cache-control', 'no-store').header('x-content-type-options', 'nosniff').header('referrer-policy', 'no-referrer').header('x-request-id', request.id);
     if (options.secureCookie) reply.header('strict-transport-security', 'max-age=31536000');
     await publicTraffic?.(request, reply);
     if (reply.sent) return;
@@ -80,10 +84,12 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
     try { await store.ready(); return { status: 'ok' }; }
     catch { return reply.code(503).send({ error: { code: 'unavailable', message: 'Storage unavailable' } }); }
   });
+  app.get('/api/v1/setup/status', sessions.setupStatus);
   app.post('/api/v1/setup', { bodyLimit: 8192 }, sessions.setup);
   app.post('/api/v1/member-invitations/accept', { bodyLimit: 8192 }, sessions.acceptMemberInvitation);
   app.post('/api/v1/session', { bodyLimit: 4096 }, sessions.login);
   app.get('/api/v1/session', sessions.read);
+  registerWorkerDownloads(app, workerDownloadDirectory, sessions.read);
   app.delete('/api/v1/session', sessions.logout);
   app.post('/api/v1/login', { bodyLimit: 4096 }, sessions.login);
   app.post('/api/v1/logout', sessions.logout);
@@ -104,6 +110,13 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
       .map(({ module, action }) => ({ module, action }));
     return { items: [...items, ...aliases] };
   }));
+  app.get<{ Params: { wid: string } }>('/api/v1/workspaces/:wid/mcp-tool-calls', request =>
+    legacyWorkspace(request, request.params.wid, async ({ context }) => {
+      if (!admins.includes(context.role)) throw forbidden();
+      const { records } = await operationRecords(context, true);
+      const calls = [...await context.list('agent', 'tool_call'), ...workerSocialStatusAuditRows(records)];
+      return mcpCallAuditWithCommits(calls, request.query, () => records.list<McpWriteReceipt>(operationWriteAuditPrefix));
+    }));
   app.get<{ Params: { wid: string; module: string; kind: string } }>('/api/v1/workspaces/:wid/records/:module/:kind', request => {
     const { wid, module, kind } = request.params;
     return legacyWorkspace(request, wid, async ({ context }) => {

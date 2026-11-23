@@ -1,0 +1,20 @@
+.worker-connect {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 16px;
+}
+.worker-connect .auth-card { width: min(100%, 32rem); overflow-wrap: anywhere; }
+.worker-connect :is(form, fieldset, label) { display: grid; gap: 10px; min-width: 0; }
+.worker-connect fieldset { margin: 0; padding: 0; border: 0; gap: 16px; }
+.worker-connect :is(select, button) { min-height: 44px; }
+
+body:has(.worker-connect, .worker-connect-login) { min-width: 0; }
+body:has(.worker-connect, .worker-connect-login) .narrow-notice { display: none; }
+@media (max-width: 760px) {
+  .auth-page.worker-connect-login { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .worker-connect-login .auth-side { min-height: 0; padding: 16px; border-inline-end: 0; }
+  .worker-connect-login .auth-side h1 { display: none; }
+  .worker-connect-login .auth-main { padding-inline: 16px; }
+  .worker-connect-login .auth-main .auth-card { padding: 20px; }
+}

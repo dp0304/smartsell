@@ -3,6 +3,9 @@ import { headerAcceptsEventStream, mcpEventStream } from '../extensions/mcp-sse.
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { invalid, requestObject } from '../auth.js';
+import { mcpAuditBusinessStatus, mcpAuditErrorCode, summarizeMcpTarget } from './mcp-call-audit.js';
+import { recordAgentToolCall } from '../modules/agent/agent-audit.js';
+import { invalid as invalidOperation } from '../identity.js';
 import { createMcpCommandBridge, createMcpHandler, MCP_TOOLS, type McpPrincipal, type McpToolDefinition } from '../extensions/mcp.js';
 import { DomainError, type Entity } from '../modules/types.js';
 import type { Registry } from '../registry.js';
@@ -11,7 +14,7 @@ import { agentJobMcp } from './agent-job-mcp.js';
 import type { AgentContext } from '../modules/agent/agent-jobs.js';
 import { intelMcpCommands, intelMcpOutput } from './intel-mcp.js';
 import { brandOperationAllowed } from './brand-access.js';
-import { describeOperationTool, operationResources, parseOperationTool, readOperationResource, resourceTemplates, serveMcpRequest } from './operation-mcp.js';
+import { describeOperationTool, operationResources, operationToolDescription, parseOperationTool, readOperationResource, resourceTemplates, serveMcpRequest } from './operation-mcp.js';
 import { operationRecords } from './operation-records.js';
 import { agentCallable, grantAllows, humanOnly, restInput, runScopedOperation, type Registered } from '../operations.js';
 import { isRecord } from '../extensions/mcp-tools.js';
@@ -20,7 +23,8 @@ import { workspaceServices } from './workspace-services.js';
 import { makeContext } from '../context.js';
 import { expireCredentialLeases } from '../modules/agent/operations.js';
 import type { OperationExecutor } from '../operation-server.js';
-import { agentInstructions, registerAgentConnections, touchAgentConnection, type SealedCredential } from './agent-connections.js';
+import { agentInstructions, registerAgentConnections, touchAgentConnection, verifyAgentConnection, workerSocialRequestKey, type SealedCredential } from './agent-connections.js';
+import { workerSocialStatusToolNames } from '../modules/account/worker-social-status.js';
 import { humanRequired } from '../agent-actor.js';
 
 type Credential = SealedCredential;
@@ -34,8 +38,11 @@ const hidden = new Set(['automation_rules_list', 'workflow_templates_list', 'cha
 const approvedReads = new Set(['search_query', 'knowledge_get_context', 'agent_preview_context', 'catalog_list_facts']);
 const describeName = 'smartsell_operations_describe';
 const callName = 'smartsell_operation_call';
+const desktopOperations = new Set(['zhihu_stats_create', 'zhihu_stats_get', 'desktop_request_capability', 'desktop_get_capability_request', ...workerSocialStatusToolNames]);
 /** One MCP tool per Operation for the flows an Agent runs most. Everything else is reachable through smartsell_operation_call. */
 const curated = [
+  'worker_catalog_list', 'worker_catalog_request_import',
+  ...desktopOperations,
   'workspace_get_context', 'workspace_brands_list', 'workspace_brand_get', 'workspace_brand_create', 'workspace_brand_update',
   'workspace_markets_list', 'workspace_market_create', 'workspace_market_update',
   'commerce_store_list', 'commerce_store_create', 'catalog_search', 'catalog_get_product', 'commerce_product_create', 'commerce_product_update',
@@ -57,14 +64,15 @@ const operationOutput = { type: 'object', properties: {
 const denied = () => new DomainError('forbidden', 'Credential unavailable', 403);
 
 function operationTool(op: Registered): McpToolDefinition {
-  const { inputSchema } = describeOperationTool(op);
+  const { inputSchema, outputSchema } = describeOperationTool(op);
   const required = (inputSchema.required ?? []).filter(name => name !== 'workspace_id');
   const read = op.method === 'GET';
   const hints = [op.versionKind ? 'pass expected_version from the row you read' : '', read ? '' : 'send an idempotency_key'].filter(Boolean);
   return {
     name: op.name, module: op.module, action: op.name, operation: op.name,
-    description: `${op.summary} (${op.method} ${op.path}).${hints.length ? ` Writes: ${hints.join('; ')}.` : ''}`,
-    inputSchema: { ...inputSchema, required }, outputSchema: operationOutput,
+    description: `${operationToolDescription(op)} (${op.method} ${op.path}).${hints.length ? ` Writes: ${hints.join('; ')}.` : ''}`,
+    inputSchema: { ...inputSchema, required },
+    outputSchema: workerSocialStatusToolNames.has(op.name) ? outputSchema ?? operationOutput : operationOutput,
     annotations: { readOnlyHint: read, destructiveHint: op.method === 'DELETE', idempotentHint: read || op.method === 'PUT', openWorldHint: false },
     sideEffect: false, needsOutputPolicy: false, result: 'operation_call',
     parse: args => ({ body: args, params: {}, query: {} }),
@@ -88,7 +96,8 @@ const genericTools: McpToolDefinition[] = [{
     params: { type: 'object', additionalProperties: { type: 'string' } },
     query: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] } },
     body: { type: 'object' }, expected_version: { type: 'integer', minimum: 1 },
-    idempotency_key: { type: 'string', pattern: idempotencyPattern },
+    idempotency_key: { type: 'string', pattern: idempotencyPattern,
+      description: `For worker_social_status_request: ${workerSocialRequestKey}` },
   } },
   outputSchema: operationOutput,
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
@@ -180,7 +189,7 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     const text = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : undefined;
     const [module, q, name] = [text(args.module), text(args.q), text(args.operation)];
     const matches = [...catalogue.byName.values()].filter(op => operationAllowed(unit, op, grant.access) &&
-      (!module || op.module === module) && (!name || op.name === name) &&
+      (!desktopOperations.has(op.name) || grant.tools.includes(op.name)) && (!module || op.module === module) && (!name || op.name === name) &&
       (!q || `${op.name} ${op.summary} ${op.path}`.toLowerCase().includes(q)));
     // Without a filter the full list costs an Agent ~25k tokens; return a module index instead.
     if (!module && !q && !name) {
@@ -275,6 +284,9 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     async handler(req, reply) {
       let credential: Credential | undefined;
       let connection = false;
+      let replayed: true | undefined;
+      let auditOutput: unknown;
+      const auditArgs = isRecord(req.body) && isRecord(req.body.params) ? req.body.params.arguments : undefined;
       const selectedFor = (principal: Pick<McpPrincipal, 'tokenId' | 'workspaceId'>) => {
         const selected = credential;
         if (!selected || selected.id !== principal.tokenId || selected.workspaceId !== principal.workspaceId) throw denied();
@@ -325,13 +337,62 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
           if (!op) throw new Problem(404, 'UNKNOWN_OPERATION', `Unknown operation ${String(name)}. Call ${describeName} to list operations.`);
           // Refuse by name before parsing; stop-only endpoints are checked against their body in the shared runner.
           if (humanOnly(op)) throw humanRequired(op.name);
-          if (!operationAllowed(unit, op, grant.access)) throw new Problem(403, 'PERMISSION_DENIED', `${op.name} is not available to this credential`);
+          if (!operationAllowed(unit, op, grant.access) || (desktopOperations.has(op.name) && !grant.tools.includes(op.name))) {
+            throw new Problem(403, 'PERMISSION_DENIED', `${op.name} is not available to this credential`);
+          }
+          if (workerSocialStatusToolNames.has(op.name) && args.workspace_id !== undefined && args.workspace_id !== selected.workspaceId) {
+            throw new Problem(404, 'NOT_FOUND', 'Workspace not found');
+          }
           const { operation: _operation, ...rest } = args;
           const { input } = parseOperationTool(op, { ...(tool.name === callName ? rest : args), workspace_id: selected.workspaceId });
           return host.execute!(unit, op, approvedInput(op.name, input), { requestId: req.id, source: 'mcp', grantId: selected.id, credentialLabel: grant.label });
         });
       }
       const handler = createMcpHandler({ ...bridge, allowedOrigins: [...origins], additionalTools,
+        auditEarlyDenials: true,
+        async audit(event) {
+          const selected = selectedFor(event);
+          const tool = definition(event.toolName, connection);
+          const name = tool?.name === callName && isRecord(auditArgs) ? auditArgs.operation : tool?.operation ?? tool?.name;
+          const op = typeof name === 'string' ? operationCatalog()?.byName.get(name) ?? operations.get(name) : undefined;
+          const persist = async (unit: Unit) => {
+            const { context } = unit;
+            if (context.actorId !== event.actorId || context.tenantId !== event.tenantId) throw denied();
+            await unit.command({ module: 'agent', action: `mcp_audit_${event.stage}`,
+              key: `mcp-audit-${event.stage}/${event.callId}`, fingerprint: '' }, async () => {
+              if (event.stage === 'start') {
+                await recordAgentToolCall(context, {
+                  tool: event.toolName, credentialId: selected.id, requestId: req.id, outcome: 'pending', elapsedMs: 0,
+                  inputHash: createHmac('sha256', key).update(event.inputHash).digest('hex'),
+                  sideEffect: event.sideEffect || tool?.annotations.readOnlyHint === false,
+                  operation: op?.name,
+                  target: op ? summarizeMcpTarget(op, undefined, selected.workspaceId).target : tool?.name ?? 'workspace',
+                }, event.callId);
+                return;
+              }
+              const row = await context.get('agent', 'tool_call', event.callId);
+              if (!row || row.data.credential_id !== selected.id || row.data.request_id !== req.id) throw denied();
+              const { agent_job_id, task_id, device_id } = summarizeMcpTarget(op, auditArgs, selected.workspaceId, auditOutput);
+              await context.update('agent', 'tool_call', row.id, { outcome: event.outcome, elapsed_ms: event.elapsedMs,
+                ...(event.code && { error_code: mcpAuditErrorCode(event.code) }),
+                ...(event.outcome === 'success' && { agent_job_id, task_id, device_id, status: mcpAuditBusinessStatus(auditOutput), replayed }),
+              }, row.version);
+              if (event.outcome === 'success' && event.toolName === describeName) await verifyAgentConnection(context, selected.id);
+            });
+          };
+          // A recovered local connection may require its credential to resolve the backing session.
+          // A live browser session can still finalize an audit if the grant was revoked during dispatch.
+          let opened = false;
+          try {
+            await store.workspace(selected.sessionHash, selected.workspaceId, async unit => {
+              opened = true;
+              await persist(unit);
+            }, selected.id);
+          } catch (error) {
+            if (opened || !(error instanceof DomainError) || error.status !== 401) throw error;
+            await store.workspace(selected.sessionHash, selected.workspaceId, persist);
+          }
+        },
         tools: () => catalog(connection), instructions: agentInstructions,
         operationTaskKey: key.toString('hex'),
         readOperation: (principal, operationId) => {
@@ -365,10 +426,13 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
               ? { data, next_cursor: typeof next_cursor === 'string' || next_cursor === null ? next_cursor : undefined } : null;
           }
           if (tool.result === 'operation_call') {
-            const { body, etag } = raw as Awaited<ReturnType<OperationExecutor>>;
+            const { body, etag, replayed: isReplay } = raw as Awaited<ReturnType<OperationExecutor>>;
+            auditOutput = body.data;
+            replayed = isReplay;
             return { data: isRecord(body.data) || Array.isArray(body.data) ? body.data : { value: body.data ?? null },
               ...(body.next_cursor !== undefined && { next_cursor: body.next_cursor }), ...(etag && { etag }) };
           }
+          auditOutput = metadata;
           return { data: metadata };
         },
         async authenticate(token) {
@@ -398,11 +462,23 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     },
   });
   return async (req: FastifyRequest, workspace: string, name: string) => {
-    if (!operations.has(name) || req.method !== 'GET' || !/^Bearer ss_command_/i.test(req.headers.authorization ?? '')) return;
+    const workerOperation = (name === 'worker_catalog_list' || name === 'worker_catalog_request_import' || workerSocialStatusToolNames.has(name))
+      ? operationCatalog()?.byName.get(name) : undefined;
+    const workerRequest = workerOperation?.method === req.method ? workerOperation : undefined;
+    if ((!workerRequest && (!operations.has(name) || req.method !== 'GET')) || !/^Bearer ss_command_/i.test(req.headers.authorization ?? '')) return;
     const credential = bearerCredential(req);
     if (!credential) throw unauthenticated();
-    return withCredential(credential, (unit, grant) => {
+    return withCredential(credential, async (unit, grant) => {
       if (workspace !== credential.workspaceId) throw missingWorkspace();
+      if (workerRequest && host.execute) {
+        if (!grant.tools.includes(name) || !operationAllowed(unit, workerRequest, grant.access)) throw denied();
+        if (workerRequest.method === 'POST' && req.body !== undefined && req.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json') {
+          throw invalidOperation('Expected application/json');
+        }
+        const input = restInput(req);
+        if (workerRequest.method === 'POST' && grant.connection) await touchAgentConnection(unit, grant.row);
+        return host.execute(unit, workerRequest, input, { requestId: req.id, source: 'rest', grantId: credential.id, credentialLabel: grant.label });
+      }
       return readOperation(unit, grant.tools, credential, name, restInput(req), req.id, 'rest');
     });
   };

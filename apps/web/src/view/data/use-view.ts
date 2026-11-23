@@ -55,11 +55,12 @@ export async function readAllPages<T>(url: string, params: Record<string, string
 }
 
 /** Reads a workspace-relative path under the `view` cache prefix that the stream invalidates. */
-export function useView<T>(path: string, query: ViewQuery = {}, options: { enabled?: boolean; allPages?: boolean } = {}) {
+export function useView<T>(path: string, query: ViewQuery = {}, options: { enabled?: boolean; allPages?: boolean; refetchInterval?: number } = {}) {
   const { ws } = useViewContext();
   const params = normalizeQuery(query);
   const result = useQuery({
     queryKey: viewKey(ws, path, params, options.allPages), enabled: options.enabled ?? true, placeholderData: keepPreviousData,
+    refetchInterval: options.refetchInterval,
     queryFn: async ({ signal }) => {
       const url = `${workspacePath(ws)}${path}`;
       const envelope = options.allPages ? await readAllPages<T>(url, params, signal) : await request<T>(url, { query: params, signal }) as ViewEnvelope<T>;

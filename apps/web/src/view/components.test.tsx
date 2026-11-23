@@ -36,9 +36,11 @@ test('LineChart draws a gap for null points, a legend for two series and a table
     { key: 'a', label: 'Instagram', points: days('2026-11-01', [3, 5, null, 4, 6]) },
     { key: 'b', label: 'TikTok', points: days('2026-11-01', [1, 2, 2, 3, 3]) },
   ]} />, 'en');
-  assert.equal(count(out, /class="vs-line"/g), 3);
-  assert.match(out, /class="vs-legend"/);
-  assert.match(out, /Instagram/);
+  assert.equal(count(out, /<path class="vs-line"/g), 3);
+  assert.equal(count(out, /<path class="vs-line" stroke="var\(--series-1,[^"]+" d=/g), 2);
+  assert.match(out, /<path class="vs-line" stroke="var\(--series-7,[^"]+" stroke-dasharray="4 3"/);
+  assert.match(out, /<line[^>]+stroke="var\(--series-1,[^"]+"[^>]*><\/line><\/svg>Instagram/);
+  assert.match(out, /<line[^>]+stroke="var\(--series-7,[^"]+" stroke-dasharray="4 3"[^>]*><\/line><\/svg>TikTok/);
   assert.match(out, /aria-pressed="false"[^>]*>Table</);
   const single = html(<LineChart title="Views" series={[{ key: 'a', label: 'Total', points: days('2026-11-01', [3, 5]) }]} />);
   assert.doesNotMatch(single, /class="vs-legend"/);

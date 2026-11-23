@@ -24,11 +24,32 @@ interface Options {
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const touchMs = 5 * 60_000;
 const route = '/api/v1/workspaces/:wid/agent-connections';
+const enrollmentMs = 10 * 60_000;
+const enrollmentKind = (client: 'claude_code' | 'codex') => `${client}_enrollment`;
+const digest = (code: string) => createHash('sha256').update(code).digest('hex');
+const invalidCode = () => new DomainError('invalid_enrollment', 'Connection code is invalid, expired, or already used', 401);
+
+function connectionInput(body: unknown, guided = false) {
+  const input = requestObject(body);
+  const client = input.client ?? 'other';
+  if (!agentClients.includes(client) || (guided && client === 'other')) throw invalid('Unsupported Agent client');
+  const defaultLabel = client === 'codex' ? 'Codex' : 'Claude Code';
+  const label = (typeof input.label === 'string' ? input.label.trim() : '') || (guided ? defaultLabel : '');
+  if (!label || label.length > 80) throw invalid('label must be 1 to 80 characters');
+  const days = input.expires_days ?? 90;
+  if (!Number.isInteger(days) || days < 1 || days > 365) throw invalid('expires_days must be an integer from 1 to 365');
+  return { client: client as typeof agentClients[number], label, days: days as number };
+}
 const notFound = () => new DomainError('not_found', 'Agent connection not found', 404);
 const iso = (ms: unknown) => typeof ms === 'number' && Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 export const isAgentConnection = (row: Pick<Entity, 'data'> | undefined) => row?.data.kind === 'agent_connection';
 
+export const workerSocialRequestKey = 'Generate a fresh high-entropy random idempotency_key (for example a UUID v4) for each new user query, even for the same account and day. Use local uuidgen only to generate the random ID if needed, without network access. Never derive the key from brand, date, or a fixed sequence. Reuse the exact key and arguments only for a network retry of the same submission.';
+
+export const workerSocialStatusInstructions = `For live questions about the user's own social accounts (查我的社媒狀態、X 上現有影片或是否已發佈), use only the paired SmartSell Worker. Call worker_social_status_request with body.mode 'account_status' for account status or 'recent_posts' for current X posts/videos, body.platform 'x' for X (or the supported platform for account status), and an idempotency_key. ${workerSocialRequestKey} Omit body.device_id when the user has exactly one eligible owned Worker; body.expected_identity is optional. Read the same task with worker_social_status_get using params.id. For X videos, use observed posts with has_video. Report the task ID, device ID, observed state and Worker receipt time (reported_at) before claiming verification. Label task IDs from earlier queries, including replays of those tasks, as historical receipts with their original observation time. If blocked, report the exact error in the user's language and give the next action: 工具缺失 → 完整退出並重開已接入的客戶端；授權不足 → 在 Web 核對工作區與連線權限；Worker 未配對或離線 → 配對或開啟指定 Worker 並等待心跳；未登入 → 請使用者在指定 Worker 登入；未綁定或帳號不符 → 在 SmartSell 核對該 Worker 的帳號綁定。 Do not fall back to local Chrome, browser/search tools, shell/curl, proxies, scraping, or guessing zero. Existing SmartSell posts and metrics may be reported as cached, with their recorded timestamps and coverage. For a specific SmartSell scheduled item, read its own publishing target and receipt as well.`;
+
 export const agentInstructions = `SmartSell is the team's marketing and commerce workspace. You do the data entry; people look at the web dashboard and make decisions there.
+${workerSocialStatusInstructions}
 Rules:
 1. Read before you write: list or get the records first, and reuse ids and versions you read. smartsell_operations_describe lists every operation this token may call, with its input schema.
 2. Every write carries an idempotency_key you generate (for example "<task>-<step>"). Reuse the same key when you retry the same write.
@@ -46,21 +67,13 @@ function agentGuide() {
   catch { return agentInstructions; }
 }
 
-export function agentSetup(mcpUrl: string, token: string) {
-  return {
-    claude_code_command: `claude mcp add --transport http smartsell ${mcpUrl} --scope user --header "Authorization: Bearer ${token}"`,
-    claude_code_json: `${JSON.stringify({ mcpServers: { smartsell: { type: 'http', url: mcpUrl,
-      headers: { Authorization: 'Bearer ${SMARTSELL_TOKEN}' } } } }, null, 2)}\n`,
-    codex_toml: `[mcp_servers.smartsell]\nurl = "${mcpUrl}"\nbearer_token_env_var = "SMARTSELL_TOKEN"\n`,
-    codex_command: `codex mcp add smartsell --url ${mcpUrl} --bearer-token-env-var SMARTSELL_TOKEN`,
-    agents_md: agentGuide(),
-  };
-}
-
-function connectionView(row: Entity) {
+function connectionView(row: Entity, mcpUrl: string) {
   const { data } = row;
   return { id: row.id, label: data.label ?? null, client: data.client ?? 'other', created_at: data.created_at ?? row.created_at,
-    expires_at: iso(data.expires), last_used_at: data.last_used_at ?? null, revoked: data.revoked === true || data.workspace_removed === true };
+    expires_at: iso(data.expires), last_used_at: data.last_used_at ?? null,
+    ...(data.client === 'codex' && { mcp_url: mcpUrl }),
+    ...(data.mcp_client_verified_at && { mcp_client_verified_at: data.mcp_client_verified_at, mcp_verified_at: data.mcp_client_verified_at }),
+    revoked: data.revoked === true || data.workspace_removed === true };
 }
 
 /** Mirror connection state into Operation records so dashboard views read it with ctx.list('agent_connection'). */
@@ -91,20 +104,29 @@ export async function touchAgentConnection(unit: Unit, row: Entity) {
   }
 }
 
+export async function verifyAgentConnection(context: Unit['context'], id: string) {
+  // The success audit and this stamp are committed together. Old tools/list stamps do not qualify.
+  const row = await context.get('mcp_runtime', 'credential', id);
+  if (!row || !isAgentConnection(row) || row.data.mcp_client_verified_at) return;
+  await context.update('mcp_runtime', 'credential', id, { mcp_client_verified_at: context.now }, row.version);
+}
+
 export function registerAgentConnections(app: FastifyInstance, { store, secret, mcpUrl, sessionHash, csrf, seal }: Options) {
   // The Agent session hash is kept encrypted so revocation can end it without the bearer token.
   const key = createHmac('sha256', secret).update('smartsell:agent-session-ref:v1').digest();
-  function sealRef(hash: string) {
+  function sealRef(value: string, purpose?: string) {
     const nonce = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', key, nonce);
-    const bytes = Buffer.concat([cipher.update(hash), cipher.final()]);
+    if (purpose) cipher.setAAD(Buffer.from(purpose));
+    const bytes = Buffer.concat([cipher.update(value), cipher.final()]);
     return Buffer.concat([nonce, cipher.getAuthTag(), bytes]).toString('base64url');
   }
-  function openRef(ref: unknown) {
+  function openRef(ref: unknown, purpose?: string) {
     if (typeof ref !== 'string') return;
     try {
       const data = Buffer.from(ref, 'base64url');
       const cipher = createDecipheriv('aes-256-gcm', key, data.subarray(0, 12));
+      if (purpose) cipher.setAAD(Buffer.from(purpose));
       cipher.setAuthTag(data.subarray(12, 28));
       return Buffer.concat([cipher.update(data.subarray(28)), cipher.final()]).toString();
     } catch { return undefined; }
@@ -117,15 +139,84 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
     return hash;
   }
 
+  async function insertConnection(unit: Unit, reqId: string, id: string, agentHash: string, expires: number,
+    { label, client }: ReturnType<typeof connectionInput>) {
+    const { context } = unit;
+    const now = context.now;
+    await context.insert('mcp_runtime', 'credential', { kind: 'agent_connection', actor_id: context.actorId, access: 'write', label, client,
+      created_at: now, expires, last_used_at: null, session_ref: sealRef(agentHash) }, id);
+    await mirror(unit, id, () => ({ id, version: 1, created_at: now, updated_at: now, label, client, user_id: context.actorId,
+      expires_at: iso(expires), last_used_at: null, revoked: false, revoked_at: null, created_via: 'human' }), records => {
+      const activity = activityEvent({ name: 'agent_connection_create' }, { actorId: context.actorId }, 'rest', reqId, now, { id, title: label });
+      records.put(`row/activity_event/${activity.id}`, activity);
+    });
+  }
+
+  app.post<{ Params: { wid: string } }>(`${route}/enroll`, { bodyLimit: 2048 }, async (req, reply) => {
+    const hash = browser(req, true);
+    const { wid } = req.params;
+    const { client, label, days } = connectionInput(req.body, true);
+    if (client === 'other') throw invalid('Unsupported Agent client');
+    const endpoint = new URL(mcpUrl);
+    if (endpoint.protocol !== 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname)) {
+      throw invalid('Agent setup requires HTTPS or a loopback URL');
+    }
+    const id = randomUUID();
+    // Bind the short-lived code to the issuing browser session without giving the client its session hash.
+    const code = sealRef(JSON.stringify({ hash, wid, id, client }), 'agent-enrollment:v1');
+    const expires = Date.now() + enrollmentMs;
+    const kind = enrollmentKind(client);
+    await store.workspace(hash, wid, async unit => {
+      const { context } = unit;
+      await unit.command({ module: 'agent', action: 'issue_agent_enrollment', key: `agent-enroll/${id}`, fingerprint: '' }, async () => {
+        const current = await context.get('mcp_runtime', kind, context.actorId);
+        const data = { code_hash: digest(code), expires, label, days };
+        if (current) await context.update('mcp_runtime', kind, current.id, data, current.version);
+        else await context.insert('mcp_runtime', kind, data, context.actorId);
+      });
+    });
+    return reply.header('Cache-Control', 'no-store').code(201).send({ data: { id, client, code, mcp_url: mcpUrl,
+      redeem_url: new URL(`${route.replace(':wid', wid)}/redeem`, mcpUrl).href, expires_at: iso(expires), expires_days: days } });
+  });
+
+  app.post<{ Params: { wid: string } }>(`${route}/redeem`, { bodyLimit: 2048 }, async (req, reply) => {
+    const { wid } = req.params;
+    const { code } = requestObject(req.body);
+    if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{100,512}$/.test(code)) throw invalidCode();
+    const opened = openRef(code, 'agent-enrollment:v1');
+    if (!opened) throw invalidCode();
+    const { hash, wid: workspace, id, client } = JSON.parse(opened);
+    if (workspace !== wid || !uuid.test(wid) || !uuid.test(id) || !/^[a-f0-9]{64}$/.test(hash) ||
+      (client !== 'claude_code' && client !== 'codex')) throw invalidCode();
+    const kind = enrollmentKind(client);
+    const agentHash = createHash('sha256').update(randomBytes(32)).digest('hex');
+    const token = seal({ sessionHash: agentHash, workspaceId: wid, id });
+    try {
+      await store.workspace(hash, wid, async unit => {
+        const { context } = unit;
+        if (!unit.issueAgentSession) throw new Error('Agent session issuance is unavailable');
+        const issue = unit.issueAgentSession;
+        await unit.command({ module: 'agent', action: 'redeem_agent_enrollment', key: `agent-redeem/${req.id}`, fingerprint: '' }, async () => {
+          const row = await context.get('mcp_runtime', kind, context.actorId);
+          if (!row || row.data.code_hash !== digest(code) || !(row.data.expires > Date.now())) throw invalidCode();
+          await context.update('mcp_runtime', kind, row.id, { code_hash: null }, row.version);
+          const now = Date.now();
+          if (row.data.expires <= now) throw invalidCode();
+          const { label, days } = row.data;
+          await insertConnection(unit, req.id, id, agentHash, now + days * 86_400_000, { label, days, client });
+          await issue(agentHash, days * 86_400);
+        });
+      });
+    } catch (error) {
+      if (error instanceof DomainError && [401, 403, 404, 409].includes(error.status)) throw invalidCode();
+      throw error;
+    }
+    return reply.header('Cache-Control', 'no-store').code(201).send({ data: { token } });
+  });
+
   app.post<{ Params: { wid: string } }>(route, async (req, reply) => {
     const hash = browser(req, true);
-    const input = requestObject(req.body);
-    const label = typeof input.label === 'string' ? input.label.trim() : '';
-    if (!label || label.length > 80) throw invalid('label must be 1 to 80 characters');
-    const client = input.client ?? 'other';
-    if (!agentClients.includes(client)) throw invalid(`client must be one of ${agentClients.join(', ')}`);
-    const days = input.expires_days ?? 90;
-    if (!Number.isInteger(days) || days < 1 || days > 365) throw invalid('expires_days must be an integer from 1 to 365');
+    const { label, client, days } = connectionInput(req.body);
     const user = (await store.session(hash))?.user;
     if (!user) throw unauthenticated();
     const id = randomUUID();
@@ -137,14 +228,7 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
         const { context } = unit;
         if (context.actorId !== user.id) throw unauthenticated();
         await unit.command({ module: 'agent', action: 'create_agent_connection', key: `agent-connection/${id}`, fingerprint: '' }, async () => {
-          const now = context.now;
-          await context.insert('mcp_runtime', 'credential', { kind: 'agent_connection', actor_id: user.id, access: 'write', label, client,
-            created_at: now, expires, last_used_at: null, session_ref: sealRef(agentHash) }, id);
-          await mirror(unit, id, () => ({ id, version: 1, created_at: now, updated_at: now, label, client, user_id: user.id,
-            expires_at: iso(expires), last_used_at: null, revoked: false, revoked_at: null, created_via: 'human' }), records => {
-            const activity = activityEvent({ name: 'agent_connection_create' }, { actorId: user.id }, 'rest', req.id, now, { id, title: label });
-            records.put(`row/activity_event/${activity.id}`, activity);
-          });
+          await insertConnection(unit, req.id, id, agentHash, expires, { label, client, days });
         });
       });
     } catch (error) {
@@ -152,14 +236,15 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
       throw error;
     }
     const token = seal({ sessionHash: agentHash, workspaceId: req.params.wid, id });
-    return reply.code(201).send({ data: { id, label, client, token, mcp_url: mcpUrl, expires_at: iso(expires), setup: agentSetup(mcpUrl, token) } });
+    return reply.header('Cache-Control', 'no-store').code(201).send({ data: { id, label, client, token, mcp_url: mcpUrl,
+      expires_at: iso(expires), setup: { agents_md: agentGuide() } } });
   });
 
   app.get<{ Params: { wid: string } }>(route, async req => {
     const hash = browser(req, false);
     const rows = await store.workspace(hash, req.params.wid, async ({ context }) =>
       (await context.list('mcp_runtime', 'credential')).filter(row => isAgentConnection(row) && row.data.actor_id === context.actorId));
-    return { data: rows.map(connectionView).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))) };
+    return { data: rows.map(row => connectionView(row, mcpUrl)).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))) };
   });
 
   app.delete<{ Params: { wid: string; id: string } }>(`${route}/:id`, async (req, reply) => {

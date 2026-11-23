@@ -9,12 +9,12 @@ test('analytics workbench shows history and sample reasons and keeps model credi
   await page.goto(`${base}/compat/workbench`);
   await expect(page).toHaveURL(`${base}/compat/workbench/login`);
   await page.getByLabel('介面語言').selectOption('en');
-  await page.getByRole('link', { name: 'First time? Set up a workspace' }).click();
+  await page.getByRole('link', { name: 'Advanced setup' }).click();
   await page.getByLabel('Your name').fill('Analytics Operator');
   await page.getByLabel('Workspace name').fill('Analytics QA');
   await page.getByLabel('Email').fill('analytics-test@example.test');
   await page.getByLabel('Password').fill('analytics-test-password');
-  await page.getByLabel(/Setup token/).fill(setupToken);
+  await page.getByLabel('Deployment setup token').fill(setupToken);
   await page.getByRole('button', { name: 'Set up SmartSell' }).click();
   await expect(page.getByRole('heading', { name: 'Operations overview' })).toBeVisible();
   const workspace = new URL(page.url()).pathname.split('/w/')[1].split('/')[0];

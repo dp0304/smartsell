@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { trafficHostConfig } from './integration/traffic-host.js';
+import { loopbackHost } from './setup-policy.js';
 
 const roles = ['api', 'mcp', 'worker', 'media', 'scheduler', 'ingress', 'public'] as const;
 export type ProcessRole = typeof roles[number];
@@ -62,8 +63,14 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     }
     for (const origin of (env.DEV_ORIGINS ?? '').split(',').filter(Boolean)) origins.add(new URL(origin).origin);
   }
+  const privateLoopback = !production && identityDeployment === 'private' && loopbackHost(host) &&
+    publicUrl.protocol === 'http:' && loopbackHost(publicUrl.hostname);
+  const localSetupOrigins = privateLoopback && env.SMARTSELL_LOCAL_SETUP === '1' ? new Set([publicUrl.origin]) : undefined;
   return {
     production, port, host, databaseUrl, backgroundDatabaseUrl, setupToken, secret, generatedSecret: !env.APP_SECRET, portalOrigin, portalCustomOrigins, portalAssertionKey, origins, origin: publicUrl.origin, identityDeployment: identityDeployment as 'private' | 'saas', identityKey,
+    localSetupOrigins,
+    workerDownloadDirectory: env.SMARTSELL_WORKER_DOWNLOAD_DIR ? resolve(env.SMARTSELL_WORKER_DOWNLOAD_DIR)
+      : privateLoopback ? resolve(root, '.local/worker-downloads') : undefined,
     statePath: resolve(env.SMARTSELL_DATA_FILE ?? resolve(root, '.local/smartsell.sqlite')),
     kernelStatePath: resolve(env.SMARTSELL_DATA_FILE ?? resolve(root, '.local/smartsell.json')),
     secureCookie: publicUrl.protocol === 'https:',

@@ -30,10 +30,10 @@ interface Options {
 
 export interface ExecuteMeta { requestId: string; source: 'rest' | 'mcp'; grantId?: string; credentialLabel?: string }
 export type OperationExecutor = (unit: Unit, op: Registered, input: Input, meta: ExecuteMeta) =>
-  Promise<{ body: { data: unknown; next_cursor?: string | null }; etag?: string; status: number }>;
+  Promise<{ body: { data: unknown; next_cursor?: string | null }; etag?: string; status: number; replayed?: true }>;
 
 const prefix = '/api/v1/workspaces/:ws';
-const reserved = new Set(['agent-connections', 'catalog', 'commands', 'records', 'stream', 'tokens', workspaceOpenApiFile]);
+const reserved = new Set(['agent-connections', 'catalog', 'commands', 'mcp-tool-calls', 'records', 'stream', 'tokens', workspaceOpenApiFile]);
 const methods = new Set(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']);
 
 function problem(reply: FastifyReply, req: FastifyRequest, error: unknown) {
@@ -177,7 +177,7 @@ export function registerOperationRoutes(app: FastifyInstance, { config, operatio
         try {
           originGuard(req, config);
           const readOnly = op.method === 'GET';
-          const fromPat = !alias && readOnly && req.headers.authorization
+          const fromPat = !alias && (readOnly || op.name === 'worker_catalog_request_import' || op.name === 'worker_social_status_request') && req.headers.authorization
             ? await patRead?.(req, req.params.ws, op.name) : undefined;
           const result = fromPat ?? await workspace(req, req.params.ws, async unit => {
             if (!visible(op, unit)) throw denied();

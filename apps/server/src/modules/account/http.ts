@@ -4,10 +4,18 @@ import { fail, one, text } from './input.ts';
 import { providers } from './oauth.ts';
 import type { DeviceAction } from './connector-service.ts';
 import { createAccountGateway, type AccountGatewayDependencies } from './gateway.ts';
+import { workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
 
 const deviceRoutes = [
   ['/api/v1/device/heartbeat', 'heartbeat'],
   ['/api/v1/device/claim', 'claim'],
+  ['/api/v1/device/channels/register', 'channels.register'],
+  ['/api/v1/device/catalog/claim', 'catalog.claim'],
+  ['/api/v1/device/catalog/upload', 'catalog.upload'],
+  ['/api/v1/device/zhihu-stats/claim', 'zhihu.stats.claim'],
+  ['/api/v1/device/zhihu-stats/report', 'zhihu.stats.report'],
+  ['/api/v1/device/social-status/claim', 'social.status.claim'],
+  ['/api/v1/device/social-status/report', 'social.status.report'],
   ['/api/v1/device/browser-identity', 'browser.identity'],
   ['/api/v1/device/mobile-identity', 'mobile.identity'],
   ['/api/v1/device/mobile-devices/report', 'mobile.report'],
@@ -64,13 +72,16 @@ export function mountAccountIngress(app: FastifyInstance, dependencies: AccountG
         }),
       }));
     }
-    for (const [path, action] of deviceRoutes) ingress.post<{ Params: Params }>(path, async (request, reply) => {
-      const data = await gateway.device(action, buffer(request), {
-        device_id: text(request.headers['x-smartsell-device']), timestamp: text(request.headers['x-smartsell-timestamp']),
-        nonce: text(request.headers['x-smartsell-nonce']), signature: text(request.headers['x-smartsell-signature']),
-      }, request.params.id, workspace(request));
-      if (data && typeof data === 'object' && 'decision' in data && data.decision === 'late') reply.code(409);
-      return { data };
-    });
+    for (const [path, action] of deviceRoutes) {
+      const limits = action === 'catalog.upload' ? { bodyLimit: workerCatalogUploadBodyLimit } : {};
+      ingress.post<{ Params: Params }>(path, limits, async (request, reply) => {
+        const data = await gateway.device(action, buffer(request), {
+          device_id: text(request.headers['x-smartsell-device']), timestamp: text(request.headers['x-smartsell-timestamp']),
+          nonce: text(request.headers['x-smartsell-nonce']), signature: text(request.headers['x-smartsell-signature']),
+        }, request.params.id, workspace(request), request.id);
+        if (data && typeof data === 'object' && 'decision' in data && data.decision === 'late') reply.code(409);
+        return { data };
+      });
+    }
   });
 }

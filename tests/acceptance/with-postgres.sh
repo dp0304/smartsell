@@ -4,7 +4,7 @@ cd "$(dirname "$0")/../.."
 
 # Use a disposable database on loopback, without pulling an image implicitly.
 container=$(docker run --rm --pull=never --detach --tmpfs /var/lib/postgresql/data \
-  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=acceptance-local postgres:17-alpine)
+  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=acceptance-local "${SMARTSELL_TEST_PG_IMAGE:-postgres:17-alpine}")
 trap 'docker stop "$container" >/dev/null' EXIT
 for ((attempt=0; attempt<30; attempt++)); do
   if docker exec "$container" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then break; fi
@@ -53,3 +53,8 @@ MIGRATION_DATABASE_URL="postgresql://acceptance_owner:fixture-owner@${address}/s
 TRAFFIC_TEST_DATABASE_URL="postgresql://acceptance_request:fixture-request@${address}/smartsell_traffic" \
   TRAFFIC_TEST_DATABASE_OWNER_URL="postgresql://acceptance_owner:fixture-owner@${address}/smartsell_traffic" \
   node --import tsx --test --test-name-pattern='^command PostgreSQL traffic scope' apps/server/src/integration/traffic-host.test.ts
+
+docker exec "$container" createdb -U postgres -O acceptance_owner smartsell_command_identity
+MIGRATION_DATABASE_URL="postgresql://acceptance_owner:fixture-owner@${address}/smartsell_command_identity" pnpm db:migrate
+COMMAND_IDENTITY_TEST_DATABASE_URL="postgresql://acceptance_request:fixture-request@${address}/smartsell_command_identity" \
+  node --import tsx --test --test-name-pattern='^Commands PostgreSQL:' apps/server/src/integration/command-identity.test.ts

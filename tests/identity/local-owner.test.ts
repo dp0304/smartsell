@@ -17,8 +17,10 @@ test('first local owner persists across reopening, uses Argon2id and cannot be r
   const dir = await mkdtemp(join(scratch, 'owner-test-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const env = { SMARTSELL_DATA_FILE: join(dir, 'workspace.sqlite') };
-  const input = owner();
+  const input = { ...owner(), password: '123456' };
+  await assert.rejects(initializeLocalOwner({ ...input, password: '12345' }, env), /at least 6 characters/i);
   await initializeLocalOwner(input, env);
+  await initializeLocalOwner(owner(), { ...env, SMARTSELL_DATA_FILE: join(dir, 'long-password.sqlite') });
   await assert.rejects(initializeLocalOwner(owner(), env), /已完成/);
   const store = localStore(env.SMARTSELL_DATA_FILE);
   const { app } = buildApp({ store, registry: new Map(), origins: new Set(), secureCookie: false });

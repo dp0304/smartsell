@@ -173,9 +173,11 @@ export function localEspOperations(factory: () => EspTransport | undefined = def
         if (campaign.status !== 'draft') throw new Problem(409, 'STATE_CONFLICT', 'Only draft campaigns can be submitted');
         const attempts = ctx.list('esp_attempt').filter(row => row.esp_campaign_ref_id === campaign.id && row.action === action);
         if (attempts.some(row => row.status !== 'failed')) throw new Problem(409, 'STATE_CONFLICT', 'Read back the existing attempt before retrying');
-        await syncSuppressions(ctx, account, config, transport);
         const version = ctx.get('segment_version', String(campaign.segment_version_id));
-        const snapshot = snapshotAudience(ctx, version.id, 'schedule_estimate', undefined, await members(ctx, version, account, transport), {
+        const memberIds = await members(ctx, version, account, transport);
+        // Recheck opt-outs after the provider's audience lookup, just before submission.
+        await syncSuppressions(ctx, account, config, transport);
+        const snapshot = snapshotAudience(ctx, version.id, 'schedule_estimate', undefined, memberIds, {
           esp_campaign_ref_id: campaign.id, esp_account_id: account.id, action,
         });
         const targets = recipients(ctx, snapshot, config).filter(row => action !== 'test_send' || row.address === input.body.test_address);

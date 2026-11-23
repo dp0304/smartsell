@@ -70,7 +70,7 @@ export function commandIdentity(store: Store, key: Uint8Array) {
         if (!user) throw unauthenticated();
         return { data: { enabled: !!await totp.factorId(user.id), canManage: true, passwordRecheck: true } };
       }));
-      const manage = (action: CommandIdentityAction, change: (totp: TotpIdentity, id: string, email: string, body: Fields) => Promise<unknown>) =>
+      const manage = (action: CommandIdentityAction, change: (totp: TotpIdentity, id: string, label: string, body: Fields) => Promise<unknown>) =>
         async (request: FastifyRequest) => {
           const hash = sessionHash(request);
           if (!hash) throw unauthenticated();
@@ -94,7 +94,8 @@ export function commandIdentity(store: Store, key: Uint8Array) {
               throw new IdentityError(503, 'Identity state busy');
             }
             if (!await passwordMatches(passwordHash, password)) throw new IdentityError();
-            const data = await change(totp, user.id, user.email, body);
+            const label = user.username ?? user.email;
+            const data = await change(totp, user.id, label, body);
             await unit.audit(user.id, action);
             return { data: data ?? {} };
           });

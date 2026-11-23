@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { expect, test as base } from '@playwright/test';
-import { localDev } from './local-dev.mjs';
+import { localDev, localRegistration, localTokenRegistration } from './local-dev.mjs';
 
 const test = base.extend({ dev: localDev });
+const registration = test.extend({ dev: localRegistration });
 test.use({ viewport: { width: 1280, height: 800 }, trace: 'off', screenshot: 'off', video: 'off' });
 
 const email = 'owner@example.test';
@@ -39,10 +40,11 @@ async function reloadFor(page, path) {
 async function setupWorkspace(page, dev) {
   const password = dev.password();
   await page.goto(`${dev.origin}/`);
-  await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '註冊', exact: true })).toBeVisible();
+  await expect(page.getByLabel('部署初始設定權杖')).toHaveAttribute('required', '');
   // Operators no longer see developer entry points such as the compatibility workbench.
   await expect(page.getByRole('link', { name: '相容版工作台' })).toHaveCount(0);
-  await page.getByRole('link', { name: '首次部署？建立第一個工作區', exact: true }).click();
+  await page.getByRole('link', { name: '進階初始化', exact: true }).click();
   await expect(page).toHaveURL(`${dev.origin}/setup`);
   // The router can update the URL before React replaces the sign-in form.
   await expect(page.getByRole('heading', { name: '首次設定', exact: true })).toBeVisible();
@@ -50,14 +52,16 @@ async function setupWorkspace(page, dev) {
   await fillAuth(page, 'password', password);
   await fillAuth(page, 'workspaceName', workspaceName);
   await fillAuth(page, 'name', 'Acceptance Owner');
-  await fillAuth(page, 'setupToken', dev.setupToken);
+  const token = page.getByLabel('部署初始設定權杖');
+  await expect(token).toHaveAttribute('required', '');
+  await expect(token).toHaveAttribute('type', 'password');
+  await token.fill(dev.setupToken);
   await expect(page.locator('input[name=email]')).toHaveValue(email);
   const setup = responseFor(page, 'POST', '/api/v1/setup');
   await page.getByRole('button', { name: '首次設定', exact: true }).click();
   expect((await setup).status(), 'POST /api/v1/setup').toBe(201);
-  // A signed-in operator lands on the dashboard, not the advanced workbench.
-  await expect(page).toHaveURL(/\/app\/[^/]+$/);
-  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  // An empty workspace starts in the guided setup rather than the advanced workbench.
+  await expectSetupAndSkip(page);
   return password;
 }
 
@@ -92,6 +96,20 @@ async function expectNoHorizontalOverflow(page) {
   expect(width.content, 'document scroll width').toBeLessThanOrEqual(width.viewport);
 }
 
+async function expectSetupAndSkip(page, locale = 'zh-Hant') {
+  const english = locale === 'en';
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: english ? 'Get started' : '開始設定', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/[^/]+\/get-started(?:\?step=agent)?$/);
+  const dashboard = page.url().replace(/\/get-started(?:\?step=agent)?$/, '');
+  await expect(main.getByRole('navigation', { name: english ? 'Setup steps' : '設定步驟', exact: true }).getByRole('listitem')).toHaveCount(2);
+  await expectNoHorizontalOverflow(page);
+  await main.getByRole('link', { name: english ? 'Finish later and go to overview' : '稍後設定，前往總覽', exact: true }).click();
+  await expect(page).toHaveURL(dashboard);
+  await expect(main.getByRole('heading', { name: english ? 'Overview' : '總覽', exact: true })).toBeVisible();
+  return dashboard;
+}
+
 test('primary root supports first-time setup and fresh-session sign-in in both languages', async ({ browser, page, dev }) => {
   const password = await setupWorkspace(page, dev);
   const fresh = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -104,13 +122,14 @@ test('primary root supports first-time setup and fresh-session sign-in in both l
     await language(loginPage).selectOption('en');
     await expect(loginPage.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(loginPage);
-    await fillAuth(loginPage, 'email', email);
+    await expect(loginPage.getByRole('link', { name: 'Advanced setup' })).toHaveCount(0);
+    await loginPage.getByLabel('Username or email').fill(email);
     await fillAuth(loginPage, 'password', password);
     const login = responseFor(loginPage, 'POST', '/api/v1/session');
     await loginPage.getByRole('button', { name: 'Sign in', exact: true }).click();
     expect((await login).status(), 'POST /api/v1/session').toBe(200);
-    // Sign-in lands on the dashboard overview; the language chosen on the sign-in page carries over.
-    await expect(loginPage).toHaveURL(/\/app\/[^/]+$/);
+    // The first sign-in to an empty workspace shows setup in the chosen language.
+    await expectSetupAndSkip(loginPage, 'en');
     await reloadFor(loginPage, `${workspaceApi(loginPage)}/views/home`);
     await expect(loginPage.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
     const dashboardNav = loginPage.getByRole('navigation', { name: 'Dashboard navigation' });
@@ -132,6 +151,205 @@ test('primary root supports first-time setup and fresh-session sign-in in both l
   } finally {
     await fresh.close();
   }
+});
+
+const tokenRegistration = test.extend({ dev: localTokenRegistration });
+for (const [entry, path, fixture, minimum] of [
+  ['primary', '/', test, 12],
+  ['compatibility', '/compat/workbench', test, 12],
+  ['trusted local compatibility', '/compat/workbench', tokenRegistration, 6],
+]) {
+  fixture(`${entry} root registers a username with a valid deployment token`, async ({ page, dev }) => {
+    const username = 'protected-operator';
+    const password = minimum === 6 ? '123456' : dev.password();
+    await page.goto(dev.origin + path);
+    await expect(page.getByRole('heading', { name: '註冊', exact: true })).toBeVisible();
+    await expect(page.locator('input')).toHaveCount(3);
+    await expect(page.getByRole('heading', { name: '登入', exact: true })).toHaveCount(0);
+    const passwordField = page.locator('input[name=password]');
+    await expect(passwordField).toHaveAttribute('minlength', String(minimum));
+    await expect(passwordField).toHaveAccessibleDescription(`密碼至少需要 ${minimum} 個字元。`);
+    await language(page).selectOption('en');
+    await expect(passwordField).toHaveAccessibleDescription(`Use at least ${minimum} characters.`);
+    await language(page).selectOption('zh-Hant');
+    const setupUrl = `${dev.origin}/api/v1/setup`;
+    const shortPassword = minimum === 6 ? '12345' : '123456';
+    expect((await page.request.post(setupUrl, {
+      headers: { Origin: dev.origin }, data: { username, password },
+    })).status()).toBe(403);
+    expect((await page.request.post(setupUrl, {
+      headers: { Origin: dev.origin, 'X-Setup-Token': dev.setupToken }, data: { username, password: shortPassword },
+    })).status()).toBe(422);
+    await page.getByLabel('使用者名稱', { exact: true }).fill(username);
+    await passwordField.fill(password);
+    const token = page.getByLabel('部署初始設定權杖');
+    await expect(token).toHaveAttribute('required', '');
+    await expect(token).toHaveAttribute('type', 'password');
+    const submit = page.getByRole('button', { name: '註冊', exact: true });
+    await token.fill('incorrect-test-authorization');
+    const rejected = responseFor(page, 'POST', '/api/v1/setup');
+    await submit.click();
+    expect((await rejected).status()).toBe(403);
+    await expect(page.getByRole('alert')).toContainText('部署授權失敗');
+    await expect(token).toBeFocused();
+    expect(await (await page.request.get(`${dev.origin}/api/v1/setup/status`)).json()).toEqual({
+      data: { initialized: false, registration_enabled: true, token_required: true, password_min_length: minimum },
+    });
+
+    await token.fill(dev.setupToken);
+    const accepted = responseFor(page, 'POST', '/api/v1/setup');
+    await submit.click();
+    const response = await accepted;
+    expect(response.status()).toBe(201);
+    const request = response.request();
+    expect(Object.keys(request.postDataJSON()).sort()).toEqual(['password', 'username']);
+    expect(request.postDataJSON().username).toBe(username);
+    expect(await request.headerValue('x-setup-token') === dev.setupToken).toBe(true);
+    const session = await page.request.get(`${dev.origin}/api/v1/session`);
+    expect(session.status()).toBe(200);
+    const { data } = await session.json();
+    expect(data.user).toMatchObject({ username, name: username });
+    expect(data.workspaces[0].name).toBe('SmartSell');
+    const setupPath = `/app/${data.workspaces[0].id}/get-started`;
+    await expect(page).toHaveURL(url => url.pathname === setupPath && ['', '?step=agent'].includes(url.search));
+    const dashboard = await expectSetupAndSkip(page);
+    await page.getByRole('button', { name: '登出', exact: true }).click();
+    await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
+    await page.goto(`${dev.origin}${path === '/' ? '' : path}/setup`);
+    await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
+    await expect(page.getByLabel('部署初始設定權杖')).toHaveCount(0);
+    await page.getByLabel('使用者名稱或電子郵件').fill(username);
+    await passwordField.fill(password);
+    const login = responseFor(page, 'POST', '/api/v1/session');
+    await page.getByRole('button', { name: '登入', exact: true }).click();
+    expect((await login).status()).toBe(200);
+    if (path === '/') {
+      await expect(page).toHaveURL(dashboard);
+      await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+    } else {
+      await expect(page).toHaveURL(`${dev.origin}${path}/w/${data.workspaces[0].id}/home`);
+    }
+  });
+}
+
+registration('first visit registers with two fields and the new user can sign out and sign back in', async ({ page, dev }) => {
+  const username = 'first-operator';
+  const password = '123456';
+  await page.goto(dev.origin);
+  await expect(page.getByRole('heading', { name: '註冊', exact: true })).toBeVisible();
+  await expect(page.locator('.auth-card input')).toHaveCount(2);
+  await expect(page.getByLabel('使用者名稱', { exact: true })).toHaveAttribute('autocomplete', 'username');
+  await expect(page.getByLabel('密碼', { exact: true })).toHaveAttribute('required', '');
+  await expect(page.getByLabel('密碼', { exact: true })).toHaveAttribute('minlength', '6');
+  await expect(page.getByLabel('密碼', { exact: true })).toHaveAccessibleDescription('密碼至少需要 6 個字元。');
+  await language(page).selectOption('en');
+  await expect(page.getByRole('heading', { name: 'Register', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAccessibleDescription('Use at least 6 characters.');
+  await expectNoHorizontalOverflow(page);
+  await page.getByLabel('Username', { exact: true }).fill(username);
+  const passwordField = page.getByLabel('Password', { exact: true });
+  await passwordField.fill('12345');
+  await page.getByRole('button', { name: 'Register', exact: true }).click();
+  await expect(passwordField).toBeFocused();
+  expect(await passwordField.evaluate(input => input.validity.tooShort)).toBe(true);
+  await language(page).selectOption('zh-Hant');
+  await page.getByLabel('密碼', { exact: true }).fill(password);
+  const setup = responseFor(page, 'POST', '/api/v1/setup');
+  await page.getByRole('button', { name: '註冊', exact: true }).click();
+  const response = await setup;
+  expect(response.status()).toBe(201);
+  expect(Object.keys(response.request().postDataJSON()).sort()).toEqual(['password', 'username']);
+  expect(response.request().headers()['x-setup-token']).toBeUndefined();
+  const dashboard = await expectSetupAndSkip(page);
+  await page.goto(dev.origin);
+  await expect(page).toHaveURL(dashboard);
+  await page.getByRole('button', { name: '登出', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '註冊' })).toHaveCount(0);
+  await page.getByLabel('使用者名稱或電子郵件').fill(username);
+  await page.getByLabel('密碼', { exact: true }).fill('not-the-right-password');
+  await page.getByRole('button', { name: '登入', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('使用者名稱、電子郵件或密碼不正確。');
+  await expect(page.getByLabel('密碼', { exact: true })).toBeFocused();
+  await page.getByLabel('密碼', { exact: true }).fill(password);
+  const login = responseFor(page, 'POST', '/api/v1/session');
+  await page.getByRole('button', { name: '登入', exact: true }).click();
+  expect((await login).status()).toBe(200);
+  await expect(page).toHaveURL(dashboard);
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '登出', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
+  const workspaceId = new URL(dashboard).pathname.split('/').at(-1);
+  const compatibility = `${dev.origin}/compat/workbench`;
+  const next = `/w/${workspaceId}/home?view=health`;
+  await page.goto(`${compatibility}${next}`);
+  await language(page).selectOption('en');
+  await page.getByLabel('Username or email').fill(username);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(`${compatibility}${next}`);
+  await expect(page.getByRole('heading', { name: 'Workspace status', exact: true })).toBeVisible();
+});
+
+registration('registration uses 12 characters when setup status omits a valid minimum', async ({ page, dev }) => {
+  let minimum;
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: {
+    data: { initialized: false, token_required: false, registration_enabled: true, password_min_length: minimum },
+  } }));
+  await page.goto(dev.origin);
+  const passwordField = page.locator('input[name=password]');
+  await expect(passwordField).toHaveAttribute('minlength', '12');
+  await expect(passwordField).toHaveAccessibleDescription('密碼至少需要 12 個字元。');
+  minimum = '6';
+  await page.reload();
+  await expect(passwordField).toHaveAttribute('minlength', '12');
+});
+
+registration('a competing first setup changes the stale form to sign-in and preserves the deep link', async ({ page, playwright, dev }) => {
+  const browserSession = await playwright.request.newContext({ baseURL: dev.origin, extraHTTPHeaders: { Origin: dev.origin } });
+  const destination = '/w/placeholder/home?tab=health#providers';
+  const username = 'race-operator';
+  const password = dev.password();
+  try {
+    await page.goto(`${dev.origin}/login?next=${encodeURIComponent(destination)}`);
+    await page.getByLabel('使用者名稱', { exact: true }).fill(username);
+    await page.getByLabel('密碼', { exact: true }).fill(password);
+    const winner = await browserSession.post('/api/v1/setup', { data: { username, password } });
+    expect(winner.status()).toBe(201);
+    const { workspaces: [workspace] } = await winner.json();
+    const rejected = responseFor(page, 'POST', '/api/v1/setup');
+    await page.getByRole('button', { name: '註冊', exact: true }).click();
+    expect((await rejected).status()).toBe(409);
+    await expect(page.getByRole('status').filter({ hasText: '另一個工作階段已完成首次設定' })).toBeVisible();
+    await expect(page.getByLabel('使用者名稱或電子郵件')).toHaveValue(username);
+    await expect(page.getByLabel('使用者名稱或電子郵件')).toBeFocused();
+    await expect(page.getByLabel('密碼', { exact: true })).toBeEmpty();
+    expect(new URL(page.url()).searchParams.get('next')).toBe(destination);
+    const next = `/w/${workspace.id}/home?tab=health#providers`;
+    await page.goto(`${dev.origin}${next}`);
+    await page.getByLabel('使用者名稱或電子郵件').fill(username);
+    await page.getByLabel('密碼', { exact: true }).fill(password);
+    await page.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(page).toHaveURL(`${dev.origin}${next}`);
+  } finally { await browserSession.dispose(); }
+});
+
+registration('unknown setup status never offers registration and can be retried', async ({ page, dev }) => {
+  let release;
+  const received = new Promise(resolve => { release = resolve; });
+  await page.route('**/api/v1/setup/status', async route => {
+    await received;
+    await route.fulfill({ status: 503, json: { error: { code: 'offline' } } });
+  });
+  await page.goto(dev.origin);
+  await expect(page.getByText('正在確認首次設定狀態…')).toBeVisible();
+  await expect(page.locator('.auth-card input')).toHaveCount(0);
+  release();
+  await expect(page.getByRole('alert')).toContainText('無法確認首次設定狀態');
+  await expect(page.getByRole('button', { name: '註冊' })).toHaveCount(0);
+  await page.unroute('**/api/v1/setup/status');
+  await page.getByRole('button', { name: '重試', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '註冊' })).toBeVisible();
 });
 
 test('WS04 marks an approval notification read without closing its work item', async ({ page, dev }) => {

@@ -1,4 +1,4 @@
-import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomBytes, randomUUID, sign } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import Fastify from 'fastify';
 import type { Context, Data, Row } from '@smartsell/contracts';
@@ -11,9 +11,10 @@ import type { Adapter } from '../../../../../packages/adapters/src/adapter-types
 import { createAdapter } from '../../../../../packages/adapters/src/official.ts';
 import { operations as executionOperations } from '../execution/ops.ts';
 import { upsertObservedPost } from '../execution/service.ts';
+import { zhihuStatsOperations } from './zhihu-stats.ts';
 
 const start = '2026-11-19T12:00:00.000Z';
-function fixture() {
+function fixture(uuid = false) {
   const rows = new Map<string, Row[]>();
   let next = 0;
   const ctx: Context = {
@@ -21,7 +22,7 @@ function fixture() {
     list: kind => rows.get(kind) ?? [],
     get(kind, id) { const row = ctx.list(kind).find(item => item.id === id); if (!row) throw new Error(`missing ${kind}`); return row; },
     create(kind, values) {
-      const row = { ...values, id: `fixture-${++next}`, version: 1, created_at: ctx.now, updated_at: ctx.now };
+      const row = { ...values, id: uuid ? randomUUID() : `fixture-${++next}`, version: 1, created_at: ctx.now, updated_at: ctx.now };
       rows.set(kind, [...ctx.list(kind), row]); return row;
     },
     update(kind, id, values) {
@@ -45,6 +46,44 @@ const terms = { version: 'fixture-v1', text: 'Fixture-only risk terms' };
 const config = { max_per_hour: 1, min_interval_seconds: 120, daily_cap: 2, allowed_windows: [{ start: '09:00', end: '17:00' }] };
 
 describe('AC workspace and device boundaries', () => {
+  it('lets an active human administrator replace a departed pairing authorizer without transferring the device', () => {
+    const { ctx } = fixture();
+    const departed = 'departed-owner';
+    const administrator = ctx.actorId;
+    const device = ctx.create('connector_device', { owner_id: departed, name: 'Legacy Worker', status: 'active', allow_channel_registration: true });
+    const keys = generateKeyPairSync('ed25519');
+    const encoded = keys.publicKey.export({ format: 'der', type: 'spki' }).toString('base64url');
+    ctx.update('connector_device', device.id, { public_key: encoded });
+    const store = ctx.create('store', { provider: 'amazon_sp', external_store_id: 'A001LEGACY', status: 'import_only', brand_id: ctx.list('brand')[0].id });
+    const binding = ctx.create('worker_catalog_binding', { provider: store.provider, external_store_id: store.external_store_id, store_id: store.id, device_id: device.id });
+    const activeWorkspaceMembers = [{ userId: administrator, role: 'admin', scopes: [] as string[] }];
+    Object.assign(ctx, { activeWorkspaceMembers });
+    const events: { type: string; data: Data }[] = [];
+    ctx.emit = (type, data) => { events.push({ type, data }); };
+    const request = () => {
+      const nonce = randomBytes(18).toString('base64url');
+      const raw = Buffer.from(JSON.stringify({ confirmed: true, selections: [{ kind: 'store', platform: 'amazon_sp', external_id: store.external_store_id, observed_at: ctx.now }] }));
+      const action = 'channels.register';
+      const signature = sign(null, deviceRequestBytes(ctx.workspaceId, device.id, action, ctx.now, nonce, raw), keys.privateKey).toString('base64url');
+      return handleDeviceRequest(ctx, action, raw, { device_id: device.id, nonce, timestamp: ctx.now, signature }, { authorizeTask: () => false });
+    };
+    const input = { params: { id: device.id }, query: {}, body: { enabled: true } };
+    const operation = (humanSession: () => boolean) => createOperations({ humanSession }).find(item => item.name === 'account_set_device_channel_registration')!;
+    expect(() => request()).toThrow('WORKER_CHANNEL_REGISTRATION_NOT_AUTHORIZED');
+    expect(() => operation(() => false).run(ctx, input)).toThrow('HUMAN_SESSION_REQUIRED');
+    expect(() => operation(() => true).run({ ...ctx, role: 'manager' }, input)).toThrow('HUMAN_SESSION_REQUIRED');
+    expect(operation(() => true).run(ctx, input)).toEqual({ device_id: device.id, allow_channel_registration: true, authorized_by: administrator });
+    operation(() => true).run(ctx, input);
+    expect(events).toEqual([{ type: 'account.audit.recorded', data: { action: 'account.device.channel_registration_changed', actor_id: administrator,
+      occurred_at: ctx.now, device_id: device.id, owner_id: departed, enabled: true, authorized_by: administrator, previous_authorized_by: departed } }]);
+    expect(ctx.get('connector_device', device.id)).toMatchObject({ id: device.id, owner_id: departed, public_key: encoded });
+    expect(request()).toEqual({ registrations: [{ kind: 'store', platform: store.provider, external_id: store.external_store_id, resource_id: store.id, device_id: device.id }] });
+    expect(ctx.get('worker_catalog_binding', binding.id)).toEqual(binding);
+    activeWorkspaceMembers[0].role = 'viewer';
+    activeWorkspaceMembers[0].scopes.push(`brand:${store.brand_id}`);
+    expect(() => request()).toThrow('WORKER_CHANNEL_REGISTRATION_NOT_AUTHORIZED');
+  });
+
   it('mounts ingress with raw signature input and rejects untrusted gateway operations', async () => {
     const { ctx } = fixture();
     const app = Fastify();
@@ -130,6 +169,110 @@ describe('AC workspace and device boundaries', () => {
       await expect(client.claim('local-binding')).resolves.toBeNull();
       await call('revoke_device', {}, id);
       await expect(client.claim('local-binding')).rejects.toMatchObject({ status: 401 });
+    } finally { await app.close(); }
+  });
+
+  it('routes read-only Zhihu tasks to two signed devices and isolates login incidents by owner', async () => {
+    const { ctx, call } = fixture(true);
+    const app = Fastify();
+    const { createSignedHttpTransport, pairOverHttp, SignedDeviceClient } = await import('../../../../connector/src/device-client.ts');
+    mountAccountIngress(app, {
+      account: {}, connector: { authorizeTask: () => false }, transaction: async (_id, run) => run(ctx),
+      oauthWorkspace: async () => undefined, pairingWorkspace: async () => ctx.workspaceId,
+      deviceWorkspace: async (_id, hint) => hint === ctx.workspaceId ? hint : undefined, webhookWorkspace: async () => undefined,
+    });
+    const inject: typeof fetch = async (url, init) => {
+      const response = await app.inject({ method: 'POST', url: new URL(String(url)).pathname,
+        headers: Object.fromEntries(new Headers(init?.headers)), payload: Buffer.from(init?.body as Uint8Array) });
+      return new Response(response.body, { status: response.statusCode, headers: { 'content-type': 'application/json' } });
+    };
+    const origin = 'http://127.0.0.1:3000';
+    const pair = async (owner: string) => {
+      ctx.actorId = owner;
+      const { pairing_code } = await call('issue_device_pairing_code', { owned_device_confirmed: true }) as { pairing_code: string };
+      const { privateKey } = generateKeyPairSync('ed25519');
+      const id = await pairOverHttp(origin, ctx.workspaceId, pairing_code, 'darwin', 'Test computer', privateKey,
+        { userInitiated: true, ownsDevice: true }, inject);
+      const client = new SignedDeviceClient(ctx.workspaceId, id, privateKey, createSignedHttpTransport(origin, inject), () => Date.parse(ctx.now));
+      const headers = (action: string, raw: Buffer) => {
+        const nonce = randomBytes(18).toString('base64url');
+        const signature = sign(null, deviceRequestBytes(ctx.workspaceId, id, action, ctx.now, nonce, raw), privateKey).toString('base64url');
+        return { 'content-type': 'application/json', 'x-smartsell-workspace': ctx.workspaceId, 'x-smartsell-device': id,
+          'x-smartsell-timestamp': ctx.now, 'x-smartsell-nonce': nonce, 'x-smartsell-signature': signature };
+      };
+      return { id, client, headers };
+    };
+    const op = (owner: string, type: 'create' | 'get' | 'incidents_list', body: Data = {}, id = '') => {
+      ctx.actorId = owner;
+      return zhihuStatsOperations.find(operation => operation.name === `zhihu_stats_${type}`)!
+        .run(ctx, { body, params: { id }, query: {} });
+    };
+    const queue = async (owner: string, body: Data) => await op(owner, 'create', body) as { id: string };
+    const a = 'owner-a', b = 'owner-b';
+    try {
+      const workerA = await pair(a);
+      const workerB = await pair(b);
+      const slug = 'test-profile';
+      expect(() => op(a, 'create', { device_id: workerB.id, profile_slug: slug })).toThrow('DEVICE_NOT_FOUND');
+      expect(() => op(a, 'create', { device_id: workerA.id, profile_slug: 'https://example.invalid/test' })).toThrow('INVALID_INPUT');
+      expect(() => op(b, 'create', { device_id: workerB.id, mode: 'login_check', profile_slug: slug })).toThrow('INVALID_INPUT');
+      const stats = await queue(a, { device_id: workerA.id, profile_slug: slug });
+      expect(() => op(b, 'get', {}, stats.id)).toThrow('ZHIHU_STATS_TASK_NOT_FOUND');
+      await expect(workerB.client.claimZhihuStats()).resolves.toBeNull();
+      const login = await queue(b, { device_id: workerB.id, mode: 'login_check' });
+
+      const raw = Buffer.from('{}');
+      const claimUrl = '/api/v1/device/zhihu-stats/claim';
+      const sendClaim = (headers: Record<string, string>) => app.inject({ method: 'POST', url: claimUrl, payload: raw, headers });
+      expect((await sendClaim(workerA.headers('claim', raw))).json()).toEqual({ error: { code: 'INVALID_DEVICE_PROOF' } });
+      const proof = workerA.headers('zhihu.stats.claim', raw);
+      const statsResponse = await sendClaim(proof);
+      expect(statsResponse.statusCode).toBe(200);
+      const statsClaim = statsResponse.json().data.claim;
+      expect(statsClaim).toMatchObject({ id: stats.id, device_id: workerA.id, workspace_id: ctx.workspaceId, profile_slug: slug });
+      expect((await sendClaim(proof)).json()).toEqual({ error: { code: 'DEVICE_PROOF_REPLAYED' } });
+      const loginClaim = (await workerB.client.claimZhihuStats())!;
+      expect(loginClaim).toMatchObject({ id: login.id, device_id: workerB.id, mode: 'login_check' });
+      expect(loginClaim).not.toHaveProperty('profile_slug');
+      await expect(workerA.client.claimZhihuStats()).resolves.toBeNull();
+
+      const counts = { status: 'completed', profile_slug: slug, followers_text: '1.2 万', upvotes_text: '获得\n3,456 次赞同' } as const;
+      const statsReport = { id: stats.id, fencing_token: statsClaim.fencing_token, result: counts };
+      const loginReport = { id: login.id, fencing_token: loginClaim.fencing_token, result: { status: 'blocked', reason: 'login_required' } as const };
+      await expect(workerB.client.reportZhihuStats(statsReport)).rejects.toMatchObject({ status: 403 });
+      await expect(workerA.client.reportZhihuStats({ ...statsReport, fencing_token: statsReport.fencing_token + 1 })).rejects.toMatchObject({ status: 409 });
+      await expect(workerA.client.reportZhihuStats({ ...statsReport, result: { ...counts, profile_slug: 'other-profile' } })).rejects.toMatchObject({ status: 422 });
+      const badCounts = { ...counts, followers_text: 'not a count' };
+      await expect(workerA.client.reportZhihuStats({ ...statsReport, result: badCounts })).rejects.toMatchObject({ status: 422 });
+      const extraFields = { ...counts, cookies: 'synthetic-extra-value' };
+      await expect(workerA.client.reportZhihuStats({ ...statsReport, result: extraFields })).rejects.toMatchObject({ status: 422 });
+      await expect(workerB.client.reportZhihuStats({ ...loginReport, result: counts })).rejects.toMatchObject({ status: 422 });
+      await expect(workerA.client.reportZhihuStats(statsReport)).resolves.toEqual({ id: stats.id, status: 'completed' });
+      await expect(workerB.client.reportZhihuStats(loginReport)).resolves.toEqual({ id: login.id, status: 'blocked' });
+      const completed = await op(a, 'get', {}, stats.id);
+      expect(completed).toMatchObject({ status: 'completed', result: counts });
+      expect(completed).not.toHaveProperty('fencing_token');
+      expect(await op(a, 'incidents_list')).toEqual([]);
+      expect(await op(b, 'incidents_list')).toEqual([{ id: login.id, workspace_id: ctx.workspaceId, device_id: workerB.id,
+        mode: 'login_check', status: 'blocked', result: loginReport.result, reported_at: ctx.now }]);
+
+      const reportedAt = ctx.now;
+      ctx.now = new Date(Date.parse(ctx.now) + 1_000).toISOString();
+      await expect(workerB.client.reportZhihuStats(loginReport)).resolves.toEqual({ id: login.id, status: 'blocked' });
+      expect(await op(b, 'get', {}, login.id)).toHaveProperty('reported_at', reportedAt);
+      await expect(workerB.client.reportZhihuStats({ ...loginReport, result: { status: 'completed' } })).rejects.toMatchObject({ status: 409 });
+      const stale = await queue(a, { device_id: workerA.id, profile_slug: slug });
+      const staleClaim = (await workerA.client.claimZhihuStats())!;
+      ctx.now = staleClaim.lease_expires_at;
+      expect(await op(a, 'get', {}, stale.id)).toHaveProperty('status', 'expired');
+      await expect(workerA.client.reportZhihuStats({ ...statsReport, id: stale.id, fencing_token: staleClaim.fencing_token })).rejects.toMatchObject({ status: 409 });
+      await expect(workerA.client.claimZhihuStats()).resolves.toBeNull();
+      const positive = await queue(b, { device_id: workerB.id, mode: 'login_check' });
+      const positiveClaim = (await workerB.client.claimZhihuStats())!;
+      await expect(workerB.client.reportZhihuStats({ id: positive.id, fencing_token: positiveClaim.fencing_token, result: { status: 'completed' } }))
+        .resolves.toEqual({ id: positive.id, status: 'completed' });
+      expect(await op(b, 'get', {}, positive.id)).toHaveProperty('result', { status: 'completed' });
+      expect(await op(b, 'incidents_list')).toHaveLength(1);
     } finally { await app.close(); }
   });
 
@@ -332,7 +475,27 @@ describe('AC workspace and device boundaries', () => {
     const account = await call('register_owned_social_account', { owned_account_confirmed: true, provider: 'douyin', external_account_id: 'approved-identity', display_name: 'Fixture account', brand_id: brand.id }) as Row;
     const { binding } = await call('set_execution_binding', { mode: 'connector', connector_channel: 'browser', device_id, owned_account_confirmed: true }, account.id) as { binding: Row };
     const session = ctx.list('browser_session')[0];
-    expect(signed('browser.identity', { session_id: session.id, observed_platform_identity: 'approved-identity' })()).toEqual({ status: 'verified' });
+    expect(signed('heartbeat', { client_version: 'fixture-v1', include_bindings: true })()).toEqual({
+      status: 'online', bindings: { social: { douyin: 1 }, commerce: {} },
+    });
+    if (scenario === 'report') {
+      const other = ctx.create('social_account', { provider: 'douyin', status: 'active', external_account_id: 'other-account' });
+      const otherBinding = ctx.create('account_execution_binding', { social_account_id: other.id, device_id: 'another-device', mode: 'connector', connector_channel: 'browser' });
+      ctx.create('browser_session', { binding_id: otherBinding.id, device_id: 'another-device', social_account_id: other.id, status: 'pending_identity' });
+      const heartbeat = () => signed('heartbeat', { client_version: 'fixture-v1', include_bindings: true, include_browser_work: true })();
+      expect(heartbeat()).toEqual({ status: 'online', bindings: { social: { douyin: 1 }, commerce: {} }, browser_work: {
+        pending_identity: [{ session_id: session.id, binding_id: binding.id, platform: 'douyin', identity: 'approved-identity' }],
+      } });
+      const proof = { session_id: session.id, pending_binding_id: binding.id, observed_platform_identity: 'approved-identity' };
+      expect(signed('browser.identity', { ...proof, observed_platform_identity: 'other-account' })).toThrow('BROWSER_IDENTITY_RECHECK_STALE');
+      expect(ctx.get('browser_session', session.id).status).toBe('pending_identity');
+      expect(ctx.list('account_block')).toHaveLength(0);
+      expect(signed('browser.identity', proof)()).toEqual({ status: 'verified' });
+      expect(signed('browser.identity', proof)).toThrow('BROWSER_IDENTITY_RECHECK_STALE');
+      expect(heartbeat()).toMatchObject({ browser_work: { pending_identity: [] } });
+    } else {
+      expect(signed('browser.identity', { session_id: session.id, observed_platform_identity: 'approved-identity' })()).toEqual({ status: 'verified' });
+    }
     await call('enable_auto_mode', { ...config, terms_version: terms.version, risk_acknowledged: true }, account.id, services);
     const revision = { id: 'rev-1', title: 'Fixture', body: 'Text', tags: [], visibility: 'public', media: [{ id: 'media-1', sha256: 'a'.repeat(64) }] };
     const hash = frozenRevisionHash(revision);
@@ -342,7 +505,28 @@ describe('AC workspace and device boundaries', () => {
       target: { channel: 'browser', profile_id: session.id, app: 'douyin' }, payload: { revision, approval: { id: 'approval-1', resource_hash: hash }, frozen_hash: hash },
     }, { ...tokens, lease_expires_at: '2026-11-19T12:05:00.000Z' }, services);
     expect(signed('claim', { binding_id: 'wrong-binding' })()).toEqual({ claim: null });
-    expect(signed('claim', { binding_id: binding.id })()).toMatchObject({ claim: { effective_mode: 'auto' } });
+    expect(signed('claim', { channel: 'mobile' })).toThrow('INVALID_DEVICE_BODY');
+    const preflight = ctx.create('zhihu_stats_task', { device_id, owner_id: ctx.actorId, mode: 'login_check', status: 'queued' });
+    expect(signed('zhihu.stats.claim', {})()).toMatchObject({ claim: { id: preflight.id } });
+    expect(signed('claim', { channel: 'browser' })()).toEqual({ claim: null });
+    expect(signed('catalog.claim', {})()).toEqual({ job: null });
+    ctx.update('zhihu_stats_task', preflight.id, { lease_expires_at: ctx.now });
+    const nextPreflight = ctx.create('zhihu_stats_task', { device_id, owner_id: ctx.actorId, mode: 'login_check', status: 'queued' });
+    const catalog = ctx.create('worker_catalog_job', { device_id, status: 'claimed', expires_at: '2026-11-19T12:05:00.000Z' });
+    expect(signed('claim', { channel: 'browser' })()).toEqual({ claim: null });
+    expect(signed('zhihu.stats.claim', {})()).toEqual({ claim: null });
+    ctx.update('worker_catalog_job', catalog.id, { status: 'previewed' });
+    const mobile = ctx.create('connector_task', { device_id, status: 'queued', binding_id: 'other-binding', lease_expires_at: '2026-11-19T12:05:00.000Z', task: {
+      schema_version: 1, workspace_id: ctx.workspaceId, attempt_id: 'mobile-attempt', connector_device_id: device_id,
+      account_id: 'mobile-account', binding_id: 'other-binding', platform_identity: 'mobile-identity', kind: 'mobile.verify_app_identity',
+      target: { channel: 'mobile', app: 'tiktok', mobile_device_id: 'phone' }, payload: {},
+    } });
+    expect(signed('claim', { binding_id: 'other-binding', channel: 'browser' })()).toEqual({ claim: null });
+    expect(signed('claim', { channel: 'browser' })()).toMatchObject({ claim: { effective_mode: 'auto' } });
+    expect(ctx.get('connector_task', mobile.id).status).toBe('queued');
+    expect(signed('catalog.claim', {})()).toEqual({ job: null });
+    expect(signed('zhihu.stats.claim', {})()).toEqual({ claim: null });
+    expect(ctx.get('zhihu_stats_task', nextPreflight.id).status).toBe('queued');
     const attempt = { ...tokens, attempt_id: 'attempt-fixture', request_hash: hash };
     expect(signed('attempt.permit', attempt)).toThrow('SUBMISSION_NOT_AUTHORIZED');
     signed('attempt.ready', { ...attempt, observed_platform_identity: 'approved-identity' })();

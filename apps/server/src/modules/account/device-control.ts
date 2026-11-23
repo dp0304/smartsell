@@ -25,8 +25,11 @@ export function issuePairingCode(ctx: Context, body: Data) {
   if (body.owned_device_confirmed !== true) fail('DEVICE_OWNERSHIP_REQUIRED', 422);
   const code = randomBytes(24).toString('base64url');
   const expiresAt = iso(time(ctx) + 5 * 60_000);
-  const row = ctx.create('device_pairing_code', { code_hash: digest(code), expires_at: expiresAt, created_by: ctx.actorId, used_at: null });
-  audit(ctx, 'account.device.pairing_code_issued', { pairing_id: row.id });
+  if (body.allow_channel_registration !== undefined && typeof body.allow_channel_registration !== 'boolean') fail('INVALID_INPUT', 422);
+  const allowChannels = body.allow_channel_registration === true;
+  const row = ctx.create('device_pairing_code', { code_hash: digest(code), expires_at: expiresAt, created_by: ctx.actorId, used_at: null,
+    ...(allowChannels && { allow_channel_registration: true }) });
+  audit(ctx, 'account.device.pairing_code_issued', { pairing_id: row.id, ...(allowChannels && { allow_channel_registration: true }) });
   return { pairing_code: code, expires_at: expiresAt };
 }
 
@@ -41,14 +44,15 @@ export function pairDevice(ctx: Context, body: Data) {
   const bytes = Buffer.from(JSON.stringify(['smartsell.pair.v1', ctx.workspaceId, body.pairing_code, encoded, platform, name]));
   if (!verify(null, bytes, publicKey(encoded), Buffer.from(proof, 'base64url'))) fail('INVALID_DEVICE_PROOF', 401);
   if (find(ctx, 'connector_device', { public_key: encoded })) fail('DEVICE_ALREADY_PAIRED');
-  const device = ctx.create('connector_device', { name, platform, public_key: encoded, owner_id: code.created_by, status: 'active', last_seen_at: ctx.now });
+  const device = ctx.create('connector_device', { name, platform, public_key: encoded, owner_id: code.created_by, status: 'active', last_seen_at: null,
+    ...(code.allow_channel_registration === true && { allow_channel_registration: true }) });
   ctx.update('device_pairing_code', code.id, { used_at: ctx.now });
   audit(ctx, 'account.device.paired', { device_id: device.id, approved_by: code.created_by });
   return { device_id: device.id };
 }
 
-export function authenticateDevice(ctx: Context, action: string, rawBody: Uint8Array, signed: SignedDeviceRequest) {
-  if (rawBody.byteLength > 128_000) fail('DEVICE_BODY_TOO_LARGE', 413);
+export function authenticateDevice(ctx: Context, action: string, rawBody: Uint8Array, signed: SignedDeviceRequest, bodyLimit = 128_000) {
+  if (rawBody.byteLength > bodyLimit) fail('DEVICE_BODY_TOO_LARGE', 413);
   const nonce = matches(signed.nonce, /^[A-Za-z0-9_-]{22,64}$/, 64);
   const timestamp = text(signed.timestamp);
   const issuedAt = Date.parse(timestamp);
@@ -97,10 +101,20 @@ export function openBlock(ctx: Context, accountId: string, reason: string, bindi
 
 export const blocked = (ctx: Context, accountId: string) => ctx.list('account_block').some(row => row.social_account_id === accountId && row.severity === 'blocking' && row.status !== 'resolved');
 
+export function pendingBrowserIdentity(ctx: Context, device: Row, binding: Row, account: Row) {
+  if (binding.device_id !== device.id || binding.social_account_id !== account.id || binding.connector_channel !== 'browser' ||
+    binding.paused || !['connector', 'hybrid'].includes(String(binding.mode)) || account.status !== 'active') return;
+  const session = sessionFor(ctx, binding);
+  if (session?.status === 'pending_identity' && session.social_account_id === account.id) return session;
+}
+
 export function reportIdentity(ctx: Context, device: Row, body: Data, channel: 'browser' | 'mobile') {
   const kind = channel === 'mobile' ? 'mobile_app_binding' : 'browser_session';
   const session = ctx.get(kind, text(body.session_id));
-  if (session.device_id !== device.id || session.status === 'revoked') fail('DEVICE_SCOPE_MISMATCH', 403);
+  if (session.device_id !== device.id || session.status === 'revoked') {
+    if (channel === 'browser' && body.pending_binding_id !== undefined) fail('BROWSER_IDENTITY_RECHECK_STALE', 409);
+    fail('DEVICE_SCOPE_MISMATCH', 403);
+  }
   if (channel === 'mobile') {
     const phone = ctx.get('mobile_device', String(session.mobile_device_id));
     if (phone.device_id !== device.id || phone.status !== 'ready') fail('MOBILE_NOT_READY');
@@ -108,6 +122,8 @@ export function reportIdentity(ctx: Context, device: Row, body: Data, channel: '
   const account = ctx.get('social_account', String(session.social_account_id));
   const binding = bindingFor(ctx, account.id);
   const same = text(body.observed_platform_identity) === account.external_account_id;
+  if (body.pending_binding_id !== undefined && (channel !== 'browser' || !same || !binding || binding.id !== body.pending_binding_id ||
+    pendingBrowserIdentity(ctx, device, binding, account)?.id !== session.id)) fail('BROWSER_IDENTITY_RECHECK_STALE', 409);
   ctx.update(kind, session.id, { status: same ? 'verified' : 'identity_mismatch', verified_at: same ? ctx.now : null });
   if (!same) openBlock(ctx, account.id, 'identity_mismatch', binding);
   return { status: same ? 'verified' : 'blocked' };

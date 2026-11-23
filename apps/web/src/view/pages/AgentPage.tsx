@@ -5,8 +5,12 @@ import { ProblemNotice } from '../../api';
 import { copy, fill } from '../copy';
 import { useView, useViewContext, useViewWrite } from '../data/use-view';
 import { connectionState, jobBody } from '../data/logic';
-import type { AgentConnection, AgentJob, CreatedConnection } from '../data/types';
+import type { AgentConnection, AgentEnrollment, AgentJob, CreatedConnection } from '../data/types';
 import { Loaded, PageHeader, Section, resourcePath, useFilters, useText } from '../parts';
+import { McpToolCalls } from './McpToolCalls';
+import { SetupAgent } from './setup-agent';
+import { canSetUp } from './setup-data';
+import { ZhihuLoginIncidents } from './zhihu-login-incidents';
 
 const clients: [string, Tuple][] = [['claude_code', copy.agent.clientClaude], ['codex', copy.agent.clientCodex], ['other', copy.agent.clientOther]];
 const lifetimes = [30, 90, 180, 365];
@@ -25,26 +29,12 @@ function Snippet({ text, label }: { text: string; label: string }) {
 
 function TokenBox({ created, onClose }: { created: CreatedConnection; onClose: () => void }) {
   const { l } = useText();
-  const setup = created.setup ?? {};
-  const tabs = ([
-    ['claude', copy.agent.setupClaude, setup.claude_code_command],
-    ['json', copy.agent.setupJson, setup.claude_code_json],
-    ['codex', copy.agent.setupCodex, [setup.codex_toml, setup.codex_command].filter(Boolean).join('\n\n') || undefined],
-    ['agents', copy.agent.setupAgents, setup.agents_md],
-  ] as const).filter(([, , text]) => text);
-  const preferred = created.client === 'codex' ? 'codex' : created.client === 'other' ? 'json' : 'claude';
-  const [tab, setTab] = useState<string>(tabs.some(([key]) => key === preferred) ? preferred : tabs[0]?.[0] ?? '');
-  const current = tabs.find(([key]) => key === tab);
+  const guide = created.setup?.agents_md;
   return <div className="vs-token" role="region" aria-label={l(copy.agent.token)}>
     <p className="vs-notice warning" role="alert">{l(copy.agent.tokenOnce)}</p>
     <Snippet label={l(copy.agent.token)} text={created.token} />
     <Snippet label={l(copy.agent.mcpUrl)} text={created.mcp_url} />
-    {tabs.length > 0 && <>
-      <div className="vs-tabs" role="tablist">{tabs.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{l(label)}</button>)}</div>
-      {current && <div role="tabpanel"><Snippet label={l(current[1])} text={current[2] ?? ''} />
-        {current[0] === 'agents' && setup.agents_md && <button type="button" className="vs-btn" onClick={() => download('AGENTS.md', setup.agents_md!)}>{l(copy.agent.download)}</button>}</div>}
-      <p className="muted"><small>{l(copy.agent.setupHint)}</small></p>
-    </>}
+    {guide && <button type="button" className="vs-btn" onClick={() => download('AGENTS.md', guide)}>{l(copy.agent.download)}</button>}
     <div className="vs-actions"><button type="button" className="vs-btn primary-soft" onClick={onClose}>{l(copy.agent.closeToken)}</button></div>
   </div>;
 }
@@ -64,19 +54,16 @@ function ConnectForm({ onCreated }: { onCreated: (created: CreatedConnection) =>
     key.current ??= crypto.randomUUID();
     setPending(true); setError(undefined);
     try {
-      const { data } = await write<CreatedConnection>('POST', '/agent-connections', { label, client: String(form.get('client')), expires_days: Number(form.get('expires_days')) }, key.current);
+      const { data } = await write<CreatedConnection>('POST', '/agent-connections', { label, client: 'other', expires_days: Number(form.get('expires_days')) }, key.current);
       key.current = undefined;
       element.reset();
       onCreated(data);
     } catch (failure) { setError(failure); }
     finally { setPending(false); }
   }
-  return <form className="vs-form" onSubmit={submit}><fieldset disabled={pending}>
-    <label className="vs-field"><span>{l(copy.agent.label)}</span><input name="label" required maxLength={120} placeholder={l(copy.agent.labelHint)} onChange={() => { key.current = undefined; }} /></label>
-    <div className="vs-field-row">
-      <label className="vs-field"><span>{l(copy.agent.client)}</span><select name="client" defaultValue="claude_code">{clients.map(([value, label]) => <option key={value} value={value}>{l(label)}</option>)}</select></label>
-      <label className="vs-field"><span>{l(copy.agent.expires)}</span><select name="expires_days" defaultValue="90">{lifetimes.map(days => <option key={days} value={days}>{fill(l(copy.agent.days), { n: days })}</option>)}</select></label>
-    </div>
+  return <form className="vs-form" onSubmit={submit} onChange={() => { key.current = undefined; }}><fieldset disabled={pending}>
+    <label className="vs-field"><span>{l(copy.agent.label)}</span><input name="label" required maxLength={80} placeholder={l(copy.agent.labelHint)} /></label>
+    <label className="vs-field"><span>{l(copy.agent.expires)}</span><select name="expires_days" defaultValue="90">{lifetimes.map(days => <option key={days} value={days}>{fill(l(copy.agent.days), { n: days })}</option>)}</select></label>
     <div className="vs-actions"><button type="submit" className="vs-btn primary-soft">{l(pending ? copy.agent.creating : copy.agent.create)}</button></div>
   </fieldset>{error !== undefined && <ProblemNotice error={error} />}</form>;
 }
@@ -171,16 +158,37 @@ function Activity() {
   </>;
 }
 
+export function AgentConnect() {
+  const [created, setCreated] = useState<CreatedConnection>();
+  return created ? <TokenBox key={created.id} created={created} onClose={() => setCreated(undefined)} />
+    : <ConnectForm onCreated={setCreated} />;
+}
+
+function NativeConnect() {
+  const { l, lang } = useText();
+  const { base, workspace } = useViewContext();
+  const guided = canSetUp(workspace.role);
+  const read = useView<AgentConnection[]>('/agent-connections', {}, { enabled: !guided, refetchInterval: 10_000 });
+  const [issued, setIssued] = useState<AgentEnrollment>();
+  return guided ? <Link className="vs-btn primary-soft" to={`${base}/get-started?step=agent`}>
+    {lang === 'en' ? 'Set up Claude Code or Codex' : '設定 Claude Code 或 Codex'}
+  </Link> : <Loaded read={read}>{connections => <SetupAgent connections={connections} issued={issued} onIssued={setIssued} />}</Loaded>;
+}
+
 export function AgentPage() {
   const { l } = useText();
-  const [created, setCreated] = useState<CreatedConnection>();
   return <>
     <PageHeader title={l(copy.agent.title)} subtitle={l(copy.agent.subtitle)} />
     <div className="vs-columns">
-      <Section title={l(copy.agent.connect)}>{created ? <TokenBox created={created} onClose={() => setCreated(undefined)} /> : <ConnectForm onCreated={setCreated} />}</Section>
+      <Section title={l(copy.agent.connect)}>
+        <NativeConnect />
+        <details><summary>{l(copy.agent.clientOther)}</summary><AgentConnect /></details>
+      </Section>
       <Section title={l(copy.agent.connections)}><Connections /></Section>
       <Section title={l(copy.agent.delegate)}><p className="muted"><small>{l(copy.agent.delegateHint)}</small></p><Delegate /><h3 className="vs-subhead">{l(copy.agent.openJobs)}</h3><OpenJobs /></Section>
+      <ZhihuLoginIncidents />
       <Section title={l(copy.agent.activity)}><Activity /></Section>
+      <McpToolCalls />
     </div>
   </>;
 }

@@ -29,11 +29,12 @@ const operations: Registered[] = [
 ];
 
 const setupBody = { email: 'owner@example.test', password: 'fixture-password-123', workspace_name: 'Owner workspace' };
-const config = configuration({ PORT: '3401' });
+const config = configuration({ PORT: '3401', SETUP_TOKEN: 'kernel-test-setup-token' });
+const setupHeaders = { 'x-setup-token': config.setupToken! };
 const readHeaders = { accept: 'application/json, text/event-stream' };
 
 async function setup(app: ReturnType<typeof createServer>) {
-  const response = await app.inject({ method: 'POST', url: '/api/v1/setup', payload: setupBody });
+  const response = await app.inject({ method: 'POST', url: '/api/v1/setup', headers: setupHeaders, payload: setupBody });
   assert.equal(response.statusCode, 201, response.body);
   const user = response.json().data.user.id as string;
   const workspace = response.json().data.workspaces[0].id as string;
@@ -49,8 +50,13 @@ async function exerciseStore(store: Store, pg = false) {
     const owner = await setup(app);
     const headers = { cookie: owner.cookie, 'x-csrf-token': owner.token, origin: config.origin };
     const session = await app.inject({ url: '/api/v1/session', headers });
-    assert.equal(session.json().data.user.id, owner.user);
-    assert.equal((await app.inject({ method: 'POST', url: '/api/v1/setup', payload: setupBody })).statusCode, 409);
+    const expectedUser = { id: owner.user, email: setupBody.email, name: 'owner' };
+    assert.deepEqual(session.json().data.user, expectedUser);
+    const login = await app.inject({ method: 'POST', url: '/api/v1/session',
+      payload: { username: setupBody.email.toUpperCase(), password: setupBody.password } });
+    assert.equal(login.statusCode, 200);
+    assert.deepEqual(login.json().data.user, expectedUser);
+    assert.equal((await app.inject({ method: 'POST', url: '/api/v1/setup', headers: setupHeaders, payload: setupBody })).statusCode, 409);
     assert.equal((await app.inject({ method: 'POST', url: `${owner.url}/fixtures`, headers: { cookie: owner.cookie }, payload: {} })).statusCode, 403);
     assert.equal((await app.inject({ method: 'POST', url: `${owner.url}/fixtures`, headers: { ...headers, origin: 'https://invalid.test' }, payload: {} })).statusCode, 403);
     const submit = (key: string, payload: Record<string, unknown>) => app.inject({ method: 'POST', url: `${owner.url}/fixtures`, headers: { ...headers, 'idempotency-key': key }, payload });
@@ -108,6 +114,10 @@ async function exerciseStore(store: Store, pg = false) {
     });
     const init = await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'Fixture', version: '1' } });
     assert.equal(init.json().result.serverInfo.name, 'smartsell');
+    assert.match(init.json().result.instructions, /worker_social_status_request.*recent_posts.*worker_social_status_get/);
+    const tasksInit = await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: { tasks: {} },
+      clientInfo: { name: 'Fixture', version: '1' } });
+    assert.match(tasksInit.json().result.instructions, /worker_social_status_request.*recent_posts.*worker_social_status_get/);
     const tools = await rpc('tools/list', {});
     assert.deepEqual(tools.json().result.tools.map((tool: { name: string }) => tool.name), ['items_get']);
     const tool = await rpc('tools/call', { name: 'items_get', arguments: { workspace_id: owner.workspace, params: { id } } });

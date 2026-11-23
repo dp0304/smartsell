@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { AgentPrompt, StatusChip } from '@smartsell/ui';
 import { timeZoneChoices } from '../../option-labels';
 import { fill } from '../copy';
-import { useViewContext, type ViewResult } from '../data/use-view';
+import { useViewContext, useViewWrite, type ViewResult } from '../data/use-view';
 import { Loaded, Section, useText } from '../parts';
 import { accountBody, can, defaultZone, platformText, platforms, type AccountDraft, type Row } from './settings-logic';
-import { Dialog, Field, WriteProblem, useSettingsWrite, useStableKey } from './settings-parts';
+import { Dialog, Field, WriteProblem, useStableKey } from './settings-parts';
 import { text } from './settings-text';
 
 const browserZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } };
@@ -17,7 +17,7 @@ export function RegisterForm({ brands, markets, initialBrand, workspaceZone, onD
 }) {
   const { l } = useText();
   const { workspace } = useViewContext();
-  const write = useSettingsWrite();
+  const write = useViewWrite();
   const key = useStableKey();
   const zoneFor = (brand: string) => defaultZone(brand, brands, markets, workspaceZone, browserZone());
   const [draft, setDraft] = useState<AccountDraft>({ brand_id: initialBrand, provider: '', display_name: '', external_account_id: '', default_timezone: zoneFor(initialBrand), owned: false });
@@ -35,7 +35,7 @@ export function RegisterForm({ brands, markets, initialBrand, workspaceZone, onD
     if ('missing' in result) { setIncomplete(true); return; }
     if (pending) return;
     setPending(true); onBusy(true); setError(undefined);
-    try { await write('POST', '/social-accounts', { body: result.body, key: key.take() }); key.reset(); onDone(String(result.body.display_name)); }
+    try { await write('POST', '/social-accounts', result.body, key.take()); key.reset(); onDone(String(result.body.display_name)); }
     catch (failure) { setError(failure); }
     finally { setPending(false); onBusy(false); }
   }

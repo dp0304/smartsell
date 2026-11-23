@@ -4,9 +4,11 @@ import { postgresCommandIdentityUnit } from './integration/command-identity-post
 import type { CommandIdentityUnit } from './integration/command-identity-state.js';
 import { DomainError, type Entity } from './modules/types';
 import { domainPersistence } from './postgres-domain.js';
+import { postgresSessionUser } from './session-user.js';
+import type { LoginIdentifier } from './setup-policy.js';
 import {
   checkVersion, duplicateRecord, keyConflict, missingWorkspace, unauthenticated, versionConflict,
-  type PublicLocator, type Scope, type Setup, type Store, type Unit, type User, type Workspace,
+  type PublicLocator, type Scope, type Setup, type Store, type Unit, type Workspace,
 } from './store';
 
 type DbEntity = Omit<Entity, 'created_at' | 'updated_at'> & { created_at: Date; updated_at: Date };
@@ -59,7 +61,11 @@ export class PostgresStore implements Store {
         AND to_regprocedure('ss.lock_scoped_workspace(uuid)') IS NOT NULL
         AND to_regprocedure('ss.scoped_members_for_actor(uuid)') IS NOT NULL
         AND to_regprocedure('ss.change_membership(uuid,uuid,text,text,text[])') IS NOT NULL
-        AND to_regprocedure('ss.issue_session_ttl(text,uuid,integer)') IS NOT NULL AS safe,
+        AND to_regprocedure('ss.issue_session_ttl(text,uuid,integer)') IS NOT NULL
+        AND to_regprocedure('ss.is_initialized()') IS NOT NULL
+        AND to_regprocedure('ss.bootstrap(text,text,text,text,text)') IS NOT NULL
+        AND to_regprocedure('ss.username_credentials(text)') IS NOT NULL
+        AND coalesce(has_function_privilege(to_regprocedure('ss.session_user_profile(text)'), 'EXECUTE'), false) AS safe,
         coalesce(
           has_table_privilege(to_regclass('ss.command_identity_state'), 'SELECT')
           AND has_table_privilege(to_regclass('ss.command_identity_state'), 'INSERT')
@@ -97,17 +103,26 @@ export class PostgresStore implements Store {
     return this.transaction(client => run(postgresCommandIdentityUnit(client)));
   }
 
+  async initialized() {
+    const { rows: [row] } = await this.pool.query<{ initialized: boolean }>('SELECT ss.is_initialized() AS initialized');
+    return row.initialized;
+  }
+
   async setup(input: Setup, tokenHash: string, replace?: string) {
     return this.transaction(async client => {
-      const { rows: [row] } = await client.query<{ id: string | null }>('SELECT ss.bootstrap($1,$2,$3,$4) AS id', [input.email, input.name, input.passwordHash, input.workspaceName]);
+      const { rows: [row] } = await client.query<{ id: string | null }>(
+        'SELECT ss.bootstrap($1,$2,$3,$4,$5) AS id', [input.email, input.name, input.passwordHash, input.workspaceName, input.username]);
       if (!row.id) return false;
       await client.query('SELECT ss.issue_session($1,$2,$3)', [tokenHash, row.id, replace]);
       return true;
     });
   }
 
-  async credentials(email: string) {
-    const { rows: [row] } = await this.pool.query<{ id: string; passwordHash: string }>('SELECT id, password_hash AS "passwordHash" FROM ss.credentials($1)', [email]);
+  async credentials(input: LoginIdentifier | string) {
+    const identifier = typeof input === 'string' ? { email: input } : input;
+    const lookup = identifier.email === undefined ? 'ss.username_credentials' : 'ss.credentials';
+    const { rows: [row] } = await this.pool.query<{ id: string; passwordHash: string }>(
+      `SELECT id, password_hash AS "passwordHash" FROM ${lookup}($1)`, [identifier.email ?? identifier.username]);
     return row;
   }
 
@@ -130,7 +145,7 @@ export class PostgresStore implements Store {
 
   private async actor(client: PoolClient, tokenHash: string | undefined) {
     if (!tokenHash) return undefined;
-    const { rows: [user] } = await client.query<User>('SELECT * FROM ss.session_user($1)', [tokenHash]);
+    const user = await postgresSessionUser(client, tokenHash);
     if (user) await client.query("SELECT set_config('smartsell.session_hash', $1, true)", [tokenHash]);
     return user;
   }
@@ -225,6 +240,12 @@ function unitOfWork(client: PoolClient, scope: Scope, mode: 'user' | 'system' | 
   }
 
   return {
+    ...mode === 'user' && {
+      async issueAgentSession(hash: string, ttlSeconds: number) {
+        activeAuditId();
+        await client.query('SELECT ss.issue_session_ttl($1,$2,$3)', [hash, scope.actorId, ttlSeconds]);
+      },
+    },
     async listMembers() {
       const { rows } = await client.query<{ user_id: string; role: Scope['role']; scopes: string[] }>('SELECT * FROM ss.scoped_members_for_actor($1)', [scope.workspaceId]);
       return rows;

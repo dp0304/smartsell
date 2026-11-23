@@ -9,6 +9,9 @@ export interface AgentToolAudit {
   agentJobId?: string;
   credentialId?: string;
   sideEffect?: boolean;
+  target?: string;
+  requestId?: string;
+  operation?: string;
 }
 
 /** Server-side only; persist metadata without storing prompts, tool arguments or results. */
@@ -19,6 +22,9 @@ export async function recordAgentToolCall(ctx: Context, audit: AgentToolAudit, c
     actor_id: ctx.actorId, credential_id: audit.credentialId ? id(audit.credentialId) : null,
     tool: text({ tool: audit.tool }, 'tool', 120), input_hash: audit.inputHash,
     outcome: text({ outcome: audit.outcome }, 'outcome', 64), elapsed_ms: integer(audit.elapsedMs, 'elapsedMs', 0),
+    ...(audit.target && { target: text({ target: audit.target }, 'target', 256) }),
+    ...(audit.requestId && { request_id: id(audit.requestId) }),
+    ...(audit.operation && { operation: audit.operation }),
     agent_job_id: job?.id ?? null, side_effect: audit.sideEffect === true,
   }, callId === undefined ? undefined : id(callId));
 }

@@ -23,7 +23,7 @@
 .vads-spend + .vads-spend { margin-top: 16px; }
 .vads-subhead { margin: 0 0 4px; color: var(--muted); font-size: 13px; font-weight: 650; }
 
-.vads-proposal.waiting { margin-inline: -8px; padding: 10px 8px; border-radius: 12px; box-shadow: inset 3px 0 var(--tone-warning); }
+.vads-proposal.waiting { margin-inline: -8px; padding: 10px 12px; border-radius: var(--radius-control); background: var(--status-warning-bg); box-shadow: inset 3px 0 var(--tone-warning); }
 .view-shell .vads-proposal .vs-btn.primary-soft { min-height: 30px; padding: 4px 10px; }
 .vads-estimates { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 10px; padding: 8px 10px; font-size: 13px; border: 1px dashed var(--line); border-radius: 10px; }
 .vads-estimates ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }

@@ -52,6 +52,16 @@ export function template(provider: string, key: TemplateKey) {
 }
 const headerName = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').replace(/^option([123])_/, 'option_$1_');
 
+/** Reuse marketplace export headings for the narrower shared product preview schema. */
+export function catalogExportMapping(provider: string, headers: string[], fields: Record<string, string>) {
+  const names = headers.map(headerName);
+  return Object.fromEntries(Object.entries(fields).flatMap(([field, target]) => {
+    const aliases = [field, ...(providerAliases[provider]?.[field] ?? []), ...(commonAliases[field] ?? [])];
+    const index = aliases.map(alias => names.indexOf(alias)).find(position => position !== -1);
+    return index === undefined ? [] : [[headers[index], target]];
+  }));
+}
+
 /** Parse quoted CSV/TSV, including multiline cells and the BOM in marketplace exports. */
 function parse(csv: unknown) {
   if (typeof csv !== 'string' || !csv.trim()) return bad('csv');

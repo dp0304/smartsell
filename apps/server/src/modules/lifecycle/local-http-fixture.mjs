@@ -35,5 +35,6 @@ export async function fixture(t) {
     workspaceId, actorId: user.id, tenantId: identity.get(`workspace/${workspaceId}`).tenantId,
   }));
   const seed = run => store.transaction({}, async tx => run(makeContext(await tx.workspace(scope), scope, 'owner')));
-  return { call, seed };
+  const events = () => store.transaction({ readOnly: true }, async tx => (await tx.workspace(scope)).list('outbox/'));
+  return { call, seed, events };
 }

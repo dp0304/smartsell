@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { request as httpRequest } from 'node:http';
 import { parseEnv } from 'node:util';
+import { checkReportXlsx } from './report-xlsx-smoke.mjs';
 
 const [phase, work, envPath] = process.argv.slice(2);
 const base = process.env.SMARTSELL_OPS_WEB_URL;
@@ -82,6 +83,7 @@ assert.ok(csrf);
 if (phase === 'source') {
   const health = await command('ops', 'health');
   assert.equal(health.safe_mode, false);
+  await checkReportXlsx(request, root());
   const fileSpec = { purpose: 'asset', mime_type: 'text/plain', size_bytes: sample.length, sha256: digest,
     original_filename: 'snapshot-fixture.txt' };
   const ticket = (await json(`${root()}/files/uploads`, { body: fileSpec, headers: { 'idempotency-key': randomUUID() } })).data;

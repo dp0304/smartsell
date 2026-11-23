@@ -14,14 +14,14 @@ test('initial setup, workspace operations, CSV commit and session lifecycle', as
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(base);
   await page.getByRole('link', { name: /相容版工作台|Compatibility workbench/ }).click();
-  await expect(page.getByRole('heading', { name: '登入' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '註冊', exact: true })).toBeVisible();
   await page.getByLabel('介面語言').selectOption('en');
-  await page.getByRole('link', { name: 'First time? Set up a workspace' }).click();
+  await page.getByRole('link', { name: 'Advanced setup' }).click();
   await page.getByLabel('Your name').fill('Workbench Operator');
   await page.getByLabel('Workspace name').fill('Workbench QA');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
-  await page.getByLabel(/Setup token/).fill(setupToken);
+  await page.getByLabel('Deployment setup token').fill(setupToken);
   await page.getByRole('button', { name: 'Set up SmartSell' }).click();
   await expect(page.getByRole('heading', { name: 'Operations overview' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
@@ -148,7 +148,7 @@ test('initial setup, workspace operations, CSV commit and session lifecycle', as
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(`${base}/compat/workbench/login`);
   expect((await page.request.get(`${base}/api/v1/session`)).status()).toBe(401);
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Username or email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Operations overview' })).toBeVisible();

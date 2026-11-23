@@ -11,6 +11,7 @@
     "setup:local": "node --import tsx apps/server/init-local.ts",
     "dev": "pnpm run dev:workspace",
     "dev:workspace": "node --watch --import tsx apps/server/dev.ts",
+    "package:worker-download": "node scripts/package-worker-download.mjs",
     "preview": "pnpm run preview:workspace",
     "preview:workspace": "node --import tsx apps/server/dev.ts preview",
     "build": "pnpm typecheck && pnpm exec turbo run build",

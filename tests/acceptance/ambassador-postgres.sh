@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 container=$(docker run --rm --pull=never --detach --tmpfs /var/lib/postgresql/data \
-  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=acceptance-local postgres:17-alpine)
+  --publish 127.0.0.1::5432 --env POSTGRES_PASSWORD=acceptance-local "${SMARTSELL_TEST_PG_IMAGE:-postgres:17-alpine}")
 trap 'docker stop "$container" >/dev/null' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM

@@ -32,23 +32,23 @@ async function checkResponse(response, status, stage) {
   return response;
 }
 
-async function enter(page, dev) {
+async function enter(page, dev, heading = '登入') {
   const failures = [];
   page.on('pageerror', error => failures.push(error.message === 'EOF is not defined' ? 'EOF is not defined' : error.name));
   const entry = await page.goto(`${dev.origin}${compat}`);
   expect(entry.status()).toBe(200);
   try {
     await expect(page).toHaveURL(`${dev.origin}${compat}/login`, { timeout: entryTimeout });
-    await expect(page.getByRole('heading', { name: '登入', ...exact })).toBeVisible({ timeout: entryTimeout });
+    await expect(page.getByRole('heading', { name: heading, ...exact })).toBeVisible({ timeout: entryTimeout });
   } catch (error) {
-    if (failures.length) throw new Error(`Compatibility entry failed to render sign-in (${[...new Set(failures)].join(', ')})`);
+    if (failures.length) throw new Error(`Compatibility entry failed to render authentication (${[...new Set(failures)].join(', ')})`);
     throw error;
   }
 }
 
 async function setupInUi(page, dev, password) {
-  await enter(page, dev);
-  await page.getByRole('link', { name: '首次使用？建立工作區', ...exact }).click();
+  await enter(page, dev, '註冊');
+  await page.getByRole('link', { name: '進階初始化', ...exact }).click();
   await expect(page.getByRole('heading', { name: '設定 SmartSell', ...exact })).toBeVisible();
   await page.locator('input[name=name]').fill(operator.name);
   await page.locator('input[name=workspaceName]').fill(operator.workspaceName);
@@ -57,8 +57,10 @@ async function setupInUi(page, dev, password) {
   await fillSecret(page, 'setupToken', dev.setupToken);
   const setup = responseFor(page, 'POST', '/setup');
   await page.getByRole('button', { name: '設定 SmartSell', ...exact }).click();
-  await checkResponse(await setup, 201, 'UI setup');
-  await expect(page).toHaveURL(/\/w\/[^/]+\/home$/);
+  const { data: session } = await (await checkResponse(await setup, 201, 'UI setup')).json();
+  const wid = session.workspaces[0].id;
+  await expect(page.getByRole('heading', { name: '營運總覽', ...exact })).toBeVisible();
+  await expect(page).toHaveURL(`${dev.origin}${compat}/w/${wid}/home`);
   await expect(page.getByLabel('切換工作區')).toContainText(operator.workspaceName);
 }
 
@@ -187,28 +189,37 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const password = dev.password();
+  const username = 'local-operator';
   await page.goto(dev.origin);
   await expect(page).toHaveURL(`${dev.origin}/login`, { timeout: entryTimeout });
-  await expect(page.getByRole('heading', { name: '登入', ...exact })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '註冊', ...exact })).toBeVisible();
   await english(page);
 
   await page.getByRole('link', { name: 'Compatibility workbench', ...exact }).click();
   await expect(page).toHaveURL(`${dev.origin}${compat}/login`);
+  await expect(page.getByRole('heading', { name: 'Register', ...exact })).toBeVisible();
   await page.getByRole('link', { name: 'Back to main workspace', ...exact }).click();
-  await page.getByRole('link', { name: 'First deployment? Create the first workspace', ...exact }).click();
-  await page.getByLabel('Your name', exact).fill(operator.name);
-  await page.getByLabel('Workspace name', exact).fill(operator.workspaceName);
-  await page.getByLabel('Email', exact).fill(operator.email);
+  await expect(page.getByRole('heading', { name: 'Register', ...exact })).toBeVisible();
+  await page.getByLabel('Username', exact).fill(username);
   await fillSecret(page, 'password', password);
   await fillSecret(page, 'setupToken', dev.setupToken);
   const setup = responseFor(page, 'POST', '/setup');
-  await page.getByRole('button', { name: 'First-time setup', ...exact }).click();
-  const { data: session } = await (await checkResponse(await setup, 201, 'Default UI setup')).json();
+  await page.getByRole('button', { name: 'Register', ...exact }).click();
+  const { data: session } = await (await checkResponse(await setup, 201, 'Default UI registration')).json();
   const wid = session.workspaces[0].id;
+  const dashboard = `/app/${wid}`;
   const home = `${dev.origin}/w/${wid}/home`;
-  // Setup lands on the dashboard; this test covers the advanced workbench, so continue there.
-  await expect(page).toHaveURL(`${dev.origin}/app/${wid}`);
-  await page.goto(home);
+  const main = page.getByRole('main');
+  const overview = main.getByRole('heading', { name: 'Overview', ...exact });
+  await expect(main.getByRole('heading', { name: 'Get started', ...exact })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
+  await expect(main.getByText('Step 1 of 2', exact)).toBeVisible();
+  await main.getByRole('link', { name: 'Finish later and go to overview', ...exact }).click();
+  await expect(overview).toBeVisible();
+  await expect(page).toHaveURL(dev.origin + dashboard);
+  await page.getByRole('link', { name: 'Advanced workbench', ...exact }).click();
+  await expect(page.getByRole('heading', { name: 'Today’s operations', ...exact })).toBeVisible();
+  await expect(page).toHaveURL(home);
 
   // Settings modules live in a folded sidebar section.
   const settings = page.getByRole('navigation').getByRole('button', { name: 'Settings', ...exact });
@@ -264,12 +275,13 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   await page.getByRole('link', { name: 'Compatibility workbench', ...exact }).click();
   await expect(page).toHaveURL(`${dev.origin}${compat}/login`);
   await page.getByRole('link', { name: 'Back to main workspace', ...exact }).click();
-  await page.getByLabel('Email', exact).fill(operator.email);
+  await page.getByLabel('Username or email', exact).fill(username);
   await fillSecret(page, 'password', password);
   const login = responseFor(page, 'POST', '/session');
   await page.getByRole('button', { name: 'Sign in', ...exact }).click();
   await checkResponse(await login, 200, 'Default UI sign-in');
-  await expect(page).toHaveURL(`${dev.origin}/app/${wid}`);
+  await expect(overview).toBeVisible();
+  await expect(page).toHaveURL(dev.origin + dashboard);
   expect(errors).toEqual([]);
 });
 
@@ -279,14 +291,15 @@ test('strict UI | compatibility setup, fresh-browser sign-in and both languages'
   const fresh = await browser.newPage();
   await fresh.addInitScript(developerMode);
   try {
-    await test.step('Sign in through the ordinary entry using a fresh cookie jar', async () => {
+    await test.step('Sign in through the compatibility entry using a fresh cookie jar', async () => {
       await enter(fresh, dev);
-      await fresh.locator('input[name=email]').fill(operator.email);
+      await fresh.locator('input[name=identifier]').fill(operator.email);
       await fillSecret(fresh, 'password', password);
       const login = responseFor(fresh, 'POST', '/session');
       await fresh.getByRole('button', { name: '登入', ...exact }).click();
-      await checkResponse(await login, 200, 'UI sign-in');
-      await expect(fresh).toHaveURL(/\/w\/[^/]+\/home$/);
+      const { data: session } = await (await checkResponse(await login, 200, 'UI sign-in')).json();
+      await expect(fresh.getByRole('heading', { name: '營運總覽', ...exact })).toBeVisible();
+      await expect(fresh).toHaveURL(`${dev.origin}${compat}/w/${session.workspaces[0].id}/home`);
     });
     await test.step('Switch to English and back to Traditional Chinese', async () => {
       await english(fresh);
@@ -422,7 +435,7 @@ test('strict UI | owner self-review is denied and a different reviewer approves 
   try {
     await enter(fresh, dev);
     await english(fresh);
-    await fresh.getByLabel('Email', exact).fill(reviewer.email);
+    await fresh.getByLabel('Username or email', exact).fill(reviewer.email);
     await fillSecret(fresh, 'password', password);
     const login = responseFor(fresh, 'POST', '/session');
     await fresh.getByRole('button', { name: 'Sign in', ...exact }).click();
@@ -452,7 +465,7 @@ test('strict UI | owner self-review is denied and a different reviewer approves 
 
   dev.switchIdentity({ ...operator, id: owner.id, role: 'owner' });
   await page.goto(`${dev.origin}${compat}/login`);
-  await page.getByLabel('Email', exact).fill(operator.email);
+  await page.getByLabel('Username or email', exact).fill(operator.email);
   await fillSecret(page, 'password', password);
   const login = responseFor(page, 'POST', '/session');
   await page.getByRole('button', { name: 'Sign in', ...exact }).click();

@@ -1,10 +1,15 @@
-import type { Context, Data, Row } from '@smartsell/contracts';
+import { workerSocialStatusVersion, type Context, type Data, type Row } from '@smartsell/contracts';
+import { claimWorkerSocialStatus, hasLiveWorkerSocialStatusClaim, reportWorkerSocialStatus } from './worker-social-status.js';
 import { parseConnectorTask, type ConnectorTask } from '../../../../../packages/connector-tasks/src/tasks.ts';
 import { PUBLISH_ASSIST_WAIT_SECONDS, PUBLISH_RESULT_REPORT_SECONDS } from '../../../../../packages/connector-tasks/src/index.ts';
 import { evaluatePermit, policy } from './auto-control.ts';
-import { authenticateDevice, blocked, connectorReady, openBlock, reportIdentity, reportPhone, sessionFor, type SignedDeviceRequest } from './device-control.ts';
+import { authenticateDevice, blocked, connectorReady, online, openBlock, pendingBrowserIdentity, reportIdentity, reportPhone, sessionFor, type SignedDeviceRequest } from './device-control.ts';
 import type { Services } from './index.ts';
+import { claimWorkerCatalog, hasLiveWorkerCatalogClaim, uploadWorkerCatalog, WorkerCatalogRequestError, workerCatalogBindingCounts, workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
 import { audit, fail, find, integer, iso, matches, object, one, sha256Pattern, text, time } from './input.ts';
+import { claimZhihuStats, hasLiveZhihuStatsClaim, reportZhihuStats } from './zhihu-stats.ts';
+import { registerWorkerChannels } from './channel-registration.js';
+import { ownedSocialProviders } from './social-accounts.js';
 
 export interface ConnectorServices extends Services {
   iosEnabled?: boolean;
@@ -218,25 +223,79 @@ export function reconcileConnectorTask(ctx: Context, attemptId: string, result: 
   audit(ctx, 'account.connector_task.reconciled', { attempt_id: attemptId, result });
 }
 
-export const deviceActions = ['heartbeat', 'claim', 'browser.identity', 'mobile.identity', 'mobile.report', 'attempt.ready', 'attempt.permit', 'attempt.consume', 'attempt.report'] as const;
+export const deviceActions = ['heartbeat', 'claim', 'channels.register', 'catalog.claim', 'catalog.upload', 'browser.identity', 'mobile.identity', 'mobile.report',
+  'attempt.ready', 'attempt.permit', 'attempt.consume', 'attempt.report', 'zhihu.stats.claim', 'zhihu.stats.report', 'social.status.claim', 'social.status.report'] as const;
 export type DeviceAction = typeof deviceActions[number];
 
 /** Gateway derives action from the route and uses the same signed bytes for parsing. */
-export function handleDeviceRequest(ctx: Context, action: DeviceAction, bytes: Uint8Array, signed: SignedDeviceRequest, services: ConnectorServices): unknown {
-  const device = authenticateDevice(ctx, action, bytes, signed);
-  let body: Data;
-  try { body = object(JSON.parse(Buffer.from(bytes).toString('utf8'))); } catch { return fail('INVALID_DEVICE_BODY', 422); }
-  if (action === 'heartbeat') {
-    ctx.update('connector_device', device.id, { last_seen_at: ctx.now, client_version: text(body.client_version, 80) });
-    return { status: 'online' };
+export function handleDeviceRequest(ctx: Context, action: DeviceAction, bytes: Uint8Array, signed: SignedDeviceRequest, services: ConnectorServices, requestId?: string): unknown {
+  const device = authenticateDevice(ctx, action, bytes, signed, action === 'catalog.upload' ? workerCatalogUploadBodyLimit : undefined);
+  const socialStatus = action === 'social.status.claim' || action === 'social.status.report';
+  if (socialStatus || action === 'channels.register' || action === 'catalog.claim' || action === 'catalog.upload' || action === 'zhihu.stats.claim' || action === 'zhihu.stats.report') {
+    for (const nonce of ctx.list('device_nonce')) {
+      if (nonce.device_id === device.id && String(nonce.expires_at) <= ctx.now) ctx.remove('device_nonce', nonce.id);
+    }
   }
+  // Signed claim routes share the workspace transaction and a single live lease per device.
+  const connectorBusy = () => ctx.list('connector_task').some(row => row.device_id === device.id && row.status === 'claimed' && expires(row) > time(ctx));
+  const socialStatusBusy = () => hasLiveWorkerSocialStatusClaim(ctx, device.id);
+  if (action === 'catalog.claim' || action === 'catalog.upload') {
+    let body: Data;
+    try { body = object(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))); }
+    catch { throw new WorkerCatalogRequestError(422, 'INVALID_DEVICE_BODY', 'INVALID_DEVICE_BODY'); }
+    return action === 'catalog.claim' ? claimWorkerCatalog(ctx, device, body, connectorBusy() || hasLiveZhihuStatsClaim(ctx, device.id) || socialStatusBusy())
+      : uploadWorkerCatalog(ctx, device, body, online(ctx, device));
+  }
+  let body: Data;
+  if (action === 'channels.register') {
+    try { body = object(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))); }
+    catch { return fail('INVALID_DEVICE_BODY', 422); }
+    return registerWorkerChannels(ctx, device, body);
+  }
+  try {
+    const json = socialStatus ? new TextDecoder('utf-8', { fatal: true }).decode(bytes) : Buffer.from(bytes).toString('utf8');
+    body = object(JSON.parse(json));
+  } catch { return fail('INVALID_DEVICE_BODY', 422); }
+  if (action === 'heartbeat') {
+    const supportsSocialStatus = body.social_status_version === workerSocialStatusVersion;
+    ctx.update('connector_device', device.id, { last_seen_at: ctx.now, client_version: text(body.client_version, 80),
+      social_status_version: supportsSocialStatus ? workerSocialStatusVersion : null });
+    const heartbeat = { status: 'online', ...(supportsSocialStatus && { social_status_version: workerSocialStatusVersion }) };
+    if (body.include_bindings !== true) return heartbeat;
+    const accounts = new Map(ctx.list('social_account').map(account => [account.id, account]));
+    const social = new Map<string, number>();
+    const pendingIdentity: Data[] = [];
+    const providers = new Set<string>(ownedSocialProviders);
+    for (const binding of ctx.list('account_execution_binding')) {
+      if (binding.device_id !== device.id || binding.connector_channel !== 'browser' || !['connector', 'hybrid'].includes(String(binding.mode))) continue;
+      const account = accounts.get(String(binding.social_account_id));
+      if (account?.status !== 'active') continue;
+      const provider = String(account.provider);
+      if (!providers.has(provider)) continue;
+      social.set(provider, (social.get(provider) ?? 0) + 1);
+      if (body.include_browser_work !== true) continue;
+      const session = pendingBrowserIdentity(ctx, device, binding, account);
+      if (session) pendingIdentity.push({ session_id: session.id, binding_id: binding.id, platform: provider, identity: account.external_account_id });
+    }
+    return { ...heartbeat, bindings: {
+      social: Object.fromEntries(social),
+      commerce: workerCatalogBindingCounts(ctx, device),
+    }, ...(body.include_browser_work === true && { browser_work: { pending_identity: pendingIdentity } }) };
+  }
+  if (action === 'zhihu.stats.report') return reportZhihuStats(ctx, device, body);
+  if (action === 'zhihu.stats.claim') return claimZhihuStats(ctx, device, body, connectorBusy() || hasLiveWorkerCatalogClaim(ctx, device.id) || socialStatusBusy());
+  if (action === 'social.status.report') return reportWorkerSocialStatus(ctx, device, body, requestId);
+  if (action === 'social.status.claim') return claimWorkerSocialStatus(ctx, device, body,
+    connectorBusy() || hasLiveWorkerCatalogClaim(ctx, device.id) || hasLiveZhihuStatsClaim(ctx, device.id));
   if (action === 'mobile.report') return reportPhone(ctx, device, body, services.iosEnabled === true);
   if (action === 'browser.identity' || action === 'mobile.identity') return reportIdentity(ctx, device, body, action === 'mobile.identity' ? 'mobile' : 'browser');
   if (action === 'claim') {
-    expireConnectorTasks(ctx);
     const bindingId = body.binding_id === undefined ? undefined : text(body.binding_id, 160);
+    if (body.channel !== undefined && body.channel !== 'browser') fail('INVALID_DEVICE_BODY', 422);
+    expireConnectorTasks(ctx);
+    if (connectorBusy() || hasLiveZhihuStatsClaim(ctx, device.id) || hasLiveWorkerCatalogClaim(ctx, device.id) || socialStatusBusy()) return { claim: null };
     const row = ctx.list('connector_task').find(item => item.device_id === device.id && item.status === 'queued' &&
-      (bindingId === undefined || item.binding_id === bindingId));
+      (bindingId === undefined || item.binding_id === bindingId) && (body.channel === undefined || rowTask(item).target.channel === 'browser'));
     if (!row) return { claim: null };
     const task = rowTask(row);
     const { binding } = authorize(ctx, services, task, Number(row.fencing_token), Number(row.write_slot_token));

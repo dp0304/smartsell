@@ -17,8 +17,9 @@ export interface HomeView {
 }
 export interface DecisionSummary { counts?: Record<string, number>; total?: number; as_of?: string }
 
-export interface AgentConnection { id: string; label: string; client: string; created_at: string; expires_at: string | null; last_used_at: string | null; revoked: boolean }
-export interface AgentSetup { claude_code_command?: string; claude_code_json?: string; codex_toml?: string; codex_command?: string; agents_md?: string }
+export interface AgentConnection { id: string; label: string; client: string; created_at: string; expires_at: string | null; last_used_at: string | null; mcp_url?: string; mcp_client_verified_at?: string; revoked: boolean }
+export interface AgentEnrollment { id: string; client: 'claude_code' | 'codex'; code: string; mcp_url: string; redeem_url: string; expires_at: string; expires_days: number }
+export interface AgentSetup { agents_md?: string }
 export interface CreatedConnection { id: string; label: string; client: string; token: string; mcp_url: string; expires_at: string | null; setup?: AgentSetup }
 export interface AgentJob {
   id: string; title: string; kind?: string; status: string; created_at?: string; updated_at?: string; due_at?: string | null;

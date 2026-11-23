@@ -71,7 +71,7 @@ test('default workspace shows provider status and runs permitted commands with r
   await expect(page).toHaveURL(`${dev.origin}/login`);
   await dev.switchIdentity({ email, name: 'Viewer', role: 'viewer' });
   await page.goto(`${dev.origin}${workspacePath}/calendar`);
-  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Username or email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(`${dev.origin}${workspacePath}/calendar`);

@@ -7,6 +7,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -29,6 +30,12 @@ async function port() {
 
 async function fixture(t) {
   const dir = await mkdtemp(join(tmpdir(), 'smartsell-launch-'));
+  let child;
+  let exited;
+  let log = '';
+  t.after(async () => {
+    try { await stop(); } finally { await rm(dir, { recursive: true, force: true }); }
+  });
   const listenPort = await port();
   const origin = `http://${loopback}:${listenPort}`;
   const setupToken = randomBytes(24).toString('hex');
@@ -37,19 +44,15 @@ async function fixture(t) {
     APP_SECRET: randomBytes(32).toString('hex'), SETUP_TOKEN: setupToken,
     SMARTSELL_DATA_FILE: join(dir, 'launch.sqlite'), MEDIA_DIRECTORY: join(dir, 'media'),
   };
-  let child;
-  let exited;
-  let log = '';
   async function stop() {
     if (!child) return;
-    child.kill('SIGTERM');
-    const forced = setTimeout(() => child.kill('SIGKILL'), 2000);
+    const server = child;
+    server.kill('SIGTERM');
+    const forced = setTimeout(() => server.kill('SIGKILL'), 2000).unref();
     try { await exited; } finally { clearTimeout(forced); child = undefined; }
   }
-  t.after(async () => {
-    try { await stop(); } finally { await rm(dir, { recursive: true, force: true }); }
-  });
   async function start() {
+    t.signal.throwIfAborted();
     log = '';
     const restrictFetch = `const fetchOriginal = globalThis.fetch;
       globalThis.fetch = (input, options) => {
@@ -60,17 +63,34 @@ async function fixture(t) {
     child = spawn(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(restrictFetch)}`, '--import', 'tsx', 'src/command-main.ts'], {
       cwd: new URL('../../apps/server/', import.meta.url), env, stdio: ['ignore', 'pipe', 'pipe'],
     });
-    exited = once(child, 'exit');
+    exited = once(child, 'close');
     for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { log = (log + chunk).slice(-8000); });
-    for (let attempt = 0; attempt < 150 && child.exitCode === null; attempt++) {
-      const health = await fetch(`${origin}/healthz`, { signal: AbortSignal.timeout(500) }).catch(() => null);
-      if (health?.ok) return;
-      await delay(50);
+    const output = createInterface({ input: child.stdout });
+    const ready = Promise.withResolvers();
+    output.on('line', line => {
+      if (line.includes('"msg":"Workspace routes loaded"')) ready.resolve();
+    });
+    const deadline = new AbortController();
+    const signal = AbortSignal.any([deadline.signal, t.signal]);
+    try {
+      await Promise.race([
+        ready.promise,
+        exited.then(([code, signal]) => { throw new Error(`process exited (${signal ?? code})`); }),
+        delay(20_000, undefined, { signal }).then(() => { throw new Error('readiness deadline exceeded'); }),
+      ]);
+      const health = await fetch(`${origin}/healthz`, { signal: AbortSignal.any([t.signal, AbortSignal.timeout(5000)]) });
+      const status = await health.json();
+      assert.equal(health.status, 200);
+      assert.equal(status.status, 'ok');
+    } catch (error) {
+      throw new Error(`Commands server did not start (${error.message}):\n${log}`, { cause: error });
+    } finally {
+      deadline.abort();
+      output.close();
     }
-    assert.fail(`Commands server did not start:\n${log}`);
   }
   async function request(method, path, body, { headers = {}, version, status = 200 } = {}) {
-    const result = await fetch(`${origin}${path}`, { method, redirect: 'manual', signal: AbortSignal.timeout(8000), headers: {
+    const result = await fetch(`${origin}${path}`, { method, redirect: 'manual', signal: AbortSignal.any([t.signal, AbortSignal.timeout(8000)]), headers: {
       origin, ...(method !== 'GET' && { 'idempotency-key': randomUUID() }),
       ...(version != null && { 'if-match': String(version) }), ...(body !== undefined && { 'content-type': 'application/json' }), ...headers,
     }, body: body === undefined ? undefined : JSON.stringify(body) });

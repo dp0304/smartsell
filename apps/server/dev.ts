@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { start } from './src/bootstrap.js';
 import { configuration } from './src/config.js';
+import { loopbackHost } from './src/setup-policy.js';
 
 const args = process.argv.slice(2);
 const preview = args[0] === 'preview';
@@ -17,12 +18,15 @@ const urlHost = (address: string) => address.includes(':') && !address.startsWit
 const loopbackForWildcard = (address: string) => address === '0.0.0.0' ? '127.0.0.1' : address === '::' ? '::1' : address;
 const config = configuration({
   ...process.env,
+  SMARTSELL_LOCAL_SETUP: loopbackHost(host) && process.env.SMARTSELL_LOCAL_SETUP !== '0' ? '1' : '0',
   PUBLIC_ORIGIN: process.env.PUBLIC_ORIGIN ?? `http://${urlHost(loopbackForWildcard(host))}:${port}`,
 });
 if (port === config.port) throw new Error('Web and API ports must differ');
 process.env.SMARTSELL_API_TARGET = `http://${urlHost(loopbackForWildcard(config.host))}:${config.port}`;
-for (const hostname of [host, 'localhost', '127.0.0.1', '::1']) {
-  config.origins.add(new URL(`http://${urlHost(hostname)}:${port}`).origin);
+const localWebOrigins = ['localhost', '127.0.0.1', '::1'].map(hostname => new URL(`http://${urlHost(hostname)}:${port}`).origin);
+for (const origin of [...localWebOrigins, new URL(`http://${urlHost(host)}:${port}`).origin]) config.origins.add(origin);
+if (config.localSetupOrigins) {
+  config.localSetupOrigins = localWebOrigins.includes(config.origin) ? new Set(localWebOrigins) : undefined;
 }
 
 const root = new URL('../web/', import.meta.url);

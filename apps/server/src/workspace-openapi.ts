@@ -83,12 +83,12 @@ export function workspaceOpenApi({ config, surface, operations, aliases = [], pe
       'x-smartsell-query': dto?.query || op.contract?.query ? 'Known query parameters are listed. The transport accepts other scalar string parameters.' : 'Open string map. Operation-specific filters are not declared.',
       parameters: [ws, ...parameterNames(op).map(name => parameter(name, 'path', string)),
         ...query.map(name => parameter(name, 'query', string)), ...pageParameters,
-        ...(!read ? [ifMatch, key(Boolean(op.external))] : []),
+        ...(!read ? [ifMatch, key(Boolean(op.external || op.idempotencyRequired))] : []),
       ],
       ...(!read && { requestBody: { required: dto?.bodyRequired ?? op.contract?.bodyRequired ?? false, content: json(body) } }),
       responses: {
         ...(op.accepted !== true && { 200: response }),
-        ...(op.accepted && { 202: { ...response, description: 'Work accepted. The response includes an operation_id.' } }),
+        ...(op.accepted && { 202: { ...response, description: 'Work accepted.' } }),
         ...errors(versionRequired, !read),
       },
     });

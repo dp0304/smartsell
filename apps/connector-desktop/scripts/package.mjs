@@ -34,9 +34,10 @@ await build({
   config: {
     appId: 'com.smartsell.connector',
     directories: { output: local ? 'release-local' : 'release' },
-    files: ['dist/main.cjs', 'dist/preload.cjs', 'dist/ui/index.html', 'dist/ui/renderer.js', 'dist/ui/styles.css', 'package.json'],
+    files: ['dist/main.cjs', 'dist/preload.cjs', 'dist/ui/index.html', 'dist/ui/renderer.js', 'dist/ui/styles.css', 'dist/smartsell-install-skills.mjs', 'package.json'],
     electronDist,
     asar: true,
+    asarUnpack: ['dist/smartsell-install-skills.mjs'],
     npmRebuild: false,
     forceCodeSigning: !local,
     electronFuses: {

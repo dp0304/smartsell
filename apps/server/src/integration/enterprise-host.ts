@@ -296,7 +296,7 @@ export function enterpriseHost(app: FastifyInstance, store: Store, config: Confi
         if (principal.user.id !== user.id || principal.user.passwordHash !== user.passwordHash) throw new IdentityError();
         const before = await hooks.factorId(user.id);
         try {
-          const data = await run({ accountId: user.id, label: user.email });
+          const data = await run({ accountId: user.id, label: user.username ?? user.email });
           if (before !== await hooks.factorId(user.id)) {
             for (const [key, session] of identity.entries<Session>('session/')) {
               if (session.userId === user.id && session.csrf !== principal.session?.csrf) identity.delete(key);

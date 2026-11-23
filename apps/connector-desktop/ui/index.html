@@ -8,64 +8,180 @@
   <script src="renderer.js" defer></script>
 </head>
 <body>
-<main>
-  <header><div><span class="brand">SmartSell</span><h1>桌面连接器</h1></div><button class="stop" id="stop">紧急停止</button></header>
-  <section aria-labelledby="device-heading">
-    <h2 id="device-heading">设备连接</h2>
-    <p id="connection"></p><p id="origin" class="muted"></p>
-    <p id="message" role="status"></p><p id="error" role="alert"></p>
-    <form id="pair" hidden>
-      <div class="fields"><label>工作区 ID<input name="workspace" required maxlength="128" autocomplete="off"></label>
-      <label>设备名称<input name="name" required maxlength="100" value="SmartSell Desktop"></label>
-      <label>工作台配对码<input name="code" type="password" required maxlength="32" minlength="32" autocomplete="off"></label></div>
-      <label class="check"><input name="owns" type="checkbox" required>我拥有或获授权管理此设备，并主动同意将其绑定到此工作区。</label>
-      <button class="primary">配对设备</button>
-    </form>
-    <div class="actions"><button class="primary" id="connect">连接</button><button id="disconnect">断开</button><button id="forget">注销本机配对</button><button id="workbench">打开工作台</button></div>
-  </section>
-  <section id="idle" hidden>
-    <h2>任务交接</h2><button class="primary" id="claim">领取一项任务</button>
-    <details><summary>核验工作台中已绑定的浏览器账号</summary>
-      <div class="actions"><button id="douyin">打开抖音创作者中心</button><button id="xhs">打开小红书创作服务平台</button></div>
-      <form id="session">
-        <div class="fields"><label>工作台浏览器会话 ID<input name="session" maxlength="128" required></label><label>官方页面中实际登录的账号 ID<input name="observed" maxlength="128" required></label></div>
-        <label class="check"><input name="confirmed" type="checkbox" required>我已在此账号的专用浏览器配置中核对实际账号，并有权使用该账号。</label>
-        <button>核验会话</button>
-      </form>
-    </details>
-  </section>
-  <section id="task" hidden>
-    <h2>当前任务</h2><p id="task-meta"></p><p id="task-scope" class="muted"></p>
-    <pre id="revision" hidden></pre>
-    <div id="prepare" hidden>
-      <div class="actions"><button id="creator">打开官方创作者页面</button><button id="media">选取本机媒体</button></div>
-      <p id="media-note" class="muted">选取的文件仅在本机校验 SHA-256。请在官方页面亲自选取同一文件，并按审批顺序排放。</p><pre id="picked" hidden></pre>
-      <form id="confirm" hidden>
-        <label>从官方页面读到的账号 ID<input name="observed" maxlength="128" required autocomplete="off"></label>
-        <label class="check"><input name="confirmed" type="checkbox" required><span id="confirm-label"></span></label>
-        <button class="primary">确认账号及交接</button>
-      </form>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><span class="brand-name">SmartSell</span><h1>桌面连接器</h1></div></div>
+    <div class="actions topbar-actions">
+      <button id="workbench" hidden>打开工作台</button>
+      <button class="stop" id="stop"><span class="stop-mark" aria-hidden="true"></span>紧急停止</button>
     </div>
-    <form id="outcome" hidden>
-      <p id="handoff"></p>
-      <fieldset id="receipt"><legend>已登记的脱敏截图证据</legend><p class="muted">请在工作台登记证据，再填写对象 ID 和 SHA-256。</p>
-      <div class="fields"><label>官方作品 ID<input name="postId" maxlength="128"></label><label>官方作品完整链接<input name="url" maxlength="2048"></label>
-      <label>证据对象 ID<input name="objectId" maxlength="128"></label><label>证据 SHA-256<input name="sha256" maxlength="64"></label></div></fieldset>
-      <div class="actions"><button id="captured" value="captured">回填作品及证据</button><button id="submitted" value="submitted">我已提交，回填结果</button>
-      <button id="visible" value="visible">作品可见</button><button id="not-visible" value="not_visible">作品不可见</button><button value="unknown">结果未知</button></div>
-    </form>
-    <div id="challenge" class="actions" hidden>
-      <label>遇到平台限制<select id="reason"><option value="captcha">验证码</option><option value="risk_control">风控提示</option><option value="login_expired">登录失效</option><option value="app_prompt">平台弹窗</option></select></label>
-      <button id="block">中止任务并回填</button>
+  </div>
+</header>
+<main class="layout">
+  <section class="card setup" aria-labelledby="setup-heading">
+    <div class="setup-heading"><h2 id="setup-heading" tabindex="-1">首次设置</h2><p id="setup-progress" class="muted"></p></div>
+    <ol class="setup-steps" aria-label="设置进度">
+      <li id="setup-storage"><strong>系统安全存储</strong><span id="setup-storage-status"></span></li>
+      <li id="setup-pair"><strong>工作台授权</strong><span id="setup-pair-status"></span></li>
+      <li id="setup-signature"><strong>签名连接</strong><span id="setup-signature-status"></span></li>
+      <li id="setup-chrome"><strong>专用 Chrome</strong><span id="setup-chrome-status"></span></li>
+      <li id="setup-channels"><strong>平台身份核验</strong><span id="setup-channels-status"></span></li>
+    </ol>
+    <div class="setup-actions">
+      <p id="setup-next" role="status"></p>
+      <button id="setup-check-storage" class="primary" type="button" hidden>检查系统安全存储</button>
+      <form id="pair" hidden>
+        <label>工作台网址<input name="url" type="url" required maxlength="2048" autocomplete="off" spellcheck="false"></label>
+        <label class="check"><input name="owns" type="checkbox" required><span>选择本机 <strong id="pair-machine"></strong>。我拥有或获授权管理此设备，并同意绑定到工作区。</span></label>
+        <div class="actions"><button class="primary" type="submit">连接本机 Worker</button><button id="cancel-authorization" type="button" hidden>取消浏览器授权</button></div>
+      </form>
+      <div id="connect-actions" class="actions" hidden><button class="primary" id="connect">连接</button></div>
+      <button id="setup-connect-chrome" class="primary" type="button" hidden>连接专用 Google Chrome</button>
+      <div id="setup-channel-picker" hidden>
+        <label for="setup-channel-select">所需平台</label>
+        <select id="setup-channel-select"><option value="">选择平台</option></select>
+        <button id="setup-add-channel" type="button">加入核验</button>
+      </div>
+      <ul id="setup-channel-list" class="setup-channels" aria-label="所选平台核验状态" hidden></ul>
+      <p id="setup-error" class="notice" role="alert"></p>
     </div>
-    <button id="report" hidden>回填待发送的任务状态</button>
   </section>
-  <section>
-    <h2>平台支持</h2>
-    <p>抖音、小红书支持通过官方创作者页面人工交付。请用已绑定账号的专用浏览器配置打开页面并亲自登录、选取媒体和发布。</p>
-    <p class="muted">当前版本未提供平台 OAuth、自动发布、手机连接或 App 交付。TikTok、Instagram 和 Facebook 暂不可用。</p>
+  <section class="card connection" aria-labelledby="device-heading">
+    <div class="connection-overview" aria-live="polite">
+      <h2 id="device-heading" tabindex="-1">连接器状态</h2>
+      <p id="connection" class="status" data-tone="neutral">正在读取</p>
+      <p id="connection-note" class="muted"></p>
+      <p id="connection-next"></p>
+    </div>
+    <div class="connection-device">
+      <dl class="connection-facts">
+        <div><dt>工作区</dt><dd id="workspace-id">—</dd></div>
+        <div><dt>本机</dt><dd id="machine-name">—</dd></div>
+        <div><dt>设备 ID</dt><dd id="device-id">—</dd></div>
+        <div><dt>服务</dt><dd id="origin">—</dd></div>
+      </dl>
+      <div class="actions connection-actions"><button id="disconnect" hidden>断开</button><button id="forget" hidden>注销本机配对</button></div>
+    </div>
+    <p id="message" class="notice" role="status"></p>
+    <p id="error" class="notice" role="alert"></p>
   </section>
-  <footer><span id="update-status"></span><button id="update-check">检查签名更新</button><button id="update-install" hidden>安装已验证更新</button></footer>
+  <section class="card workspace" id="workspace-panel" hidden aria-labelledby="workspace-heading">
+    <h2 id="workspace-heading" tabindex="-1">任务交接</h2>
+    <p id="workspace-note" class="muted intro">正在读取本机连接状态…</p>
+    <div id="task" hidden>
+      <p id="task-meta" class="task-meta"></p>
+      <dl class="task-facts">
+        <div><dt>预期账号</dt><dd id="task-identity"></dd></div>
+        <div id="task-post-row" hidden><dt>待核实作品</dt><dd id="task-post"></dd></div>
+      </dl>
+      <details id="task-details" class="subsection">
+        <summary>任务详情<span id="revision-label" hidden>与审批版本</span></summary>
+        <p class="muted">任务 ID <span id="task-id"></span></p>
+        <pre id="revision" hidden></pre>
+      </details>
+      <div id="prepare" class="subsection" hidden>
+        <h3>官方页面交接</h3>
+        <p id="task-proof" class="muted" role="status"></p>
+        <div class="actions"><button class="primary" id="creator">打开官方创作者页面</button><button id="media">选取本机媒体</button></div>
+        <p id="media-note" class="muted">选取的文件仅在本机校验 SHA-256。请在官方页面亲自选取同一文件，并按审批顺序排放。</p><pre id="picked" hidden></pre>
+        <form id="confirm" hidden>
+          <label class="check"><input name="confirmed" type="checkbox" required><span id="confirm-label"></span></label>
+          <button class="primary">确认账号及交接</button>
+        </form>
+      </div>
+      <form id="outcome" class="subsection" hidden aria-labelledby="outcome-heading">
+        <h3 id="outcome-heading">回填结果</h3>
+        <p id="handoff" class="notice"></p>
+        <fieldset id="receipt"><legend>已登记的脱敏截图证据</legend><p class="muted">请在工作台登记证据，再填写对象 ID 和 SHA-256。</p>
+        <div class="fields"><label>官方作品 ID<input name="postId" maxlength="128"></label><label>官方作品完整链接<input name="url" maxlength="2048"></label>
+        <label>证据对象 ID<input name="objectId" maxlength="128"></label><label>证据 SHA-256<input name="sha256" maxlength="64"></label></div></fieldset>
+        <div class="actions"><button class="primary" id="captured" value="captured">回填作品及证据</button><button class="primary" id="submitted" value="submitted">我已提交，回填结果</button>
+        <button class="primary" id="visible" value="visible">作品可见</button><button id="not-visible" value="not_visible">作品不可见</button><button value="unknown">结果未知</button></div>
+      </form>
+      <details id="challenge" class="subsection" hidden>
+        <summary>遇到平台限制</summary>
+        <div class="actions challenge-actions">
+          <label>限制类型<select id="reason"><option value="captcha">验证码</option><option value="risk_control">风控提示</option><option value="login_expired">登录失效</option><option value="app_prompt">平台弹窗</option></select></label>
+          <button id="block">中止任务并回填</button>
+        </div>
+      </details>
+      <div id="pending" class="subsection" hidden>
+        <h3>待回填工作台</h3>
+        <p id="pending-note" class="muted"></p>
+        <button id="report">回填待发送的任务状态</button>
+      </div>
+    </div>
+  </section>
+  <section class="card integration" id="channel-enrollment" hidden aria-labelledby="channel-enrollment-heading">
+    <h2 id="channel-enrollment-heading">登记本机渠道</h2>
+    <p class="muted">检查本机 <strong id="channel-machine"></strong> 的专用 Chrome，再勾选下方要登记的社媒账号和商城店铺。</p>
+    <div class="actions">
+      <button id="channel-scan" type="button">检查本机已登录渠道</button>
+      <button id="channel-register" type="button" class="primary" disabled>确认登记所选渠道</button>
+    </div>
+    <p id="channel-selection-note" class="muted" role="status"></p>
+    <p id="channel-error" class="notice" role="alert"></p>
+  </section>
+  <section class="card integration" aria-labelledby="social-heading">
+    <div class="section-heading"><span class="section-icon social-icon" aria-hidden="true">◉</span><h2 id="social-heading">社媒</h2></div>
+    <p class="muted">在本机专用 Chrome 登录，再验证当前账号。验证码和二次验证请在 Chrome 完成。</p>
+    <ul id="social-channels" class="platforms" aria-label="社媒 Chrome 渠道"></ul>
+    <p id="pending-browser-identity" class="muted" role="status"></p>
+  </section>
+  <section class="card integration" aria-labelledby="commerce-heading">
+    <div class="section-heading"><span class="section-icon commerce-icon" aria-hidden="true">▤</span><h2 id="commerce-heading">商城</h2></div>
+    <p class="muted">在同一专用 Chrome 验证店铺，也可继续手动导出商品。</p>
+    <ul id="commerce-channels" class="platforms" aria-label="商城 Chrome 渠道"></ul>
+    <p id="catalog-error" class="notice" role="alert"></p>
+    <div id="catalog-job" class="subsection" hidden>
+      <h3 id="catalog-job-heading" tabindex="-1">当前商品任务</h3>
+      <dl class="task-facts">
+        <div><dt>店铺</dt><dd id="catalog-store"></dd></div>
+        <div><dt>预期店铺 ID</dt><dd id="catalog-external-id"></dd></div>
+        <div><dt>租约</dt><dd id="catalog-lease"></dd></div>
+      </dl>
+      <p id="catalog-retry" class="notice" data-tone="warning" hidden>服务尚未确认收到商品表。请先在工作台查看是否已有预览。仍需发送时，请选用同一份导出表并重新确认店铺。</p>
+      <div id="catalog-controls" hidden>
+        <p id="catalog-portal-help" class="muted"></p>
+        <div class="actions"><button id="catalog-portal" hidden>打开官方卖家后台</button><button id="catalog-file">选择商品导出表</button></div>
+        <p class="muted">支持 384 KiB 以内的 UTF-8 CSV、TSV 或 XLSX。XLSX 仅读取第一张表。连接器只发送识别到的商品列。</p>
+        <p id="catalog-picked" role="status"></p>
+        <form id="catalog-upload-form" hidden>
+          <label>官方页面显示的实际店铺 ID<input name="observed" required maxlength="160" autocomplete="off" spellcheck="false"></label>
+          <label class="check"><input name="confirmed" type="checkbox" required><span>我有权导出此店铺商品，已核对实际店铺 ID，并确认文件仅包含商品数据，不含订单、客户资料或账号凭据。</span></label>
+          <button id="catalog-upload" class="primary">发送到工作台预览</button>
+        </form>
+      </div>
+    </div>
+    <div id="catalog-result" class="subsection" hidden>
+      <h3 id="catalog-result-heading" tabindex="-1">已送工作台预览</h3>
+      <p id="catalog-import" class="muted"></p>
+      <div id="catalog-return-actions" class="actions" hidden><button id="catalog-return">返回工作台</button></div>
+    </div>
+  </section>
+  <section class="card activity" aria-labelledby="activity-heading">
+    <div class="section-heading"><span class="section-icon activity-icon" aria-hidden="true">◷</span><h2 id="activity-heading">最近活动</h2></div>
+    <p class="muted activity-scope">本次运行 · 最近 30 条</p>
+    <p id="activity-empty" class="empty">暂无活动。配对、连接和任务操作的结果会显示在这里。</p>
+    <ol id="activity-list" class="activity-list" aria-label="最近操作，按时间倒序" hidden></ol>
+  </section>
+  <section class="card updates" aria-labelledby="update-heading">
+    <div class="update-summary"><h2 id="update-heading">签名更新</h2><p id="update-status" class="muted" role="status"></p></div>
+    <div id="update-actions" class="actions" hidden><button id="update-check" disabled>检查签名更新</button><button id="update-install" hidden>安装已验证更新</button></div>
+    <p id="update-task-note" class="muted" hidden>处理完当前任务后可安装更新。</p>
+  </section>
 </main>
+<template id="channel-row">
+  <li class="channel-row">
+    <div class="platform-identity"><span class="platform-mark" aria-hidden="true"></span><strong class="channel-name"></strong></div>
+    <span class="platform-status" role="status">未验证</span>
+    <p class="channel-proof" hidden></p>
+    <p class="channel-note muted" hidden></p>
+    <p class="channel-registration" hidden></p>
+    <label class="check channel-select" hidden><input type="checkbox"><span>选择此渠道</span></label>
+    <div class="actions channel-actions"><button type="button" data-action="open">在 Chrome 打开</button><button type="button" data-action="verify">验证</button></div>
+    <details class="channel-help"><summary>查看验证位置</summary><p class="muted"></p></details>
+  </li>
+</template>
 </body>
 </html>

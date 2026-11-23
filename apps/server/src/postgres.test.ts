@@ -30,7 +30,9 @@ test('PostgreSQL request role, setup, and workspace transactions', { skip: !requ
   await store.ready();
   await assert.rejects(privilegedStore.ready(), /non-owner/);
 
-  const input = { email: 'first@example.test', name: 'First', workspaceName: 'First workspace', password: 'a-long-test-password' };
+  const input = { username: 'first-owner', name: 'First', workspaceName: 'First workspace', password: 'a-long-test-password' };
+  const status = () => app.inject('/api/v1/setup/status');
+  assert.deepEqual((await status()).json(), { data: { initialized: false, token_required: true, registration_enabled: true, password_min_length: 12 } });
   const setup = (token?: string) => app.inject({ method: 'POST', url: '/api/v1/setup',
     headers: token ? { origin, 'x-setup-token': token } : { origin }, payload: input });
   assert.equal((await setup()).statusCode, 403);
@@ -41,6 +43,19 @@ test('PostgreSQL request role, setup, and workspace transactions', { skip: !requ
   assert.match(String(winner.headers['set-cookie']), /HttpOnly/i);
   assert.match(String(winner.headers['set-cookie']), /Secure/i);
   const { user: { id: actor }, workspaces: [{ id: workspace }] } = winner.json();
+  const login = await app.inject({ method: 'POST', url: '/api/v1/session', payload: { username: 'FIRST-OWNER', password: input.password } });
+  assert.equal(login.statusCode, 200, login.body);
+  const expectedUser = { id: actor, name: input.name, username: input.username, email: '' };
+  assert.deepEqual(winner.json().user, expectedUser);
+  assert.deepEqual(winner.json().data.user, expectedUser);
+  assert.deepEqual(login.json().user, expectedUser);
+  assert.deepEqual(login.json().data.user, expectedUser);
+  const session = await app.inject({ url: '/api/v1/session', cookies: { [login.cookies[0].name]: login.cookies[0].value } });
+  assert.equal(session.statusCode, 200, session.body);
+  assert.deepEqual(session.json().user, expectedUser);
+  assert.deepEqual(session.json().data.user, expectedUser);
+  assert.equal((await app.inject({ method: 'POST', url: '/api/v1/session', payload: { username: input.name, password: input.password } })).statusCode, 401);
+  assert.deepEqual((await status()).json(), { data: { initialized: true, token_required: true, registration_enabled: false, password_min_length: 12 } });
   const { rows: [first] } = await admin.query('SELECT tenant_id FROM ss.workspaces WHERE id=$1', [workspace]);
   const { rows: [second] } = await admin.query(`WITH tenant AS (INSERT INTO ss.tenants DEFAULT VALUES RETURNING id)
     INSERT INTO ss.workspaces (tenant_id,name) SELECT id,'Second workspace' FROM tenant RETURNING id,tenant_id`);
