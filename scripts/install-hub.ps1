@@ -8,8 +8,8 @@
 [CmdletBinding()]
 param(
   [string]$Dir = (Join-Path $HOME 'smartsell'),
-  [string]$Repo = 'https://gitee.com/yueshutech/smartsell.git',
-  [string]$Branch = 'master',
+  [string]$Repo = 'https://github.com/dp0304/smartsell.git',
+  [string]$Branch = 'main',
   [string]$Mode = '',
   [switch]$CheckOnly
 )

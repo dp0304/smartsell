@@ -344,7 +344,7 @@ pnpm hub:export-legacy --from .local/smartsell.sqlite --out ~/SmartSell-export-2
 
 - **`scripts/install-hub.sh`（macOS）與 `scripts/install-hub.ps1`（Windows）：**
   1. 檢查前置軟體：git、Node 24、corepack（pnpm）、ffmpeg（ffprobe）、Tailscale。缺少時**印出確切的安裝命令**（macOS 為 brew 命令，Windows 為 winget 命令），由主人自己執行後重跑；腳本不替主人安裝系統軟體。
-  2. 執行 `corepack enable`；clone 或更新原始碼（預設 Gitee `master`，可用 `--repo`、`--branch` 覆寫；GitHub 社群版是之後同步的副本，見 §11.3）。
+  2. 執行 `corepack enable`；clone 或更新原始碼（預設 GitHub `main`，可用 `--repo`、`--branch` 覆寫，例如改用 Gitee `master`；兩倉內容相同，見 §11.3）。
   3. `pnpm install --frozen-lockfile`、建置 Web、執行 `pnpm hub:init`、執行 `pnpm hub:service install`。
   4. 任何一步失敗時，印出失敗的命令、原因與下一步（例如「Node 版本是 22，需要 24：brew install node@24」），然後停止。
 - **`pnpm hub:update`：**
@@ -2946,7 +2946,7 @@ S10 也自行訂閱 `worker.job.status_changed`、`worker.job.late_fact`、`core
 
 **合併到 master 的順序：**S0 → S1 → S2 → S3 → S10 → S5 → S4 → S6 → S9 → S7 → S8。每次合併前都要通過 `pnpm typecheck` 與 `pnpm test`，既有測試不能退步。開發模式（`pnpm dev`）的行為不受中樞模式影響。
 
-**兩倉同步：**依主人的決定，每次公開推送到 GitHub 社群版之前再確認一次。第 1 階段只推送到 Gitee 主倉；`install-hub` 預設從 Gitee `master` 取得原始碼。
+**兩倉同步（2026-11-24 主人改決定）：**社群版與內部版內容一模一樣，SaaS 版只是代為部署。GitHub `dp0304/smartsell` 的 `main` 與 Gitee `yueshutech/smartsell` 的 `master` 每次推送同一個提交；`install-hub` 預設從 GitHub `main` 取得原始碼。社群版先前的三語化提交保留在歷史中，簡體中文於第 2 階段併回。
 
 ## 12. 風險與待決問題
 

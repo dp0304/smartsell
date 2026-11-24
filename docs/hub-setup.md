@@ -23,7 +23,8 @@
 ```bash
 bash scripts/install-hub.sh                 # 已有原始碼時，在原始碼資料夾執行
 # 或指定位置與來源：
-bash scripts/install-hub.sh --dir ~/smartsell --repo https://gitee.com/yueshutech/smartsell.git --branch master
+bash scripts/install-hub.sh --dir ~/smartsell --repo https://github.com/dp0304/smartsell.git --branch main
+# 從 Gitee 鏡像安裝：--repo https://gitee.com/yueshutech/smartsell.git --branch master
 bash scripts/install-hub.sh --check-only    # 只檢查前置軟體，不做任何變更
 ```
 

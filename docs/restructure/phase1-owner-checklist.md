@@ -38,7 +38,7 @@
 macOS（終端機）：
 
 ```bash
-git clone https://gitee.com/yueshutech/smartsell.git ~/smartsell
+git clone https://github.com/dp0304/smartsell.git ~/smartsell
 cd ~/smartsell
 bash scripts/install-hub.sh --check-only     # 只檢查前置軟體，不做任何變更
 bash scripts/install-hub.sh                  # 依序執行 hub:init、建置、安裝服務
@@ -47,7 +47,7 @@ bash scripts/install-hub.sh                  # 依序執行 hub:init、建置、
 Windows（系統管理員 PowerShell）：
 
 ```powershell
-git clone https://gitee.com/yueshutech/smartsell.git $HOME\smartsell
+git clone https://github.com/dp0304/smartsell.git $HOME\smartsell
 cd $HOME\smartsell
 powershell -ExecutionPolicy Bypass -File scripts\install-hub.ps1 -CheckOnly
 powershell -ExecutionPolicy Bypass -File scripts\install-hub.ps1 -Mode boot   # 開機就執行，不必有人登入（建議）
@@ -200,7 +200,7 @@ winget install --id Git.Git -e
 winget install --id OpenJS.NodeJS -e --version 24.*
 # 重新開啟 PowerShell
 corepack enable
-git clone https://gitee.com/yueshutech/smartsell.git $HOME\smartsell
+git clone https://github.com/dp0304/smartsell.git $HOME\smartsell
 cd $HOME\smartsell
 pnpm install --frozen-lockfile
 pnpm worker:release --win
@@ -347,7 +347,7 @@ Mac-B：`sudo shutdown -r now`；Win-C：`Restart-Computer`。重開機並登入
 **前置（筆電，一次）：**
 
 ```bash
-git clone https://gitee.com/yueshutech/smartsell.git ~/smartsell-check     # 已有原始碼就用既有的
+git clone https://github.com/dp0304/smartsell.git ~/smartsell-check     # 已有原始碼就用既有的
 cd ~/smartsell-check
 pnpm install --frozen-lockfile
 brew install ffmpeg                       # 產生測試影片；Windows 筆電見下方說明
