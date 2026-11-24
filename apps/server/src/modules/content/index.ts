@@ -1,6 +1,6 @@
-import type { Context as RestContext, Operation } from '@smartsell/contracts';
+import type { PlatformDefaults, Context as RestContext, Operation } from '@smartsell/contracts';
 import { admins, readers, writers, type Command, type Commands, type Context, type Entity, type Fields } from '../types.ts';
-import { array, choice, emit, fail, get, hash, id, ids, insert, kinds, list, machineActor, object, optionalText, pick, requireVersion, stages, text, update, webUrl } from './model.ts';
+import { array, choice, draftFor, emit, fail, get, hash, id, ids, insert, kinds, list, machineActor, object, optionalText, pick, requireVersion, snapshot, stages, text, update, webUrl } from './model.ts';
 import { activeItem, autosave, commit, createVariant, currentRevision, diffRevisions, handleContentEvent, insertProductFact, insertProductPrice, prepareEdit, revisionFor, setReadiness, variantFor } from './revisions.ts';
 import { laterCommands, recordFeedItems as recordNormalizedFeedItems } from './later.ts';
 import { applyContentEvent as applyReferenceEvent, commandContext, contentAcceptsEvent as acceptsReferenceEvent, makeOperations } from './operations.ts';
@@ -458,4 +458,71 @@ export async function applyContentEvent(ctx: RestContext, event: Fields, transpo
     ...(response.status === 200 || response.etag !== undefined ? { etag: response.etag } : {}),
     ...(response.status === 200 || response.last_modified !== undefined ? { last_modified: response.last_modified } : {}),
   });
+}
+
+// ---------- Phase 1 hub (phase1-design §4.4, C2) ----------
+
+/** The platform options the channel defaults put on a revision; null when the platform has none. */
+export function channelPlatformOptions(platform: string, defaults: PlatformDefaults): Fields | null {
+  if (platform === 'tiktok' && defaults.tiktok) {
+    const { privacy_level, allow_comment, allow_duet, allow_stitch, commercial_disclosure, ai_generated } = defaults.tiktok;
+    return { privacy_level, allow_comment, allow_duet, allow_stitch, commercial_disclosure, ai_generated: ai_generated ?? false };
+  }
+  if (platform === 'x' && defaults.x) return { reply_settings: defaults.x.reply_settings };
+  return null;
+}
+
+function withChannelOptions(draft: Fields, platform: string, options: Fields, applied: Fields) {
+  const settings = draft.settings ?? {};
+  return { ...draft, settings: { ...settings,
+    platform_options: { ...settings.platform_options, [platform]: options },
+    channel_defaults_applied: { ...settings.channel_defaults_applied, [platform]: applied },
+  } };
+}
+
+/**
+ * Trusted path: commits the owner's saved channel defaults onto the variant's head revision as a new revision with origin
+ * 'channel_defaults'. It skips platformSettings' agent check because the values come from account settings a person saved,
+ * never from tool input. A field a person changed on the revision after an earlier application keeps the person's value.
+ */
+export async function applyChannelDefaults(rest: RestContext, variantId: string, defaults: PlatformDefaults): Promise<{ revision_id: string; changed: boolean }> {
+  const ctx = commandContext(rest);
+  const variant = await get(ctx, kinds.variant, text(variantId, 'variant_id'));
+  await activeItem(ctx, variant.data.content_item_id);
+  const platform = String(variant.data.platform);
+  const head = await currentRevision(ctx, variant);
+  const wanted = channelPlatformOptions(platform, defaults);
+  if (!wanted) {
+    if (!head) fail('invalid_state', 'The variant has no committed revision', 409);
+    return { revision_id: head.id, changed: false };
+  }
+  const base: Fields = head ? snapshot(head) : variant.data.draft_doc;
+  const current: Fields = base.settings?.platform_options?.[platform] ?? {};
+  const applied: Fields | undefined = base.settings?.channel_defaults_applied?.[platform];
+  const next: Fields = { ...current };
+  for (const [field, value] of Object.entries(wanted)) {
+    const personChanged = applied !== undefined && Object.hasOwn(applied, field) && current[field] !== undefined && hash(current[field]) !== hash(applied[field]);
+    if (!personChanged) next[field] = value;
+  }
+  if (head && hash(next) === hash(current) && hash(applied) === hash(wanted)) return { revision_id: head.id, changed: false };
+  const working = variant.data.draft_doc;
+  const { variant: committed, revision } = await commit(ctx, variant, withChannelOptions(base, platform, next, wanted), 'channel_defaults');
+  // Keep a person's unsaved working draft, with the same options applied.
+  if (head && working && hash(working) !== hash(base)) await update(ctx, committed, { draft_doc: withChannelOptions(working, platform, next, wanted) });
+  return { revision_id: revision.id, changed: true };
+}
+
+/** Commits a caption change (post_update edit_caption) on top of the head revision, keeping media and options. */
+export async function commitVariantRevision(rest: RestContext, variantId: string, draft: { body: string }): Promise<{ revision_id: string; changed: boolean }> {
+  const ctx = commandContext(rest);
+  const variant = await get(ctx, kinds.variant, text(variantId, 'variant_id'));
+  await activeItem(ctx, variant.data.content_item_id);
+  if (typeof draft.body !== 'string' || draft.body.length > 100_000) fail('invalid_input', 'Invalid body');
+  const head = await currentRevision(ctx, variant);
+  const base: Fields = head ? snapshot(head) : variant.data.draft_doc;
+  if (head && base.body === draft.body) return { revision_id: head.id, changed: false };
+  const agent = machineActor(ctx);
+  const next = draftFor({ body: draft.body }, String(variant.data.platform), base, agent);
+  const { revision } = await commit(ctx, variant, next, agent ? 'agent' : 'human');
+  return { revision_id: revision.id, changed: true };
 }

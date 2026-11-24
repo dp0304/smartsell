@@ -1,6 +1,6 @@
 import type { AgentEnrollment } from '../data/types';
 import { relay } from './setup-agent-relay';
-import { codexRouting, previousCodexRouting } from './setup-codex-routing';
+import { codexRouting, previousCodexRoutings } from './setup-codex-routing';
 
 const install = String.raw`import getpass, shutil, subprocess, warnings
 
@@ -129,7 +129,8 @@ def install_codex_routing():
         if marks == (1, 1):
             if re.search(b"^" + re.escape(block) + b"$", content, re.MULTILINE):
                 return
-            old = re.search(b"^" + re.escape(previous_codex_routing.encode("utf-8")) + b"$", content, re.MULTILINE)
+            old = next((match for match in (re.search(b"^" + re.escape(previous.encode("utf-8")) + b"$", content, re.MULTILINE)
+                                            for previous in previous_codex_routings) if match), None)
             if old:
                 updated = content[:old.start()] + block + content[old.end():]
                 with tempfile.NamedTemporaryFile(dir=home, prefix=".smartsell-routing-", delete=False) as temp:
@@ -189,8 +190,9 @@ def preflight(command):
             raise RelayError("MCP 預檢失敗。" + line.removeprefix("SmartSell relay: "))
     responses = {msg.get("id"): msg.get("result") for msg in map(object_json, result.stdout.splitlines()) if "method" not in msg}
     tools = (responses.get(2) or {}).get("tools", [])
+    # Phase-1 connections (tool profile hub_v1) list only the hub tools (§7.1, §7.4); smartsell_overview is always one of them.
     if (result.returncode or result.stderr or not responses.get(1) or not any(
-            isinstance(tool, dict) and tool.get("name") == "smartsell_operations_describe" for tool in tools)):
+            isinstance(tool, dict) and tool.get("name") == "smartsell_overview" for tool in tools)):
         raise RelayError("MCP 預檢未通過。請確認服務位址、TLS、連線是否到期及工作區權限，再執行同一區塊重試。")
 
 
@@ -224,7 +226,7 @@ try:
     if client == "codex":
         install_codex_routing()
         print("Codex 的 SmartSell 社媒路由規則已就緒。")
-    print("請完整退出並重開客戶端，從此註冊呼叫 smartsell_operations_describe，再回 Web 重新檢查狀態。")
+    print("請完整退出並重開客戶端，從此註冊呼叫 smartsell_overview，再回 Web 重新檢查狀態。")
 except RelayError as error:
     sys.exit(str(error))
 except (HTTPException, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired):
@@ -234,7 +236,7 @@ function commandBlock(id: string, mcpUrl: string, client: 'codex' | 'claude_code
   return ["python3 -I - <<'SMARTSELL_SETUP'", '# -*- coding: utf-8 -*-', `client = ${JSON.stringify(client === 'codex' ? 'codex' : 'claude')}`,
     `server = ${JSON.stringify(`smartsell-${id.replaceAll('-', '')}`)}`, `mcp_url = ${JSON.stringify(mcpUrl)}`,
     `redeem_url = ${JSON.stringify(redeemUrl ?? '')}`, `repairing = ${redeemUrl ? 'False' : 'True'}`,
-    `codex_routing = ${JSON.stringify(codexRouting)}`, `previous_codex_routing = ${JSON.stringify(previousCodexRouting)}`,
+    `codex_routing = ${JSON.stringify(codexRouting)}`, `previous_codex_routings = ${JSON.stringify(previousCodexRoutings)}`,
     `relay_source = ${JSON.stringify(relay)}`,
     'exec(compile(relay_source, "<SmartSell relay>", "exec"))', install, 'SMARTSELL_SETUP'].join('\n');
 }
@@ -250,6 +252,6 @@ export function agentRepairCommand(id: string, mcpUrl: string) {
 export function agentCheckPrompt(english: boolean, id?: string) {
   const registration = id ? `smartsell-${id.replaceAll('-', '')}` : 'SmartSell';
   return english
-    ? `Find the ${registration} MCP tools in this client’s tool search and call smartsell_operations_describe with empty arguments. Use the client’s native MCP tools only. If discovery fails, report the exact error and ask me to fully quit and reopen the client. If permission is denied or the connection is expired or revoked, report the exact blocker. After a successful native call, ask me to return to SmartSell and select “Check status again.”`
-    : `請在此客戶端的工具搜尋中找到 ${registration} 的 MCP 工具，並用空參數呼叫 smartsell_operations_describe。只使用此客戶端原生載入的 MCP 工具。若找不到工具，請回報具體錯誤，並請我完整退出後重開客戶端。若授權不足、連線到期或被撤銷，請明確回報原因。原生工具呼叫成功後，請我回 SmartSell 按「重新檢查狀態」。`;
+    ? `Find the ${registration} MCP tools in this client’s tool search and call smartsell_overview with empty arguments. Use the client’s native MCP tools only. If discovery fails, report the exact error and ask me to fully quit and reopen the client. If permission is denied or the connection is expired or revoked, report the exact blocker. After a successful native call, ask me to return to SmartSell and select “Check status again.”`
+    : `請在此客戶端的工具搜尋中找到 ${registration} 的 MCP 工具，並用空參數呼叫 smartsell_overview。只使用此客戶端原生載入的 MCP 工具。若找不到工具，請回報具體錯誤，並請我完整退出後重開客戶端。若授權不足、連線到期或被撤銷，請明確回報原因。原生工具呼叫成功後，請我回 SmartSell 按「重新檢查狀態」。`;
 }

@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, request, workspacePath, type Operation, type Session } from '@smartsell/sdk';
@@ -9,7 +10,7 @@ import { ViewContext } from './data/use-view';
 import { RouterLink } from './parts';
 import { SetupShell, ViewShell } from './ViewShell';
 import { GetStartedPage } from './pages/GetStartedPage';
-import { ManageStoresPage, ManageWorkerAccountsPage } from './pages/worker-management';
+import { ManageStoresPage } from './pages/worker-management';
 import { OverviewPage } from './pages/OverviewPage';
 import { SetupLanding } from './pages/setup-landing';
 import { ProductsPage } from './pages/ProductsPage';
@@ -22,9 +23,24 @@ import { AdsPage } from './pages/AdsPage';
 import { DecisionsPage } from './pages/DecisionsPage';
 import { AgentPage } from './pages/AgentPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { TodayPage } from './pages/TodayPage';
+import { MachinePage, MachinesPage } from './pages/MachinesPage';
+import { ChannelsPage } from './pages/ChannelsPage';
+import { ChannelPage } from './pages/ChannelPage';
+import { PostPage } from './pages/PostPage';
+import { NotificationSettingsPage, NotificationsPage } from './pages/NotificationsPage';
 import './view.css';
 
 export const appPath = (ws: string) => `/app/${encodeURIComponent(ws)}`;
+
+/**
+ * WV-8: a detail page mounts anew for each id, so nothing of the previous item (forms, notices, 改到… time, the 換機器 choice)
+ * carries over when the bell, a link or back/forward moves from one post, machine or channel to another.
+ */
+function KeyedById({ page: Page }: { page: ComponentType }) {
+  const { id = '' } = useParams();
+  return <Page key={id} />;
+}
 
 /** The dashboard mounted at /app/:ws/*; it owns its own stream subscription and query keys. */
 export function ViewApp({ session, compatibility = false }: { session: Session; compatibility?: boolean }) {
@@ -50,7 +66,15 @@ export function ViewApp({ session, compatibility = false }: { session: Session; 
           </Route>
           <Route element={compatibility ? undefined : <SetupLanding />}>
             <Route element={<ViewShell />}>
-              <Route index element={<OverviewPage />} />
+              <Route index element={<TodayPage />} />
+              <Route path="overview" element={<OverviewPage />} />
+              <Route path="machines" element={<MachinesPage />} />
+              <Route path="machines/:id" element={<KeyedById page={MachinePage} />} />
+              <Route path="channels" element={<ChannelsPage />} />
+              <Route path="channels/:id" element={<KeyedById page={ChannelPage} />} />
+              <Route path="posts/:id" element={<KeyedById page={PostPage} />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="settings/notifications" element={<NotificationSettingsPage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="products/stores" element={<ManageStoresPage phase="store" />} />
               <Route path="products/stores/imports" element={<ManageStoresPage key="imports" phase="import" />} />
@@ -62,7 +86,7 @@ export function ViewApp({ session, compatibility = false }: { session: Session; 
               <Route path="ads" element={<AdsPage />} />
               <Route path="decisions" element={<DecisionsPage />} />
               <Route path="agent" element={<AgentPage />} />
-              <Route path="settings/worker-accounts" element={<ManageWorkerAccountsPage />} />
+              <Route path="settings/worker-accounts" element={<Navigate to={`${base}/channels`} replace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to={base} state={{ skipSetupCheck: true }} replace />} />
             </Route>

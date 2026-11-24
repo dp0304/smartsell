@@ -1,4 +1,5 @@
 import { Problem, type Context, type Data, type Input, type Operation, type Row } from '@smartsell/contracts';
+import { deviceOnline } from '../../../../../packages/domain/src/publishing/index.js';
 import { haltSources, policy } from '../account/auto-control.js';
 import { workspace } from './brands.js';
 import { listNotifications, subscriptions } from './notifications.js';
@@ -68,7 +69,8 @@ const projections: Record<string, (ctx: WorkspaceReadContext) => PendingItem[]> 
     const expiredConnection = (row: Row) => is(row, 'active', 'authorized') && timestamp(row.expires_at) <= timestamp(ctx.now);
     const kinds = [
       ['connection', '/connections', (row: Row) => is(row, 'expired', 'revoked', 'reauth_required', 'reauthorization_required', 'needs_reauth') || expiredConnection(row), 'Connection authorization requires attention'],
-      ['connector_device', '/devices', (row: Row) => is(row, 'offline', 'identity_mismatch') || (row.status === 'active' && timestamp(ctx.now) - timestamp(row.last_seen_at) >= 90_000), 'Connector requires attention'],
+      // Online state comes from the in-memory presence (C14, §2.10), not the 5-minute last_seen_at write; a paused machine is intentional.
+      ['connector_device', '/devices', (row: Row) => is(row, 'offline', 'identity_mismatch') || (row.status === 'active' && row.paused !== true && !deviceOnline(ctx, row)), 'Connector requires attention'],
       ['mobile_device', '/mobile-devices', (row: Row) => is(row, 'offline'), 'Paired phone is offline'],
       ['mobile_app_binding', '/mobile-app-bindings', (row: Row) => is(row, 'identity_mismatch') || row.identity_status === 'identity_mismatch', 'Paired phone account identity mismatch'],
       ['account_execution_binding', '/account-execution-bindings', (row: Row) => !!row.auto_stop_reason && !find(ctx, 'account_block', row.auto_stop_block_id), 'Automatic mode requires attention'],

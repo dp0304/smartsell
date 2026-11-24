@@ -1,21 +1,27 @@
 {
   "name": "@smartsell/connector-desktop",
-  "productName": "SmartSell Connector",
-  "version": "0.1.0",
+  "productName": "SmartSell Worker",
+  "version": "0.2.0",
   "private": true,
-  "description": "SmartSell desktop connector",
+  "description": "SmartSell Worker: posts from this machine's Chrome, and the laptop Agent mode",
   "author": "SmartSell",
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:release": "node scripts/build.mjs --packaged",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --experimental-transform-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"../../tests/connector-desktop/*.test.{ts,mts}\"",
     "start": "electron .",
     "package:mac": "npm run build && node scripts/package.mjs mac",
-    "package:win": "npm run build && node scripts/package.mjs win"
+    "package:win": "npm run build && node scripts/package.mjs win",
+    "package:unsigned": "node scripts/build.mjs --packaged && node scripts/package.mjs --unsigned"
   },
-  "dependencies": { "electron-updater": "6.8.11" },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
   "devDependencies": {
+    "@smartsell/agent-relay": "workspace:*",
+    "@smartsell/contracts": "workspace:*",
     "@types/node": "24.19.2",
     "electron": "45.4.1",
     "electron-builder": "26.18.0",

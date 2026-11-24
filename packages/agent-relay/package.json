@@ -1,0 +1,19 @@
+{
+  "name": "@smartsell/agent-relay",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "SmartSell stdio MCP relay: forwards MCP to the hub and handles media_upload locally (chunked, resumable, SHA-256).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "smartsell-relay": "bin/smartsell-relay.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { BarChart3, Bot, BriefcaseBusiness, CalendarDays, Globe, LayoutDashboard, ListChecks, LogOut, Megaphone, Menu, Package, Settings, SlidersHorizontal, Target, Wrench, X, Zap } from 'lucide-react';
+import { AtSign, BarChart3, Bot, BriefcaseBusiness, CalendarDays, Gauge, Globe, LayoutDashboard, ListChecks, LogOut, Megaphone, Menu, Monitor, Package, Settings, SlidersHorizontal, Target, Wrench, X, Zap } from 'lucide-react';
 import { asRecord, request } from '@smartsell/sdk';
 import { isNum, type Tuple } from '@smartsell/ui';
 import { useCopy } from '../i18n';
@@ -12,19 +12,29 @@ import type { AgentConnection, DecisionSummary } from './data/types';
 import { useText } from './parts';
 import { setupText } from './pages/setup-copy';
 import { canSetUp } from './pages/setup-data';
+import { hub } from './hub-copy';
+import { AlertBell } from './pages/NotificationsPage';
+import { useDeveloperMode, useShowMoreModules } from '../preferences';
 import './setup-entry.css';
 
+/** Core navigation (phase1-design §9.1, owner decision: core only). */
 export const navEntries = [
-  { path: '', icon: LayoutDashboard, label: copy.nav.overview },
-  { path: 'products', icon: Package, label: copy.nav.products },
-  { path: 'plans', icon: Megaphone, label: copy.nav.plans },
+  { path: '', icon: LayoutDashboard, label: hub.nav.today },
   { path: 'calendar', icon: CalendarDays, label: copy.nav.calendar },
-  { path: 'social', icon: BarChart3, label: copy.nav.social },
-  { path: 'ads', icon: Target, label: copy.nav.ads },
-  { path: 'decisions', icon: ListChecks, label: copy.nav.decisions },
+  { path: 'machines', icon: Monitor, label: hub.nav.machines },
+  { path: 'channels', icon: AtSign, label: hub.nav.channels },
   { path: 'agent', icon: Bot, label: copy.nav.agent },
   { path: 'settings', icon: Settings, label: copy.nav.settings },
   { path: 'get-started', icon: SlidersHorizontal, label: setupText.title },
+] as const;
+/** Hidden modules: routes and code stay; Settings → 介面 → 顯示其他模組 lists them here. */
+export const moreEntries = [
+  { path: 'overview', icon: Gauge, label: copy.nav.overview },
+  { path: 'products', icon: Package, label: copy.nav.products },
+  { path: 'plans', icon: Megaphone, label: copy.nav.plans },
+  { path: 'social', icon: BarChart3, label: copy.nav.social },
+  { path: 'ads', icon: Target, label: copy.nav.ads },
+  { path: 'decisions', icon: ListChecks, label: copy.nav.decisions },
 ] as const;
 
 // Read by every page, so it is a small read model rather than the whole home view.
@@ -125,7 +135,9 @@ export function ViewShell() {
   const closeButton = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLElement>(null);
   const section = sectionOf(pathname);
-  const summary = useView<DecisionSummary>('/views/decisions/summary');
+  const more = useShowMoreModules() || moreEntries.some(entry => entry.path === section);
+  const developer = useDeveloperMode();
+  const summary = useView<DecisionSummary>('/views/decisions/summary', {}, { enabled: more });
   const pending = summary.value?.total;
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
@@ -153,12 +165,22 @@ export function ViewShell() {
           const Icon = entry.icon;
           return <Link key={entry.path} to={{ pathname: entry.path ? `${base}/${entry.path}` : base, search: carry ? `?${carry}` : '' }} aria-current={current ? 'page' : undefined} className={current ? 'active' : undefined} onClick={open ? closeMenu : undefined}>
             <Icon size={17} aria-hidden="true" /><span>{l(entry.label)}</span>
-            {entry.path === 'decisions' && isNum(pending) && pending > 0 && <span className="vs-badge" aria-label={`${pending} ${l(copy.nav.pending)}`}>{pending > 99 ? '99+' : pending}</span>}
           </Link>;
         })}
+        {more && <>
+          <span className="vs-nav-group">{l(hub.nav.more)}</span>
+          {moreEntries.map(entry => {
+            const current = section === entry.path;
+            const Icon = entry.icon;
+            return <Link key={entry.path} to={{ pathname: `${base}/${entry.path}`, search: carry ? `?${carry}` : '' }} aria-current={current ? 'page' : undefined} className={current ? 'active' : undefined} onClick={open ? closeMenu : undefined}>
+              <Icon size={17} aria-hidden="true" /><span>{l(entry.label)}</span>
+              {entry.path === 'decisions' && isNum(pending) && pending > 0 && <span className="vs-badge" aria-label={`${pending} ${l(copy.nav.pending)}`}>{pending > 99 ? '99+' : pending}</span>}
+            </Link>;
+          })}
+        </>}
       </nav>
       <div className="vs-nav-foot">
-        <Link to={`/w/${encodeURIComponent(ws)}/home`} className="vs-advanced"><Wrench size={15} aria-hidden="true" />{l(copy.nav.advanced)}</Link>
+        {(more || developer) && <Link to={`/w/${encodeURIComponent(ws)}/home`} className="vs-advanced"><Wrench size={15} aria-hidden="true" />{l(copy.nav.advanced)}</Link>}
         <div className="vs-user"><span className="vs-avatar" aria-hidden="true">{(user || 'S').slice(0, 1).toUpperCase()}</span><span title={session.user.email}>{user}</span><SignOut /></div>
       </div>
     </aside>
@@ -170,6 +192,7 @@ export function ViewShell() {
         {Object.hasOwn(periodDefaults, section) && <PeriodPicker defaultDays={periodDefaults[section]} />}
         <span className="vs-top-spacer" />
         <AgentDot to={`${base}/agent`} />
+        <AlertBell />
         <Language />
       </header>
       <main className="vs-content" id="vs-content" ref={content} tabIndex={-1}><Outlet /></main>

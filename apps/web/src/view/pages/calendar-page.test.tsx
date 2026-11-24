@@ -50,7 +50,8 @@ test('month view answers first, draws the plan as bars across weeks and marks wh
   assert.match(out, /cal-next-title[^>]*>新品開箱</);
   assert.match(out, /3月4日週三 15:30/, 'Times are shown in the workspace zone');
   assert.match(out, /cal-tile-number">1</);
-  assert.match(out, /href="\/app\/w1\/decisions"/);
+  // 「待你決定」 is merged into Today (§9.1): the summary sends the person there.
+  assert.match(out, /href="\/app\/w1"[^>]*>到今日處理</);
   // 2 March – 15 March (ends_at is exclusive) covers two Monday-first weeks.
   assert.equal(out.match(/class="cal-bar cal-k-plan/g)?.length, 2);
   assert.match(out, /cal-bar cal-k-plan after/);
@@ -83,10 +84,12 @@ test('kind chips filter the calendar and stay the legend', async () => {
   assert.match(none, /目前的篩選隱藏了這段期間的 3 件事/);
 });
 
-test('an empty period tells the person what to ask their agent', async () => {
+test('an empty period says how posts get here and links to real pages instead of a prompt to copy (§9.5)', async () => {
   const out = await render('/app/w1/calendar?month=2099-03', view([]), march);
   assert.match(out, /這段期間沒有任何排程/);
-  assert.match(out, /幫我把 2099年3月 的社群發布排程和推廣檔期排好/);
+  assert.match(out, /在 Codex 說「明天 9:00 把 video\.mp4 發到 X」/);
+  assert.match(out, /href="\/app\/w1\/channels"/);
+  assert.doesNotMatch(out, /幫我把 2099年3月 的社群發布排程和推廣檔期排好/);
   assert.doesNotMatch(out, /cal-summary/);
 });
 

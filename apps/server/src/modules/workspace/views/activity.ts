@@ -109,6 +109,32 @@ const described: Record<string, [Verb, string, string]> = {
   change_sets_create: ['submitted', '提出了變更', 'Proposed changes'],
   change_sets_apply: ['approved', '套用了變更', 'Applied changes'],
   change_sets_reject: ['other', '拒絕了變更', 'Rejected changes'],
+  // Phase 1 (hub_* operations, §4.6, §5.14, §7)
+  hub_posts_schedule: ['created', '排程了貼文', 'Scheduled posts'],
+  hub_posts_update: ['updated', '修改了貼文', 'Updated a post'],
+  hub_publishing_pause: ['other', '暫停了發布', 'Paused publishing'],
+  hub_channels_check: ['other', '檢查了帳號登入', 'Checked a channel login'],
+  hub_channels_update_settings: ['updated', '更新了帳號設定', 'Updated channel settings'],
+  hub_channels_ack_automation_notice: ['approved', '確認了自動化告知', 'Acknowledged the automation notice'],
+  hub_channels_ack_risk: ['approved', '同意了代按發布的風險', 'Accepted the posting risk'],
+  hub_channels_clear_risk_ack: ['other', '撤回了代按發布的同意', 'Withdrew the posting risk acceptance'],
+  hub_channels_bind_machine: ['updated', '把帳號換到另一台機器', 'Moved a channel to another machine'],
+  hub_channels_dry_run: ['other', '試跑了帳號', 'Ran a dry run'],
+  hub_machines_update: ['updated', '改了機器名稱', 'Renamed a machine'],
+  hub_machines_pause: ['other', '暫停了機器', 'Paused a machine'],
+  hub_machines_resume: ['other', '恢復了機器', 'Resumed a machine'],
+  hub_machines_retire: ['other', '撤銷了機器', 'Retired a machine'],
+  hub_posts_confirm_result: ['approved', '確認了貼文已發出', 'Confirmed a post went out'],
+  hub_posts_mark_not_published: ['other', '確認了貼文沒有發出', 'Confirmed a post did not go out'],
+  hub_posts_retry: ['other', '重試了貼文', 'Retried a post'],
+  hub_jobs_resume: ['other', '恢復了停下的工作', 'Resumed a stopped job'],
+  hub_jobs_force_release: ['other', '強制釋放了工作', 'Force-released a job'],
+  hub_alerts_update_channels: ['updated', '更新了推播設定', 'Updated push settings'],
+  hub_alerts_test: ['other', '傳了一則測試推播', 'Sent a test push'],
+  hub_alerts_read: ['updated', '把通知標為已讀', 'Marked alerts read'],
+  agent_connection_create: ['created', '建立了 Agent 連線', 'Created an Agent connection'],
+  agent_connection_revoke: ['deleted', '撤銷了 Agent 連線', 'Revoked an Agent connection'],
+  account_issue_device_pairing_code: ['created', '產生了機器配對碼', 'Issued a machine pairing code'],
 };
 
 function inferVerb(action: string): Verb {
@@ -122,7 +148,9 @@ function inferVerb(action: string): Verb {
 export function describeAction(action: string, count = 1): { verb: Verb; summary: Label } {
   const known = described[action];
   const [zh, en] = known ? [known[1], known[2]] : [`執行了 ${action}`, `Ran ${action}`];
-  return { verb: known?.[0] ?? inferVerb(action), summary: count > 1 ? [`${zh} ×${count}`, `${en} ×${count}`] : [zh, en] };
+  // The count travels in the item's own `count`; the shared ActivityList renders 「×N」 from it, so the sentence does not repeat it.
+  void count;
+  return { verb: known?.[0] ?? inferVerb(action), summary: [zh, en] };
 }
 
 const titles: Record<string, (row: Row, find: (kind: string, id: unknown) => Row | undefined) => unknown> = {

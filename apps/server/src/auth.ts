@@ -75,26 +75,68 @@ async function newPasswordHash(password: string, minimum = DEFAULT_PASSWORD_MIN)
 
 export type AuthOptions = SetupPolicy & { secureCookie: boolean; origins: ReadonlySet<string> };
 
+const rateLimited = () => new DomainError('rate_limited', 'Try again later', 429);
+
+/** Attempts per client address per minute (login, setup, invitations; `mfa:` keys for the second factor). */
+export const CLIENT_ATTEMPTS_PER_MINUTE = 10;
+/** SEC-2: failed sign-ins per sign-in name per 15 minutes, whatever address or X-Forwarded-For the requests claim. */
+export const ACCOUNT_FAILURES_PER_WINDOW = 20;
+export const ACCOUNT_FAILURE_WINDOW_MS = 15 * 60_000;
+
+/**
+ * SEC-2: a fixed-window counter that never locks everyone out when it is full. Expired entries go first, then the oldest
+ * ones, so flooding it with made-up keys only ages out other made-up keys instead of refusing every newcomer.
+ */
+export function createThrottle(options: { limit: number; windowMs: number; capacity?: number; now?: () => number }) {
+  const entries = new Map<string, { count: number; until: number }>();
+  const capacity = options.capacity ?? 10_000;
+  const clock = options.now ?? Date.now;
+  let nextSweep = 0;
+  const sweep = (now: number) => {
+    for (const [key, value] of entries) if (value.until <= now) entries.delete(key);
+    nextSweep = now + 60_000;
+  };
+  function entry(key: string, now: number) {
+    if (now >= nextSweep) sweep(now);
+    let value = entries.get(key);
+    if (!value || value.until <= now) {
+      entries.delete(key);
+      if (entries.size >= capacity) sweep(now);
+      // Map order is insertion order: the first key is the oldest window.
+      while (entries.size >= capacity) entries.delete(entries.keys().next().value!);
+      value = { count: 0, until: now + options.windowMs };
+      entries.set(key, value);
+    }
+    return value;
+  }
+  return {
+    /** Counts one attempt and throws 429 once `key` went over its limit in the current window. */
+    hit(key: string) {
+      if (++entry(key, clock()).count > options.limit) throw rateLimited();
+    },
+    /** Counts one failure without throwing (the caller is already answering). */
+    record(key: string) { entry(key, clock()).count++; },
+    /** True when `key` has used its whole budget in the current window; counts nothing. */
+    exhausted(key: string) {
+      const value = entries.get(key);
+      return !!value && value.until > clock() && value.count >= options.limit;
+    },
+    clear(key: string) { entries.delete(key); },
+    get size() { return entries.size; },
+  };
+}
+
 export function auth(store: Store, options: AuthOptions, identity?: ReturnType<typeof commandIdentity>,
   csrfToken?: (hash: string) => string | undefined) {
   const cookieName = options.secureCookie ? '__Host-smartsell_session' : 'smartsell_session';
-  const attempts = new Map<string, { count: number; until: number }>();
-  let nextSweep = 0;
-
-  function throttle(ip: string) {
-    const now = Date.now();
-    if (now >= nextSweep) {
-      for (const [key, value] of attempts) if (value.until <= now) attempts.delete(key);
-      nextSweep = now + 60_000;
-    }
-    let value = attempts.get(ip);
-    if (!value || value.until <= now) {
-      if (attempts.size >= 10_000) throw new DomainError('rate_limited', 'Try again later', 429);
-      value = { count: 0, until: now + 60_000 };
-      attempts.set(ip, value);
-    }
-    if (++value.count > 10) throw new DomainError('rate_limited', 'Try again later', 429);
-  }
+  // Keyed by request.ip. On the hub that is the X-Forwarded-For client of `tailscale serve` (trustProxy 127.0.0.1, config.ts),
+  // which a process on the hub machine itself can set freely; the per-account limit below is what no header can bypass.
+  const clients = createThrottle({ limit: CLIENT_ATTEMPTS_PER_MINUTE, windowMs: 60_000 });
+  // Existing accounts and made-up names are counted apart: the same 429 for both (no enumeration), and flooding the map
+  // with made-up names can never age out the owner's counter.
+  const accounts = createThrottle({ limit: ACCOUNT_FAILURES_PER_WINDOW, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  const unknownAccounts = createThrottle({ limit: ACCOUNT_FAILURES_PER_WINDOW, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  const throttle = (ip: string) => clients.hit(ip);
 
   function tokenHash(request: FastifyRequest) {
     const matches = header(request, 'cookie')?.split(';').map(value => value.trim()).filter(value => value.startsWith(`${cookieName}=`));
@@ -131,11 +173,16 @@ export function auth(store: Store, options: AuthOptions, identity?: ReturnType<t
     async login(request: FastifyRequest, reply: FastifyReply) {
       throttle(request.ip);
       const { identifier, password } = credentials(requestObject(request.body), true);
+      // SEC-2: an account that failed too often in the window answers 429 before any password work, from every address.
+      const account = identifier.username !== undefined ? `username:${identifier.username}` : `email:${identifier.email}`;
+      if (accounts.exhausted(account) || unknownAccounts.exhausted(account)) throw rateLimited();
       const user = await store.credentials(identifier);
       const matches = await passwordMatches(user?.passwordHash, password);
       if (!user || !matches) {
+        (user ? accounts : unknownAccounts).record(account);
         throw new DomainError('invalid_credentials', 'Invalid sign-in credentials', 401);
       }
+      accounts.clear(account);
       const token = opaque();
       const hash = digest(token).toString('hex');
       if (identity) {

@@ -10,7 +10,10 @@
     "dev:kernel": "tsx watch src/kernel-main.ts",
     "start:kernel": "tsx src/kernel-main.ts",
     "identity:configure": "tsx src/integration/configure-enterprise.ts",
-    "test": "tsx --test src/core.test.ts src/postgres.test.ts test/kernel.test.ts"
+    "test": "tsx --test src/core.test.ts src/postgres.test.ts test/kernel.test.ts",
+    "hub": "node --import tsx hub.ts",
+    "hub:check": "node --import tsx hub.ts --check",
+    "hub:init": "node --import tsx hub-init.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

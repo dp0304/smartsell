@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { expect, test as base } from '@playwright/test';
 import { localDev } from './local-dev.mjs';
+import { expectWizardStep, finishLater } from './phase1-shell.mjs';
 
 const test = base.extend({ dev: localDev });
 // These tests drive the developer surfaces (Tools, the compatibility workbench and raw operations),
@@ -210,13 +211,13 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   const dashboard = `/app/${wid}`;
   const home = `${dev.origin}/w/${wid}/home`;
   const main = page.getByRole('main');
-  const overview = main.getByRole('heading', { name: 'Overview', ...exact });
-  await expect(main.getByRole('heading', { name: 'Get started', ...exact })).toBeVisible();
+  // The dashboard index is Today in phase 1 (§9.1).
+  const today = main.getByRole('heading', { level: 1, name: 'Today', ...exact });
+  // An empty workspace opens the five-step first-run wizard (§2.9) on its first step.
   await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
-  await expect(main.getByText('Step 1 of 2', exact)).toBeVisible();
-  await main.getByRole('link', { name: 'Finish later and go to overview', ...exact }).click();
-  await expect(overview).toBeVisible();
-  await expect(page).toHaveURL(dev.origin + dashboard);
+  await expectWizardStep(page, 'workspace', { locale: 'en' });
+  expect(await finishLater(page, 'en')).toBe(dev.origin + dashboard);
+  await expect(today).toBeVisible();
   await page.getByRole('link', { name: 'Advanced workbench', ...exact }).click();
   await expect(page.getByRole('heading', { name: 'Today’s operations', ...exact })).toBeVisible();
   await expect(page).toHaveURL(home);
@@ -280,7 +281,7 @@ test('strict UI | default setup, catalog-backed write and reciprocal workspace l
   const login = responseFor(page, 'POST', '/session');
   await page.getByRole('button', { name: 'Sign in', ...exact }).click();
   await checkResponse(await login, 200, 'Default UI sign-in');
-  await expect(overview).toBeVisible();
+  await expect(today).toBeVisible();
   await expect(page).toHaveURL(dev.origin + dashboard);
   expect(errors).toEqual([]);
 });

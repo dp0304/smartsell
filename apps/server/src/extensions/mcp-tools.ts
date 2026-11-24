@@ -42,7 +42,8 @@ interface ToolConfig {
   id?: string;
   query?: readonly string[];
   write?: 'update' | 'create';
-  result: 'jobs' | 'job' | 'operation' | 'change' | 'templates' | 'rules' | 'intel' | 'approved_read' | 'operation_call';
+  /** 'hub': a phase 1 hub tool (integration/mcp-hub-tools.ts); its result is the tool's own JSON object (§7.2). */
+  result: 'jobs' | 'job' | 'operation' | 'change' | 'templates' | 'rules' | 'intel' | 'approved_read' | 'operation_call' | 'hub';
   needsOutputPolicy?: boolean;
 }
 
@@ -263,6 +264,7 @@ export function projectMcpResult(tool: McpToolDefinition, value: unknown): JsonR
     }
     case 'approved_read': return isRecord(value) ? value : undefined;
     case 'operation_call': return isRecord(value) && isRecord(value.body) ? value : undefined;
+    case 'hub': return isRecord(value) ? value : undefined;
     case 'templates':
     case 'rules':
     case 'intel': return {};

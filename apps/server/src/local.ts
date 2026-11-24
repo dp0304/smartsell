@@ -62,8 +62,21 @@ function checkedFile(path: string, existing: boolean) {
   return stat;
 }
 
+/** How long a connection waits for another one's lock (a backup reading the file, hub:update's copy) before SQLITE_BUSY. */
+export const BUSY_TIMEOUT_MS = 5_000;
+
+/**
+ * E45 (AO-8): durability settings for every connection to the hub's SQLite file. On macOS a plain fsync does not flush
+ * the drive's write cache, so a power cut could lose acknowledged Worker facts or corrupt the only data file; fullfsync
+ * asks for F_FULLFSYNC. The busy timeout lets a write wait out a backup's short read lock instead of failing.
+ */
+export function applyDurability(db: DatabaseSync, platform: NodeJS.Platform = process.platform) {
+  db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
+  if (platform === 'darwin') db.exec('PRAGMA fullfsync = ON; PRAGMA checkpoint_fullfsync = ON');
+}
+
 /** A loopback preview store. Existing-only mode never creates a database or initializes its schema. */
-export function localStore(path: string, { existing = false } = {}) {
+export function localStore(path: string, { existing = false, platform = process.platform }: { existing?: boolean; platform?: NodeJS.Platform } = {}) {
   if (!existing) {
     mkdirSync(dirname(path), { mode: 0o700, recursive: true });
     try { closeSync(openSync(path, 'wx', 0o600)); }
@@ -76,6 +89,7 @@ export function localStore(path: string, { existing = false } = {}) {
   };
   const db = new DatabaseSync(existing ? `${pathToFileURL(path).href}?mode=rw` : path);
   try {
+    applyDurability(db, platform);
     if (existing) {
       verifyFile();
       db.exec('BEGIN IMMEDIATE; ROLLBACK');
@@ -102,7 +116,12 @@ export function localStore(path: string, { existing = false } = {}) {
       },
       close() { db.close(); },
     };
-    return new LocalStore(persistence);
+    /** A PRAGMA value of this store's own connection (per-connection settings are invisible to any other connection). */
+    const pragma = (name: 'fullfsync' | 'checkpoint_fullfsync' | 'busy_timeout' | 'synchronous') => {
+      const row = db.prepare(`PRAGMA ${name}`).get() as Record<string, unknown> | undefined;
+      return row ? Number(Object.values(row)[0]) : undefined;
+    };
+    return Object.assign(new LocalStore(persistence), { pragma });
   } catch (error) {
     db.close();
     throw error;

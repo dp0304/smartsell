@@ -53,7 +53,7 @@ test('activity groups consecutive same-credential actions within ten minutes, ne
   assert.deepEqual(items[1], {
     id: items[1]!.id, occurred_at: '2026-11-20T11:57:00.000Z',
     actor: { type: 'agent', user_id: 'owner', credential_id: 'cred-claude', label: 'Claude Code' },
-    source: 'mcp', action: 'campaign_update', verb: 'updated', summary: ['更新了推廣計劃 ×2', 'Updated a campaign ×2'],
+    source: 'mcp', action: 'campaign_update', verb: 'updated', summary: ['更新了推廣計劃', 'Updated a campaign'],
     resource: { type: 'campaign', id: campaign.id, title: 'Winter launch' }, count: 2,
   });
   assert.deepEqual(items[2]!.actor, { type: 'human', user_id: 'owner', credential_id: null, label: null });
@@ -88,7 +88,7 @@ test('agent presence is unknown without attributed events and counts credentials
   agent(30, 'content_create_item', { credential_id: 'cred-codex' });
   assert.deepEqual(agentPresence(ctx), { connections: 2, last_seen_at: '2026-11-20T11:30:00.000Z' });
   assert.deepEqual(describeAction('publishing_archive_slot_template').verb, 'deleted');
-  assert.deepEqual(describeAction('publishing_create_target', 3).summary, ['建立了發布排期 ×3', 'Created a publish schedule ×3']);
+  assert.deepEqual(describeAction('publishing_create_target', 3).summary, ['建立了發布排期', 'Created a publish schedule'], 'the count is rendered from item.count');
 });
 
 test('activity names and links only resources the caller may read in their own module', () => {

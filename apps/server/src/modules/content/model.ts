@@ -8,7 +8,7 @@ export const kinds = {
   revision: 'content_revision', reference: 'content_reference', stage: 'content_stage_history',
   translation: 'translation_link', feed: 'feed_source', feedItem: 'feed_item',
 } as const;
-export const platforms = ['instagram', 'facebook', 'tiktok', 'youtube', 'douyin', 'xiaohongshu', 'generic'];
+export const platforms = ['instagram', 'facebook', 'tiktok', 'youtube', 'douyin', 'xiaohongshu', 'x', 'generic'];
 export const formats = ['feed_image', 'carousel', 'reel', 'story', 'short_video', 'long_video', 'text', 'note', 'live_teaser'];
 export const stages = ['accepted', 'drafting', 'design', 'awaiting_assets', 'internal_review', 'ready', 'archived'];
 
@@ -74,13 +74,17 @@ export function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(stable(value)) ?? 'undefined').digest('hex');
 }
 
+/** Platform options only a person selects. Agents reach them only through the channel defaults (phase1-design §4.4). */
 const humanOptions: Record<string, string[]> = {
-  tiktok: ['privacy_level', 'commercial_disclosure', 'allow_comment', 'allow_duet', 'allow_stitch'],
+  tiktok: ['privacy_level', 'commercial_disclosure', 'allow_comment', 'allow_duet', 'allow_stitch', 'ai_generated'],
   douyin: ['visibility'], xiaohongshu: ['visibility'],
   youtube: ['title', 'categoryId', 'madeForKids', 'containsSyntheticMedia'],
+  x: ['reply_settings'],
 };
 const interactions = ['allow_comment', 'allow_duet', 'allow_stitch'];
+const booleanOptions = ['madeForKids', 'containsSyntheticMedia', 'ai_generated'];
 const disclosures = ['none', 'your_brand', 'branded_content', 'both'];
+export const xReplySettings = ['everyone', 'following', 'mentioned', 'verified'];
 const draftFields = ['body', 'body_doc', 'media', 'asset_version_ids', 'product_refs', 'link_refs', 'knowledge_refs', 'settings', 'template_application'];
 const settingsFields = ['first_comment', 'location', 'user_tags', 'collaborators', 'product_tag', 'music_ref', 'visibility_hint', 'disclosure', 'platform_options'];
 
@@ -109,9 +113,11 @@ function platformSettings(input: Fields, prior: Fields, platform: string, agent:
       if (agent && (!interactions.includes(field) || setting !== false)) fail('human_selection_required', `Only a human may select ${field}`, 403);
       if (agent) continue;
       if (!interactions.includes(field) && setting === null) delete merged[field];
-      else if (interactions.includes(field) || field === 'madeForKids' || field === 'containsSyntheticMedia') {
+      else if (interactions.includes(field) || booleanOptions.includes(field)) {
         if (typeof setting !== 'boolean') fail('invalid_input', `Invalid ${field}`);
         merged[field] = setting;
+      } else if (field === 'reply_settings') {
+        merged[field] = choice(setting, field, xReplySettings);
       } else if (field === 'categoryId') {
         if (typeof setting !== 'string' || !/^\d{1,3}$/.test(setting)) fail('invalid_input', `Invalid ${field}`);
         merged[field] = setting;

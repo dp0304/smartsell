@@ -105,13 +105,16 @@ export async function commit(ctx: Context, variant: Entity, draft: Fields, origi
   }
   const pinned = await pinProductFacts(ctx, variant.data, draft, [...(head?.data.product_refs ?? []), ...(variant.data.draft_doc?.product_refs ?? [])], !!restoredFrom);
   const frozen = { ...pinned, media };
+  // A channel_defaults revision only applies the owner's account defaults to the head content (phase1-design §4.4).
+  const createdByType = origin === 'agent' ? 'agent' : origin === 'channel_defaults' ? 'system' : 'user';
+  const aiGenerated = origin === 'agent' || origin === 'channel_defaults' && head?.data.ai_generated === true;
   const revision = await insert(ctx, kinds.revision, {
-    ...frozen, variant_id: variant.id, author_id: ctx.actorId, created_by_id: ctx.actorId, created_by_type: origin === 'agent' ? 'agent' : 'user',
+    ...frozen, variant_id: variant.id, author_id: ctx.actorId, created_by_id: ctx.actorId, created_by_type: createdByType,
     platform: variant.data.platform, format: variant.data.format, locale: variant.data.locale, market: variant.data.market,
     market_id: variant.data.market, campaign_id: variant.data.campaign_id, revision_no: (head?.data.revision_no ?? 0) + 1,
     based_on_revision_id: head?.id ?? null, ...(restoredFrom ? { restored_from_revision_id: restoredFrom } : {}),
     ...(!head && variant.data.derived_from_revision_id ? { derived_from_revision_id: variant.data.derived_from_revision_id } : {}),
-    origin, ai_generated: origin === 'agent', rendered: render(frozen), content_hash: hash(frozen),
+    origin, ai_generated: aiGenerated, rendered: render(frozen), content_hash: hash(frozen),
   });
   for (const reference of references(frozen)) await insert(ctx, kinds.reference, { revision_id: revision.id, ...reference });
   const readiness = variant.data.readiness === 'stale' || head?.data.content_hash === revision.data.content_hash ? variant.data.readiness : 'draft';
@@ -252,6 +255,9 @@ export async function handleContentEvent(ctx: Context, event: string, payload: F
   }
   const mapping = Object.hasOwn(staleEvents, event) ? staleEvents[event] : undefined;
   if (!mapping) return;
+  // An agent upload's first version is the bytes of an asset that was already referenced while uploading (§6.4 step 3.4),
+  // not a content change: posts scheduled during the upload must not go stale when it completes (S5 ledger item 11).
+  if (event === 'asset.version.created' && payload.source === 'agent_upload') return;
   const referenceIds = new Set(mapping.keys.map(key => payload[key]).filter(Boolean));
   if (payload.fact_id && ['commerce.fact.approved', 'commerce.fact.retracted'].includes(event)) {
     const fact = await ctx.get('commerce', 'product_fact', payload.fact_id);

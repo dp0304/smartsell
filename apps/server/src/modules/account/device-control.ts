@@ -3,6 +3,8 @@ import type { Context, Data, Row } from '@smartsell/contracts';
 import { audit, fail, find, iso, matches, one, text, time } from './input.ts';
 import { digest } from './oauth.ts';
 import { stopAuto } from './auto-control.ts';
+import { deviceNonceStore } from '../worker/nonces.ts';
+import { isMachineOnline } from '../worker/presence.ts';
 
 export interface SignedDeviceRequest { device_id: string; timestamp: string; nonce: string; signature: string }
 export const severeBlocks = ['captcha', 'platform_restriction', 'identity_mismatch'] as const;
@@ -44,7 +46,10 @@ export function pairDevice(ctx: Context, body: Data) {
   const bytes = Buffer.from(JSON.stringify(['smartsell.pair.v1', ctx.workspaceId, body.pairing_code, encoded, platform, name]));
   if (!verify(null, bytes, publicKey(encoded), Buffer.from(proof, 'base64url'))) fail('INVALID_DEVICE_PROOF', 401);
   if (find(ctx, 'connector_device', { public_key: encoded })) fail('DEVICE_ALREADY_PAIRED');
+  // §3.2/§2.9: the name the owner typed in the Worker App; shown instead of the host name. Optional for older Workers.
+  const displayName = body.display_name === undefined || body.display_name === null ? null : text(body.display_name, 60).trim();
   const device = ctx.create('connector_device', { name, platform, public_key: encoded, owner_id: code.created_by, status: 'active', last_seen_at: null,
+    display_name: displayName, protocol: 1, paused: false,
     ...(code.allow_channel_registration === true && { allow_channel_registration: true }) });
   ctx.update('device_pairing_code', code.id, { used_at: ctx.now });
   audit(ctx, 'account.device.paired', { device_id: device.id, approved_by: code.created_by });
@@ -61,12 +66,19 @@ export function authenticateDevice(ctx: Context, action: string, rawBody: Uint8A
   if (device.status !== 'active') fail('DEVICE_INACTIVE', 401);
   const signature = matches(signed.signature, /^[A-Za-z0-9_-]{86}$/, 86);
   if (!verify(null, deviceRequestBytes(ctx.workspaceId, device.id, action, timestamp, nonce, rawBody), publicKey(String(device.public_key)), Buffer.from(signature, 'base64url'))) fail('INVALID_DEVICE_PROOF', 401);
+  // §2.10: the hub keeps nonces in memory (no snapshot write per heartbeat); Postgres keeps device_nonce records.
+  const nonces = deviceNonceStore();
+  if (nonces !== 'records') {
+    nonces.use(device.id, nonce, issuedAt, time(ctx));
+    return device;
+  }
   if (find(ctx, 'device_nonce', { device_id: device.id, nonce })) fail('DEVICE_PROOF_REPLAYED', 401);
   ctx.create('device_nonce', { device_id: device.id, nonce, expires_at: iso(issuedAt + 61_000) });
   return device;
 }
 
-export const online = (ctx: Context, row: Row) => row.status === 'active' && time(ctx) - Date.parse(String(row.last_seen_at)) < 90_000;
+/** §2.10: every online check goes through the in-memory presence first (the row is written at most every 5 minutes). */
+export const online = (ctx: Context, row: Row) => isMachineOnline(ctx, row);
 
 export function bindingFor(ctx: Context, accountId: string) {
   return find(ctx, 'account_execution_binding', { social_account_id: accountId });

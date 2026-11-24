@@ -56,6 +56,11 @@ export interface Operation {
     output?: Record<string, unknown>;
     query?: readonly string[];
   };
+  /**
+   * E22: a read whose result is an object (not paginated by the runner) receives `limit` in its query. Array results never
+   * set this: the runner paginates them and would lose every page after the first.
+   */
+  ownsLimit?: boolean;
   /** Apply operation-specific resource visibility before version checks and replay. */
   scopeContext?(ctx: Context, input: Input): Context;
   /** Supply ordered rows for shared REST pagination when the operation has a legacy result shape. */

@@ -1,12 +1,17 @@
-import { describe, expect, it } from 'vitest';
-import { Problem, type Context, type Data, type Role, type Row } from '@smartsell/contracts';
+import { afterEach, describe, expect, it } from 'vitest';
+import { AUTOMATION_NOTICE_VERSION, Problem, RISK_TERMS_VERSION, derivePostStatus, type Context, type Data, type Role, type Row } from '@smartsell/contracts';
 import { assessTarget, onRevisionCreated, resolveLocal } from '../../../../../packages/domain/src/publishing/index.js';
 import { createAdapter } from '../../../../../packages/adapters/src/official.js';
 import { completeOAuth, startOAuth } from '../account/oauth.js';
-import { applyPlanningEvent, operations, scanPlanningDue } from './index.js';
+import { applyPlanningEvent, operations, resubmitIfWaiting, scanPlanningDue, submit as submitTarget, updateTarget } from './index.js';
+import { channelOperations } from '../account/channel-ops.js';
+import { machineOperations } from '../account/machine-ops.js';
+import { approvalDeadline, ensureChannelSettings, setWorkerEngineHooks } from '../account/channel-settings.js';
+import { applyChannelDefaults, commitVariantRevision } from '../content/index.js';
 import { operations as assets } from '../asset/index.js';
 import { operations as contentOperations } from '../content/index.js';
 import { operations as execution } from '../execution/index.js';
+import { deviceSyncState, setJob } from '../worker/model.js';
 
 function fixture() {
   const rows = new Map<string, Row[]>();
@@ -35,7 +40,7 @@ function fixture() {
     emit(type, payload) { events.push({ type, payload }); },
   };
   function run(name: string, body: Data = {}, id = '', role: Role = ctx.role, expectedVersion?: number, query: Record<string, string> = {}) {
-    const operation = [...operations, ...assets, ...contentOperations, ...execution].find(item => item.name === name)!;
+    const operation = [...operations, ...assets, ...contentOperations, ...execution, ...channelOperations, ...machineOperations].find(item => item.name === name)!;
     if (!operation.roles.includes(role)) throw new Problem(403, 'PERMISSION_DENIED', name);
     if (operation.versionKind && expectedVersion === undefined) throw new Problem(428, 'VERSION_REQUIRED', name);
     return operation.run({ ...ctx, role }, { body, params: { id }, query, expectedVersion });
@@ -507,5 +512,467 @@ describe('publishing planning', () => {
     expect(post).toMatchObject({ verification: 'manual_confirmed', publish_target_id: target.id });
     expect(ctx.get('execution_task', task.id).status).toBe('published');
     expect(ctx.get('publish_target', target.id).plan_status).toBe('closed');
+  });
+});
+
+// ---------- Phase 1 channels: approval policy and resubmission (phase1-design §4, S2) ----------
+
+async function channelFixture(provider: 'x' | 'tiktok' = 'x', approval: 'direct' | 'needs_approval' = 'needs_approval') {
+  const base = fixture();
+  const { ctx, run } = base;
+  ctx.create('workspace', { name: 'Fixture', default_timezone: 'UTC' });
+  const device = ctx.create('connector_device', { name: 'mac-b.local', display_name: 'Mac-B', status: 'active', last_seen_at: ctx.now });
+  const channel = ctx.create('social_account', { provider, status: 'active', brand_id: 'brand', default_timezone: 'UTC', handle: 'lurelab', external_account_id: provider === 'x' ? 'lurelab' : '7000000001' });
+  const binding = ctx.create('account_execution_binding', { social_account_id: channel.id, mode: 'connector', connector_channel: 'browser', device_id: device.id, connector_mode: 'assist' });
+  ctx.create('browser_session', { binding_id: binding.id, device_id: device.id, social_account_id: channel.id, status: 'verified' });
+  const created = ensureChannelSettings(ctx, channel.id);
+  ctx.update('channel_settings', created.id, {
+    approval_mode: approval, automation_notice_ack: { at: ctx.now, via: 'worker_app', by: `device:${device.id}`, version: AUTOMATION_NOTICE_VERSION },
+    risk_ack: { at: ctx.now, by_user_id: 'owner', terms_version: RISK_TERMS_VERSION, text_sha256: 'f'.repeat(64) },
+  });
+  const file = ctx.create('file_object', { purpose: 'asset', sha256: 'b'.repeat(64), scan_status: 'skipped', mime_type: 'video/mp4', byte_size: 30_000_000 });
+  const asset = ctx.create('asset', { kind: 'video', brand_id: null, ownership: 'owned', origin: 'agent_upload', status: 'ready', title: 'video.mp4' });
+  const version = ctx.create('asset_version', { asset_id: asset.id, file_object_id: file.id, sha256: 'b'.repeat(64), mime_type: 'video/mp4', meta: { duration_ms: 12_000 } });
+  ctx.update('asset', asset.id, { current_version_id: version.id });
+  const draft = await run('content_create_draft', { brand_id: 'brand', title: 'Lure clip', variants: [{ platform: provider, format: 'short_video', social_account_id: channel.id,
+    body: 'New lure test', media: [{ asset_id: asset.id, asset_version_id: version.id, role: 'primary' }] }] }) as { variants: Row[] };
+  const clip = draft.variants[0];
+  const settings = () => ensureChannelSettings(ctx, channel.id);
+  const schedule = (scheduled_at = '2027-01-02T10:00:00Z') => run('publishing_create_target', { social_account_id: channel.id, content_variant_id: clip.id, scheduled_at, late_policy: 'skip', grace_minutes: 30 }) as Row;
+  const request = (target: Row) => ctx.list('approval_request').find(row => row.id === base.row(target.id).approval_request_id);
+  /** The §4 invariant: a waiting target always holds a pending request. */
+  const holdsPending = (target: Row) => {
+    const current = base.row(target.id);
+    return current.plan_status !== 'awaiting_approval' || request(current)?.status === 'pending';
+  };
+  const save = (body: Data) => run('hub_channels_update_settings', body, channel.id, 'owner', settings().version) as Promise<Data> | Data;
+  return { ...base, device, channel, binding, clip, asset, version, settings, schedule, request, holdsPending, save };
+}
+
+describe('phase 1 channel approval', () => {
+  let restore: (() => void) | undefined;
+  afterEach(() => { restore?.(); restore = undefined; });
+
+  it('approves a direct channel on submit as channel_policy bound to the approval generation', async () => {
+    const { ctx, submit, schedule, request, settings, events } = await channelFixture('x', 'direct');
+    const target = schedule();
+    const ready = submit(target.id);
+    expect(ready.plan_status).toBe('ready');
+    expect(request(ready)).toMatchObject({ status: 'approved', approved_via: 'channel_policy', channel_approval_generation: settings().approval_generation, standing_grant_id: null });
+    expect(ctx.list('execution_task')).toHaveLength(1);
+    expect(events.some(event => event.type === 'core.approval_request.approved')).toBe(true);
+  });
+
+  // E34 replaces the old min(now + 48 h, scheduled_at + lateness) deadline, which this test used to assert for the far post: a
+  // request expired after 48 h while every view still asked for an approval the hub then refused (F3, WV-2, COH-1).
+  it('a needs_approval channel waits for the owner until scheduled_at + lateness, however far ahead the post is (E34)', async () => {
+    const { ctx, submit, schedule, request, approve, row, holdsPending } = await channelFixture('x');
+    const far = schedule('2027-01-05T10:00:00Z');
+    expect(submit(far.id).plan_status).toBe('awaiting_approval');
+    expect(request(far)).toMatchObject({ status: 'pending', approved_via: null, due_at: '2027-01-05T10:30:00.000Z' });   // no 48 h cap
+    expect(request(far)!.due_at).toBe(approvalDeadline(ctx, row(far.id)));
+    // 49 hours later the scan keeps it pending, the post still holds its request and the owner can approve it.
+    ctx.now = '2027-01-03T11:00:00.000Z';
+    scanPlanningDue(ctx);
+    expect(request(far)!.status).toBe('pending');
+    expect(holdsPending(far)).toBe(true);
+    expect(approve(far.id).plan_status).toBe('ready');
+    ctx.now = '2027-01-01T10:00:00.000Z';
+    const near = schedule('2027-01-02T10:00:00Z');
+    submit(near.id);
+    expect(request(near)!.due_at).toBe('2027-01-02T10:30:00.000Z');   // scheduled_at + 30 min wins
+    expect(approvalDeadline(ctx, ctx.get('publish_target', near.id))).toBe('2027-01-02T10:30:00.000Z');
+    expect(approve(near.id).plan_status).toBe('ready');
+    expect(request(near)!.approved_via).toBe('human');
+  });
+
+  it('a pending request kept under the reschedule tolerance moves its deadline with the post', async () => {
+    const { ctx, submit, schedule, request, row } = await channelFixture('x');
+    const target = schedule('2027-01-02T10:00:00Z');
+    submit(target.id);
+    const kept = updateTarget(ctx, row(target.id), { scheduled_at: '2027-01-02T10:40:00Z' }, true);
+    expect(kept.approval_retained).toBe(true);
+    expect(request(target)).toMatchObject({ status: 'pending', due_at: '2027-01-02T11:10:00.000Z' });
+  });
+
+  it('an unapproved post past its deadline expires and derives as missed; rescheduling resubmits it', async () => {
+    const { ctx, run, submit, schedule, request, row, holdsPending } = await channelFixture('x');
+    const target = schedule('2027-01-01T11:00:00Z');
+    submit(target.id);
+    ctx.now = '2027-01-01T11:31:00.000Z';
+    scanPlanningDue(ctx);
+    expect(request(target)!.status).toBe('expired');
+    const lapsed = time(approvalDeadline(ctx, row(target.id))!) <= time(ctx.now);
+    expect(derivePostStatus({ plan_status: String(row(target.id).plan_status), has_platform_post: false, approval_lapsed: lapsed })).toBe('missed');
+    expect(() => run('publishing_approve', {}, target.id, 'owner', row(target.id).version)).toThrowError(expect.objectContaining({ code: 'INVALID_STATE' }));
+    const moved = run('publishing_reschedule', { scheduled_at: '2027-01-02T09:00:00Z' }, target.id, 'owner', row(target.id).version) as Row;
+    expect(moved.approval_retained).toBe(false);
+    expect(request(target)).toMatchObject({ status: 'pending', due_at: '2027-01-02T09:30:00.000Z' });
+    expect(holdsPending(target)).toBe(true);
+  });
+
+  it('a reschedule outside tolerance resubmits: pending for needs_approval, auto-approved for direct', async () => {
+    for (const mode of ['needs_approval', 'direct'] as const) {
+      const { ctx, submit, approve, schedule, request, row, holdsPending } = await channelFixture('x', mode);
+      const target = schedule();
+      const first = submit(target.id);
+      if (mode === 'needs_approval') approve(first.id);
+      expect(row(target.id).plan_status).toBe('ready');
+      // The post_update path (S4): updateTarget, then submit() whenever the approval was not retained.
+      const moved = updateTarget(ctx, row(target.id), { scheduled_at: '2027-01-03T15:00:00Z' }, true);
+      expect(moved.approval_retained).toBe(false);
+      if (!moved.approval_retained) submitTarget(ctx, row(target.id));
+      expect(row(target.id).plan_status).toBe(mode === 'direct' ? 'ready' : 'awaiting_approval');
+      expect(request(target)).toMatchObject(mode === 'direct' ? { status: 'approved', approved_via: 'channel_policy' } : { status: 'pending' });
+      expect(holdsPending(target)).toBe(true);
+    }
+  });
+
+  it('a caption edit commits a revision, rebinds the target and resubmits it', async () => {
+    const { ctx, submit, approve, schedule, request, row, clip, holdsPending } = await channelFixture('x');
+    const target = schedule();
+    approve(submit(target.id).id);
+    const { revision_id, changed } = await commitVariantRevision(ctx, clip.id, { body: 'A sharper caption #lure' });
+    expect(changed).toBe(true);
+    expect(ctx.get('content_revision', revision_id).rendered).toMatchObject({ text: 'A sharper caption #lure' });
+    expect(ctx.get('content_revision', revision_id).media).toHaveLength(1);
+    const edited = updateTarget(ctx, row(target.id), { variant_revision_id: revision_id });
+    expect(edited.approval_retained).toBe(false);
+    submitTarget(ctx, row(target.id));
+    expect(row(target.id)).toMatchObject({ plan_status: 'awaiting_approval', variant_revision_id: revision_id });
+    expect(request(target)!.status).toBe('pending');
+    expect(holdsPending(target)).toBe(true);
+    expect(await commitVariantRevision(ctx, clip.id, { body: 'A sharper caption #lure' })).toEqual({ revision_id, changed: false });
+  });
+
+  it('switching needs_approval → direct retires the pending request first and then auto-approves', async () => {
+    const { ctx, submit, schedule, request, save, settings, events } = await channelFixture('x');
+    const target = schedule();
+    submit(target.id);
+    const pending = request(target)!;
+    const before = settings();
+    const result = await save({ approval_mode: 'direct' }) as Data;
+    expect(result).toMatchObject({ requeued_posts: 1, revoked_posts: 0, changed_fields: ['approval_mode'] });
+    expect(ctx.get('approval_request', pending.id)).toMatchObject({ status: 'invalidated', invalidated_reason: 'channel_approval_mode_changed' });
+    expect(request(target)).toMatchObject({ status: 'approved', approved_via: 'channel_policy', channel_approval_generation: before.approval_generation + 1 });
+    expect(ctx.get('publish_target', target.id).plan_status).toBe('ready');
+    expect(events.find(event => event.type === 'account.channel_settings.changed')?.payload).toMatchObject({ social_account_id: target.social_account_id, approval_mode_changed: true, fields: ['approval_mode'] });
+  });
+
+  it('switching direct → needs_approval withdraws channel-policy approvals and leaves each post with a pending request', async () => {
+    const { ctx, submit, schedule, request, save, holdsPending } = await channelFixture('x', 'direct');
+    const revoked: string[] = [];
+    // Each call records the post's state as the engine sees it (revoke.ts re-reads the target) and whether it still holds a
+    // pending request then.
+    restore = setWorkerEngineHooks({ revokeForTarget: (hookCtx, target, reason) => {
+      const current = hookCtx.get('publish_target', target.id);
+      revoked.push(`${target.id}:${reason}:${String(current.plan_status)}:${String(request(current)?.status)}`);
+    } });
+    const target = schedule();
+    const other = schedule('2027-01-02T12:00:00Z');
+    submit(target.id);
+    submit(other.id);
+    const task = ctx.list('execution_task').find(row => row.publish_target_id === target.id)!;
+    ctx.update('execution_task', task.id, { route: [{ executor: 'worker', device_id: 'device' }] });
+    const result = await save({ approval_mode: 'needs_approval' }) as Data;
+    expect(result).toMatchObject({ requeued_posts: 2, revoked_posts: 2 });
+    for (const row of [target, other]) {
+      expect(ctx.get('publish_target', row.id).plan_status).toBe('awaiting_approval');
+      expect(request(row)).toMatchObject({ status: 'pending', approved_via: null });
+      expect(holdsPending(row)).toBe(true);
+    }
+    // S3 review: ensureTask routes both direct posts to the Worker, so retiring each channel-policy approval asks the engine
+    // to revoke while the post is still ready (the engine keeps a matching unstarted job then, §5.10). E23: once the post has
+    // left ready, the engine is asked again in the same transaction, before the new request exists, so the unstarted job is
+    // withdrawn at once. Exactly one such pair per post, in post order (§4.1 table).
+    expect(revoked).toEqual([
+      `${target.id}:approval_invalidated:ready:invalidated`, `${target.id}:approval_invalidated:awaiting_approval:invalidated`,
+      `${other.id}:approval_invalidated:ready:invalidated`, `${other.id}:approval_invalidated:awaiting_approval:invalidated`,
+    ]);
+    expect(ctx.get('execution_task', task.id).status).toBe('scheduled');   // the job engine owns Worker task state
+  });
+
+  it('a person-approved post keeps its approval when the channel switches to direct and back', async () => {
+    const { submit, approve, schedule, request, save } = await channelFixture('x');
+    const target = schedule();
+    approve(submit(target.id).id);
+    await save({ approval_mode: 'direct' });
+    expect(request(target)).toMatchObject({ status: 'approved', approved_via: 'human' });
+    await save({ approval_mode: 'needs_approval' });
+    expect(request(target)).toMatchObject({ status: 'approved', approved_via: 'human' });
+  });
+
+  it('posting.unblock: new TikTok defaults become a revision, the target is rebound, and it resubmits with ai_generated', async () => {
+    for (const mode of ['needs_approval', 'direct'] as const) {
+      const { ctx, schedule, request, row, clip, save, settings, holdsPending } = await channelFixture('tiktok', mode);
+      const target = schedule();
+      const blocked = submitTarget(ctx, row(target.id));
+      expect(blocked.submission_status).toBe('blocked');
+      expect(ctx.list('precheck_item').some(item => item.check_key === 'channel_defaults' && item.severity === 'blocker')).toBe(true);
+      await save({ platform_defaults: { tiktok: { privacy_level: 'SELF_ONLY', allow_comment: true, allow_duet: true, allow_stitch: true, commercial_disclosure: 'none', ai_generated: true } } });
+      // S4's posting.unblock: applyChannelDefaults → updateTarget(variant_revision_id) → submit().
+      const applied = await applyChannelDefaults(ctx, clip.id, settings().platform_defaults);
+      expect(applied.changed).toBe(true);
+      const revision = ctx.get('content_revision', applied.revision_id);
+      expect(revision).toMatchObject({ origin: 'channel_defaults', created_by_type: 'system' });
+      expect((revision.settings as { platform_options: Data }).platform_options.tiktok).toMatchObject({ privacy_level: 'SELF_ONLY', allow_duet: true, allow_stitch: true, ai_generated: true });
+      updateTarget(ctx, row(target.id), { variant_revision_id: applied.revision_id });
+      const resubmitted = submitTarget(ctx, row(target.id));
+      expect(resubmitted.submission_status).toBeUndefined();
+      expect(row(target.id).plan_status).toBe(mode === 'direct' ? 'ready' : 'awaiting_approval');
+      expect(holdsPending(target)).toBe(true);
+      expect(request(target)!.status).toBe(mode === 'direct' ? 'approved' : 'pending');
+      const payload = assessTarget(ctx, row(target.id), 'schedule').payload;
+      expect((payload.options as Data).platform_options).toMatchObject({ tiktok: { ai_generated: true } });
+      expect(await applyChannelDefaults(ctx, clip.id, settings().platform_defaults)).toEqual({ revision_id: applied.revision_id, changed: false });
+    }
+  });
+
+  it('blockUnsent never writes a Worker-route task; an invalid approval asks the job engine to revoke', async () => {
+    const { ctx, submit, schedule, row, device } = await channelFixture('x', 'direct');
+    const revoked: string[] = [];
+    restore = setWorkerEngineHooks({ revokeForTarget: (_ctx, target, reason) => { revoked.push(`${target.id}:${reason}`); } });
+    const target = schedule('2027-01-01T10:40:00Z');
+    submit(target.id);
+    const task = ctx.list('execution_task').find(item => item.publish_target_id === target.id)!;
+    ctx.update('execution_task', task.id, { route: [{ executor: 'worker', device_id: device.id }] });
+    ctx.update('connector_device', device.id, { paused: true });
+    scanPlanningDue(ctx);
+    expect(ctx.list('precheck_run').at(-1)).toMatchObject({ stage: 'preflight', overall: 'blocked' });
+    expect(ctx.get('execution_task', task.id).status).toBe('scheduled');
+    expect(revoked).toEqual([]);
+    ctx.update('connector_device', device.id, { paused: false });
+    const request = ctx.get('approval_request', String(row(target.id).approval_request_id));
+    ctx.update('approval_request', request.id, { status: 'invalidated' });
+    applyPlanningEvent(ctx, { type: 'core.approval_request.invalidated', payload: { request_id: request.id } });
+    expect(revoked).toEqual([`${target.id}:approval_invalidated`]);
+    expect(ctx.get('execution_task', task.id).status).toBe('scheduled');
+    // The direct channel resubmits at once, so the post is not left waiting without a request (§4 common rule).
+    expect(row(target.id).plan_status).toBe('ready');
+  });
+
+  it('pausing and releasing a scope tells the machines of the affected channels to resync', async () => {
+    const { run, channel, device, schedule, submit } = await channelFixture('x', 'direct');
+    const bumps: string[] = [];
+    restore = setWorkerEngineHooks({ bumpSyncGeneration: (_ctx, ids, reason) => { bumps.push(`${ids.join(',')}:${reason}`); return bumps.length; } });
+    submit(schedule().id);
+    const pause = run('publishing_pause', { scope_type: 'social_account', scope_id: channel.id, reason: 'Owner stop' }) as Row;
+    run('publishing_release_pause', {}, pause.id);
+    const brandPause = run('publishing_pause', { scope_type: 'workspace', reason: 'Everything' }) as Row;
+    expect(brandPause.scope_type).toBe('workspace');
+    expect(bumps).toEqual([`${device.id}:pause_activated`, `${device.id}:pause_released`, `${device.id}:pause_activated`]);
+  });
+
+  it('with the job engine installed, withdrawing a direct approval revokes the unstarted job in the same transaction (E23) instead of refusing', async () => {
+    const { ctx, submit, schedule, save, row, request, approve, device } = await channelFixture('x', 'direct');
+    const target = schedule();
+    submit(target.id);
+    const job = ctx.list('worker_job').find(item => item.publish_target_id === target.id)!;
+    expect(job).toMatchObject({ status: 'queued', kind: 'publish_post' });
+    expect(row(target.id).worker_job_id).toBe(job.id);
+    const task = ctx.list('execution_task').find(item => item.publish_target_id === target.id)!;
+    const result = await save({ approval_mode: 'needs_approval' }) as Data;
+    expect(result).toMatchObject({ requeued_posts: 1, revoked_posts: 1 });
+    // E23: the post left ready, so its queued job is withdrawn now (C3: queued → cancelled at once), not by the lifecycle scan.
+    expect(ctx.get('worker_job', job.id)).toMatchObject({ status: 'cancelled', revoke: { reason: 'approval_invalidated', requested_at: ctx.now }, finished_at: ctx.now });
+    expect(ctx.list('worker_job_event').filter(event => event.job_id === job.id && event.event !== 'dispatched')
+      .map(event => [event.event, (event.detail as Data).reason, (event.detail as Data).outcome]))
+      .toEqual([['revoke_requested', 'approval_invalidated', 'cancelled_unclaimed']]);   // one revoke, not one per call
+    expect(ctx.list('worker_job').filter(item => item.publish_target_id === target.id && !['cancelled', 'superseded'].includes(String(item.status)))).toEqual([]);
+    // Only the job is withdrawn: the post waits for the owner (「待你核准」) and its task is not cancelled.
+    expect(row(target.id).plan_status).toBe('awaiting_approval');
+    expect(request(target)).toMatchObject({ status: 'pending', approved_via: null });
+    expect(ctx.get('execution_task', task.id).status).toBe(task.status);
+    expect(ctx.get('execution_task', task.id).cancel_requested_at).toBeFalsy();
+    // Approving again sends a new job to the machine; the withdrawn one is never reused.
+    approve(target.id);
+    const fresh = ctx.list('worker_job').filter(item => item.publish_target_id === target.id && item.status === 'queued');
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]).toMatchObject({ kind: 'publish_post', device_id: device.id });
+    expect(fresh[0].id).not.toBe(job.id);
+    expect(row(target.id)).toMatchObject({ plan_status: 'ready', worker_job_id: fresh[0].id });
+  });
+
+  it('direct → needs_approval: a claimed job is released, a started job follows §5.10 and its post is not resubmitted (E23)', async () => {
+    for (const state of ['claimed', 'running'] as const) {
+      const { ctx, submit, schedule, save, row, request, device } = await channelFixture('x', 'direct');
+      const target = schedule();
+      submit(target.id);
+      const queued = ctx.list('worker_job').find(item => item.publish_target_id === target.id)!;
+      const job = setJob(ctx, queued, state === 'claimed' ? { status: 'claimed', claimed_at: ctx.now } : { status: 'running', claimed_at: ctx.now, started_at: ctx.now });
+      const generation = deviceSyncState(ctx, device.id).generation;
+      const result = await save({ approval_mode: 'needs_approval' }) as Data;
+      const after = ctx.get('worker_job', job.id);
+      expect(after.revoke).toEqual({ reason: 'approval_invalidated', requested_at: ctx.now });
+      expect(deviceSyncState(ctx, device.id)).toMatchObject({ reason: 'job_revoked' });
+      expect(deviceSyncState(ctx, device.id).generation).toBeGreaterThan(generation);
+      if (state === 'claimed') {
+        // Not started: the machine gives it back on its next heartbeat; the post waits for the owner at once.
+        expect(after.status).toBe('releasing');
+        expect(result).toMatchObject({ requeued_posts: 1, revoked_posts: 1 });
+        expect(row(target.id).plan_status).toBe('awaiting_approval');
+        expect(request(target)).toMatchObject({ status: 'pending' });
+      } else {
+        // Started: only the Worker's check before the click can stop it, so the job keeps running with the revoke pending and
+        // the post is not resubmitted until the job is resolved (E23 「已開跑的 job 仍依 §5.10」).
+        expect(after.status).toBe('running');
+        expect(result).toMatchObject({ requeued_posts: 0, revoked_posts: 1 });
+        expect(row(target.id).plan_status).toBe('ready');
+        expect(request(target)).toMatchObject({ status: 'invalidated', invalidated_reason: 'channel_approval_mode_changed' });
+      }
+    }
+  });
+});
+
+const time = (value: string) => Date.parse(value);
+
+// ---------- Wave 6 (G2): E34, E35, E37, F4, F10 ----------
+
+describe('wave 6 posting fixes (planning)', () => {
+  let restore: (() => void) | undefined;
+  afterEach(() => { restore?.(); restore = undefined; });
+
+  it('E34: a request written with the old 48 h cap that expires before the post can still go out is replaced by a fresh pending one', async () => {
+    const { ctx, run, submit, schedule, request, row, holdsPending } = await channelFixture('x');
+    const target = schedule('2027-01-05T10:00:00Z');
+    submit(target.id);
+    const legacy = request(target)!;
+    ctx.update('approval_request', legacy.id, { due_at: '2027-01-03T10:00:00.000Z' });   // as submitted before E34
+    ctx.now = '2027-01-03T11:00:00.000Z';
+    scanPlanningDue(ctx);
+    expect(ctx.get('approval_request', legacy.id)).toMatchObject({ status: 'expired', invalidated_reason: 'deadline_elapsed' });
+    expect(request(target)).toMatchObject({ status: 'pending', due_at: '2027-01-05T10:30:00.000Z' });
+    expect(holdsPending(target)).toBe(true);
+    expect((run('publishing_approve', {}, target.id, 'owner', row(target.id).version) as Row).plan_status).toBe('ready');
+  });
+
+  it('F4: a direct post whose edit is blocked becomes draft (blocked, not submitted) and its stale job is revoked in the same transaction', async () => {
+    const { ctx, submit, schedule, request, row, clip } = await channelFixture('x', 'direct');
+    const target = schedule();
+    submit(target.id);
+    const job = ctx.list('worker_job').find(item => item.publish_target_id === target.id)!;
+    const approved = request(target)!;
+    expect([row(target.id).plan_status, job.status]).toEqual(['ready', 'queued']);
+    // The post_update edit_caption path: commit, rebind (approval dropped), resubmit. 150 CJK characters weigh 300 > 280.
+    const { revision_id } = await commitVariantRevision(ctx, clip.id, { body: '新'.repeat(150) });
+    const edited = updateTarget(ctx, row(target.id), { variant_revision_id: revision_id });
+    expect(edited.approval_retained).toBe(false);
+    const result = resubmitIfWaiting(ctx, target.id);
+    expect(result.submission_status).toBe('blocked');
+    expect(row(target.id)).toMatchObject({ plan_status: 'draft', precheck_summary: 'blocked', frozen_hash: null, auto_submit_on_unblock: true });
+    expect(ctx.get('approval_request', approved.id).status).toBe('invalidated');
+    expect(ctx.get('worker_job', job.id)).toMatchObject({ status: 'cancelled', revoke: { reason: 'approval_invalidated' } });
+    expect(derivePostStatus({ plan_status: String(row(target.id).plan_status), precheck_summary: 'blocked', has_platform_post: false, job_status: 'cancelled' })).toBe('blocked');
+    // A caption that fits submits it again: the direct channel approves and a new job goes to the machine.
+    const fixed = await commitVariantRevision(ctx, clip.id, { body: '新'.repeat(100) });
+    updateTarget(ctx, row(target.id), { variant_revision_id: fixed.revision_id });
+    submitTarget(ctx, row(target.id));
+    expect(row(target.id).plan_status).toBe('ready');
+    expect(ctx.list('worker_job').filter(item => item.publish_target_id === target.id && item.status === 'queued')).toHaveLength(1);
+  });
+
+  it('E35: posts scheduled, rescheduled or switched to needs_approval during a pause are submitted again when it is released', async () => {
+    const { ctx, run, submit, schedule, request, row, channel, save, holdsPending } = await channelFixture('x', 'direct');
+    const ready = schedule('2027-01-02T10:00:00Z');
+    const moved = schedule('2027-01-02T12:00:00Z');
+    submit(ready.id);
+    submit(moved.id);
+    const pause = run('publishing_pause', { scope_type: 'social_account', scope_id: channel.id, reason: 'Owner on holiday' }) as Row;
+    expect([row(ready.id).plan_status, row(moved.id).plan_status]).toEqual(['paused', 'paused']);
+    // (a) The Agent schedules a new post while paused: blocked by the pause, never submitted.
+    const fresh = schedule('2027-01-03T10:00:00Z');
+    ctx.update('publish_target', fresh.id, { auto_submit_on_unblock: true });   // as post_schedule creates it
+    expect(submitTarget(ctx, row(fresh.id)).submission_status).toBe('blocked');
+    // (b) The Agent moves a paused post by a day: the approval is dropped and the resubmission is blocked → draft, not 「待你核准」.
+    const rescheduled = updateTarget(ctx, row(moved.id), { scheduled_at: '2027-01-03T12:00:00Z' }, true);
+    expect(rescheduled.approval_retained).toBe(false);
+    resubmitIfWaiting(ctx, moved.id);
+    expect(row(moved.id)).toMatchObject({ plan_status: 'draft', precheck_summary: 'blocked' });
+    // (c) The owner switches the paused channel to needs_approval: the paused post loses its channel-policy approval.
+    await save({ approval_mode: 'needs_approval' });
+    expect(row(ready.id)).toMatchObject({ plan_status: 'draft', precheck_summary: 'blocked' });
+    run('publishing_release_pause', {}, pause.id);
+    for (const target of [ready, moved, fresh]) {
+      expect(row(target.id).plan_status).toBe('awaiting_approval');
+      expect(request(target)).toMatchObject({ status: 'pending', due_at: approvalDeadline(ctx, row(target.id)) });
+      expect(holdsPending(target)).toBe(true);
+    }
+  });
+
+  it('E35: on a direct channel the released posts are approved by the channel policy and dispatched', async () => {
+    const { ctx, run, submit, schedule, row, channel } = await channelFixture('x', 'direct');
+    const pause = run('publishing_pause', { scope_type: 'workspace', reason: 'Stop everything' }) as Row;
+    const fresh = schedule('2027-01-03T10:00:00Z');
+    ctx.update('publish_target', fresh.id, { auto_submit_on_unblock: true });
+    expect(submit(fresh.id).plan_status).toBe('draft');
+    const other = run('publishing_pause', { scope_type: 'social_account', scope_id: channel.id, reason: 'Check this channel' }) as Row;
+    run('publishing_release_pause', {}, pause.id);
+    expect(row(fresh.id).plan_status).toBe('draft');   // the channel pause still holds it
+    run('publishing_release_pause', {}, other.id);
+    expect(row(fresh.id).plan_status).toBe('ready');
+    expect(ctx.list('worker_job').filter(item => item.publish_target_id === fresh.id && item.status === 'queued')).toHaveLength(1);
+  });
+
+  it('E35: resuming a paused machine submits the posts it held before approval', async () => {
+    const { ctx, run, schedule, row, device, request, holdsPending } = await channelFixture('x');
+    ctx.update('connector_device', device.id, { paused: true });
+    const target = schedule('2027-01-03T10:00:00Z');
+    ctx.update('publish_target', target.id, { auto_submit_on_unblock: true });
+    expect(submitTarget(ctx, row(target.id)).submission_status).toBe('blocked');
+    run('hub_machines_resume', {}, device.id);
+    expect(row(target.id).plan_status).toBe('awaiting_approval');
+    expect(request(target)!.status).toBe('pending');
+    expect(holdsPending(target)).toBe(true);
+  });
+
+  it('E35/F10: a hub post that missed its window during a pause is not closed on release; it reports missed and can be rescheduled', async () => {
+    const { ctx, run, submit, schedule, row, channel, request } = await channelFixture('x', 'direct');
+    const target = schedule('2027-01-01T10:30:00Z');
+    submit(target.id);
+    const job = ctx.list('worker_job').find(item => item.publish_target_id === target.id)!;
+    const pause = run('publishing_pause', { scope_type: 'social_account', scope_id: channel.id, reason: 'Owner stop' }) as Row;
+    ctx.now = '2027-01-01T11:30:00.000Z';   // past 10:30 + 30 min
+    run('publishing_release_pause', {}, pause.id);
+    expect(row(target.id)).toMatchObject({ plan_status: 'ready', paused_by_switch_id: null });
+    expect(row(target.id).close_reason).toBeUndefined();
+    expect(ctx.list('worker_job').filter(item => item.publish_target_id === target.id).map(item => item.id)).toEqual([job.id]);   // no second run
+    setJob(ctx, ctx.get('worker_job', job.id), { status: 'missed', finished_at: ctx.now });   // what the lifecycle reports next
+    expect(derivePostStatus({ plan_status: 'ready', has_platform_post: false, job_status: 'missed' })).toBe('missed');
+    const moved = run('publishing_reschedule', { scheduled_at: '2027-01-02T09:00:00Z' }, target.id, 'owner', row(target.id).version) as Row;
+    expect(moved.approval_retained).toBe(false);
+    expect(row(target.id).plan_status).toBe('ready');
+    expect(request(target)).toMatchObject({ status: 'approved', approved_via: 'channel_policy' });
+  });
+
+  it('E35: skipping a hub post in the release decisions cancels it instead of closing it', async () => {
+    const { ctx, run, submit, schedule, row, channel } = await channelFixture('x', 'direct');
+    const target = schedule('2027-01-02T10:00:00Z');
+    submit(target.id);
+    const pause = run('publishing_pause', { scope_type: 'social_account', scope_id: channel.id, reason: 'Owner stop' }) as Row;
+    run('publishing_release_pause', { decisions: [{ target_id: target.id, action: 'skip' }] }, pause.id);
+    expect(row(target.id)).toMatchObject({ plan_status: 'cancelled', cancellation_reason: 'skipped_on_pause_release' });
+    expect(ctx.list('worker_job').filter(item => item.publish_target_id === target.id && !['cancelled', 'superseded'].includes(String(item.status)))).toEqual([]);
+  });
+
+  it('E37: an owner rejection stays put through settings changes and a switch to direct; an explicit resubmit sends it again', async () => {
+    const { ctx, run, submit, schedule, row, request, save } = await channelFixture('x');
+    const target = schedule();
+    submit(target.id);
+    run('publishing_reject', { reason: 'Not this one' }, target.id, 'owner', row(target.id).version);
+    const rejected = request(target)!;
+    expect([row(target.id).plan_status, rejected.status]).toEqual(['changes_requested', 'rejected']);
+    await save({ daily_cap: 5 });
+    await save({ approval_mode: 'direct' });
+    expect(row(target.id).plan_status).toBe('changes_requested');
+    expect(ctx.list('approval_request').filter(item => item.resource_id === target.id).map(item => item.status)).toEqual(['rejected']);
+    expect(ctx.list('worker_job').filter(item => item.publish_target_id === target.id)).toEqual([]);
+    // The policy/rights invalidation sweep leaves it alone too.
+    const sweep = await import('../../../../../packages/domain/src/publishing/index.js');
+    sweep.invalidateTargets(ctx, item => item.id === target.id, 'rights_revoked');
+    expect(row(target.id).plan_status).toBe('changes_requested');
+    // Only an explicit resubmission sends it again (here the direct channel approves it).
+    submit(target.id);
+    expect(row(target.id).plan_status).toBe('ready');
+    expect(request(target)).toMatchObject({ status: 'approved', approved_via: 'channel_policy' });
   });
 });

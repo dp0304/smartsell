@@ -11,7 +11,6 @@
     "setup:local": "node --import tsx apps/server/init-local.ts",
     "dev": "pnpm run dev:workspace",
     "dev:workspace": "node --watch --import tsx apps/server/dev.ts",
-    "package:worker-download": "node scripts/package-worker-download.mjs",
     "preview": "pnpm run preview:workspace",
     "preview:workspace": "node --import tsx apps/server/dev.ts preview",
     "build": "pnpm typecheck && pnpm exec turbo run build",
@@ -25,7 +24,16 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "requirements": "node scripts/requirements.mjs --check",
     "verify": "pnpm requirements && pnpm build && pnpm test --built-web",
-    "verify:services": "bash scripts/verify-services.sh"
+    "verify:services": "bash scripts/verify-services.sh",
+    "hub": "node --import tsx apps/server/hub.ts",
+    "hub:init": "node --import tsx apps/server/hub-init.ts",
+    "hub:service": "node --import tsx scripts/hub-service.mjs",
+    "hub:update": "node --import tsx scripts/hub-update.mjs",
+    "hub:doctor": "node --import tsx scripts/hub-doctor.mjs",
+    "hub:export-legacy": "node --import tsx scripts/hub-export-legacy.mjs",
+    "worker:release": "node --import tsx scripts/worker-release.mjs",
+    "test:e2e-phase1": "node --import tsx --test tests/e2e-phase1/*.test.ts",
+    "real-model-check": "node --import tsx scripts/real-model-check.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

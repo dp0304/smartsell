@@ -10,6 +10,9 @@ import { audit, fail, find, integer, iso, matches, object, one, sha256Pattern, t
 import { claimZhihuStats, hasLiveZhihuStatsClaim, reportZhihuStats } from './zhihu-stats.ts';
 import { registerWorkerChannels } from './channel-registration.js';
 import { ownedSocialProviders } from './social-accounts.js';
+import { claimJobs, goJob, heartbeatV2, reportJob } from '../worker/device-jobs.js';
+import { verifyStoredEvidence } from '../worker/media.js';
+import { notePresenceRowWrite, recordHeartbeatPresence } from '../worker/presence.js';
 
 export interface ConnectorServices extends Services {
   iosEnabled?: boolean;
@@ -169,7 +172,8 @@ function report(ctx: Context, row: Row, body: Data, services: ConnectorServices)
     outcome.evidence = body.evidence.map(value => {
       const item = object(value);
       const evidence = { kind: one(item.kind, ['masked_screenshot', 'masked_ui_hierarchy'] as const), sha256: matches(item.sha256, sha256Pattern), object_id: text(item.object_id) };
-      if (!services.verifyEvidence?.(ctx, evidence)) fail('EVIDENCE_UNVERIFIED', 422);
+      // §8.13 (C11): without a host verifier, check the stored evidence file and its checksum instead of refusing everything.
+      if (!(services.verifyEvidence ?? verifyStoredEvidence)(ctx, evidence)) fail('EVIDENCE_UNVERIFIED', 422);
       ctx.create('connector_evidence', { ...evidence, attempt_id: task.attempt_id });
       return evidence;
     });
@@ -224,12 +228,24 @@ export function reconcileConnectorTask(ctx: Context, attemptId: string, result: 
 }
 
 export const deviceActions = ['heartbeat', 'claim', 'channels.register', 'catalog.claim', 'catalog.upload', 'browser.identity', 'mobile.identity', 'mobile.report',
-  'attempt.ready', 'attempt.permit', 'attempt.consume', 'attempt.report', 'zhihu.stats.claim', 'zhihu.stats.report', 'social.status.claim', 'social.status.report'] as const;
+  'attempt.ready', 'attempt.permit', 'attempt.consume', 'attempt.report', 'zhihu.stats.claim', 'zhihu.stats.report', 'social.status.claim', 'social.status.report',
+  // Phase 1 job protocol (§5.4): handled by modules/worker/device-jobs.ts.
+  'jobs.claim', 'jobs.report', 'jobs.go'] as const;
+/** §5.4 body limits per signed action (bytes). */
+export const deviceBodyLimits: Partial<Record<DeviceAction, number>> = { 'jobs.report': 64_000, 'jobs.claim': 8_192, 'jobs.go': 8_192 };
 export type DeviceAction = typeof deviceActions[number];
 
 /** Gateway derives action from the route and uses the same signed bytes for parsing. */
 export function handleDeviceRequest(ctx: Context, action: DeviceAction, bytes: Uint8Array, signed: SignedDeviceRequest, services: ConnectorServices, requestId?: string): unknown {
-  const device = authenticateDevice(ctx, action, bytes, signed, action === 'catalog.upload' ? workerCatalogUploadBodyLimit : undefined);
+  const device = authenticateDevice(ctx, action, bytes, signed, action === 'catalog.upload' ? workerCatalogUploadBodyLimit : deviceBodyLimits[action]);
+  if (action === 'jobs.claim' || action === 'jobs.report' || action === 'jobs.go') {
+    let input: Data;
+    try { input = object(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))); }
+    catch { return fail('INVALID_DEVICE_BODY', 422); }
+    if (action === 'jobs.claim') return claimJobs(ctx, device, input);
+    if (action === 'jobs.go') return goJob(ctx, device, input);
+    return reportJob(ctx, device, input);
+  }
   const socialStatus = action === 'social.status.claim' || action === 'social.status.report';
   if (socialStatus || action === 'channels.register' || action === 'catalog.claim' || action === 'catalog.upload' || action === 'zhihu.stats.claim' || action === 'zhihu.stats.report') {
     for (const nonce of ctx.list('device_nonce')) {
@@ -257,9 +273,13 @@ export function handleDeviceRequest(ctx: Context, action: DeviceAction, bytes: U
     body = object(JSON.parse(json));
   } catch { return fail('INVALID_DEVICE_BODY', 422); }
   if (action === 'heartbeat') {
+    // Heartbeat v2 (§5.4.1): presence in memory, no snapshot write unless something changed (§2.10).
+    if (body.protocol === 2) return heartbeatV2(ctx, device, body);
+    recordHeartbeatPresence(ctx, device, { protocol: 1, client_version: typeof body.client_version === 'string' ? body.client_version : '' });
     const supportsSocialStatus = body.social_status_version === workerSocialStatusVersion;
     ctx.update('connector_device', device.id, { last_seen_at: ctx.now, client_version: text(body.client_version, 80),
       social_status_version: supportsSocialStatus ? workerSocialStatusVersion : null });
+    notePresenceRowWrite(device.id, ctx.now);
     const heartbeat = { status: 'online', ...(supportsSocialStatus && { social_status_version: workerSocialStatusVersion }) };
     if (body.include_bindings !== true) return heartbeat;
     const accounts = new Map(ctx.list('social_account').map(account => [account.id, account]));

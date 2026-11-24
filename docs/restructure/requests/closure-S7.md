@@ -1,0 +1,36 @@
+# S7 closure: items other ledgers addressed to S7
+
+S7 = web pages and read models (`apps/web/**`, `apps/server/src/modules/workspace/views/**`, `workspace/overview.ts`, and per E15
+`modules/posting/{views,posts}.ts`). S7's own requests to others are in `S7.md`.
+
+| Source | Item | Outcome |
+|---|---|---|
+| S1 #1 | `GET /api/v1/hub/info` (top-level fields mirrored under `data`; `worker_downloads[].version/sha256`; up to 5 s wait; `tailscale.serve_ok` may be `null`) | **Done.** `pages/setup-hub.tsx` `useHubInfo()` shows the hub address in large type with a copy button, warns when `request_origin_ok === false` and when `serve_ok === false` (not for `null`), lists the downloads with version. |
+| S1 #2 | Development mode has no `/api/v1/hub/info` (404) | **Done.** 404 → the page uses its own origin and says so (「開發模式：沒有中樞資訊…」); downloads fall back to `GET /api/v1/worker-downloads`. |
+| S1 #3 | `/api/v1/worker-downloads` gained `version`, `sha256`, `bytes` | **Done** (read in the development fallback). |
+| S1 #4 | Hub SPA paths are `/`, `/setup`, `/login`, `/worker-connect`, `/agent-connect`, `/app/*`, `/w/*`; `/invite`, `/admin/*` 404 in hub mode | **Done / no change needed.** The new `/agent-connect` page is in that list. Phase 1 needs neither `/invite` nor `/admin/*` on the hub; S7 asks for nothing. |
+| S2 #8 | Look channel settings up by account; If-Match with the row's `version` (`1` before the row exists) | **Done.** Views use `channelSettingsOrDefault(ctx, accountId)`; the channel page sends `If-Match: <settings.version>` and shows 「設定已在別處被修改…」 on 409 `VERSION_CONFLICT`. Verified against the dev server (save → version 3→4). |
+| S2 #9 | Use `channelReadiness`, `channelLabel`, `channelLoginState`, `effectiveMode`, `approvalDeadline`; show `requeued_posts` | **Done.** Readiness checklist, login state and the approval deadline come from S2's functions; the save message is 「已更新，N 則排程中的貼文已重新確認」 from `requeued_posts`, plus 「Mac-B 目前離線，上線後才會收到」 when the bound machine is offline. |
+| S2 #10 | Machine name = `display_name ?? name` | **Done** (`machineName` in `views/hub-model.ts`). |
+| S3 #6 | Extra job fields (`driver_trace`, `owner_confirmed`, `force_released`, `failure`, …) and evidence rows | **Done.** `driver_trace` → machine page 「最近一次試跑步驟」 and Today's `dry_run_fallback` card; `owner_confirmed` → result 「你手動確認」; `force_released` → status; evidence = `file_object` with `purpose='evidence'` and `worker_job_id`, shown as screenshots through signed `/files/:id/download?inline=true` links. |
+| S3 #7 | Extra timeline events (`go`, `go_denied`, `missed`, `media_ready`, `media_unavailable`, `requeued`, `result_pending_timeout`, `missed_unclaimed` reason) | **Done.** `views/timeline.ts` words every §3.6 event and these (zh-Hant); the web has English labels per event. |
+| S3 #8 | `derivePostStatus` after `force_release` of an unreported job says `scheduled` | **Done (with a lead request).** `postStatus()` in `views/hub-model.ts` passes `job_status: 'missed'` in exactly that case, so all pages and the Agent show 「沒有發出」 with 「改到…」; `missed_reason='machine_was_off'`. Appendix A amendment requested in `S7.md` #3. |
+| S3 #9 | `sync_behind` = presence `applied_sync_generation` vs `deviceSyncState().generation` | **Done** via `ctx.presence` (C14) and `deviceSyncState`; message 「Mac-B 還沒收到你 08:40 的變更（最後連線 08:35）」, shown once a change has been missed for 60 s (an online machine takes it within one heartbeat). |
+| S4 #5 | C7 builders vs S4's Agent projections | **Done (E15).** `posting/posts.ts` (`agentPost`, `listAgentPosts`, `postDetail`) and `posting/views.ts` (`overview`, `machinesList`, `channelsList`, `taskDetail`) now compact `postSummary`/`postDetail`/`listPosts`/`buildOverview`/`machineSummaries`/`channelSummaries`/`jobDetail`. Output shapes unchanged; all 24 S4 tests (posting + MCP integration) pass. No `views_*` names registered in `posting`. |
+| S4 #6 | Register `webUrl` with `configurePosting`; routes must exist | **Done.** `installWebLinks({ publicOrigin })` registers it (wired by L-server in `bootstrap.ts`). Every kind maps to a route in `routes.tsx` (test `machines.test.ts`). |
+| S4 #9 | Reconnecting the same laptop: who revokes the old connection | **Done / superseded by E13.** The App revokes the old connection with its own token; `/agent-connect` hands back `connection=<new id>` so the App knows its new id. No page-side revoke. |
+| S5 #15 | Post page upload progress via `mediaUploadProgress` | **Done.** `views/posts.ts` reads `mediaUploadProgress(ctx, mediaId)`; the post page shows 「上傳中 N%」 with a progress bar. |
+| S9 #7 | Hand back `#workspace&code&state&connection=<enrollment id>` | **Done.** `agentReturnUrl()` in `apps/web/src/agent-connect.tsx`; test checks the fragment keys and that nothing goes in the query. |
+| S9 #8 | The App opens `/agent-connect?client=codex|claude_code&port&state&label` | **Done.** `parseAgentConnect()` accepts exactly these keys (each once), port 1024–65535, 43-char state, label ≤120; enrolls with `expires_days: 365`; top-level navigation to the loopback page (no fetch, CSP-safe). |
+| S10 #13 | `configureAlerts({ webUrl, machineWarnings })` | **Done** through `installWebLinks` (kinds `post`, `machine`, `channel`, `today`, `notifications` → `/settings/notifications`). |
+| S10 #14 | Bell: `views_alerts`, `hub_alerts_read`, refetch on stream revision | **Done.** Header bell with unread count, latest 8 alerts linked to post / channel / machine, 「標為已讀」 and 「全部標為已讀」, plus a full `/notifications` page. Verified on the dev server (8 unread → none after 「全部標為已讀」). |
+| S10 #15 | Settings → 通知: get/update/test channels, preferences, public-ntfy advice | **Done.** `/settings/notifications`: ntfy / Bark / Telegram (tokens never shown; empty keeps, 「清除權杖」 sends `null`), 「傳一則測試」 with the `last_test` result, the two optional alerts, laptop and tailnet notes, and the §12.1 risk 13 advice for `https://ntfy.sh/` topics. |
+| Lead E1, E10 | `OwnerAlertKind` `offline_run_stale_settings`, `handle_changed` | **Done** (zh-Hant / en labels in `view/hub-copy.ts`). |
+| Lead E15 | Agent read tools use S7's view builders | **Done** (see S4 #5). |
+| Task brief | Hide non-core modules from navigation (routes kept) | **Done.** Nav = 今日、日曆、機器、帳號、Agent、設定、開始設定; 「設定 → 介面 → 顯示其他模組」 (localStorage via `preferences.ts`) brings back 總覽、商品、推廣計劃、社媒成效、投放、待你決定; their routes stay reachable by URL. |
+| Task brief | Replace 「請你的 Agent…複製」 prompts with real actions | **Done for the core pages.** Calendar drawer shows `<PostDetail compact>` with the post's own actions for publish events; the empty calendar links to Today / channels / Agent; Settings brand prompts link to the workbench. **Deferred to phase 2:** the hidden modules (products, plans, social, ads, overview) keep their prompts until the 「交給 Agent」 button exists (§1.2). |
+
+## Deferred to phase 2 (with reason)
+
+- **「重新登入」 opening the login window remotely** — no web-callable endpoint creates `check_login{open_login_window:true}` (request to S4 in `S7.md` #5); the web says to press 「重新登入」 in that machine's Worker App and offers 「檢查登入」.
+- **Media thumbnails** (`media_thumb_url`, `thumbnail_url`) are `null`: phase 1 stores no poster frames; the post page previews the video itself through a signed link.

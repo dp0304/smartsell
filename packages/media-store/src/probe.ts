@@ -4,11 +4,20 @@ import { open } from 'node:fs/promises';
 
 export class InvalidMedia extends Error {}
 export class MediaUnavailable extends Error {}
+/** ffprobe or ffmpeg is not installed (or not executable). Callers may degrade to "no metadata" (§6.5). */
+export class MediaToolMissing extends MediaUnavailable {}
+/** All media process slots are taken; retry later. */
+export class MediaToolBusy extends MediaUnavailable {}
+
+const GB = 1_000_000_000;
+/** Phase 1 (§6.4): ffprobe gets 60 s plus 30 s per GB of input. */
+export const probeTimeoutMs = (size: number) => 60_000 + Math.ceil(Math.max(0, size) / GB * 30_000);
 
 const formats: Record<string, { demuxer: string; codec?: string; mov?: boolean }> = {
   'image/png': { demuxer: 'png_pipe', codec: 'png' }, 'image/jpeg': { demuxer: 'jpeg_pipe', codec: 'mjpeg' },
   'image/webp': { demuxer: 'webp_pipe', codec: 'webp' }, 'image/gif': { demuxer: 'gif', codec: 'gif' },
   'video/mp4': { demuxer: 'mov', mov: true }, 'audio/mp4': { demuxer: 'mov', mov: true },
+  'video/quicktime': { demuxer: 'mov', mov: true },
   'video/webm': { demuxer: 'matroska' }, 'audio/webm': { demuxer: 'matroska' },
   'audio/mpeg': { demuxer: 'mp3', codec: 'mp3' }, 'audio/wav': { demuxer: 'wav' },
 };
@@ -16,7 +25,7 @@ const texts = ['text/plain', 'text/csv', 'text/vtt', 'application/x-subrip', 'ap
 export const mediaTypes = [...Object.keys(formats), ...texts, 'application/pdf'];
 export const canPreview = (mime: string) => mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/');
 
-function magic(prefix: Buffer, mime: string) {
+export function magic(prefix: Buffer, mime: string) {
   const at = (offset: number, value: string) => prefix.subarray(offset, offset + value.length).equals(Buffer.from(value, 'latin1'));
   switch (mime) {
     case 'image/png': return at(0, '\x89PNG\r\n\x1a\n');
@@ -24,6 +33,7 @@ function magic(prefix: Buffer, mime: string) {
     case 'image/webp': return at(0, 'RIFF') && at(8, 'WEBP');
     case 'image/gif': return at(0, 'GIF87a') || at(0, 'GIF89a');
     case 'video/mp4': case 'audio/mp4': return at(4, 'ftyp') && !at(8, 'qt  ');
+    case 'video/quicktime': return at(4, 'ftyp') && at(8, 'qt  ');
     case 'video/webm': case 'audio/webm': return at(0, '\x1a\x45\xdf\xa3') && prefix.subarray(4, 64).includes(Buffer.from('\x42\x82\x84webm', 'latin1'));
     case 'audio/mpeg': return at(0, 'ID3') || (prefix[0] === 0xff && (prefix[1] & 0xe0) === 0xe0);
     case 'audio/wav': return (at(0, 'RIFF') || at(0, 'RF64')) && at(8, 'WAVE');
@@ -39,9 +49,16 @@ function inputArgs(mime: string) {
     '-probesize', '4194304', '-analyzeduration', '5000000', '-i', 'fd:'];
 }
 
+/** Content types the Phase 1 agent upload accepts, detected from the first 64 bytes (§6.3 step 3). */
+export const AGENT_UPLOAD_MIME = ['video/mp4', 'video/quicktime', 'video/webm', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+/** Detect an accepted upload type from file content; the extension is ignored. */
+export function sniffMime(prefix: Buffer): typeof AGENT_UPLOAD_MIME[number] | undefined {
+  return AGENT_UPLOAD_MIME.find(mime => magic(prefix, mime));
+}
+
 let processes = 0;
-async function runMedia(binary: 'ffprobe' | 'ffmpeg', path: string, args: string[], outputLimit: number) {
-  if (processes >= 4) throw new MediaUnavailable('Media workers are busy');
+async function runMedia(binary: string, path: string, args: string[], outputLimit: number, timeoutMs = 15_000) {
+  if (processes >= 4) throw new MediaToolBusy('Media workers are busy');
   processes++;
   try {
     const input = await open(path, 'r');
@@ -51,16 +68,23 @@ async function runMedia(binary: 'ffprobe' | 'ffmpeg', path: string, args: string
         const chunks: Buffer[] = [];
         let size = 0;
         let exceeded = false;
+        let missing = false;
         const stop = () => { exceeded = true; child.kill('SIGKILL'); };
-        const timer = setTimeout(stop, 15_000);
+        const timer = setTimeout(stop, timeoutMs);
         child.stdout?.on('data', (chunk: Buffer) => {
           size += chunk.length;
           if (size > outputLimit) stop();
           if (!exceeded) chunks.push(chunk);
         });
-        child.on('error', () => reject(new MediaUnavailable('Media executable is unavailable')));
+        child.on('error', (error: NodeJS.ErrnoException) => {
+          missing = true;
+          clearTimeout(timer);
+          reject(error.code === 'ENOENT' || error.code === 'EACCES'
+            ? new MediaToolMissing('Media executable is unavailable') : new MediaUnavailable('Media executable failed to start'));
+        });
         child.on('close', code => {
           clearTimeout(timer);
+          if (missing) return;
           if (code !== 0 || exceeded) reject(new InvalidMedia('Media could not be processed within limits'));
           else resolve(Buffer.concat(chunks, size));
         });
@@ -70,7 +94,13 @@ async function runMedia(binary: 'ffprobe' | 'ffmpeg', path: string, args: string
 }
 
 export type MediaMetadata = { width?: number; height?: number; duration_seconds?: number; video_codec?: string; audio_codec?: string };
-export type Probe = (path: string, mime: string) => Promise<MediaMetadata>;
+export interface ProbeOptions {
+  /** Kill ffprobe after this many milliseconds. Defaults to 15 s; agent uploads pass probeTimeoutMs(size). */
+  timeoutMs?: number;
+  /** ffprobe executable; defaults to FFPROBE_PATH or `ffprobe` on PATH. */
+  ffprobe?: string;
+}
+export type Probe = (path: string, mime: string, options?: ProbeOptions) => Promise<MediaMetadata>;
 
 async function verifyText(path: string, mime: string) {
   const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -97,7 +127,7 @@ async function verifyText(path: string, mime: string) {
   }
 }
 
-export const probeMedia: Probe = async (path, mime) => {
+export const probeMedia: Probe = async (path, mime, options = {}) => {
   if (texts.includes(mime)) { await verifyText(path, mime); return {}; }
   const file = await open(path, 'r');
   const prefix = Buffer.alloc(64);
@@ -108,8 +138,8 @@ export const probeMedia: Probe = async (path, mime) => {
   if (mime === 'application/pdf') return {};
   const format = formats[mime];
   if (!format) throw new InvalidMedia('Unsupported media type');
-  const output = await runMedia('ffprobe', path, ['-v', 'error', '-max_alloc', '67108864', ...inputArgs(mime), '-show_entries',
-    'stream=codec_type,codec_name,width,height:stream_disposition=attached_pic:format=duration', '-of', 'json'], 32_768);
+  const output = await runMedia(options.ffprobe ?? process.env.FFPROBE_PATH ?? 'ffprobe', path, ['-v', 'error', '-max_alloc', '67108864', ...inputArgs(mime), '-show_entries',
+    'stream=codec_type,codec_name,width,height:stream_disposition=attached_pic:format=duration', '-of', 'json'], 32_768, options.timeoutMs);
   const result = JSON.parse(output.toString()) as {
     streams?: { codec_type?: string; codec_name?: string; width?: number; height?: number; disposition?: { attached_pic?: number } }[];
     format?: { duration?: string };

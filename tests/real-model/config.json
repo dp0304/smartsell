@@ -1,0 +1,6 @@
+{
+  "REAL_MODEL_ID": "claude-sonnet-5-5",
+  "CONFIRM_MODEL_ID": "claude-opus-5-5",
+  "CODEX_MODEL_ID": null,
+  "notes": "phase1-design §10.3. REAL_MODEL_ID is the full Claude model ID the gate runs with (the first run's modelUsage key must equal it, else the round is void). CONFIRM_MODEL_ID is the confirmation round (--model claude-opus-5-5). CODEX_MODEL_ID: the full Codex model ID for --client codex; null runs Codex's default model and records the one its session log names."
+}

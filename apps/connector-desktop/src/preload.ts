@@ -1,5 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+// Phase 1 UI (index.html): one allowlisted call per action; main re-checks the sender frame.
+const actions = new Set([
+  'state', 'choose-role', 'pair', 'cancel-pairing', 'autostart', 'add-account', 'confirm-account', 'cancel-account', 'open-chrome',
+  'check-login', 'relogin', 'open-job-chrome', 'stop', 'resume', 'update-install', 'open-web', 'open-url', 'open-logs', 'legacy-enable',
+  'legacy-open', 'legacy-chrome-delete', 'forget', 'retry-vault', 'agent-hub', 'agent-connect', 'agent-cancel',
+]);
+
+contextBridge.exposeInMainWorld('smartsell', {
+  call: (name: unknown, body?: unknown) => typeof name === 'string' && actions.has(name)
+    ? ipcRenderer.invoke(`smartsell:${name}`, body ?? {}) : Promise.resolve({ error: '未知的操作。' }),
+  onChange: (listener: unknown) => {
+    if (typeof listener !== 'function') return;
+    ipcRenderer.on('smartsell:changed', () => (listener as () => void)());
+  },
+});
+
+// Legacy work lines (legacy.html, 「進階」): the previous connector API, unchanged.
 contextBridge.exposeInMainWorld('connector', {
   state: () => ipcRenderer.invoke('connector:state'),
   checkStorage: () => ipcRenderer.invoke('connector:check-storage'),

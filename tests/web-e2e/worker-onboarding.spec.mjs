@@ -1,21 +1,27 @@
-import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
+import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { expect, test as base } from '@playwright/test';
 import { createSignedHttpTransport, pairOverHttp, SignedDeviceClient } from '../../apps/connector/src/device-client.ts';
 import { textCell, workbookFixture } from '../../apps/server/src/modules/ingest/xlsx-fixture.ts';
 import { localWorkerOnboarding } from './local-dev.mjs';
+import { mcpClient, pairMachine, workerPairingBody } from './phase1-fixture.mjs';
+import { expectStepStatus, expectToday, expectWizardStep, finishLater, showMoreModules, wizardEntry, wizardPanel, wizardSteps } from './phase1-shell.mjs';
 
 const test = base.extend({ dev: localWorkerOnboarding });
 test.use({ serviceWorkers: 'block' });
 test.setTimeout(120_000);
 
+// Onboarding through the phase-1 first-run wizard (phase1-design §2.9): workspace → machines → channels → notifications →
+// Codex. Machines pair from their own Worker App (/worker-connect); the wizard never issues pairing links (§2.9 step 3,
+// Appendix B.3). Older entry points (store management, imports, Zhihu jobs) stay reachable outside the core navigation.
 const username = 'worker-onboarding-e2e';
-const agentName = 'Onboarding primary agent';
 const storeName = 'Onboarding fixture store';
 const externalStoreId = 'onboarding-fixture-shop';
 const shopExportHeader = ['Handle', 'Title', 'Variant SKU', 'Variant Price', 'Variant Inventory Qty'];
+const HUB_TOOLS = ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
+  'posts_list', 'post_get', 'task_get', 'publishing_pause'];
 
 function shopExportRows(samples) {
   return [shopExportHeader, ...samples.map(({ handle, title, sku, priceMinor, quantity }) => [
@@ -54,10 +60,10 @@ async function register(page, dev) {
   const root = `/api/v1/workspaces/${encodeURIComponent(id)}`;
   const { csrf_token } = await (await page.request.get(`${dev.origin}/api/v1/session/csrf`, { maxRedirects: 0 })).json();
   expect(csrf_token).toEqual(expect.any(String));
-  const rest = async (method, path, data) => dataFrom(await page.request.fetch(`${dev.origin}${root}${path}`, {
+  const rest = async (method, path, data, status) => dataFrom(await page.request.fetch(`${dev.origin}${root}${path}`, {
     method, data, maxRedirects: 0,
     headers: { Origin: dev.origin, 'X-CSRF-Token': csrf_token, 'Idempotency-Key': randomUUID() },
-  }), `${method} ${path}`);
+  }), `${method} ${path}`, status);
   const localFetch = (url, options) => {
     expect(new URL(url).origin).toBe(dev.origin);
     return fetch(url, { ...options, redirect: 'error' });
@@ -65,309 +71,176 @@ async function register(page, dev) {
   return { id, root, rest, localFetch, password, app: `${dev.origin}/app/${id}`, legacy: `${dev.origin}/w/${id}` };
 }
 
-async function connectAgent(page, ws, dev) {
-  await page.getByRole('combobox', { name: 'Agent client', exact: true }).selectOption('codex');
-  await page.getByText('Advanced settings', { exact: true }).click();
-  await page.getByLabel('Name', { exact: true }).fill(agentName);
-  const created = responseFor(page, 'POST', `${ws.root}/agent-connections/enroll`);
-  await page.getByRole('button', { name: 'Generate setup prompt', exact: true }).click();
-  const { code, redeem_url, mcp_url, id } = await dataFrom(await created, 'Generate primary Agent prompt', 201);
-  expect(mcp_url).toBe(`${dev.origin}/mcp`);
-  const command = page.getByRole('textbox', { name: 'Local terminal command', exact: true });
-  await expect(command).toBeVisible();
-  const codeField = page.getByRole('textbox', { name: 'One-time code (hidden terminal prompt only)', exact: true });
-  await expect(codeField).toBeVisible();
-  expect((await command.inputValue()).includes(code)).toBe(false);
-  const redeemed = await ws.localFetch(redeem_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
-  const { token } = await dataFrom(redeemed, 'Redeem Agent code', 201);
-  await page.getByRole('button', { name: 'Check status again', exact: true }).click();
-  await expect(page.getByText('Credential issued, awaiting first use', { exact: true }).first()).toBeVisible();
-  async function rpc(method, params) {
-    const response = await ws.localFetch(mcp_url, {
-      method: 'POST', signal: AbortSignal.timeout(10_000),
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ jsonrpc: '2.0', ...(method.startsWith('notifications/') ? {} : { id: randomUUID() }), method, params }),
-    });
-    const body = await response.text();
-    if (method.startsWith('notifications/')) {
-      expect(response.status, `MCP ${method}`).toBe(202);
-      return;
-    }
-    expect(response.status, `MCP ${method}`).toBe(200);
-    const json = response.headers.get('content-type')?.includes('text/event-stream')
-      ? body.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trim()).join('\n') : body;
-    const message = JSON.parse(json);
-    expect(message.error, `MCP ${method}`).toBeUndefined();
-    return message.result;
-  }
-  await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'onboarding-e2e', version: '1' } });
-  await rpc('notifications/initialized');
-  const { tools } = await rpc('tools/list', {});
-  expect(tools.map(tool => tool.name)).toContain('smartsell_operations_describe');
-  const refresh = page.getByRole('button', { name: 'Check status again', exact: true });
-  await refresh.click();
-  await expect(page.getByText('MCP connection verified', { exact: true })).toHaveCount(0);
-  const verified = async () => (await ws.rest('GET', '/agent-connections')).find(connection => connection.id === id)?.mcp_client_verified_at;
-  expect(await verified()).toBeUndefined();
-  const result = await rpc('tools/call', { name: 'smartsell_operations_describe', arguments: {} });
-  expect(result.isError).toBeFalsy();
-  expect(await verified()).toEqual(expect.any(String));
-  await refresh.click();
-  await expect(page.getByText('MCP connection verified', { exact: true })).toBeVisible();
-  return { id, rpc };
-}
-
-async function submitAsAgent(page, ws, dev) {
-  const { id, rpc } = await connectAgent(page, ws, dev);
-  const result = await rpc('tools/call', { name: 'workspace_brand_create', arguments: {
-    idempotency_key: randomUUID(), body: { name: 'Onboarding fixture brand', slug: 'onboarding-fixture-brand' },
-  } });
-  expect(result.isError, JSON.stringify(result.structuredContent)).toBeFalsy();
-  expect(result.structuredContent.data).toMatchObject({ name: 'Onboarding fixture brand', created_via: 'agent' });
-  const connections = await ws.rest('GET', '/agent-connections');
-  expect(connections).toContainEqual(expect.objectContaining({ id, label: agentName, last_used_at: expect.any(String) }));
-}
-
-async function pairWithoutHeartbeat(ws, dev, name, pairingCode) {
-  const { privateKey } = generateKeyPairSync('ed25519');
-  const id = await pairOverHttp(dev.origin, ws.id, pairingCode, 'darwin', name, privateKey,
-    { userInitiated: true, ownsDevice: true }, ws.localFetch);
-  const client = new SignedDeviceClient(ws.id, id, privateKey, createSignedHttpTransport(dev.origin, ws.localFetch));
-  return { id, client };
-}
-
-async function pairWorker(ws, dev, name, pairingCode) {
-  const worker = await pairWithoutHeartbeat(ws, dev, name, pairingCode);
-  await worker.client.heartbeat('worker-onboarding-e2e');
-  return worker;
-}
-
-const setupSteps = { agent: 'Main agent', worker: 'Desktop worker' };
 const setupUrl = (ws, step) => `${ws.app}/get-started${step ? `?step=${step}` : ''}`;
-const setupNav = page => page.getByRole('navigation', { name: 'Setup steps' });
 
-async function expectStep(page, ws, step, { implicit = false } = {}) {
-  const number = Object.keys(setupSteps).indexOf(step) + 1;
+/** The wizard is on `step`; the URL carries `?step=<param>` (or no step at all when `implicit`). */
+async function expectStep(page, ws, step, { implicit = false, param = step } = {}) {
   const destination = new URL(setupUrl(ws));
   await expect(page).toHaveURL(url => url.origin === destination.origin && url.pathname === destination.pathname &&
-    (url.searchParams.get('step') === step || (implicit && !url.searchParams.has('step'))));
-  const main = page.getByRole('main');
-  const panel = main.getByRole('region', { name: setupSteps[step], exact: true });
-  await expect(panel.getByRole('heading', { name: setupSteps[step], level: 2, exact: true })).toBeVisible();
-  for (const [key, label] of Object.entries(setupSteps)) {
-    if (key !== step) await expect(main.getByRole('heading', { name: label, level: 2, exact: true })).toHaveCount(0);
-  }
-  const steps = setupNav(page).getByRole('button');
-  await expect(steps).toHaveCount(2);
-  await expect(steps.nth(number - 1)).toHaveAttribute('aria-current', 'step');
-  await expect(panel.getByText(`Step ${number} of 2`, { exact: true })).toBeVisible();
+    (url.searchParams.get('step') === param || (implicit && !url.searchParams.has('step'))));
+  return expectWizardStep(page, step, { locale: 'en' });
 }
 
 async function nextStep(page, ws, step) {
-  await page.getByRole('button', { name: 'Next step', exact: true }).click();
-  await expectStep(page, ws, step);
+  await page.getByRole('main').getByRole('button', { name: 'Next', exact: true }).click();
+  return expectStep(page, ws, step);
 }
 
 async function openSetupStep(page, ws, step) {
   await page.goto(setupUrl(ws, step));
-  await expectStep(page, ws, step);
+  return expectStep(page, ws, step);
 }
 
-async function pairFromWizard(page, ws, dev, name, pair = pairWorker) {
-  const main = page.getByRole('main');
-  const panel = main.getByRole('region', { name: 'Download and connect' });
-  if (!await panel.isVisible()) await main.getByText('Download desktop worker', { exact: true }).click();
-  const generate = panel.getByRole('button', { name: 'Generate connection URL' });
-  if (!await generate.isVisible()) await panel.getByText('Use a one-time connection URL', { exact: true }).click();
-  await panel.getByRole('checkbox', { name: 'I own this device or am authorized to manage it.' }).check();
-  const pairedCode = responseFor(page, 'POST', `${ws.root}/devices/pairing-codes`);
-  await generate.click();
-  const { pairing_code } = await dataFrom(await pairedCode, 'Generate pairing code in onboarding');
-  expect(pairing_code).toMatch(/^[\w-]{32}$/);
-  await expect(panel.getByRole('textbox', { name: 'Connection URL' })).toHaveValue(`${setupUrl(ws, 'worker')}#worker-pair=${pairing_code}`);
-  const worker = await pair(ws, dev, name, pairing_code);
-  await main.getByRole('button', { name: 'Check status again' }).click();
-  const machines = main.getByRole('combobox', { name: 'Select machine' });
-  if ((await ws.rest('GET', '/devices')).length > 1) await machines.selectOption(worker.id);
-  await expect(main.getByText(name, { exact: true }).filter({ visible: true }).last()).toBeVisible();
-  return worker;
+/** The machine pairs from its Worker App with the /worker-connect grant and sends a v2 heartbeat (§5.4.1). */
+async function pairWorker(ws, dev, name, { heartbeat = true, grant = workerPairingBody } = {}) {
+  const machine = await pairMachine(dev, ws, name, { grant });
+  if (heartbeat) await machine.heartbeat();
+  return machine;
 }
 
-async function previewAndMerge(page, ws, importId, storeId, samples, expectedRowStatus) {
-  const path = `/imports/${encodeURIComponent(importId)}`;
-  expect(await ws.rest('GET', path)).toMatchObject({ store_id: storeId, template_key: 'product_list',
-    status: 'awaiting_confirmation', stats: { rows: samples.length, valid: samples.length, invalid: 0 } });
-  await expect(page.getByRole('heading', { name: 'Review product import preview' })).toBeVisible();
-  const rows = await ws.rest('GET', `${path}/rows`);
-  expect(rows).toHaveLength(samples.length);
-  const table = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Source price' }) });
-  await expect(table.getByRole('row')).toHaveCount(samples.length + 1);
-  for (const [index, { sku, title, priceMinor, quantity }] of samples.entries()) {
-    const row = rows[index];
-    expect(row).toMatchObject({ status: expectedRowStatus, normalized: { sku, title } });
-    if (priceMinor === null) {
-      expect(row.normalized).not.toHaveProperty('price_minor');
-      expect(row.normalized).not.toHaveProperty('available');
-    } else {
-      expect(row.normalized).toMatchObject({ price_minor: priceMinor, currency: 'USD', available: quantity });
-    }
-    const visibleRow = table.getByRole('row').filter({ hasText: sku });
-    await expect(visibleRow.getByText(sku, { exact: true })).toBeVisible();
-    await expect(visibleRow).toContainText(title);
-    const cells = visibleRow.getByRole('cell');
-    await expect(cells.nth(1)).toHaveText(priceMinor === null ? 'Not collected' : new Intl.NumberFormat('en-US', {
-      style: 'currency', currency: 'USD',
-    }).format(priceMinor / 100));
-    await expect(cells.nth(2)).toHaveText(quantity === null ? 'Unknown' : String(quantity));
-  }
-  const confirm = page.getByRole('button', { name: 'Confirm merge', exact: true });
-  await expect(confirm).toBeDisabled();
-  await page.getByRole('checkbox', { name: /^I reviewed the preview and confirm/ }).check();
-  const merged = responseFor(page, 'POST', `${ws.root}${path}/confirm`);
-  await confirm.click();
-  await expect(page).toHaveURL(`${ws.app}/products/stores/imports?store=${storeId}`);
-  expect(await dataFrom(await merged, 'Merge reviewed Worker import')).toMatchObject({
-    id: importId, status: 'merged', merged_rows: samples.length, failed_rows: 0,
-  });
-  await expect(page.getByText(`Merged / unchanged / left out · ${samples.length} / 0 / 0`, { exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'View products in a new tab' })).toBeVisible();
+/** The wizard's list of paired machines and one machine's row in it. */
+const pairedRow = (page, name) => wizardPanel(page, 'machines', 'en').getByRole('listitem').filter({ has: page.getByRole('link', { name, exact: true }) });
+
+/**
+ * Connect Codex the §6.2 way from the wizard's last step: create a connection, take its token file, and verify it with
+ * one MCP tool call. Returns an MCP client with that token.
+ */
+async function connectAgent(page, ws, label) {
+  const panel = await openSetupStep(page, ws, 'agent');
+  await expectStepStatus(page, 'agent', 'todo', 'en');
+  await panel.getByRole('textbox', { name: 'Connection name', exact: true }).fill(label);
+  const created = responseFor(page, 'POST', `${ws.root}/agent-connections`);
+  const download = page.waitForEvent('download');
+  await panel.getByRole('button', { name: 'Create a connection and download the token file', exact: true }).click();
+  const connection = await dataFrom(await created, 'Create the relay connection', 201);
+  expect(connection).toMatchObject({ label, client: 'codex', token: expect.stringMatching(/^ss_command_/) });
+  expect(await readFile(await (await download).path(), 'utf8')).toBe(`${connection.token}\n`);
+  await expect(panel.getByRole('status')).toContainText(`Created "${label}".`);
+  const agent = mcpClient(connection.mcp_url, connection.token);
+  await agent.initialize('onboarding-e2e');
+  // Phase 1 lists only the 11 hub tools (§7.1); older tools stay callable by name (§7.4).
+  expect((await agent.rpc('tools/list')).tools.map(tool => tool.name)).toEqual(HUB_TOOLS);
+  const verified = async () => (await ws.rest('GET', '/agent-connections')).find(row => row.id === connection.id)?.mcp_client_verified_at;
+  expect(await verified()).toBeUndefined();
+  await expectStepStatus(page, 'agent', 'todo', 'en');
+  return { connection, agent, verified };
 }
 
-async function expectProductOnDashboard(page, ws, market, productId, sample) {
-  const { title, sku, priceMinor, quantity, priceText, stockStatus, stockText } = sample;
-  await page.goto(`${ws.app}/products`);
-  await page.getByRole('searchbox', { name: 'Search by product name or SKU' }).fill(sku);
-  await expect(page).toHaveURL(`${ws.app}/products?q=${sku}`);
-  await page.reload();
-  await expect(page.getByRole('heading', { level: 1, name: 'Products', exact: true })).toBeVisible();
-  const detailRead = responseFor(page, 'GET', `${ws.root}/views/products/${productId}`);
-  await page.getByRole('main').getByRole('link', { name: title, exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/products/${productId}(?:\\?|$)`));
-  const detail = await dataFrom(await detailRead, `Read product detail for ${sku}`);
-  const marketKey = { market_id: market.id, market_name: market.name, channel: 'online_store' };
-  const availability = quantity === null ? 'not_collected' : 'observed';
-  expect(detail).toMatchObject({ id: productId, title, markets: [{ ...marketKey,
-    price: priceMinor === null ? null : { min_minor: priceMinor, max_minor: priceMinor, currency: 'USD' },
-    stock: { status: stockStatus, quantity, availability, variants_total: 1, variants_observed: quantity === null ? 0 : 1 },
-  }], variants: [{ id: expect.any(String), sku, listings: priceMinor === null ? [] : [{
-    ...marketKey, price_minor: priceMinor, currency: 'USD', inventory_quantity: quantity, inventory_status: stockStatus, availability,
-  }] }] });
-
-  await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible();
-  const matrix = page.getByRole('region', { name: 'Market prices and stock' });
-  await expect(matrix.getByRole('columnheader', { name: market.name, exact: true })).toBeVisible();
-  const variant = matrix.getByRole('row').filter({ has: page.getByRole('rowheader', { name: sku, exact: true }) });
-  await expect(variant.getByText(priceText, { exact: true })).toBeVisible();
-  const summary = matrix.getByRole('row').filter({ has: page.getByRole('rowheader', { name: 'All variants', exact: true }) });
-  await expect(summary.getByText(stockText, { exact: true })).toBeVisible();
-  if (quantity !== null) await expect(variant.getByText(stockText, { exact: true })).toBeVisible();
-  return detail.variants[0].id;
+async function submitAsAgent(page, ws, label = 'Onboarding primary agent') {
+  const { connection, agent, verified } = await connectAgent(page, ws, label);
+  const result = await agent.rpc('tools/call', { name: 'workspace_brand_create', arguments: {
+    idempotency_key: randomUUID(), body: { name: 'Onboarding fixture brand', slug: 'onboarding-fixture-brand' },
+  } });
+  expect(result.isError, JSON.stringify(result.structuredContent)).toBeFalsy();
+  expect(result.structuredContent.data).toMatchObject({ name: 'Onboarding fixture brand', created_via: 'agent' });
+  expect(await verified()).toEqual(expect.any(String));
+  const panel = wizardPanel(page, 'agent', 'en');
+  await expect(panel.getByText('An Agent has called SmartSell over MCP.', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expectStepStatus(page, 'agent', 'done', 'en');
+  expect(await ws.rest('GET', '/agent-connections')).toContainEqual(expect.objectContaining({ id: connection.id, label, last_used_at: expect.any(String) }));
+  return { connection, agent };
 }
 
-async function signIn(page, password) {
-  await page.getByLabel('Username or email').fill(username);
-  await page.getByLabel('Password', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+/** An Agent connection made over REST, for tests whose subject is not the connect step. */
+async function agentOverRest(ws, label) {
+  const connection = await ws.rest('POST', '/agent-connections', { label, client: 'codex', expires_days: 30 }, 201);
+  const agent = mcpClient(connection.mcp_url, connection.token);
+  await agent.initialize('onboarding-e2e');
+  return { connection, agent };
 }
+
+const overflow = page => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
 test('an empty workspace enters onboarding from registration, the signed-in root and ordinary login', async ({ page, dev }) => {
   const ws = await register(page, dev);
-  await expectStep(page, ws, 'agent', { implicit: true });
+  await expectStep(page, ws, 'workspace', { implicit: true });
   await page.goto(dev.origin);
-  await expectStep(page, ws, 'agent', { implicit: true });
-  const agent = page.getByRole('region', { name: 'Main agent', exact: true });
-  const statusPaths = new Set(['/agent-connections', '/devices']);
+  await expectStep(page, ws, 'workspace', { implicit: true });
+  // The wizard's own reads (§2.9): the workspace, machines, channels, push channels and Agent connections.
+  const wizardReads = ['', '/views/machines', '/views/channels', '/hub/alerts/channels', '/agent-connections'];
   for (let cycle = 1; cycle <= 3; cycle++) {
     await test.step(`Sign out and sign in again (${cycle}/3)`, async () => {
+      await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+      await expect(page).toHaveURL(`${dev.origin}/login`);
       const statuses = [];
       const recordStatus = response => {
         const url = new URL(response.url());
-        if (url.origin !== dev.origin) return;
-        const path = url.pathname.startsWith(`${ws.root}/`) ? url.pathname.slice(ws.root.length) : url.pathname;
-        if (path === '/api/v1/session' || statusPaths.has(path)) {
-          statuses.push(`${response.request().method()} ${path} ${response.status()}`);
-        }
+        if (url.origin !== dev.origin || response.request().method() !== 'GET') return;
+        const path = url.pathname === ws.root ? '' : url.pathname.startsWith(`${ws.root}/`) ? url.pathname.slice(ws.root.length) : undefined;
+        if (path !== undefined && wizardReads.includes(path)) statuses.push([path, response.status()]);
       };
       page.on('response', recordStatus);
       try {
-        await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-        await expect(page).toHaveURL(`${dev.origin}/login`);
         await signIn(page, ws.password);
-        await expectStep(page, ws, 'agent', { implicit: true });
-        for (const label of Object.values(setupSteps)) {
-          await expect(setupNav(page).getByRole('listitem').filter({ hasText: label })).toContainText('To set up');
-        }
-        await expect(page.getByText('Status unavailable', { exact: true })).toHaveCount(0);
-        await expect(agent.getByRole('button', { name: 'Generate setup prompt', exact: true })).toBeEnabled();
-        await expect(agent.getByRole('button', { name: 'Skip this step for now', exact: true })).toBeEnabled();
-        await expect(agent.getByRole('button', { name: 'Next step', exact: true })).toHaveCount(0);
+        const panel = await expectStep(page, ws, 'workspace', { implicit: true });
+        for (const step of wizardSteps) await expectStepStatus(page, step, step === 'notifications' ? 'optional' : 'todo', 'en');
+        await expect(panel.getByRole('button', { name: 'Save and continue', exact: true })).toBeEnabled();
+        await expect(panel.getByRole('button', { name: 'Next', exact: true })).toBeEnabled();
+        await expect(panel.getByRole('button', { name: 'Back', exact: true })).toHaveCount(0);
+        await expect.poll(() => wizardReads.every(path => statuses.some(([read]) => read === path))).toBe(true);
+        expect(statuses.filter(([, status]) => status !== 200)).toEqual([]);
       } finally {
         page.off('response', recordStatus);
-        console.log(`Re-login ${cycle}/3: ${statuses.join(', ')}`);
       }
     });
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await agent.getByRole('button', { name: 'Skip this step for now', exact: true }).click();
-  await expectStep(page, ws, 'worker');
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  await nextStep(page, ws, 'machines');
+  await expect.poll(() => overflow(page)).toBeLessThanOrEqual(0);
 });
 
 test('skipping setup does not complete it, and explicit deep links still resolve', async ({ page, dev, browser }) => {
   const ws = await register(page, dev);
-  await expectStep(page, ws, 'agent', { implicit: true });
-  await page.getByRole('button', { name: 'Skip this step for now', exact: true }).click();
-  await expectStep(page, ws, 'worker');
-  const agentProgress = setupNav(page).getByRole('listitem').filter({ hasText: 'Main agent' });
-  await expect(agentProgress).toContainText('Skipped for now');
+  await expectStep(page, ws, 'workspace', { implicit: true });
+  // 「下一步」 moves on without saving; the skipped step stays 待設定 (nothing is completed by skipping).
+  await nextStep(page, ws, 'machines');
+  await expectStepStatus(page, 'workspace', 'todo', 'en');
   await page.reload();
-  await expectStep(page, ws, 'worker');
-  await expect(agentProgress).toContainText('Skipped for now');
-  const { user } = await dataFrom(await page.request.get(`${dev.origin}/api/v1/session`), 'Read session for legacy resume');
-  await page.evaluate(({ userId, wsId }) => {
-    localStorage.setItem(`smartsell.get-started.navigation:${JSON.stringify([userId, wsId])}`,
-      JSON.stringify({ location: 'import', skipped: ['agent', 'store'] }));
-  }, { userId: user.id, wsId: ws.id });
-  await page.goto(setupUrl(ws));
-  await expectStep(page, ws, 'worker', { implicit: true });
-  await expect(agentProgress).toContainText('Skipped for now');
-  await page.getByRole('button', { name: 'Previous step', exact: true }).click();
-  await expectStep(page, ws, 'agent');
-  await expect(agentProgress).not.toContainText('MCP connection verified');
+  await expectStep(page, ws, 'machines');
+  await expectStepStatus(page, 'workspace', 'todo', 'en');
+  await page.getByRole('main').getByRole('button', { name: 'Back', exact: true }).click();
+  await expectStep(page, ws, 'workspace');
   expect(await ws.rest('GET', '/agent-connections')).toEqual([]);
-  await page.getByRole('button', { name: 'Skip this step for now', exact: true }).click();
-  await expectStep(page, ws, 'worker');
-  await expect(page.getByText('No machines have been paired.')).toBeVisible();
-  await page.getByRole('button', { name: 'Review setup', exact: true }).click();
-  const summary = page.getByRole('region', { name: 'Setup summary', exact: true });
-  await expect(summary.getByRole('heading', { name: 'Remaining steps' })).toBeVisible();
-  await expect(summary.getByRole('listitem').filter({ hasText: 'Main agent' })).toContainText('Skipped for now');
-  await expect(summary.getByText('Both steps are complete.')).toHaveCount(0);
-  await summary.getByRole('link', { name: 'Finish later and go to overview' }).click();
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  let panel = await nextStep(page, ws, 'machines');
+  await expect(panel.getByText('No machines yet. Follow the steps above on that machine.', { exact: true })).toBeVisible();
+  panel = await nextStep(page, ws, 'channels');
+  await expect(panel.getByText('Connect a machine first.', { exact: true })).toBeVisible();
+  await nextStep(page, ws, 'notifications');
+  panel = await nextStep(page, ws, 'agent');
+  // The last step has no 「下一步」, only 「完成，前往今日」.
+  await expect(panel.getByRole('button', { name: 'Next', exact: true })).toHaveCount(0);
+  await expect(panel.getByRole('link', { name: 'Done, go to Today', exact: true })).toHaveAttribute('href', `/app/${ws.id}`);
+  for (const step of wizardSteps) await expectStepStatus(page, step, step === 'notifications' ? 'optional' : 'todo', 'en');
+  expect(await finishLater(page, 'en')).toBe(ws.app);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page).toHaveURL(`${dev.origin}/login`);
   await signIn(page, ws.password);
+  // The wizard was left, so the next sign-in opens Today (§9.1) without passing through it.
   await expect(page).toHaveURL(ws.app);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expectToday(page, 'en');
 
-  // A fresh session opening an old workbench link must return to that resource after login.
+  // A fresh session opening an old dashboard or workbench link must return to that resource after login.
   const context = await browser.newContext({ serviceWorkers: 'block' });
   try {
     await context.route('**/*', route => new URL(route.request().url()).origin === dev.origin
       ? route.continue() : route.abort('blockedbyclient'));
     await context.addInitScript(() => localStorage.setItem('smartsell-language', 'en'));
     const linkedPage = await context.newPage();
+    // Products is hidden from the phase-1 navigation, but its route stays (§9.1).
     const productsLink = `${ws.app}/products?q=fixture`;
     await linkedPage.goto(productsLink);
     await signIn(linkedPage, ws.password);
     await expect(linkedPage).toHaveURL(productsLink);
     await expect(linkedPage.getByRole('heading', { name: 'Products', exact: true })).toBeVisible();
-    for (const oldStep of ['social', 'store', 'import']) {
+    await expect(linkedPage.getByRole('navigation', { name: 'Dashboard navigation' }).getByRole('link', { name: 'Products', exact: true })).toBeVisible();
+    // Links to the previous wizard's steps open the machine step (§2.9: one pairing path); others open the first open step.
+    for (const oldStep of ['worker', 'social', 'store', 'import']) {
       await linkedPage.goto(setupUrl(ws, oldStep));
-      await expectStep(linkedPage, ws, 'worker');
+      await expectStep(linkedPage, ws, 'machines', { param: oldStep });
     }
-    await expect(setupNav(linkedPage).getByRole('button', { name: /Main agent/ })).not.toContainText('MCP connection verified');
+    await linkedPage.goto(setupUrl(ws, 'summary'));
+    await expectStep(linkedPage, ws, 'workspace', { param: 'summary' });
+    await expect(wizardEntry(linkedPage, 'agent', 'en').locator('small')).toHaveText('To do');
     await linkedPage.getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(linkedPage).toHaveURL(`${dev.origin}/login`);
     const legacyLink = `${ws.legacy}/data/imports?tab=imports`;
@@ -380,7 +253,7 @@ test('skipping setup does not complete it, and explicit deep links still resolve
   }
 });
 
-test('download serves the available package and creates a pairing URL only on explicit request', async ({ page, dev }) => {
+test('the machine step lists the built package and shows machines that pair themselves, without pairing links', async ({ page, dev }) => {
   const ws = await register(page, dev);
   const mac = '/api/v1/worker-downloads/mac-arm64';
   const list = '/api/v1/worker-downloads';
@@ -389,94 +262,91 @@ test('download serves the available package and creates a pairing URL only on ex
   expect((await page.request.get(`${dev.origin}${mac}`)).status()).toBe(404);
   const bytes = Buffer.from(await workbookFixture('<row r="1"><c r="A1"><v>123</v></c></row>'), 'base64');
   await dev.writeMacWorkerPackage(bytes);
+  // Phase 1 never shows a pairing code or link in the web (§2.9 step 3, Appendix B.3): pairing happens on the machine.
   const issued = [];
   page.on('request', request => {
     if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/devices/pairing-codes')) issued.push(request);
   });
-  await openSetupStep(page, ws, 'worker');
-  const checklist = page.getByRole('list', { name: 'Worker setup checklist' });
-  await expect(page.getByText('No machines have been paired.')).toBeVisible();
-  await expect(checklist).toContainText('Not authorized');
-  const checks = checklist.getByRole('listitem');
-  await expect(checks.locator('strong')).toHaveText([
-    'Secure storage', 'Workspace authorization', 'Signed heartbeat', 'Connect dedicated Chrome', 'Verify required accounts',
-  ]);
-  const signed = checks.filter({ has: page.getByText('Signed heartbeat', { exact: true }) });
-  await expect(signed).toContainText('Waiting for workspace authorization');
-  for (const item of ['Secure storage', 'Connect dedicated Chrome', 'Verify required accounts']) {
-    await expect(checks.filter({ has: page.getByText(item, { exact: true }) })).toContainText('Complete in Worker');
-  }
-  await expect(checks.nth(3)).toContainText('then sign in to the required platforms');
-  await page.getByText('Download desktop worker', { exact: true }).click();
-  const panel = page.getByRole('region', { name: 'Download and connect' });
-  await expect(panel).toContainText('reach this service over HTTPS');
-  await expect(panel).toContainText('then authorize once in your browser');
-  await expect(panel.getByRole('textbox', { name: 'Workbench URL' })).toHaveValue(ws.app);
-  await expect(panel.getByRole('checkbox')).toHaveCount(0);
-  await expect(panel.getByRole('button', { name: 'Generate connection URL' })).toHaveCount(0);
+  let panel = await openSetupStep(page, ws, 'machines');
+  await expect(panel.getByText('No machines yet. Follow the steps above on that machine.', { exact: true })).toBeVisible();
+  await expectStepStatus(page, 'machines', 'todo', 'en');
+  // The hub address in large type with a copy button; in development there is no hub info, so this page's origin.
+  await expect(panel.getByText(dev.origin, { exact: true })).toBeVisible();
+  await expect(panel).toContainText('Development mode: no hub information, so this page\'s address is used.');
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: dev.origin });
-  await panel.getByRole('button', { name: 'Copy workbench URL' }).click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(ws.app);
-  const link = panel.getByRole('link', { name: 'Download macOS (Apple silicon)', exact: true });
+  await panel.getByRole('button', { name: 'Copy the hub address' }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(dev.origin);
+  // Where each step happens.
+  const steps = panel.getByRole('list').filter({ hasText: 'Install Tailscale' }).getByRole('listitem');
+  await expect(steps).toHaveCount(4);
+  await expect(steps.nth(1)).toHaveText('Install and open SmartSell Worker and paste the hub address above.');
+  await expect(steps.nth(3)).toContainText('Pairing always happens on that machine; no links to send.');
+  await expect(panel.getByRole('textbox')).toHaveCount(0);
+  await expect(panel.getByRole('checkbox')).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: /connection URL/i })).toHaveCount(0);
+  // Downloads: the built package links to the signed download; missing ones say how to build them.
+  const downloads = panel.locator('.hub-downloads').getByRole('listitem');
+  await expect(downloads).toHaveCount(3);
+  const link = downloads.filter({ hasText: 'macOS (Apple silicon)' }).getByRole('link', { name: 'Download', exact: true });
   await expect(link).toHaveAttribute('href', mac);
-  await expect(panel.getByRole('link', { name: /Windows/ })).toHaveCount(0);
+  for (const missing of ['macOS (Intel)', 'Windows']) {
+    await expect(downloads.filter({ hasText: missing })).toContainText('Not built yet');
+    await expect(downloads.filter({ hasText: missing }).getByRole('link')).toHaveCount(0);
+  }
+  await expect(panel).toContainText('run pnpm worker:release on the hub');
   expect((await page.request.get(`${dev.origin}${list}/win-x64`)).status()).toBe(404);
   const download = page.waitForEvent('download');
   await link.click();
   const file = await download;
   expect(file.suggestedFilename()).toBe('SmartSell-Worker-mac-arm64.zip');
   expect(await readFile(await file.path())).toEqual(bytes);
-  expect(issued).toHaveLength(0);
-  const worker = await pairFromWizard(page, ws, dev, 'Downloaded Worker', pairWithoutHeartbeat);
-  expect(issued).toHaveLength(1);
-  const [beforeHeartbeat] = await ws.rest('GET', '/devices');
-  expect(beforeHeartbeat).toMatchObject({ id: worker.id, status: 'active', online: false, last_seen_at: null });
-  expect(beforeHeartbeat.client_version).toBeUndefined();
-  await expect(checklist).toContainText('Authorized and paired');
-  await expect(signed).toContainText('Paired, waiting for first heartbeat');
-  await expect(checklist).not.toContainText('Last seen');
-  const workerStep = setupNav(page).getByRole('button', { name: /Desktop worker/ });
-  await expect(workerStep).toContainText('Awaiting verification');
 
+  // The machine pairs from its own Worker App (/worker-connect grant) and shows up by itself, before any heartbeat.
+  const worker = await pairWorker(ws, dev, 'Downloaded Worker', { heartbeat: false });
+  const row = pairedRow(page, 'Downloaded Worker');
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await expect(row).toContainText('Offline');
+  await expectStepStatus(page, 'machines', 'todo', 'en');
+  const [beforeHeartbeat] = await ws.rest('GET', '/devices');
+  expect(beforeHeartbeat).toMatchObject({ id: worker.id, status: 'active', online: false, last_seen_at: null, allow_channel_registration: true });
+  expect(beforeHeartbeat.client_version).toBeUndefined();
+
+  // A store can be assigned to the machine before its first heartbeat.
   const brand = await ws.rest('POST', '/brands', { name: 'First heartbeat brand', slug: 'first-heartbeat-brand' });
   const store = await ws.rest('POST', '/stores', { brand_id: brand.id, provider: 'shopify', mode: 'import', name: 'Assigned before heartbeat',
     external_store_id: 'first-heartbeat-shop', default_currency: 'USD', default_locale: 'en-US' });
   expect(await ws.rest('PUT', `/stores/${store.id}/worker`, { device_id: worker.id, external_store_id: 'first-heartbeat-shop' }))
     .toMatchObject({ device_id: worker.id });
 
-  await worker.client.heartbeat('worker-onboarding-e2e');
-  expect(await ws.rest('GET', '/devices')).toMatchObject([{ id: worker.id, online: true, client_version: 'worker-onboarding-e2e', last_seen_at: expect.any(String) }]);
-  const refresh = page.getByRole('button', { name: 'Check status again' });
-  await refresh.click();
-  await expect(checklist).toContainText('Verified online');
-  await expect(workerStep).toContainText('Complete');
-  const observed_at = new Date().toISOString();
-  const registered = await worker.client.registerChannels([
-    { kind: 'social', platform: 'douyin', external_id: 'download-account', display_name: 'Signed social', observed_at },
-    { kind: 'store', platform: 'shopify', external_id: 'download-shop', display_name: 'Signed store', observed_at },
-  ]);
-  expect(registered.map(item => item.device_id)).toEqual([worker.id, worker.id]);
-  await page.getByRole('button', { name: 'Check status again' }).click();
-  await expect(page.getByRole('list', { name: 'Social accounts' })).toContainText('Signed social');
-  await expect(page.getByRole('list', { name: 'Stores' })).toContainText('Signed store');
+  await worker.heartbeat();
+  expect(await ws.rest('GET', '/devices')).toMatchObject([{ id: worker.id, online: true, client_version: '0.2.0', last_seen_at: expect.any(String) }]);
+  await expect(row).toContainText('Online', { timeout: 15_000 });
+  await expect(row).toContainText('0.2.0');
+  await expectStepStatus(page, 'machines', 'done', 'en');
+  await expect(row.getByRole('link', { name: 'Downloaded Worker', exact: true })).toHaveAttribute('href', `/app/${ws.id}/machines/${worker.id}`);
+  // A channel the machine registers appears under that machine in the next step.
+  const channelId = await worker.addChannel('x', 'download_acct');
+  panel = await nextStep(page, ws, 'channels');
+  const group = panel.locator('section').filter({ has: page.getByRole('heading', { level: 3, name: /^Downloaded Worker/ }) });
+  await expect(group.getByRole('link', { name: /@download_acct$/ })).toHaveAttribute('href', `/app/${ws.id}/channels/${channelId}`);
+  await expect(group).toContainText('Signed in');
+
+  // After the presence window the machine is offline; it stays paired and the step stays done.
   await dev.setTime(Date.now() + 95_000);
-  await page.reload();
-  await expect(checklist).toContainText('Previously verified, now offline');
-  await expect(workerStep).toContainText('Complete');
-  await expect(page.getByRole('textbox', { name: 'Connection URL' })).toHaveCount(0);
-  expect(issued).toHaveLength(1);
+  await page.goto(setupUrl(ws, 'machines'));
+  await expectStep(page, ws, 'machines');
+  await expect(row).toContainText('Offline');
+  await expectStepStatus(page, 'machines', 'done', 'en');
   expect(await ws.rest('GET', '/devices')).toMatchObject([{ id: worker.id, online: false }]);
 
-  const devicesUrl = `${dev.origin}${ws.root}/devices`;
-  await page.route(devicesUrl, route => route.abort());
-  await refresh.click();
-  await expect(checklist).toContainText('Could not read worker status');
-  await expect(checklist).not.toContainText('Previously verified, now offline');
-  await page.unroute(devicesUrl);
+  // A revoked machine leaves the list and the step is open again.
   await ws.rest('POST', `/devices/${worker.id}/revoke`, {});
-  await refresh.click();
-  await expect(checklist).toContainText('Revoked');
-  await expect(workerStep).not.toContainText('Complete');
+  await page.reload();
+  await expectStep(page, ws, 'machines');
+  await expect(row).toHaveCount(0);
+  await expect(wizardPanel(page, 'machines', 'en').getByText('No machines yet. Follow the steps above on that machine.', { exact: true })).toBeVisible();
+  await expectStepStatus(page, 'machines', 'todo', 'en');
+  expect(issued).toHaveLength(0);
 });
 
 test('desktop authorization resumes after login and returns a scoped one-time grant to loopback', async ({ page, dev }) => {
@@ -550,8 +420,8 @@ test('desktop authorization resumes after login and returns a scoped one-time gr
     expect(pairing_code).toMatch(/^[\w-]{32}$/);
     expect([...fragment]).toEqual([['state', state], ['workspace', ws.id], ['code', pairing_code]]);
     expect(callback).toEqual({ url: '/smartsell-worker', referer: undefined });
-    await pairWorker(ws, dev, 'Authorized Worker', pairing_code);
-    await expect(pairWorker(ws, dev, 'Second machine', pairing_code)).rejects.toThrow();
+    await pairWithCode(ws, dev, 'Authorized Worker', pairing_code);
+    await expect(pairWithCode(ws, dev, 'Second machine', pairing_code)).rejects.toThrow();
 
     dev.updateSnapshot(snapshot => { snapshot.scope.role = 'editor'; });
     await page.goto(`${entry}&workspace=${ws.id}`);
@@ -569,102 +439,94 @@ test('desktop authorization resumes after login and returns a scoped one-time gr
   }
 });
 
-test('a workspace admin enables channel registration only for the selected existing worker', async ({ page, dev }) => {
+/** The /worker-connect hand-off: a pairing code granted in the browser, redeemed by the desktop with its own key. */
+async function pairWithCode(ws, dev, name, pairingCode) {
+  const { privateKey } = generateKeyPairSync('ed25519');
+  const id = await pairOverHttp(dev.origin, ws.id, pairingCode, 'darwin', name, privateKey, { userInitiated: true, ownsDevice: true }, ws.localFetch);
+  const client = new SignedDeviceClient(ws.id, id, privateKey, createSignedHttpTransport(dev.origin, ws.localFetch));
+  await client.heartbeat('worker-onboarding-e2e');
+  return { id, client };
+}
+
+// Phase 1 pairs only through /worker-connect, whose grant always allows channel registration (§2.9 step 3; worker-connect.tsx
+// workerPairingBody), and the hub starts from a new data file (§1.2), so the old wizard's per-machine "allow channel
+// registration" switch is gone. What stays: only a machine holding that grant can add channels, and every channel lands
+// under the machine that registered it.
+test('only a machine paired with the registration grant adds channels, and each channel lands under its own machine', async ({ page, dev }) => {
   const ws = await register(page, dev);
-  const pairWithoutPermission = async name => {
-    const { pairing_code } = await ws.rest('POST', '/devices/pairing-codes', { owned_device_confirmed: true });
-    return pairWorker(ws, dev, name, pairing_code);
-  };
-  const first = await pairWithoutPermission('Existing Worker A');
-  const second = await pairWithoutPermission('Existing Worker B');
-  const readDevices = () => ws.rest('GET', '/devices');
-  const operation = `${ws.root}/devices/${first.id}/channel-registration`;
+  const first = await pairWorker(ws, dev, 'Existing Worker A');
+  const second = await pairWorker(ws, dev, 'Existing Worker B', { grant: { owned_device_confirmed: true } });
+  expect(await ws.rest('GET', '/devices')).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: first.id, allow_channel_registration: true }),
+    expect.objectContaining({ id: second.id, allow_channel_registration: false }),
+  ]));
   const attempts = [];
   page.on('request', request => {
     if (request.method() === 'PUT' && new URL(request.url()).pathname.endsWith('/channel-registration')) attempts.push(request);
   });
+  await expect(second.addChannel('x', 'existing_worker')).rejects.toMatchObject({ status: 403 });
+  const channelId = await first.addChannel('x', 'existing_worker');
+  expect(await ws.rest('GET', '/views/channels')).toEqual([expect.objectContaining({ channel_id: channelId, handle: 'existing_worker',
+    machine: expect.objectContaining({ id: first.id }) })]);
 
-  await openSetupStep(page, ws, 'worker');
-  const machines = page.getByRole('combobox', { name: 'Select machine' });
-  const allow = page.getByRole('button', { name: 'Allow this worker to register channels', exact: true });
-  await machines.selectOption(second.id);
-  await expect(allow).toBeVisible();
-  await machines.selectOption(first.id);
-  await expect(page.getByText('Verified online', { exact: true })).toBeVisible();
-  await expect(allow).toBeVisible();
-  expect(attempts).toHaveLength(0);
-  const missingCsrf = await page.request.put(`${dev.origin}${operation}`, {
-    data: { enabled: true }, headers: { Origin: dev.origin, 'Idempotency-Key': randomUUID() },
-  });
-  expect(missingCsrf.status()).toBe(403);
-  await expect(allow).toBeEnabled();
+  const panel = await openSetupStep(page, ws, 'channels');
+  const group = name => panel.locator('section').filter({ has: page.getByRole('heading', { level: 3, name: new RegExp(`^${name}`) }) });
+  await expect(group('Existing Worker A').getByRole('link', { name: /@existing_worker$/ })).toHaveAttribute('href', `/app/${ws.id}/channels/${channelId}`);
+  await expect(group('Existing Worker A')).toContainText('Signed in');
+  await expect(group('Existing Worker B').getByText('No channels on this machine yet.', { exact: true })).toBeVisible();
+  await expect(group('Existing Worker B').getByRole('link')).toHaveCount(0);
 
-  const changed = responseFor(page, 'PUT', operation);
-  await allow.click();
-  expect(await dataFrom(await changed, 'Allow selected Worker to register channels'))
-    .toMatchObject({ device_id: first.id, allow_channel_registration: true });
-  await expect(allow).toHaveCount(0);
-  expect(attempts).toHaveLength(1);
-  expect(attempts[0].postDataJSON()).toEqual({ enabled: true });
-  expect(attempts[0].headers()['x-csrf-token']).toBeTruthy();
-  expect(await readDevices()).toEqual(expect.arrayContaining([
-    expect.objectContaining({ id: first.id, allow_channel_registration: true }),
-    expect.objectContaining({ id: second.id, allow_channel_registration: false }),
-  ]));
-
-  const selection = { kind: 'social', platform: 'douyin', external_id: 'existing-worker-test',
-    display_name: 'Existing Worker social', observed_at: new Date().toISOString() };
-  await expect(second.client.registerChannels([selection])).rejects.toMatchObject({ status: 403 });
-  expect(await first.client.registerChannels([selection])).toMatchObject([{ device_id: first.id }]);
-  await page.getByRole('button', { name: 'Check status again' }).click();
-  await expect(page.getByRole('list', { name: 'Social accounts' })).toContainText(selection.display_name);
+  // The channels page filters by machine the same way.
+  await page.goto(`${ws.app}/channels`);
+  const machine = page.getByRole('combobox', { name: 'Machine', exact: true });
+  await machine.selectOption(second.id);
+  await expect(page).toHaveURL(`${ws.app}/channels?machine_id=${second.id}`);
+  await expect(page.getByRole('main').getByText(/^No channels yet\./)).toBeVisible();
+  await machine.selectOption(first.id);
+  const card = page.getByRole('main').getByRole('article').filter({ has: page.getByRole('link', { name: /@existing_worker$/ }) });
+  await expect(card).toContainText('Existing Worker A');
   await dev.setTime(Date.now() + 95_000);
   await page.reload();
-  await machines.selectOption(second.id);
-  await expect(page.getByText('Previously verified, now offline', { exact: true })).toBeVisible();
-  await expect(allow).toBeEnabled();
-  await expect(page.getByText(selection.display_name, { exact: true })).toHaveCount(0);
-  await machines.selectOption(first.id);
-  await expect(allow).toHaveCount(0);
-  await expect(page.getByRole('list', { name: 'Social accounts' })).toContainText(selection.display_name);
-  expect(attempts).toHaveLength(1);
+  await expect(card).toContainText('Offline');
+  expect(attempts).toHaveLength(0);
 });
 
-test('paired workers complete setup and support signed CSV and XLSX imports from management', async ({ page, dev }) => {
+test('the wizard completes with an Agent and two machines, and paired workers run signed CSV and XLSX imports', async ({ page, dev }) => {
   const ws = await register(page, dev);
   const main = page.getByRole('main');
-  await expectStep(page, ws, 'agent', { implicit: true });
-  await expect(main.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible();
-  await submitAsAgent(page, ws, dev);
-  await main.getByRole('button', { name: 'Check status again' }).click();
-  await expect(setupNav(page).getByRole('button', { name: /Main agent/ })).toContainText('MCP connection verified');
-  await expect(main.getByText(agentName, { exact: true })).toBeVisible();
+  await expectStep(page, ws, 'workspace', { implicit: true });
+  await submitAsAgent(page, ws);
   const [brand] = await ws.rest('GET', '/brands');
   expect(brand).toMatchObject({ name: 'Onboarding fixture brand' });
 
-  await nextStep(page, ws, 'worker');
-  const primary = await pairFromWizard(page, ws, dev, 'Catalog Worker A');
-  const other = await pairFromWizard(page, ws, dev, 'Catalog Worker B');
+  await openSetupStep(page, ws, 'machines');
+  const primary = await pairWorker(ws, dev, 'Catalog Worker A');
+  const other = await pairWorker(ws, dev, 'Catalog Worker B');
   expect(primary.id).not.toBe(other.id);
-  await expect(setupNav(page).getByRole('button', { name: /Desktop worker/ })).toContainText('Complete');
-  await page.reload();
-  await expectStep(page, ws, 'worker');
-  await main.getByRole('link', { name: 'Finish later and go to overview' }).click();
-  await expect(page).toHaveURL(ws.app);
+  for (const name of ['Catalog Worker A', 'Catalog Worker B']) await expect(pairedRow(page, name)).toContainText('Online', { timeout: 15_000 });
+  await expectStepStatus(page, 'machines', 'done', 'en');
+  expect(await finishLater(page, 'en')).toBe(ws.app);
+  // 開始設定 from the navigation reopens the first open step; finished steps keep their status.
   await page.getByRole('navigation', { name: 'Dashboard navigation' }).getByRole('link', { name: 'Get started', exact: true }).click();
-  // The saved cursor is Worker even though Social is now the first incomplete step.
-  await expectStep(page, ws, 'worker', { implicit: true });
-  await expect(setupNav(page).getByRole('button', { name: /Main agent/ })).toContainText('MCP connection verified');
-  await expect(main.getByText('Catalog Worker A', { exact: true }).last()).toBeVisible();
-  await main.getByRole('combobox', { name: 'Select machine' }).selectOption(other.id);
-  await expect(main.getByText('Catalog Worker B', { exact: true }).last()).toBeVisible();
+  await expectStep(page, ws, 'workspace', { implicit: true });
+  await expectStepStatus(page, 'machines', 'done', 'en');
+  await expectStepStatus(page, 'agent', 'done', 'en');
   expect(await ws.rest('GET', '/stores')).toEqual([]);
   expect(await ws.rest('GET', '/products')).toEqual([]);
-  await main.getByRole('button', { name: 'Review setup' }).click();
-  await expect(main.getByText('Both steps are complete.')).toBeVisible();
+
+  // Settings points to the channels page (§9.8: worker-management → channels); channels come from the Worker (§8.16).
   await page.goto(`${ws.app}/settings`);
-  await page.getByRole('link', { name: 'Social accounts and dedicated workers' }).click();
-  await registerAndVerifySocial(page, ws, primary, other);
+  await page.getByRole('link', { name: 'Posting channels and machines', exact: true }).click();
+  await expect(page).toHaveURL(`${ws.app}/channels`);
+  await expect(main.getByText(/^No channels yet\. Add them in SmartSell Worker on the machine that posts/)).toBeVisible();
+  const channelId = await primary.addChannel('x', 'catalog_fixture');
+  await page.reload();
+  const channelCard = main.getByRole('article').filter({ has: page.getByRole('link', { name: /@catalog_fixture$/ }) });
+  await expect(channelCard).toContainText('Catalog Worker A');
+  await expect(channelCard).toContainText('Signed in');
+  // The legacy settings path still lands on the channels page.
+  await page.goto(`${ws.app}/settings/worker-accounts`);
+  await expect(page).toHaveURL(`${ws.app}/channels`);
 
   const readCatalog = () => ws.rest('GET', '/worker-catalog');
   expect(await readCatalog()).toEqual({ bindings: [], jobs: [] });
@@ -746,23 +608,23 @@ test('paired workers complete setup and support signed CSV and XLSX imports from
     expect(job.id).toEqual(expect.any(String));
     const queued = await catalogJob();
     expect(queued).toMatchObject({ ...expectedJob, status: 'queued', expires_at: expect.any(String) });
-    expect(await other.client.claimCatalog()).toBeNull();
+    expect(await other.signed.claimCatalog()).toBeNull();
     expect(await catalogJob()).toEqual(queued);
 
-    const claim = await primary.client.claimCatalog();
+    const claim = await primary.signed.claimCatalog();
     expect(claim).toMatchObject({ ...expectedJob, claim_id: expect.any(String), expires_at: expect.any(String) });
     const claimed = await catalogJob();
     expect(claimed).toMatchObject({ ...expectedJob, status: 'claimed', expires_at: claim.expires_at });
-    await expect(other.client.uploadCatalog(claim, externalStoreId, upload)).rejects.toMatchObject({ status: 403 });
-    await expect(primary.client.uploadCatalog(claim, 'different-fixture-shop', upload)).rejects.toMatchObject({ status: 409 });
+    await expect(other.signed.uploadCatalog(claim, externalStoreId, upload)).rejects.toMatchObject({ status: 403 });
+    await expect(primary.signed.uploadCatalog(claim, 'different-fixture-shop', upload)).rejects.toMatchObject({ status: 409 });
     expect(await catalogJob()).toEqual(claimed);
     expect(claimed.import_id ?? null).toBeNull();
     expect(await ws.rest('GET', '/imports')).toHaveLength(index);
 
-    const result = await primary.client.uploadCatalog(claim, externalStoreId, upload);
+    const result = await primary.signed.uploadCatalog(claim, externalStoreId, upload);
     expect(result).toEqual({ import_id: expect.any(String), status: 'previewed' });
     expect(await catalogJob()).toMatchObject({ ...expectedJob, import_id: result.import_id, status: 'previewed' });
-    expect(await primary.client.claimCatalog()).toBeNull();
+    expect(await primary.signed.claimCatalog()).toBeNull();
     const beforeMerge = await ws.rest('GET', '/products');
     expect(beforeMerge).toHaveLength(priorProducts.length);
     expect(beforeMerge).toEqual(expect.arrayContaining(priorProducts.map(({ id, title }) => expect.objectContaining({ id, title }))));
@@ -781,41 +643,111 @@ test('paired workers complete setup and support signed CSV and XLSX imports from
     priorProducts = products;
   }
 
+  // Back in the wizard at phone width: each machine lists only its own channels, then 「完成，前往今日」.
   await page.setViewportSize({ width: 390, height: 844 });
-  await openSetupStep(page, ws, 'worker');
-  const machine = main.getByRole('combobox', { name: 'Select machine' });
-  await machine.selectOption(primary.id);
-  await expect(main.getByRole('list', { name: 'Social accounts' })).toContainText('Fixture social account');
-  await expect(main.getByRole('list', { name: 'Stores' })).toContainText(storeName);
-  await machine.selectOption(other.id);
-  await expect(main.getByText('Fixture social account')).toHaveCount(0);
-  await expect(main.getByText(storeName, { exact: true })).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), {
-    message: 'the worker step fits the mobile viewport',
-  }).toBeLessThanOrEqual(0);
-  await main.getByRole('button', { name: 'Review setup', exact: true }).click();
-  await expect(page).toHaveURL(setupUrl(ws, 'summary'));
-  await expect(main.getByRole('heading', { name: 'Setup summary', exact: true })).toBeVisible();
-  await expect(main.getByText('Both steps are complete.', { exact: true })).toBeVisible();
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), {
-    message: 'the completion screen fits the mobile viewport',
-  }).toBeLessThanOrEqual(0);
-  await main.getByRole('link', { name: 'Go to overview', exact: true }).click();
+  const panel = await openSetupStep(page, ws, 'channels');
+  const group = name => panel.locator('section').filter({ has: page.getByRole('heading', { level: 3, name: new RegExp(`^${name}`) }) });
+  await expect(group('Catalog Worker A').getByRole('link', { name: /@catalog_fixture$/ })).toHaveAttribute('href', `/app/${ws.id}/channels/${channelId}`);
+  await expect(group('Catalog Worker B').getByText('No channels on this machine yet.', { exact: true })).toBeVisible();
+  await expect.poll(() => overflow(page), { message: 'the channel step fits the mobile viewport' }).toBeLessThanOrEqual(0);
+  await openSetupStep(page, ws, 'agent');
+  await expect.poll(() => overflow(page), { message: 'the last step fits the mobile viewport' }).toBeLessThanOrEqual(0);
+  await main.getByRole('link', { name: 'Done, go to Today', exact: true }).click();
   await expect(page).toHaveURL(ws.app);
-  await expect(main.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expectToday(page, 'en');
 });
 
 async function storeRecoveryFixture(page, dev) {
   const ws = await register(page, dev);
-  await expectStep(page, ws, 'agent', { implicit: true });
-  await submitAsAgent(page, ws, dev);
-  await openSetupStep(page, ws, 'worker');
-  const worker = await pairFromWizard(page, ws, dev, 'Recovery Worker');
+  await expectStep(page, ws, 'workspace', { implicit: true });
+  const { agent } = await agentOverRest(ws, 'Recovery agent');
+  const result = await agent.rpc('tools/call', { name: 'workspace_brand_create', arguments: {
+    idempotency_key: randomUUID(), body: { name: 'Onboarding fixture brand', slug: 'onboarding-fixture-brand' },
+  } });
+  expect(result.isError, JSON.stringify(result.structuredContent)).toBeFalsy();
+  const worker = await pairWorker(ws, dev, 'Recovery Worker');
   const [brand] = await ws.rest('GET', '/brands');
   const store = await ws.rest('POST', '/stores', { brand_id: brand.id, provider: 'shopify', mode: 'import', name: 'Existing recovery fixture',
     external_store_id: 'recovery-existing', default_currency: 'USD', default_locale: 'en-US' });
   await page.goto(`${ws.app}/products/stores`);
   return { ws, brand, store, worker };
+}
+
+async function previewAndMerge(page, ws, importId, storeId, samples, expectedRowStatus) {
+  const path = `/imports/${encodeURIComponent(importId)}`;
+  expect(await ws.rest('GET', path)).toMatchObject({ store_id: storeId, template_key: 'product_list',
+    status: 'awaiting_confirmation', stats: { rows: samples.length, valid: samples.length, invalid: 0 } });
+  await expect(page.getByRole('heading', { name: 'Review product import preview' })).toBeVisible();
+  const rows = await ws.rest('GET', `${path}/rows`);
+  expect(rows).toHaveLength(samples.length);
+  const table = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Source price' }) });
+  await expect(table.getByRole('row')).toHaveCount(samples.length + 1);
+  for (const [index, { sku, title, priceMinor, quantity }] of samples.entries()) {
+    const row = rows[index];
+    expect(row).toMatchObject({ status: expectedRowStatus, normalized: { sku, title } });
+    if (priceMinor === null) {
+      expect(row.normalized).not.toHaveProperty('price_minor');
+      expect(row.normalized).not.toHaveProperty('available');
+    } else {
+      expect(row.normalized).toMatchObject({ price_minor: priceMinor, currency: 'USD', available: quantity });
+    }
+    const visibleRow = table.getByRole('row').filter({ hasText: sku });
+    await expect(visibleRow.getByText(sku, { exact: true })).toBeVisible();
+    await expect(visibleRow).toContainText(title);
+    const cells = visibleRow.getByRole('cell');
+    await expect(cells.nth(1)).toHaveText(priceMinor === null ? 'Not collected' : new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: 'USD',
+    }).format(priceMinor / 100));
+    await expect(cells.nth(2)).toHaveText(quantity === null ? 'Unknown' : String(quantity));
+  }
+  const confirm = page.getByRole('button', { name: 'Confirm merge', exact: true });
+  await expect(confirm).toBeDisabled();
+  await page.getByRole('checkbox', { name: /^I reviewed the preview and confirm/ }).check();
+  const merged = responseFor(page, 'POST', `${ws.root}${path}/confirm`);
+  await confirm.click();
+  await expect(page).toHaveURL(`${ws.app}/products/stores/imports?store=${storeId}`);
+  expect(await dataFrom(await merged, 'Merge reviewed Worker import')).toMatchObject({
+    id: importId, status: 'merged', merged_rows: samples.length, failed_rows: 0,
+  });
+  await expect(page.getByText(`Merged / unchanged / left out · ${samples.length} / 0 / 0`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'View products in a new tab' })).toBeVisible();
+}
+
+async function expectProductOnDashboard(page, ws, market, productId, sample) {
+  const { title, sku, priceMinor, quantity, priceText, stockStatus, stockText } = sample;
+  await page.goto(`${ws.app}/products`);
+  await page.getByRole('searchbox', { name: 'Search by product name or SKU' }).fill(sku);
+  await expect(page).toHaveURL(`${ws.app}/products?q=${sku}`);
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Products', exact: true })).toBeVisible();
+  const detailRead = responseFor(page, 'GET', `${ws.root}/views/products/${productId}`);
+  await page.getByRole('main').getByRole('link', { name: title, exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/products/${productId}(?:\\?|$)`));
+  const detail = await dataFrom(await detailRead, `Read product detail for ${sku}`);
+  const marketKey = { market_id: market.id, market_name: market.name, channel: 'online_store' };
+  const availability = quantity === null ? 'not_collected' : 'observed';
+  expect(detail).toMatchObject({ id: productId, title, markets: [{ ...marketKey,
+    price: priceMinor === null ? null : { min_minor: priceMinor, max_minor: priceMinor, currency: 'USD' },
+    stock: { status: stockStatus, quantity, availability, variants_total: 1, variants_observed: quantity === null ? 0 : 1 },
+  }], variants: [{ id: expect.any(String), sku, listings: priceMinor === null ? [] : [{
+    ...marketKey, price_minor: priceMinor, currency: 'USD', inventory_quantity: quantity, inventory_status: stockStatus, availability,
+  }] }] });
+
+  await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible();
+  const matrix = page.getByRole('region', { name: 'Market prices and stock' });
+  await expect(matrix.getByRole('columnheader', { name: market.name, exact: true })).toBeVisible();
+  const variant = matrix.getByRole('row').filter({ has: page.getByRole('rowheader', { name: sku, exact: true }) });
+  await expect(variant.getByText(priceText, { exact: true })).toBeVisible();
+  const summary = matrix.getByRole('row').filter({ has: page.getByRole('rowheader', { name: 'All variants', exact: true }) });
+  await expect(summary.getByText(stockText, { exact: true })).toBeVisible();
+  if (quantity !== null) await expect(variant.getByText(stockText, { exact: true })).toBeVisible();
+  return detail.variants[0].id;
+}
+
+async function signIn(page, password) {
+  await page.getByLabel('Username or email').fill(username);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
 function addStore(page) {
@@ -908,35 +840,34 @@ test('two management tabs recover the same store from competing registrations wi
   } finally { await second.close(); }
 });
 
-test('desktop Zhihu jobs route to their signed Workers and leave a Web login incident', async ({ page, dev }) => {
+test('desktop Zhihu jobs route to their signed Workers and leave a Web login incident behind 顯示其他模組', async ({ page, dev }) => {
   const ws = await register(page, dev);
-  await expectStep(page, ws, 'agent', { implicit: true });
-  const { rpc } = await connectAgent(page, ws, dev);
-  const names = (await rpc('tools/list', {})).tools.map(tool => tool.name);
-  expect(names).toEqual(expect.arrayContaining(['zhihu_stats_create', 'zhihu_stats_get', 'desktop_request_capability', 'desktop_get_capability_request']));
-  expect(names).not.toContain('zhihu_stats_incidents_list');
+  await expectStep(page, ws, 'workspace', { implicit: true });
+  const { agent } = await agentOverRest(ws, 'Zhihu agent');
+  // Phase 1 lists only the hub tools (§7.1); the Zhihu tools are hidden but still callable by name (§7.4).
+  const names = (await agent.rpc('tools/list', {})).tools.map(tool => tool.name);
+  expect(names).toEqual(HUB_TOOLS);
   const call = async (name, args) => {
-    const result = await rpc('tools/call', { name, arguments: args });
+    const result = await agent.rpc('tools/call', { name, arguments: args });
     expect(result.isError, `${name}: ${JSON.stringify(result.structuredContent)}`).toBeFalsy();
     return result.structuredContent.data;
   };
-  await openSetupStep(page, ws, 'worker');
-  const a = await pairFromWizard(page, ws, dev, 'Zhihu fixture Worker A');
-  const b = await pairFromWizard(page, ws, dev, 'Zhihu fixture Worker B');
+  const a = await pairWorker(ws, dev, 'Zhihu fixture Worker A');
+  const b = await pairWorker(ws, dev, 'Zhihu fixture Worker B');
   const enqueue = body => call('zhihu_stats_create', { body, idempotency_key: randomUUID() });
   const read = id => call('zhihu_stats_get', { params: { id } });
   const login = await enqueue({ device_id: a.id, mode: 'login_check' });
   expect(login).toMatchObject({ status: 'queued', device_id: a.id, mode: 'login_check' });
-  expect(await b.client.claimZhihuStats()).toBeNull();
+  expect(await b.signed.claimZhihuStats()).toBeNull();
   const stats = await enqueue({ device_id: b.id, profile_slug: 'fixture-self' });
-  const claimA = await a.client.claimZhihuStats();
-  const claimB = await b.client.claimZhihuStats();
+  const claimA = await a.signed.claimZhihuStats();
+  const claimB = await b.signed.claimZhihuStats();
   expect(claimA).toMatchObject({ id: login.id, device_id: a.id });
   expect(claimB).toMatchObject({ id: stats.id, device_id: b.id });
   const blocked = { status: 'blocked', reason: 'login_required' };
   const observed = { status: 'completed', profile_slug: 'fixture-self', followers_text: '0', upvotes_text: '获得 12 次赞同' };
-  await a.client.reportZhihuStats({ id: claimA.id, fencing_token: claimA.fencing_token, result: blocked });
-  await b.client.reportZhihuStats({ id: claimB.id, fencing_token: claimB.fencing_token, result: observed });
+  await a.signed.reportZhihuStats({ id: claimA.id, fencing_token: claimA.fencing_token, result: blocked });
+  await b.signed.reportZhihuStats({ id: claimB.id, fencing_token: claimB.fencing_token, result: observed });
   const incident = await read(login.id);
   expect(incident).toMatchObject({ id: login.id, device_id: a.id, status: 'blocked', result: blocked, reported_at: expect.any(String) });
   expect(await read(stats.id)).toMatchObject({ status: 'completed', device_id: b.id, result: observed });
@@ -950,12 +881,18 @@ test('desktop Zhihu jobs route to their signed Workers and leave a Web login inc
   expect(receipt).toMatchObject({ product_id: product.id, status: 'unsupported', reason: 'product_listing_not_supported' });
   expect(await call('desktop_request_capability', request)).toEqual(receipt);
   expect(await call('desktop_get_capability_request', { params: { id: receipt.id } })).toEqual(receipt);
-  expect(await a.client.claimZhihuStats()).toBeNull();
-  expect(await b.client.claimZhihuStats()).toBeNull();
+  expect(await a.signed.claimZhihuStats()).toBeNull();
+  expect(await b.signed.claimZhihuStats()).toBeNull();
   expect(await ws.rest('GET', '/worker-catalog')).toEqual({ bindings: [], jobs: [] });
 
-  await page.goto(`${ws.app}/agent`);
+  // The core Agent page does not show the hidden Zhihu module (§9.1) ...
   const incidents = page.getByRole('list', { name: 'Zhihu sign-in incidents' });
+  await page.goto(`${ws.app}/agent`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Agent', exact: true })).toBeVisible();
+  await expect(incidents).toHaveCount(0);
+  // ... until Settings → Interface → Show other modules brings it back.
+  await showMoreModules(page, ws.app, 'en');
+  await page.goto(`${ws.app}/agent`);
   for (let visit = 0; visit < 2; visit++) {
     if (visit > 0) await page.reload();
     const row = incidents.getByRole('listitem');
@@ -973,49 +910,17 @@ test('existing business data keeps normal entry points on the dashboard', async 
   const store = await ws.rest('POST', '/stores', { brand_id: brand.id, provider: 'shopify', mode: 'import', name: 'Existing fixture store',
     external_store_id: 'existing-fixture-shop', default_currency: 'USD', default_locale: 'en-US' });
   const product = await ws.rest('POST', '/products', { store_id: store.id, title: 'Existing fixture product', status: 'active' });
-  // This workspace has never dismissed the wizard. It is the real business inventory that prevents the redirect.
+  // This workspace has never dismissed the wizard. It is the real business inventory that prevents the redirect;
+  // the dashboard index is Today in phase 1 (§9.1).
   await page.goto(dev.origin);
   await expect(page).toHaveURL(ws.app);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expectToday(page, 'en');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await signIn(page, ws.password);
   await expect(page).toHaveURL(ws.app);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expectToday(page, 'en');
   const target = `${ws.app}/products/${product.id}`;
   await page.goto(target);
   await expect(page).toHaveURL(target);
   await expect(page.getByRole('heading', { name: product.title, exact: true })).toBeVisible();
 });
-
-async function registerAndVerifySocial(page, ws, primary, other) {
-  await page.getByRole('combobox', { name: 'Platform', exact: true }).selectOption('douyin');
-  await page.getByLabel('Display name').fill('Fixture social account');
-  await page.getByLabel('Platform account ID').fill('fixture-social-identity');
-  await page.getByRole('checkbox', { name: /I confirm this account is owned by/ }).check();
-  const registered = responseFor(page, 'POST', `${ws.root}/social-accounts`);
-  await page.getByRole('button', { name: 'Register account', exact: true }).click();
-  const account = await dataFrom(await registered, 'Register fixture social account');
-  const accountRow = page.getByRole('listitem').filter({ hasText: 'Fixture social account' });
-  await accountRow.getByLabel('Dedicated worker').selectOption(primary.id);
-  await accountRow.getByRole('checkbox', { name: 'I confirm I am authorized to use this account on this machine.' }).check();
-  const bound = responseFor(page, 'PUT', `${ws.root}/social-accounts/${account.id}/execution-binding`);
-  await accountRow.getByRole('button', { name: 'Save worker assignment' }).click();
-  const result = await dataFrom(await bound, 'Bind social account to the selected Worker');
-  expect(result.binding).toMatchObject({ device_id: primary.id, social_account_id: account.id, connector_channel: 'browser' });
-  const sessions = () => ws.rest('GET', '/browser-sessions');
-  const [boundSession] = await sessions();
-  expect(boundSession).toMatchObject({ social_account_id: account.id, device_id: primary.id, status: 'pending_identity' });
-  await expect(accountRow).toContainText('Identity verification pending');
-  const loginRequested = responseFor(page, 'POST', `${ws.root}/browser-sessions/${boundSession.id}/request-login`);
-  await accountRow.getByRole('button', { name: 'Request browser sign-in on worker' }).click();
-  expect(await dataFrom(await loginRequested, 'Request browser identity verification')).toEqual({ status: 'pending_identity' });
-  const [pending] = await sessions();
-  expect(pending).toMatchObject({ id: boundSession.id, status: 'pending_identity' });
-  await expect(other.client.reportIdentity('browser', pending.id, account.external_account_id)).rejects.toMatchObject({ status: 403 });
-  expect(await sessions()).toEqual([pending]);
-  expect(await primary.client.reportIdentity('browser', pending.id, account.external_account_id)).toBe('verified');
-  expect(await sessions()).toEqual([expect.objectContaining({ id: pending.id, device_id: primary.id,
-    status: 'verified', verified_at: expect.any(String) })]);
-  await page.getByRole('button', { name: 'Check status again' }).click();
-  await expect(accountRow).toContainText('Identity verified');
-}

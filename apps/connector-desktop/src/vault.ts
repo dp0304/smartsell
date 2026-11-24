@@ -3,6 +3,17 @@ import { readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { fields, opaqueId } from '../../../packages/connector-tasks/src/tasks.ts';
 
 export type Pairing = { origin: string; workspace: string; device: string; name: string; key: KeyObject };
+
+/**
+ * The pairing exists but cannot be decrypted (§8.2, §12.1 risk 11): on macOS an unsigned update can make the
+ * keychain ask again, and a denied or unavailable keychain must not look like "not paired".
+ */
+export class VaultLockedError extends Error {
+  constructor(readonly reason: 'unavailable' | 'decrypt_failed', options?: { cause?: unknown }) {
+    super(reason === 'unavailable' ? '系統安全儲存目前無法使用。' : '無法解密本機配對資料。', options);
+    this.name = 'VaultLockedError';
+  }
+}
 export interface Vault {
   load(): Pairing | undefined;
   save(pairing: Pairing): void;
@@ -39,9 +50,12 @@ export function deviceVault(path: string, safe: SafeStorage, platform: string): 
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
         throw error;
       }
-      requireEncryption();
+      if (!available()) throw new VaultLockedError('unavailable');
       if (ciphertext.length > 16_384) throw new Error('配对记录无效。');
-      const row = fields(JSON.parse(safe.decryptString(ciphertext)), ['origin', 'workspace', 'device', 'name', 'privateKey']);
+      let plain: string;
+      try { plain = safe.decryptString(ciphertext); }
+      catch (error) { throw new VaultLockedError('decrypt_failed', { cause: error }); }
+      const row = fields(JSON.parse(plain), ['origin', 'workspace', 'device', 'name', 'privateKey']);
       if (typeof row.origin !== 'string' || typeof row.name !== 'string' || typeof row.privateKey !== 'string') throw new Error('配对记录无效。');
       const key = createPrivateKey(row.privateKey);
       if (key.asymmetricKeyType !== 'ed25519') throw new Error('配对密钥无效。');

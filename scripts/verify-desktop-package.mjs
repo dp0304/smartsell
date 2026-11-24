@@ -3,13 +3,16 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PRODUCT_NAME } from '../apps/connector-desktop/scripts/package-config.mjs';
 
+// CI check of the unsigned development package (`package.mjs mac|win --local-dir`). Release installers are built and
+// checked by `pnpm worker:release` (§8.18); this only verifies the packaged app layout of the SmartSell Worker App.
 const project = fileURLToPath(new URL('../apps/connector-desktop/', import.meta.url));
 const output = resolve(project, 'release-local');
 const archives = readdirSync(output, { recursive: true }).filter(path => /[/\\]app\.asar$/.test(path));
 assert.equal(archives.length, 1, 'Expected one packaged Electron application');
 const archive = resolve(output, archives[0]);
-const executable = process.platform === 'darwin' ? '../MacOS/SmartSell Connector' : '../SmartSell Connector.exe';
+const executable = process.platform === 'darwin' ? `../MacOS/${PRODUCT_NAME}` : `../${PRODUCT_NAME}.exe`;
 assert(statSync(resolve(dirname(archive), executable)).isFile(), 'Packaged application executable is missing');
 
 const require = createRequire(new URL('../apps/connector-desktop/package.json', import.meta.url));

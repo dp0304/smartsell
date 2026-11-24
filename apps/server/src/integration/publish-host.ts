@@ -10,6 +10,10 @@ import type { CustomerEgress } from './customer-egress.js';
 import { publishConnector, publishDrain } from './publish-connector.js';
 import { mountPublishDevice } from './publish-device.js';
 import { youtubePublishing, type PublishMedia } from './publish-youtube.js';
+import type { Storage } from '../../../../packages/media-store/src/storage.js';
+import { configureWorkerHost, type WorkerHostOptions } from '../modules/worker/model.js';
+import { runWorkerLifecycle } from '../modules/worker/lifecycle.js';
+import { refreshHostCaches } from '../modules/worker/host-cache.js';
 
 const providers = ['xiaohongshu', 'douyin'] as const;
 const channels = ['browser', 'mobile'] as const;
@@ -53,9 +57,17 @@ export function publishDevicePolicy(raw: string | undefined, termsRaw: string | 
   } satisfies Pick<ConnectorServices, 'connectorConfigured' | 'terms'>;
 }
 
-export function createPublishHost(account: AccountServices, media?: PublishMedia,
-  policy = publishDevicePolicy(process.env.SMARTSELL_CONNECTOR_APPROVALS, process.env.SMARTSELL_CONNECTOR_TERMS)) {
+/**
+ * The Worker job engine's host wiring (§5.13, §6.6, §8.11, §8.18): test timing, release and selector directories, and the
+ * media storage used for signed downloads and evidence. Values not given keep the previous configuration.
+ */
+export type WorkerHostConfig = WorkerHostOptions;
+
+export function createPublishHost(account: AccountServices, media?: PublishMedia & { storage?: Storage },
+  policy = publishDevicePolicy(process.env.SMARTSELL_CONNECTOR_APPROVALS, process.env.SMARTSELL_CONNECTOR_TERMS), worker: WorkerHostConfig = {}) {
   const services = { ...account, ...policy };
+  configureWorkerHost({ ...worker, ...(media?.storage && !worker.storage && { storage: media.storage }) });
+  void refreshHostCaches(true);
   return {
     policy,
     bindOperation(op: Registered): Registered {
@@ -65,8 +77,11 @@ export function createPublishHost(account: AccountServices, media?: PublishMedia
       } };
     },
     schedules(items: Schedule[]) { return items.filter(item => item.id !== 'execution.due'); },
-    mount(app: FastifyInstance, store: BackgroundStore, egress?: CustomerEgress) { mountPublishDevice(app, store, services, egress); },
+    mount(app: FastifyInstance, store: BackgroundStore, egress?: CustomerEgress) { mountPublishDevice(app, store, services, egress, { storage: media?.storage ?? worker.storage }); },
     drain: (async transact => {
+      // §5.13: the Worker job lifecycle (missed, unreported, outcome_unknown, successors) in its own short transaction.
+      await refreshHostCaches();
+      await runWorkerLifecycle(transact);
       await runPostMaintenance(transact, account);
       const youtube = media && youtubePublishing(transact, account, media);
       await publishDrain(publishConnector(services), youtube ? [youtube] : [])(transact);

@@ -14,6 +14,7 @@ import { brandOperationAllowed, validateBrandScopes } from './brand-access.js';
 import { portalTeam } from './portal-host.js';
 import { assertUsageAllowed } from '../modules/ops/metering.js';
 import { handoverCandidates, transferAcceptedTasks } from '../modules/workspace/tasks.js';
+import { presenceFor } from '../modules/worker/presence.js';
 
 const membershipKey = (userId: string, workspaceId: string) => `member/${userId}/${workspaceId}`;
 const tenantMemberKey = (tenantId: string, userId: string) => `tenant-member/${tenantId}/${userId}`;
@@ -33,6 +34,8 @@ export function workspaceServices(operations: readonly Registered[], egress?: Cu
     }, ctx, ctx.role);
     return Object.assign(ctx, {
       agentCredentialId: credentialId,
+      // C14: in-memory machine presence for the domain precheck, views and alerts (§2.10). Never written by readers.
+      presence: (deviceId: string) => presenceFor(ctx, deviceId),
       agentModelServices: models.bind(ctx, egress?.hasModel(ctx) ? egress.model : undefined),
       async agentInboxRead(scoped: Context, id: string) {
         if (!inboxRead?.roles.includes(scoped.role)) throw new Problem(403, 'FORBIDDEN', 'Inbox read is unavailable');
@@ -44,7 +47,8 @@ export function workspaceServices(operations: readonly Registered[], egress?: Cu
         ? !!identity.get<Membership>(membershipKey(id, ctx.workspaceId)) : id === ctx.actorId,
       tenantScope,
       tenantRole: credentialId ? undefined : identity?.get<{ role: Role }>(tenantMemberKey(ctx.tenantId, ctx.actorId))?.role,
-      workspaceName: identity?.get<Workspace>(`workspace/${ctx.workspaceId}`)?.name,
+      // The identity record when the store has one; else the name the store put on the context (local/memory store, S8 item 4).
+      workspaceName: identity?.get<Workspace>(`workspace/${ctx.workspaceId}`)?.name ?? (ctx as { workspaceName?: string }).workspaceName,
       canReadWorkspaceResource(kind: string, row: Row) {
         if (['customer', 'conversation', 'creator', 'agent_job'].includes(kind)) {
           return ['owner', 'admin', 'manager'].includes(ctx.role) ||

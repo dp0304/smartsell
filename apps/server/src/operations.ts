@@ -27,7 +27,10 @@ interface PortalHooks {
 export const moduleKeys = [
   'workspace', 'account', 'ingest', 'commerce', 'campaign', 'intel', 'content', 'asset', 'planning',
   'execution', 'inbox', 'creator', 'traffic', 'ads', 'lifecycle', 'analytics', 'agent', 'team', 'ops',
+  // Phase 1 hub modules (docs/restructure/phase1-design.md §11.1). They may export an empty list while being built.
+  'worker', 'posting', 'alerts',
 ] as const;
+const PHASE1_MODULES: ReadonlySet<string> = new Set(['worker', 'posting', 'alerts']);
 
 export interface Registered extends Operation { module: string; mcp?: boolean }
 export interface Subscriber {
@@ -59,7 +62,7 @@ export async function discoverOperations() {
       loadFailures.set(module, error instanceof Error ? error.message : String(error));
       continue;
     }
-    if (!Array.isArray(imported.operations) || !imported.operations.length) {
+    if (!Array.isArray(imported.operations) || (!imported.operations.length && !PHASE1_MODULES.has(module))) {
       missingModules.push(module);
       continue;
     }
@@ -135,6 +138,11 @@ export const HUMAN_ONLY: ReadonlySet<string> = new Set([
   'experiment_start', 'collection_budget_set',
   // Undoing a person's pause or archive. A retracted fact cannot be revised and its key cannot be reused, so it is not a stop.
   'data_source_resume', 'workspace_brand_restore', 'commerce_fact_retract',
+  // Phase 1 hub (phase1-design §4.6). Registered under these exact names, never through account's `account_` prefix.
+  'hub_channels_update_settings', 'hub_channels_ack_automation_notice', 'hub_channels_ack_risk', 'hub_channels_clear_risk_ack',
+  'hub_channels_bind_machine', 'hub_channels_dry_run', 'hub_machines_update', 'hub_machines_resume', 'hub_machines_retire',
+  'hub_posts_confirm_result', 'hub_posts_mark_not_published', 'hub_posts_retry', 'hub_jobs_resume', 'hub_jobs_force_release',
+  'hub_alerts_update_channels', 'hub_alerts_test',
 ]);
 /** Endpoints that both release and stop: an Agent may send only the stop (design 4.3: Agent 可以「停」…不能「解除」). */
 export const AGENT_STOP_ONLY: Readonly<Record<string, (body: Data) => boolean>> = {
@@ -147,6 +155,9 @@ export const AGENT_STOP_ONLY: Readonly<Record<string, (body: Data) => boolean>> 
 export const AGENT_HUMAN_FIELDS: Readonly<Record<string, readonly string[]>> = {
   // What collected data may be shown, shared, exported or sent to models is the data licence.
   data_source_create: ['allowed_uses'], data_source_update: ['allowed_uses'],
+  // E21/E32: only a person asks a machine to open a sign-in window (「重新登入」); a plain check stays Agent-callable.
+  // posting/check.ts keeps its own requireHuman guard as defence in depth.
+  hub_channels_check: ['open_login_window'],
 };
 
 export const humanOnly = (operation: Pick<Registered, 'name' | 'mcp'>) => HUMAN_ONLY.has(operation.name) || operation.mcp === false;
@@ -305,7 +316,9 @@ export async function runScopedOperation(records: Records, scope: Scope, princip
       });
     }
   }
-  const operationInput = { ...input, query: readOnly ? filters : input.query };
+  // E22: a read with an object result that declares ownsLimit receives `limit` itself (arrays are paginated below instead).
+  const ownLimit = readOnly && limit !== undefined && operation.ownsLimit === true;
+  const operationInput = { ...input, query: readOnly ? (ownLimit ? { ...filters, limit } : filters) : input.query };
   const data = readOnly && source === 'rest' && operation.listForRest
     ? await operation.listForRest(ctx, operationInput)
     : await operation.run(ctx, operationInput);

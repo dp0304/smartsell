@@ -1,6 +1,7 @@
 import { Problem } from '@smartsell/contracts';
 import { createHash, randomUUID } from 'node:crypto';
-import Fastify, { type FastifyRequest } from 'fastify';
+import type { Socket } from 'node:net';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { auth, forbidden, header, invalid, requestObject, type AuthOptions } from './auth';
 import { admins, DomainError } from './modules/types';
 import { mcpCallAuditWithCommits, operationWriteAuditPrefix, workerSocialStatusAuditRows, type McpWriteReceipt } from './integration/mcp-call-audit.js';
@@ -19,6 +20,37 @@ import { registerWorkerDownloads } from './worker-downloads.js';
 import { commandIdentity } from './integration/command-identity.js';
 
 const notFound = () => new DomainError('not_found', 'Resource not found', 404);
+const notFoundBody = { error: { code: 'not_found', message: 'Resource not found' } };
+
+/**
+ * Route options for a POST route that receives a non-JSON body (raw bytes, multipart, form posts).
+ *
+ * The root onRequest guard rejects every POST whose Content-Type is not `application/json` with 415. PUT, PATCH and
+ * DELETE are not content-type checked, so raw-byte uploads should prefer PUT (§2.4: upload parts, evidence). When a
+ * POST really must accept another type, register it with this config:
+ *
+ *   app.post('/api/v1/example/raw', { ...RAW_BODY_ROUTE, bodyLimit: 4 * 1024 * 1024 }, handler);
+ *
+ * and add its own content-type parser in an encapsulated plugin. The origin and Sec-Fetch-Site checks still apply;
+ * only the content-type check is skipped. List every such route in `docs/hub-setup.md` (developer notes).
+ */
+export const RAW_BODY_ROUTE = { config: { smartsellRawBody: true } } as const;
+// Read without augmenting FastifyContextConfig: an all-optional augmentation turns it into a weak type for every route.
+const acceptsRawBody = (request: FastifyRequest) => (request.routeOptions.config as { smartsellRawBody?: unknown } | undefined)?.smartsellRawBody === true;
+
+/** Paths whose unmatched requests always get the JSON 404, never the SPA (§2.6). */
+export function isReservedApiPath(url: string) {
+  let path = url.split(/[?#]/, 1)[0].replace(/\/+/g, '/');
+  try { path = decodeURIComponent(path); } catch { return true; }
+  return path === '/api' || path.startsWith('/api/') || path === '/mcp' || path.startsWith('/mcp/') ||
+    path === '/agent' || path.startsWith('/agent/');
+}
+
+/**
+ * Receives unmatched GET/HEAD requests outside the reserved API paths. Send the response and resolve to true, or resolve
+ * to false to fall back to the JSON 404. Resolve to a boolean, not the reply: FastifyReply is a thenable.
+ */
+export type NotFoundDelegate = (request: FastifyRequest, reply: FastifyReply) => boolean | Promise<boolean>;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function canonical(value: unknown): string {
@@ -38,10 +70,36 @@ type Options = AuthOptions & {
   commandIdentityKey?: Uint8Array;
   origin?: string;
   workerDownloadDirectory?: string;
+  /** Fastify trustProxy; the hub trusts only the local `tailscale serve` (§2.2). */
+  trustProxy?: string | false;
+  requestTimeoutMs?: number;
+  notFound?: NotFoundDelegate;
 };
 
-export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, workerDownloadDirectory, logger = false, ...options }: Options) {
-  const app = Fastify({ logger, disableRequestLogging: true, bodyLimit: 1024 * 1024, requestTimeout: 30_000, requestIdHeader: false, genReqId: () => randomUUID() });
+/**
+ * Shutdown must not wait on sockets that never sent a byte. HTTP clients (undici's fetch after a cancelled SSE body, for
+ * example) may open a spare connection without a request; Node counts it as a request in progress, so `server.close()`
+ * waits for `headersTimeout` (~70 s with the connection check interval) although nothing will ever arrive on it. Idle
+ * keep-alive sockets are closed by Fastify and requests in flight still finish; only these empty sockets are destroyed.
+ */
+function closeUnusedSocketsOnShutdown(app: FastifyInstance) {
+  const sockets = new Set<Socket>();
+  let closing = false;
+  app.server.on('connection', (socket: Socket) => {
+    if (closing) { socket.destroy(); return; }
+    sockets.add(socket);
+    socket.once('close', () => sockets.delete(socket));
+  });
+  app.addHook('preClose', async () => {
+    closing = true;
+    for (const socket of sockets) if (socket.bytesRead === 0) socket.destroy();
+  });
+}
+
+export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, workerDownloadDirectory,
+  trustProxy = false, requestTimeoutMs = 30_000, notFound: delegateNotFound, logger = false, ...options }: Options) {
+  const app = Fastify({ logger, disableRequestLogging: true, bodyLimit: 1024 * 1024, requestTimeout: requestTimeoutMs, requestIdHeader: false,
+    trustProxy, genReqId: () => randomUUID() });
   const identity = commandIdentityKey && commandIdentity(store, commandIdentityKey);
   const csrfSecret = operationApi?.config.secret ?? secret;
   const csrf = csrfSecret ? createOperationCsrf(csrfSecret) : undefined;
@@ -56,15 +114,22 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
     return run(unit);
   });
   const publicTraffic = traffic && commandTraffic(traffic, store, roles?.has('public') ?? true);
+  closeUnusedSocketsOnShutdown(app);
   app.addHook('onClose', () => store.close());
   app.addHook('onRequest', async (request, reply) => {
     reply.header('cache-control', 'no-store').header('x-content-type-options', 'nosniff').header('referrer-policy', 'no-referrer').header('x-request-id', request.id);
     if (options.secureCookie) reply.header('strict-transport-security', 'max-age=31536000');
     await publicTraffic?.(request, reply);
     if (reply.sent) return;
-    sessions.guard(request, request.routeOptions.url !== '/api/v1/logout');
+    sessions.guard(request, request.routeOptions.url !== '/api/v1/logout' && !acceptsRawBody(request));
   });
-  app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: { code: 'not_found', message: 'Resource not found' } }));
+  // Fastify allows one not-found handler per root, so the SPA fallback is a delegate of this handler (§2.4).
+  app.setNotFoundHandler(async (request, reply) => {
+    if (delegateNotFound && (request.method === 'GET' || request.method === 'HEAD') && !isReservedApiPath(request.url)) {
+      if (await delegateNotFound(request, reply)) return reply;
+    }
+    return reply.code(404).send(notFoundBody);
+  });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof DomainError || error instanceof Problem) return reply.code(error.status).send({ error: { code: error.code, message: error.message } });
     const code = (error as { code?: string }).code;
@@ -186,5 +251,5 @@ export function buildApp({ store, registry, extensions, secret, operationApi, tr
       if (registry.get(module)?.has(action)) throw new Error(`Duplicate command: ${module}.${action}`);
     }
   }
-  return { app, workspace };
+  return { app, workspace, requireSession: sessions.read as (request: FastifyRequest) => Promise<unknown> };
 }

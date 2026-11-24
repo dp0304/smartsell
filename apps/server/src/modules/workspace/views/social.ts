@@ -356,5 +356,5 @@ export function socialView(ctx: WorkspaceReadContext, { query }: Input) {
 
 export const socialViewOperations: Operation[] = [
   { method: 'GET', path: '/views/social', name: 'views_social', roles: READ, summary: 'Read per-account social performance, daily series and top posts with coverage',
-    contract: { query: ['from', 'to', 'tz', 'brand_id', 'platform', 'metric', 'limit'] }, run: socialView },
+    contract: { query: ['from', 'to', 'tz', 'brand_id', 'platform', 'metric', 'limit'] }, ownsLimit: true, run: socialView },
 ];

@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { Data } from '@smartsell/contracts';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { invalid, requestObject } from '../auth.js';
 import { makeContext } from '../context.js';
 import { expireCredentialLeases } from '../modules/agent/operations.js';
@@ -19,6 +19,8 @@ interface Options {
   sessionHash(request: FastifyRequest): string | undefined;
   csrf(request: FastifyRequest): void;
   seal(credential: SealedCredential): string;
+  /** Opens an `ss_command_` bearer token; enables the self-revoke route (E13). */
+  open?(token: string): SealedCredential | undefined;
 }
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -105,13 +107,13 @@ export async function touchAgentConnection(unit: Unit, row: Entity) {
 }
 
 export async function verifyAgentConnection(context: Unit['context'], id: string) {
-  // The success audit and this stamp are committed together. Old tools/list stamps do not qualify.
+  // The success audit of any tool call and this stamp are committed together (§7.4, B07). tools/list and old stamps do not qualify.
   const row = await context.get('mcp_runtime', 'credential', id);
   if (!row || !isAgentConnection(row) || row.data.mcp_client_verified_at) return;
   await context.update('mcp_runtime', 'credential', id, { mcp_client_verified_at: context.now }, row.version);
 }
 
-export function registerAgentConnections(app: FastifyInstance, { store, secret, mcpUrl, sessionHash, csrf, seal }: Options) {
+export function registerAgentConnections(app: FastifyInstance, { store, secret, mcpUrl, sessionHash, csrf, seal, open }: Options) {
   // The Agent session hash is kept encrypted so revocation can end it without the bearer token.
   const key = createHmac('sha256', secret).update('smartsell:agent-session-ref:v1').digest();
   function sealRef(value: string, purpose?: string) {
@@ -143,8 +145,9 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
     { label, client }: ReturnType<typeof connectionInput>) {
     const { context } = unit;
     const now = context.now;
+    // §7.4: connections created from phase 1 on list only the hub tools (legacy tools stay callable).
     await context.insert('mcp_runtime', 'credential', { kind: 'agent_connection', actor_id: context.actorId, access: 'write', label, client,
-      created_at: now, expires, last_used_at: null, session_ref: sealRef(agentHash) }, id);
+      created_at: now, expires, last_used_at: null, session_ref: sealRef(agentHash), tool_profile: 'hub_v1' }, id);
     await mirror(unit, id, () => ({ id, version: 1, created_at: now, updated_at: now, label, client, user_id: context.actorId,
       expires_at: iso(expires), last_used_at: null, revoked: false, revoked_at: null, created_via: 'human' }), records => {
       const activity = activityEvent({ name: 'agent_connection_create' }, { actorId: context.actorId }, 'rest', reqId, now, { id, title: label });
@@ -211,7 +214,8 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
       if (error instanceof DomainError && [401, 403, 404, 409].includes(error.status)) throw invalidCode();
       throw error;
     }
-    return reply.header('Cache-Control', 'no-store').code(201).send({ data: { token } });
+    // The laptop App writes config.json {hub_origin, workspace_id, connection_id, client} from this answer (§6.2 step 3).
+    return reply.header('Cache-Control', 'no-store').code(201).send({ data: { token, id, connection_id: id, workspace_id: wid, client, mcp_url: mcpUrl } });
   });
 
   app.post<{ Params: { wid: string } }>(route, async (req, reply) => {
@@ -247,7 +251,33 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
     return { data: rows.map(row => connectionView(row, mcpUrl)).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))) };
   });
 
+  /** Revokes one stored connection row in the caller's workspace transaction and records who did it (activity event). */
+  async function revokeConnection(unit: Unit, row: Entity, reqId: string, audit: { name: string; credentialId?: string }) {
+    const { context } = unit;
+    const { id } = row;
+    await unit.command({ module: 'agent', action: 'revoke_agent_connection', key: `agent-connection-revoke/${id}`, fingerprint: '' }, async () => {
+      const now = context.now;
+      await context.update('mcp_runtime', 'credential', id, { revoked: true, revoked_at: now }, row.version);
+      const { reapAgentJobLeases } = await import('../modules/agent/agent-jobs.js');
+      await reapAgentJobLeases(context, id);
+      await mirror(unit, id, current => current && { ...current, revoked: true, revoked_at: now, updated_at: now, version: Number(current.version) + 1,
+        ...(audit.credentialId && { revoked_via: 'self' }) },
+        records => {
+          expireCredentialLeases(makeContext(records, context, context.role, reqId), id);
+          const label = typeof row.data.label === 'string' ? row.data.label : undefined;
+          const principal = audit.credentialId ? { actorId: context.actorId, grantId: audit.credentialId, ...(label && { credentialLabel: label }) }
+            : { actorId: context.actorId };
+          const activity = activityEvent({ name: audit.name }, principal, 'rest', reqId, now, { id, title: row.data.label });
+          records.put(`row/activity_event/${activity.id}`, activity);
+        });
+    });
+  }
+
   app.delete<{ Params: { wid: string; id: string } }>(`${route}/:id`, async (req, reply) => {
+    // The laptop App (§6.2 step 5) has no browser session; with its own Bearer token it may revoke exactly this connection.
+    if (open && !sessionHash(req) && /^Bearer /i.test(String(req.headers.authorization ?? ''))) {
+      return selfRevoke(req, reply, { id: req.params.id, workspaceId: req.params.wid });
+    }
     const hash = browser(req, true);
     const { id } = req.params;
     if (!uuid.test(id)) throw notFound();
@@ -256,23 +286,41 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
       const row = await context.get('mcp_runtime', 'credential', id);
       if (!row || !isAgentConnection(row) || row.data.actor_id !== context.actorId) throw notFound();
       if (row.data.revoked === true) return row.data.session_ref;
-      await unit.command({ module: 'agent', action: 'revoke_agent_connection', key: `agent-connection-revoke/${id}`, fingerprint: '' }, async () => {
-        const now = context.now;
-        await context.update('mcp_runtime', 'credential', id, { revoked: true, revoked_at: now }, row.version);
-        const { reapAgentJobLeases } = await import('../modules/agent/agent-jobs.js');
-        await reapAgentJobLeases(context, id);
-        await mirror(unit, id, current => current && { ...current, revoked: true, revoked_at: now, updated_at: now, version: Number(current.version) + 1 },
-          records => {
-            expireCredentialLeases(makeContext(records, context, context.role, req.id), id);
-            const activity = activityEvent({ name: 'agent_connection_revoke' }, { actorId: context.actorId }, 'rest', req.id, now,
-              { id, title: row.data.label });
-            records.put(`row/activity_event/${activity.id}`, activity);
-          });
-      });
+      await revokeConnection(unit, row, req.id, { name: 'agent_connection_revoke' });
       return row.data.session_ref;
     });
     const agentHash = openRef(ref);
     if (agentHash) await store.revokeSession(agentHash);
     return reply.code(204).send();
   });
+
+  // E13: an Agent connection revokes itself with its own Bearer token (the laptop App re-connecting, §6.2 step 5). The token
+  // names exactly one connection; `expect` (the legacy `/:id` path) must name that same connection.
+  async function selfRevoke(req: FastifyRequest, reply: FastifyReply, expect?: { id: string; workspaceId: string }) {
+    const token = /^Bearer (.+)$/i.exec(String(req.headers.authorization ?? ''))?.[1]?.trim() ?? '';
+    const credential = token && open ? open(token) : undefined;
+    const unauthorized = (message: string) => reply.code(401).header('WWW-Authenticate', 'Bearer').send({ error: { code: 'UNAUTHENTICATED', message } });
+    if (!credential || !uuid.test(credential.id) || !uuid.test(credential.workspaceId)) return unauthorized('A valid agent connection token is required');
+    if (expect && (expect.id !== credential.id || expect.workspaceId !== credential.workspaceId)) {
+      return reply.code(403).send({ error: { code: 'PERMISSION_DENIED', message: 'An agent connection token can revoke only its own connection' } });
+    }
+    try {
+      await store.workspace(credential.sessionHash, credential.workspaceId, async unit => {
+        const row = await unit.context.get('mcp_runtime', 'credential', credential.id);
+        if (!row || !isAgentConnection(row) || row.data.actor_id !== unit.context.actorId || row.data.revoked === true || !(row.data.expires > Date.now())) {
+          throw unauthenticated();
+        }
+        await revokeConnection(unit, row, req.id, { name: 'agent_connection_self_revoke', credentialId: credential.id });
+      }, credential.id);
+    } catch (error) {
+      if (error instanceof DomainError && error.status === 401) return unauthorized('This connection is unknown, expired or already revoked');
+      throw error;
+    }
+    await store.revokeSession(credential.sessionHash);
+    return reply.code(204).send();
+  }
+  if (open) app.delete(SELF_REVOKE_PATH, (req, reply) => selfRevoke(req, reply));
 }
+
+/** E13, Appendix B.1: `DELETE` with the connection's own `Authorization: Bearer ss_command_…`. */
+export const SELF_REVOKE_PATH = '/api/v1/agent-connections/self';

@@ -189,7 +189,9 @@ export function periodProgress(span: Span, today: string): { day: number; days: 
   return { day: diffDays(span.first, today) + 1, days: span.days };
 }
 
-const SETTLED = new Set(['published', 'failed', 'expired', 'closed', 'cancelled', 'cancel_requested', 'superseded']);
+// Phase 1 post statuses that already say what happened (missed, unknown, needs you, …) are not also marked overdue.
+const SETTLED = new Set(['published', 'failed', 'expired', 'closed', 'cancelled', 'cancel_requested', 'superseded',
+  'missed', 'unknown', 'needs_owner', 'publishing', 'confirming', 'cancelling', 'rejected']);
 export interface CalendarSummary {
   counts: Record<string, number>;
   needs: Record<NeedsHuman, number> & { total: number };
@@ -229,7 +231,9 @@ export function isOverdue(event: CalendarEvent, now: Date, today: string, timeZo
 }
 
 /** Where the person settles an event that needs them; the decisions page filters by its own kinds. */
-export function decisionHref(base: string, event: Pick<CalendarEvent, 'kind' | 'needs_human'>) {
+export function decisionHref(base: string, event: Pick<CalendarEvent, 'kind' | 'needs_human'> & { post_id?: string }) {
+  // Phase 1 posts are settled on their own page (§9.5); the decisions module is hidden from the core navigation.
+  if (event.kind === 'publish' && event.post_id) return `${base}/posts/${encodeURIComponent(event.post_id)}`;
   const kind = event.needs_human === 'late_decision' ? 'late_decision'
     : event.needs_human === 'approval' && event.kind === 'publish' ? 'publish_approval'
       : event.needs_human === 'approval' && event.kind === 'ad_flight' ? 'ad_proposal' : null;

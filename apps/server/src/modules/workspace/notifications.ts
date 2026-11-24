@@ -59,6 +59,18 @@ function preference(ctx: Context, userId: string, type: string) {
     (row.type_pattern === type || (row.type_pattern.endsWith('*') && type.startsWith(row.type_pattern.slice(0, -1)))))
     .sort((a, b) => String(b.type_pattern).replace(/\*$/, '').length - String(a.type_pattern).replace(/\*$/, '').length || Number(b.type_pattern === type) - Number(a.type_pattern === type))[0];
 }
+/** In-app notification type that mirrors an `owner_alert` into the existing bell feed (phase1-design §5.9 channel 1). */
+export const ownerAlertNotificationType = 'owner_alert';
+
+/**
+ * Who "the owner" is for owner alerts: active owners and unscoped admins of the workspace (§5.9).
+ * Empty when the context carries no membership list (unit tests, or an unenriched context).
+ */
+export function ownerRecipients(ctx: Context): string[] {
+  const members = (ctx as Context & { activeWorkspaceMembers?: { userId: string; role: string; scopes?: string[] }[] }).activeWorkspaceMembers ?? [];
+  return [...new Set(members.filter(member => !member.scopes?.length && ['owner', 'admin'].includes(member.role)).map(member => member.userId))].sort();
+}
+
 export function notify(ctx: Context, recipient: string, type: string, title: string, data: Data = {}) {
   if (data.dedupe_key) {
     const existing = ctx.list('notification').find(row => row.recipient_user_id === recipient && row.dedupe_key === data.dedupe_key);

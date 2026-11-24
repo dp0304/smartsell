@@ -5,6 +5,8 @@ import { RouterLink, resourcePath, useText } from '../parts';
 import { decisionHref, eventSpan, periodProgress, safePermalink } from './calendar-logic';
 import { KindKey, NeedsMark, OverdueTag, StatusTag, isAllDay } from './calendar-parts';
 import { clock, dayLabel, fill, kindLabel, needsDetail, platformLabel, resourceLabel, shortDay, t } from './calendar-text';
+import { PostDetail } from './post-detail';
+import { hub } from '../hub-copy';
 
 /** When an event happens, in the workspace zone: a day, a time, or a period with its length. */
 export function whenText(event: CalendarEvent, lang: Lang, timeZone: string | undefined, today: string) {
@@ -39,6 +41,8 @@ export function EventDrawer({ event, timeZone, today, planName, base, onClose }:
   const planHref = event.campaign_id ? `${base}/plans/${encodeURIComponent(event.campaign_id)}` : undefined;
   const shortWhen = span ? `${shortDay(span.first, lang)}${span.period ? ` – ${shortDay(span.last, lang)}` : isAllDay(event) ? '' : ` ${clock(event.starts_at, lang, timeZone)}`}` : '';
   const prompt = fill(l(t.agentPrompt), { title: event.title, when: shortWhen });
+  // Phase 1 publish events carry the post id (§9.7): the drawer shows the post itself instead of a prompt to copy (§9.5).
+  const postId = event.kind === 'publish' ? (event as CalendarEvent & { post_id?: string }).post_id : undefined;
   return <dialog ref={ref} className="cal-drawer" aria-labelledby={titleId} onClose={onClose}
     onClick={click => { if (click.target === click.currentTarget) ref.current?.close(); }}>
     <div className="cal-drawer-body">
@@ -47,7 +51,7 @@ export function EventDrawer({ event, timeZone, today, planName, base, onClose }:
         <button type="button" className="vs-icon-button" aria-label={l(t.close)} title={l(t.close)} onClick={() => ref.current?.close()}><X size={16} aria-hidden="true" /></button>
       </header>
       <h2 id={titleId}>{event.title}</h2>
-      {event.needs_human && <div className="cal-drawer-needs" role="note">
+      {event.needs_human && !postId && <div className="cal-drawer-needs" role="note">
         <NeedsMark event={event} />
         <p>{l(needsDetail(event.kind, event.needs_human))}</p>
         <RouterLink to={decisionHref(base, event)} className="vs-btn primary-soft">{l(t.goDecisions)}</RouterLink>
@@ -63,11 +67,14 @@ export function EventDrawer({ event, timeZone, today, planName, base, onClose }:
         {planHref && event.kind === 'plan' && <RouterLink to={planHref} className="vs-btn">{l(t.openPlan)}</RouterLink>}
         {relatedLink && <RouterLink to={relatedLink} className="vs-btn">{resourceLabel(event.resource?.type, lang)}</RouterLink>}
       </div>}
-      <div className="cal-drawer-agent">
+      {postId ? <div className="cal-drawer-post">
+        <PostDetail postId={postId} compact />
+        <RouterLink to={`${base}/posts/${encodeURIComponent(postId)}`} className="vs-btn">{l(hub.post.openFull)}</RouterLink>
+      </div> : <div className="cal-drawer-agent">
         <p className="muted"><Glyph name="bot" />{l(t.askAgent)}</p>
         <blockquote>{lang === 'en' ? `“${prompt}”` : `「${prompt}」`}</blockquote>
         <CopyButton text={prompt} />
-      </div>
+      </div>}
       <p className="cal-drawer-source muted">{l(t.source)}{lang === 'en' ? ': ' : '：'}{resourceLabel(event.resource?.type, lang) || kindLabel(event.kind, lang)}{event.resource?.id && <code>{event.resource.id}</code>}</p>
     </div>
   </dialog>;

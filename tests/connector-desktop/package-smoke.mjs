@@ -1,4 +1,7 @@
-// Usage: node tests/connector-desktop/package-smoke.mjs '/path/to/SmartSell Connector.app'
+// Usage: node tests/connector-desktop/package-smoke.mjs '/path/to/SmartSell Worker.app' [--unsigned]
+// (Launches the App with a window; a manual check on a desktop session. The headless check of a built package is
+// `"<App>" --smoke --smartsell-user-data=<tmp> --smoke-out=<tmp>/report.json` (exit 0 when every check passes).)
+// --unsigned: packages from `pnpm worker:release` are ad-hoc signed at most, so the Developer ID signature check is skipped.
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -7,6 +10,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
 const bundle = resolve(process.argv[2] ?? '');
+const unsigned = process.argv.includes('--unsigned');
 assert(process.platform === 'darwin' && bundle.endsWith('.app'), 'Pass a local macOS .app bundle');
 const contents = join(bundle, 'Contents');
 const archive = join(contents, 'Resources', 'app.asar');
@@ -14,7 +18,7 @@ const asar = resolve(import.meta.dirname, '../../apps/connector-desktop/node_mod
 const temp = await mkdtemp(join(tmpdir(), 'smartsell-native-smoke-'));
 let child;
 try {
-  execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle]);
+  if (!unsigned) execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle]);
   const files = execFileSync(asar, ['list', archive], { encoding: 'utf8' }).trim().split('\n');
   for (const name of ['main.cjs', 'preload.cjs', 'ui/index.html', 'ui/renderer.js', 'ui/styles.css', 'smartsell-install-skills.mjs']) {
     assert(files.includes(`/dist/${name}`), `Missing app.asar resource: ${name}`);

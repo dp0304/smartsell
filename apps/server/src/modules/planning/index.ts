@@ -1,10 +1,11 @@
-import { ADMIN, APPROVE, READ, WRITE, Problem, type Context, type Data, type Input, type Operation, type Row } from '@smartsell/contracts';
+import { ADMIN, APPROVE, READ, TERMINAL_JOB_STATUSES, WRITE, Problem, type Context, type Data, type Input, type Operation, type Row, type WorkerJobStatus } from '@smartsell/contracts';
 import { activePause, assessTarget, assertVersion, closeTarget, digest, entries, evergreenExpiry, findStandingGrant, hasExecutionRisk, instant, list, localMinute, locate, object, platformKey, resolveLocal, taskFor, time, type Stage } from '../../../../../packages/domain/src/publishing/index.js';
 import { platformScheduleOperation, readPlatformSchedule } from './schedule-reconciliation.js';
 import { acceptsVerification, cancellationTracking, ensureTask, pending, postAttribution, registerManualPost, requestCancellation, transition } from '../execution/service.js';
 import { isSafeMode } from '../ops/controls.js';
 import { assertLicenseAllowed, getLicenseState } from '../ops/metering.js';
 import { DAY, date, dow, integer, minute, queueSlots, recurringDates, similarity } from './expansion.js';
+import { approvalDeadline, channelSettings, isChannelDirect, registerPlanningHooks, workerEngine } from '../account/channel-settings.js';
 
 export { commands, commands as planningCommands } from './commands.ts';
 export { checkExecution } from './precheck.ts';
@@ -68,7 +69,7 @@ function schedule(body: Data, account: Row, now: string, previous?: Row) {
     : instant(body.scheduled_at ?? previous?.scheduled_at, 'scheduled_at');
   return { schedule_kind, schedule_tz, scheduled_at, local_scheduled_at: localMinute(scheduled_at, schedule_tz), dst_resolution: 'none' };
 }
-function targetValues(ctx: Context, body: Data, previous?: Row): Data {
+export function targetValues(ctx: Context, body: Data, previous?: Row): Data {
   const account = ctx.get('social_account', text(body.social_account_id ?? previous?.social_account_id, 'social_account_id'));
   const variant = ctx.get('content_variant', text(body.content_variant_id ?? previous?.content_variant_id, 'content_variant_id'));
   const item = ctx.get('content_item', text(variant.content_item_id, 'content_item_id'));
@@ -104,7 +105,7 @@ function targetValues(ctx: Context, body: Data, previous?: Row): Data {
     options, promotion_ids: promotions, owner_user_id: text(body.owner_user_id ?? previous?.owner_user_id ?? ctx.actorId, 'owner_user_id'),
   };
 }
-function createTarget(ctx: Context, values: Data, metadata: Data = {}) {
+export function createTarget(ctx: Context, values: Data, metadata: Data = {}) {
   const row = ctx.create(KIND, { ...values, ...metadata, plan_status: 'draft', snapshot_generation: 1, precheck_summary: 'not_run' });
   ctx.emit('planning.target.created', { target_id: row.id });
   return row;
@@ -135,18 +136,34 @@ function policyFor(ctx: Context, target: Data) {
 }
 const defaultSteps = [{ order: 1, approvers: { roles: APPROVE }, min_approvals: 1, due_hours: 48 }];
 const due = (ctx: Context, step: Data) => new Date(time(ctx.now) + Number(step.due_hours ?? 48) * 3_600_000).toISOString();
+/**
+ * Approval request deadline. E34: for a hub channel it is always scheduled_at + lateness_limit_min, the last moment the
+ * post could still go out (phase1-design §4.2). There is no now + 48 h cap: a post planned days ahead stays approvable, and
+ * request.due_at, approvalDeadline, the reminders and approval_lapsed all use the same deadline. Other targets keep the
+ * step's hours.
+ */
+export function approvalDue(ctx: Context, target: Row | Data, step: Data): string {
+  return approvalDeadline(ctx, target as Row) ?? due(ctx, step);
+}
+const workerTask = (task: Row | undefined) => Array.isArray(task?.route) && object(task.route[0]).executor === 'worker';
 function matchesPolicy(request: Row, policy?: Row) {
   return (request.policy_id ?? null) === (policy?.id ?? null) && (request.policy_version ?? null) === (policy?.version ?? null);
 }
 function blockUnsent(ctx: Context, target: Row, reason: string) {
   const task = taskFor(ctx, target);
+  // Worker-route task state is written only by the job engine (syncTaskFromJob). An invalid approval withdraws the live job;
+  // other precheck failures are held by the go check and heartbeat hold instead (phase1-design §4.4, §5.10).
+  if (workerTask(task)) {
+    if (reason === 'approval_invalid') workerEngine().revokeForTarget(ctx, ctx.get(KIND, target.id), 'approval_invalidated');
+    return;
+  }
   // Keep the authorization hold through preflight refreshes and read-only reauthorization.
   if (reason === 'precheck_blocked' && task?.status === 'blocked' && task.status_reason === 'connection_revoked') return;
   if (task && ['scheduled', 'queued', 'blocked'].includes(String(task.status)) && !hasExecutionRisk(ctx, target)) {
     transition(ctx, task, 'blocked', reason);
   }
 }
-function retireRequest(ctx: Context, row: Row, reason: string, status = 'invalidated') {
+export function retireRequest(ctx: Context, row: Row, reason: string, status = 'invalidated') {
   const request = locate(ctx, 'approval_request', row.approval_request_id);
   if (!request || request.resource_type !== RESOURCE || request.resource_id !== row.id || !['approved', 'pending'].includes(String(request.status))) return;
   ctx.update('approval_request', request.id, { status, invalidated_reason: reason });
@@ -162,22 +179,47 @@ function ready(ctx: Context, target: Row) {
   ctx.emit('planning.target.ready', { target_id: row.id, generation: row.snapshot_generation });
   return ctx.get(KIND, row.id);
 }
-function submit(ctx: Context, target: Row, assessment = assessTarget(ctx, target, 'schedule')): Row & { submission_status?: string } {
+/**
+ * F4/F2: a hub-channel submission that precheck blocks leaves the post in draft (derived 「已擋下」, approval not_submitted),
+ * not in awaiting_approval without a pending request, where every view would ask the owner for an approval the hub then
+ * refuses. A changes_requested post that was explicitly resubmitted has left the owner's rejection behind, so it becomes
+ * draft too. auto_submit_on_unblock carries the submission on: fixing the blocker, releasing the pause or resuming the
+ * machine submits it again (E35). Like E23, the job of the withdrawn approval is revoked in the same transaction: it was
+ * kept while the post was still ready, and nothing else would withdraw it before the lifecycle scan.
+ */
+function blockedResubmission(ctx: Context, target: Row, prior: Row | undefined): Row {
+  if (!channelSettings(ctx, String(target.social_account_id)) || hasExecutionRisk(ctx, target)) return target;
+  const validPending = prior?.status === 'pending' && prior.resource_id === target.id && prior.resource_hash === target.frozen_hash && time(prior.due_at) > time(ctx.now);
+  if (!(target.plan_status === 'changes_requested' || target.plan_status === 'awaiting_approval' && !validPending)) return target;
+  // A pending request that no longer binds this post (stale hash or past its deadline) is retired, never left behind.
+  if (prior?.status === 'pending') {
+    const elapsed = time(prior.due_at) <= time(ctx.now);
+    retireRequest(ctx, target, elapsed ? 'deadline_elapsed' : 'resubmitted', elapsed ? 'expired' : 'invalidated');
+  }
+  const row = ctx.update(KIND, target.id, { plan_status: 'draft', frozen_hash: null, paused_by_switch_id: null, auto_submit_on_unblock: true });
+  workerEngine().revokeForTarget(ctx, row, 'approval_invalidated');
+  return ctx.get(KIND, target.id);
+}
+export function submit(ctx: Context, target: Row, assessment = assessTarget(ctx, target, 'schedule')): Row & { submission_status?: 'blocked'; precheck?: unknown } {
   if (!['draft', 'changes_requested', 'awaiting_approval'].includes(String(target.plan_status))) conflict('Target cannot be submitted');
   if (hasExecutionRisk(ctx, target)) conflict('Resolve the prior attempt before requesting approval');
   const prior = locate(ctx, 'approval_request', target.approval_request_id);
   const policy = policyFor(ctx, target);
   if (assessment.overall !== 'blocked' && prior?.status === 'pending' && prior.resource_id === target.id && prior.resource_type === RESOURCE && prior.resource_hash === assessment.hash && target.frozen_hash === assessment.hash && matchesPolicy(prior, policy) && time(prior.due_at) > time(ctx.now)) return target;
   const precheck = recordCheck(ctx, target, 'schedule', assessment);
-  if (assessment.overall === 'blocked') return { ...ctx.get(KIND, target.id), submission_status: 'blocked', precheck };
+  if (assessment.overall === 'blocked') return { ...blockedResubmission(ctx, ctx.get(KIND, target.id), prior), submission_status: 'blocked', precheck };
   retireRequest(ctx, target, prior?.status === 'pending' && time(prior.due_at) <= time(ctx.now) ? 'deadline_elapsed' : 'resubmitted', prior?.status === 'pending' && time(prior.due_at) <= time(ctx.now) ? 'expired' : 'invalidated');
-  const grant = standingGrant(ctx, target, assessment.overall);
-  const automatic = !!grant || policy?.mode === 'optional' && !fromAgent(ctx);
+  // A channel the owner set to "direct" is approved by that channel policy (§4.1); it is auditable via approved_via.
+  const channelDirect = isChannelDirect(ctx, target, assessment);
+  const grant = channelDirect.ok ? undefined : standingGrant(ctx, target, assessment.overall);
+  const automatic = !!grant || policy?.mode === 'optional' && !fromAgent(ctx) || channelDirect.ok;
   const steps = policy ? entries(policy.steps) : defaultSteps;
   const request = ctx.create('approval_request', {
     resource_type: RESOURCE, resource_id: target.id, resource_hash: assessment.hash, policy_id: policy?.id ?? null, policy_version: policy?.version ?? null,
-    status: automatic ? 'approved' : 'pending', current_step: 1, steps, due_at: due(ctx, steps[0]),
-    approved_via: automatic ? 'policy' : null, standing_grant_id: grant?.id ?? null, decided_at: automatic ? ctx.now : null,
+    status: automatic ? 'approved' : 'pending', current_step: 1, steps, due_at: approvalDue(ctx, target, steps[0]),
+    approved_via: automatic ? (channelDirect.ok ? 'channel_policy' : 'policy') : null,
+    channel_approval_generation: channelDirect.ok ? channelDirect.generation : null,
+    standing_grant_id: grant?.id ?? null, decided_at: automatic ? ctx.now : null,
     context: { precheck_run_id: precheck.id, anchor_scheduled_at: target.scheduled_at, submitted_by: agentCredential(ctx) ?? ctx.actorId, submitted_by_type: fromAgent(ctx) ? 'agent_client' : 'user' },
   });
   bindReferences(ctx, target, assessment);
@@ -193,6 +235,19 @@ function submit(ctx: Context, target: Row, assessment = assessTarget(ctx, target
     return ready(ctx, row);
   }
   return row;
+}
+/**
+ * Common rule of phase1-design §4: a hub-channel target left in awaiting_approval must hold a pending request, otherwise the
+ * owner cannot approve it and a direct channel is never re-approved. Legacy (non-channel) targets keep their old behaviour.
+ */
+export function resubmitIfWaiting(ctx: Context, targetId: string): Row & { submission_status?: 'blocked'; precheck?: unknown } {
+  const target = ctx.get(KIND, targetId);
+  if (target.plan_status !== 'awaiting_approval' || !channelSettings(ctx, String(target.social_account_id)) || hasExecutionRisk(ctx, target)) return target;
+  const deadline = approvalDeadline(ctx, target);
+  if (deadline && time(deadline) <= time(ctx.now)) return target;   // derived as missed (not_approved); rescheduling resubmits
+  const request = locate(ctx, 'approval_request', target.approval_request_id);
+  if (request?.status === 'pending' && request.resource_id === target.id && request.resource_hash === target.frozen_hash && time(request.due_at) > time(ctx.now)) return target;
+  return submit(ctx, target);
 }
 function canDecide(ctx: Context, request: Row) {
   if (fromAgent(ctx) || !APPROVE.includes(ctx.role) || request.status !== 'pending') return false;
@@ -233,16 +288,19 @@ function decide(ctx: Context, target: Row, decision: 'approve' | 'reject' | 'req
   const steps = entries(request.steps);
   if (decision === 'approve' && decisions.filter(row => row.decision === 'approve').length + 1 < Number(steps[step - 1].min_approvals)) return ctx.update(KIND, target.id, { last_approval_decision_at: ctx.now });
   if (decision === 'approve' && steps.length > step) {
-    ctx.update('approval_request', request.id, { current_step: step + 1, due_at: due(ctx, steps[step]) });
+    ctx.update('approval_request', request.id, { current_step: step + 1, due_at: approvalDue(ctx, target, steps[step]) });
     ctx.emit('core.approval_request.step_advanced', { request_id: request.id, current_step: step + 1 });
     return ctx.update(KIND, target.id, { last_approval_decision_at: ctx.now });
   }
   const status = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'changes_requested';
   ctx.update('approval_request', request.id, { status, decided_at: ctx.now, approved_via: decision === 'approve' ? 'human' : null });
   ctx.emit(`core.approval_request.${status}`, { request_id: request.id, resource_id: target.id });
+  // E37: changes_requested (the request says rejected or changes_requested) is the owner's decision against this version. Nothing
+  // resubmits it on its own (posting.unblock, approval-mode switches, pause release, invalidateTargets); only an explicit edit
+  // or reschedule (updateTarget → draft, then submit) or an explicit publishing_request_approval sends it back.
   return decision === 'approve' ? ready(ctx, target) : ctx.update(KIND, target.id, { plan_status: 'changes_requested' });
 }
-function updateTarget(ctx: Context, row: Row, body: Data, reschedule = false, values = targetValues(ctx, body, row)): Row & { approval_retained: boolean } {
+export function updateTarget(ctx: Context, row: Row, body: Data, reschedule = false, values = targetValues(ctx, body, row)): Row & { approval_retained: boolean } {
   checkEditable(ctx, row);
   const next = { ...row, ...values };
   const prior = locate(ctx, 'approval_request', row.approval_request_id);
@@ -266,7 +324,9 @@ function updateTarget(ctx: Context, row: Row, body: Data, reschedule = false, va
     !(prior.standing_grant_id && (movement || assisted || row.campaign_id !== next.campaign_id));
   if (prior && !keep) retireRequest(ctx, row, reschedule ? 'rescheduled_outside_tolerance' : 'target_changed');
   if (keep && prior && (movement || assisted)) {
-    ctx.update('approval_request', prior.id, { resource_hash: assessment.hash, previous_resource_hash: previous.hash });
+    // A hub channel's pending request follows the post: its deadline is the new scheduled_at + lateness (E34, no hours cap).
+    const due_at = prior.status === 'pending' && movement ? approvalDeadline(ctx, next as Row) ?? undefined : undefined;
+    ctx.update('approval_request', prior.id, { resource_hash: assessment.hash, previous_resource_hash: previous.hash, ...(due_at ? { due_at } : {}) });
     ctx.emit('planning.target.approval_kept_under_tolerance', { target_id: row.id, request_id: prior.id, old_hash: previous.hash, resource_hash: assessment.hash });
   }
   const executionChanged = movement || digest(previous.payload) !== digest(assessment.payload) || row.connector_mode_pref !== next.connector_mode_pref || row.grace_minutes !== next.grace_minutes || row.late_policy !== next.late_policy;
@@ -277,7 +337,12 @@ function updateTarget(ctx: Context, row: Row, body: Data, reschedule = false, va
   ctx.emit(`planning.target.${reschedule ? 'rescheduled' : 'updated'}`, { target_id: row.id, approval_retained: keep });
   return { ...ctx.get(KIND, row.id), approval_retained: keep };
 }
-function cancel(ctx: Context, target: Row, reason?: unknown) {
+/** After an edit that dropped the approval, a hub channel resubmits at once (direct approves, needs_approval waits for the owner). */
+function withResubmit(ctx: Context, updated: Row & { approval_retained: boolean }) {
+  if (updated.approval_retained) return updated;
+  return { ...resubmitIfWaiting(ctx, updated.id), approval_retained: false };
+}
+export function cancel(ctx: Context, target: Row, reason?: unknown) {
   if (FINAL.includes(String(target.plan_status))) return conflict('Target is already final');
   const task = taskFor(ctx, target);
   if (target.plan_status === 'cancel_requested') return { ...target, ...cancellationTracking(ctx, task) };
@@ -399,6 +464,7 @@ function checkPolicyImpact(ctx: Context) {
     if (!request || !['pending', 'approved'].includes(String(request.status)) || matchesPolicy(request, policyFor(ctx, target))) continue;
     retireRequest(ctx, target, 'policy_changed');
     if (!hasExecutionRisk(ctx, target)) ctx.update(KIND, target.id, { plan_status: 'awaiting_approval', paused_by_switch_id: null, frozen_hash: null, precheck_summary: 'stale', approval_invalidated_reason: 'policy_changed' });
+    resubmitIfWaiting(ctx, target.id);
   }
 }
 
@@ -504,6 +570,18 @@ function latestEngagements(ctx: Context) {
   return observations;
 }
 
+/** Machines whose heartbeat carries a hub channel affected by a pause in this scope (phase1-design §5.4.1 sync_generation). */
+function pausedChannelDevices(ctx: Context, scopeType: string, scopeId: string): string[] {
+  const campaignAccounts = scopeType === 'campaign' ? new Set(ctx.list(KIND).filter(row => row.campaign_id === scopeId).map(row => row.social_account_id)) : undefined;
+  const accounts = ctx.list('social_account').filter(account => channelSettings(ctx, account.id) && (scopeType === 'workspace' ||
+    scopeType === 'brand' && account.brand_id === scopeId || scopeType === 'social_account' && account.id === scopeId || !!campaignAccounts?.has(account.id)));
+  const ids = accounts.map(account => ctx.list('account_execution_binding').find(row => row.social_account_id === account.id)?.device_id);
+  return [...new Set(ids.filter((id): id is string => typeof id === 'string'))];
+}
+function bumpPausedDevices(ctx: Context, scopeType: string, scopeId: string, reason: string) {
+  const devices = pausedChannelDevices(ctx, scopeType, scopeId);
+  if (devices.length) workerEngine().bumpSyncGeneration(ctx, devices, reason);
+}
 function activatePause(ctx: Context, body: Data) {
   const scope_type = pick(body.scope_type ?? 'workspace', ['workspace', 'brand', 'campaign', 'social_account'], 'scope_type');
   const scope_id = scope_type === 'workspace' ? ctx.workspaceId : ctx.get(scope_type, text(body.scope_id, 'scope_id')).id;
@@ -525,6 +603,7 @@ function activatePause(ctx: Context, body: Data) {
     ctx.emit('planning.target.paused', { target_id: target.id, pause_switch_id: row.id, mode });
   }
   ctx.emit('planning.pause_switch.activated', { pause_switch_id: row.id, scope_type, scope_id, mode });
+  bumpPausedDevices(ctx, scope_type, scope_id, 'pause_activated');
   return row;
 }
 function pauseWithdrawals(ctx: Context, pauseId: string) {
@@ -532,12 +611,45 @@ function pauseWithdrawals(ctx: Context, pauseId: string) {
     target_id: target.id, title: target.title, plan_status: target.plan_status, execution_status: taskFor(ctx, target)?.status,
   }));
 }
+/** The Worker job a hub target points at, else its newest publish job (the same rule as the post views). */
+function latestPublishJob(ctx: Context, target: Row): Row | undefined {
+  const jobs = ctx.list('worker_job').filter(job => job.publish_target_id === target.id && job.kind === 'publish_post' && job.dry_run !== true);
+  return jobs.find(job => job.id === target.worker_job_id)
+    ?? [...jobs].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)) || String(b.id).localeCompare(String(a.id)))[0];
+}
+/**
+ * E35: submit again the hub-channel targets that a pause or a paused machine held before they were ever approved: draft ones the
+ * Agent scheduled (auto_submit_on_unblock) and awaiting_approval ones without a valid pending request (§4 common rule). Never
+ * changes_requested (E37: the owner's rejection stands), never a post past its lateness limit (derived missed; 「改到…」
+ * resubmits it) and never one another active pause still holds. Returns how many were submitted.
+ */
+export function resubmitWaiting(ctx: Context, match: (target: Row) => boolean): number {
+  let count = 0;
+  for (const row of ctx.list(KIND).filter(match)) {
+    const target = ctx.get(KIND, row.id);
+    if (!['draft', 'awaiting_approval'].includes(String(target.plan_status)) || !channelSettings(ctx, String(target.social_account_id))) continue;
+    if (target.plan_status === 'draft' && target.auto_submit_on_unblock !== true) continue;
+    if (activePause(ctx, target) || hasExecutionRisk(ctx, target)) continue;
+    const deadline = approvalDeadline(ctx, target);
+    if (deadline && time(deadline) <= time(ctx.now)) continue;
+    const before = target.approval_request_id;
+    const result = target.plan_status === 'draft' ? submit(ctx, target) : resubmitIfWaiting(ctx, target.id);
+    if (result.approval_request_id !== before) count++;
+  }
+  return count;
+}
 function releasePause(ctx: Context, row: Row, body: Data) {
   if (row.released_at) return conflict('Pause is already released');
   const targets = ctx.list(KIND).filter(target => target.paused_by_switch_id === row.id && target.plan_status === 'paused');
-  const missed = (target: Row) => target.schedule_kind === 'manual_date'
-    ? String(target.local_scheduled_at) < localMinute(ctx.now, String(target.schedule_tz ?? 'UTC')).slice(0, 10)
-    : time(target.scheduled_at) < time(ctx.now);
+  // A hub channel post is late only after its lateness limit (scheduled_at + lateness_limit_min, §5.6): released within it,
+  // the Worker still runs it (§5.4.4 item 4). Closing it as skipped at scheduled_at would cancel a post that can still go out.
+  const missed = (target: Row) => {
+    const deadline = approvalDeadline(ctx, target);
+    if (deadline) return time(deadline) < time(ctx.now);
+    return target.schedule_kind === 'manual_date'
+      ? String(target.local_scheduled_at) < localMinute(ctx.now, String(target.schedule_tz ?? 'UTC')).slice(0, 10)
+      : time(target.scheduled_at) < time(ctx.now);
+  };
   if (body.dry_run === true) return {
     pause_switch_id: row.id, version: row.version,
     targets: targets.map(target => ({ target_id: target.id, version: target.version, missed: missed(target), scheduled_at: target.scheduled_at, local_scheduled_at: target.local_scheduled_at, execution_locked: hasExecutionRisk(ctx, target) })),
@@ -571,7 +683,23 @@ function releasePause(ctx: Context, row: Row, body: Data) {
       ctx.update(KIND, target.id, { plan_status: 'ready', paused_by_switch_id: null });
       continue;
     }
-    if (choice?.action === 'skip' || !choice && missed(target) && (target.late_policy ?? taskFor(ctx, target)?.late_policy) === 'skip') {
+    const hub = !!channelSettings(ctx, String(target.social_account_id));
+    // E35/F10: a hub-channel post is never closed by a release. Skipped on purpose it is cancelled (derived 「已取消」); past its
+    // lateness limit it goes back to ready and its job's lifecycle reports missed, so 「改到…」 (post_update reschedule) still works.
+    if (hub && choice?.action === 'skip') {
+      ctx.update(KIND, target.id, { paused_by_switch_id: null });
+      cancel(ctx, ctx.get(KIND, target.id), 'skipped_on_pause_release');
+      continue;
+    }
+    // A job that is still live (or already missed) is reported by the lifecycle as is; without one, the ready() below dispatches
+    // one in the past window, which the lifecycle reports missed (never a second run: not_after has passed).
+    const job = hub ? latestPublishJob(ctx, target) : undefined;
+    if (hub && !choice && missed(target) && job && (job.status === 'missed' || !TERMINAL_JOB_STATUSES.includes(job.status as WorkerJobStatus))) {
+      ctx.update(KIND, target.id, { plan_status: 'ready', paused_by_switch_id: null });
+      ctx.emit('planning.target.resumed', { target_id: target.id, pause_switch_id: row.id });
+      continue;
+    }
+    if (choice?.action === 'skip' || !hub && !choice && missed(target) && (target.late_policy ?? taskFor(ctx, target)?.late_policy) === 'skip') {
       if (taskFor(ctx, target)) requestCancellation(ctx, target);
       closeTarget(ctx, target, 'expired_skipped');
       continue;
@@ -582,11 +710,21 @@ function releasePause(ctx: Context, row: Row, body: Data) {
       if (assessment.items.some(item => item.check_key === 'approval_valid' && item.severity === 'blocker')) {
         retireRequest(ctx, updated, 'approval_invalid_after_pause');
         ctx.update(KIND, target.id, { plan_status: 'awaiting_approval', frozen_hash: null, paused_by_switch_id: null, precheck_summary: 'stale' });
+        resubmitIfWaiting(ctx, target.id);
       } else ready(ctx, updated);
-    } else ctx.update(KIND, updated.id, { paused_by_switch_id: null });
+    } else {
+      ctx.update(KIND, updated.id, { paused_by_switch_id: null });
+      resubmitIfWaiting(ctx, updated.id);
+    }
     ctx.emit('planning.target.resumed', { target_id: target.id, pause_switch_id: row.id });
   }
+  // E35: posts scheduled, rescheduled or sent back for approval while the pause held them were never paused (they stayed draft or
+  // awaiting approval with no request); submit them again now, in the release transaction.
+  const resumed = new Set(targets.map(target => target.id));
+  const scope = (target: Row) => ({ workspace: ctx.workspaceId, brand: target.brand_id, campaign: target.campaign_id, social_account: target.social_account_id } as Data)[String(row.scope_type)];
+  resubmitWaiting(ctx, target => !resumed.has(target.id) && scope(target) === row.scope_id);
   ctx.emit('planning.pause_switch.released', { pause_switch_id: row.id });
+  bumpPausedDevices(ctx, String(row.scope_type), String(row.scope_id), 'pause_released');
   return released;
 }
 
@@ -773,6 +911,9 @@ function roundSummary(ctx: Context, round: Row) {
   return { ...round, status: stale ? 'version_updated' : closed || time(round.due_at) <= time(ctx.now) ? 'expired' : round.status };
 }
 
+// The channel settings module applies approval-mode changes with these (phase1-design §4.1); see registerPlanningHooks.
+registerPlanningHooks({ submit, retireRequest, resubmitWaiting });
+
 export function planningAcceptsEvent(type: string) {
   return /^(commerce\.(listing\.changed|promotion\.(changed|expired)|fact\.retracted)$|asset\.rights_grant\.(expired|revoked|activated|revised)$|account\.(capability|connection|binding|social_account|device|mobile_device|mobile_app_binding|connector_auto_policy)\.|ops\.connector_auto\.|execution\.platform_post\.observed$|content\.revision\.created$|core\.approval_request\.invalidated$)/.test(type);
 }
@@ -828,6 +969,7 @@ export function applyPlanningEvent(ctx: Context, envelope: Data) {
       if (target.plan_status !== 'awaiting_approval' || target.frozen_hash != null) {
         ctx.update(KIND, target.id, { plan_status: 'awaiting_approval', frozen_hash: null, precheck_summary: 'stale', paused_by_switch_id: null, approval_invalidated_reason: request.invalidated_reason ?? 'approval_invalid' });
       }
+      resubmitIfWaiting(ctx, target.id);
     }
     return;
   }
@@ -858,6 +1000,7 @@ export function applyPlanningEvent(ctx: Context, envelope: Data) {
     const current = ctx.get(KIND, target.id);
     recordCheck(ctx, current, stage, assessment);
     if (assessment.overall === 'blocked' && current.plan_status === 'ready') blockUnsent(ctx, current, 'precheck_blocked');
+    if (request && (bindingChanged || priceClaimChanged)) resubmitIfWaiting(ctx, target.id);
     if (previousCheck?.effective_mode === 'auto' && assessment.effective_mode === 'assist' && time(target.scheduled_at) >= time(ctx.now) && time(target.scheduled_at) <= time(ctx.now) + DAY) {
       ctx.emit('planning.target.connector_downgraded', { target_id: target.id, recipient_user_id: target.owner_user_id, scheduled_at: target.scheduled_at });
     }
@@ -907,8 +1050,12 @@ export function scanPlanningDue(ctx: Context) {
     const target = ctx.get(KIND, planned.id);
     const request = locate(ctx, 'approval_request', target.approval_request_id);
     if (target.plan_status === 'awaiting_approval' && request?.status === 'pending') {
-      if (time(request.due_at) <= time(ctx.now)) retireRequest(ctx, target, 'deadline_elapsed', 'expired');
-      else if (time(request.due_at) - time(ctx.now) <= DAY && request.reminded_step !== request.current_step) {
+      if (time(request.due_at) <= time(ctx.now)) {
+        retireRequest(ctx, target, 'deadline_elapsed', 'expired');
+        // E34: a hub request written before E34 could expire (now + 48 h) while the post can still go out. The §4 common rule
+        // gives it a fresh pending request until scheduled_at + lateness; past that it derives as missed (not_approved).
+        resubmitIfWaiting(ctx, target.id);
+      } else if (time(request.due_at) - time(ctx.now) <= DAY && request.reminded_step !== request.current_step) {
         ctx.update('approval_request', request.id, { reminded_step: request.current_step, reminded_at: ctx.now });
         const step = entries(request.steps)[Number(request.current_step) - 1];
         ctx.emit('planning.approval.reminder_requested', { request_id: request.id, target_id: target.id, recipient_user_ids: list(object(step?.approvers).user_ids) });
@@ -923,7 +1070,8 @@ export function scanPlanningDue(ctx: Context) {
       blockUnsent(ctx, target, assessment.items.some(item => item.check_key === 'approval_valid' && item.severity === 'blocker') ? 'approval_invalid' : 'precheck_blocked');
       continue;
     }
-    if (assessment.effective_mode === 'assist' && !target.assist_reminder_at) {
+    // Hub channels get their "click Post" reminders from the owner alerts module (phase1-design §4.5, §5.9).
+    if (assessment.effective_mode === 'assist' && !target.assist_reminder_at && !channelSettings(ctx, String(target.social_account_id))) {
       ctx.update(KIND, target.id, { assist_reminder_at: ctx.now });
       ctx.emit('planning.target.assist_reminder', { target_id: target.id, recipient_user_id: target.owner_user_id, scheduled_at: target.scheduled_at, mobile: assessment.items.some(item => item.check_key.startsWith('mobile_')) });
     }
@@ -976,7 +1124,7 @@ export const operations: Operation[] = [
   op('GET', TARGETS, 'publishing_list_targets', READ, (ctx, input) => listTargets(ctx, input.query)),
   op('GET', `${TARGETS}/:id`, 'publishing_get_target', READ, (ctx, input) => detail(ctx, ctx.get(KIND, input.params.id))),
   op('POST', TARGETS, 'publishing_create_target', WRITE, (ctx, input) => createTarget(ctx, targetValues(ctx, input.body), { origin: fromAgent(ctx) ? 'agent' : 'manual' })),
-  op('PATCH', `${TARGETS}/:id`, 'publishing_update_target', WRITE, (ctx, input) => updateTarget(ctx, expect(ctx, input), input.body), KIND),
+  op('PATCH', `${TARGETS}/:id`, 'publishing_update_target', WRITE, (ctx, input) => withResubmit(ctx, updateTarget(ctx, expect(ctx, input), input.body)), KIND),
   op('POST', `${TARGETS}/:id/submit`, 'publishing_request_approval', WRITE, (ctx, input) => {
     const row = ctx.get(KIND, input.params.id);
     if (input.expectedVersion !== undefined) assertVersion(row, input.expectedVersion);
@@ -987,7 +1135,7 @@ export const operations: Operation[] = [
     const target = expect(ctx, input);
     const body = select(input.body, ['scheduled_at', 'local_scheduled_at', 'schedule_tz', 'tz', 'schedule_kind', 'dst_choice']);
     if (!Object.keys(body).length) fail('Provide a schedule change');
-    return updateTarget(ctx, target, body, true);
+    return withResubmit(ctx, updateTarget(ctx, target, body, true));
   }, KIND),
   { ...op('POST', `${TARGETS}/:id/cancel`, 'publishing_cancel', WRITE, (ctx, input) => cancel(ctx, expect(ctx, input), input.body.reason), KIND), accepted: acceptsVerification },
   ...(['approve', 'reject', 'request-changes'] as const).map(decision => op('POST', `${TARGETS}/:id/${decision}`, `publishing_${decision.replace('-', '_')}`, APPROVE, (ctx, input) => {

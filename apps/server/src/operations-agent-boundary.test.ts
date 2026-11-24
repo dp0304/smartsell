@@ -58,7 +58,7 @@ const AGENT_SETTINGS: Record<string, string[]> = {
     'inbox_archive_business_hours', 'inbox_archive_sla_policy', 'inbox_archive_auto_rule', 'utm_remove', 'lifecycle_record_suppression',
     'lifecycle_create_frequency_rule', 'agent_jobs_confirm_cancel'],
   'authorizes only .test addresses or loopback readback': ['lifecycle_set_local_esp', 'inbox_set_local_comment_access'],
-  'asks a person to act or approve, or carries out what a person approved': ['publishing_schedule', 'publishing_retry',
+  'asks a person to act or approve, or carries out what a person approved': ['publishing_schedule', 'publishing_retry', 'hub_posts_schedule',
     'publishing_apply_execution_batch', 'inbox_send_reply', 'inbox_retry_reply', 'outreach_send', 'lifecycle_request_customer_data'],
   'internal work state: retries failed collection or media, reopens tasks, frees a lease': ['sync_run_retry', 'backfill_resume',
     'asset_retry_rendition', 'tasks_reopen', 'inbox_sla_tick', 'inbox_unsnooze', 'inbox_release'],
@@ -77,7 +77,8 @@ test('no approver-tier write becomes Agent-callable without an explicit stop or 
     const op = all.find(item => item.name === name);
     assert.ok(op && agentCallable(op), `${name} is not an Agent-callable operation`);
   }
-  assert.deepEqual([...HUMAN_ONLY].filter(name => !names.has(name)), [], 'HUMAN_ONLY names an operation that does not exist');
+  // Phase 1 hub_* names are frozen ahead of their modules; tests/phase1/human-only.test.ts checks that each one exists.
+  assert.deepEqual([...HUMAN_ONLY].filter(name => !names.has(name) && !name.startsWith('hub_')), [], 'HUMAN_ONLY names an operation that does not exist');
 });
 
 test('no admin-tier or release-named write becomes Agent-callable without a stated reason', async () => {

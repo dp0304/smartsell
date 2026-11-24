@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test as base } from '@playwright/test';
 import { localWithoutWorker } from '../../../tests/web-e2e/local-dev.mjs';
+import { showMoreModules } from '../../../tests/web-e2e/phase1-shell.mjs';
 
 const test = base.extend({ dev: localWithoutWorker });
 const reportedAt = '2026-01-15T10:30:00.000Z';
@@ -93,15 +94,29 @@ test('expands Worker social audit receipts by task ID and displays only observed
     if (path.includes('/worker-social-status/')) requests.push([request.method(), path]);
   });
 
-  await page.goto(`${dev.origin}/app/${wid}/agent`);
+  const app = `${dev.origin}/app/${wid}`;
   const audit = page.locator('section').filter({ has: page.getByRole('heading', { name: 'MCP 工具審計', exact: true }) });
+  const zhihuIncident = page.getByText('需要使用者登入知乎');
+  // Phase 1 (§9.1) hides the non-core Zhihu module: its sign-in incident is not on the core Agent page.
+  await page.goto(`${app}/agent`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Agent', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '連線', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(zhihuIncident).toHaveCount(0);
+  // The MCP audit moved to the 開發者 tab (§9.8, B29); it is not on the default tab.
+  await expect(audit).toHaveCount(0);
+  // Settings → 介面 → 顯示其他模組 brings the hidden module back, with the observed incident.
+  await showMoreModules(page, app);
+  await page.goto(`${app}/agent`);
+  await expect(zhihuIncident).toBeVisible();
+  await page.getByRole('tablist', { name: 'Agent', exact: true }).getByRole('tab', { name: '開發者', exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === `/app/${wid}/agent` && url.searchParams.get('tab') === 'developer');
+  await expect(page.getByRole('tab', { name: '開發者', exact: true })).toHaveAttribute('aria-selected', 'true');
   const row = id => audit.getByRole('listitem').filter({ has: page.getByText(id, { exact: true }) });
   const expand = id => row(id).getByText(disclosure).click();
   await expect(row(ids.request)).toBeVisible();
   expect(requests).toEqual([]);
   await expect(row(ids.zhihu).getByText(disclosure)).toHaveCount(0);
   await expect(row(ids.unlinked).getByText(disclosure)).toHaveCount(0);
-  await expect(page.getByText('需要使用者登入知乎')).toBeVisible();
 
   await expand(ids.request);
   await expect(row(ids.request).getByText('排隊中')).toBeVisible();

@@ -7,6 +7,13 @@ import { ProblemNotice } from './api';
 import { useCopy } from './i18n';
 
 const setupStatusKey = ['setup-status'];
+
+/** `#setup-token=<token>` (the only fragment key the setup link carries). */
+export function readSetupToken(hash: string): string | undefined {
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  const token = params.get('setup-token')?.trim();
+  return token && token.length <= 512 && /^[\x21-\x7e]+$/.test(token) ? token : undefined;
+}
 type AuthMode = 'login' | 'register' | 'setup';
 
 export function AuthenticationForm<T>({ setupPath, compatibility = false, showCompatibility = false, locale, readSession, onSession }: {
@@ -19,7 +26,13 @@ export function AuthenticationForm<T>({ setupPath, compatibility = false, showCo
 }) {
   const { t: translate } = useCopy();
   const t = (key: string) => translate(key, { lng: locale });
-  const { search } = useLocation();
+  const { search, hash } = useLocation();
+  // §2.9 step 1: hub:init prints https://<hub>/setup#setup-token=…; the token is read from the fragment (never sent in a URL to the
+  // server), kept in memory, removed from the address bar and its field is hidden.
+  const [fragmentToken] = useState(() => readSetupToken(hash));
+  useEffect(() => {
+    if (fragmentToken && typeof window !== 'undefined' && window.location.hash) window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+  }, [fragmentToken]);
   const status = useQuery({ queryKey: setupStatusKey, queryFn: ({ signal }) => readSetupStatus(signal), staleTime: 0, retry: false });
   const form = useRef<HTMLFormElement>(null);
   const previousStep = useRef<AuthMode | 'challenge'>(undefined);
@@ -62,7 +75,7 @@ export function AuthenticationForm<T>({ setupPath, compatibility = false, showCo
       if (challenge) await finishLogin(challenge, fields);
       else if (mode !== 'login') {
         const body = mode === 'setup' ? { ...credentials, name: fields.name, workspaceName: fields.workspaceName } : credentials;
-        await setupWorkspace(body, needsToken ? String(fields.setupToken ?? '') : undefined);
+        await setupWorkspace(body, needsToken ? fragmentToken ?? String(fields.setupToken ?? '') : undefined);
       }
 
       // Some setup clients create the account without establishing a browser session.
@@ -125,7 +138,7 @@ export function AuthenticationForm<T>({ setupPath, compatibility = false, showCo
             <label className="field">{t('workspace_name')}<input name="workspaceName" required maxLength={120} pattern=".*\S.*" autoComplete="organization" /></label>
             <label className="field">{t(compatibility ? 'auth.compatName' : 'displayName')}<input name="name" maxLength={120} autoComplete="name" /></label>
           </>}
-          {needsToken && mode !== 'login' && <label className="field">{t('auth.deploymentToken')}
+          {needsToken && mode !== 'login' && !fragmentToken && <label className="field">{t('auth.deploymentToken')}
             <input name="setupToken" type="password" required autoComplete="off" aria-invalid={authorizationFailed || undefined} />
           </label>}
         </>}

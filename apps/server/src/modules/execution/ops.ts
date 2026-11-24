@@ -4,7 +4,7 @@ import { assessTarget, closeTarget } from '../../../../../packages/domain/src/pu
 import {
   ATTEMPT, FINAL, POST, SLOT, TASK, VERIFY_SCHEDULE_SECONDS, acceptsVerification, after, assignee, attachEvidence, attempts, authorized, availableWriteSlot,
   blockExecution, cancellationTracking, conflict, confirmCancellation, endAttempt, executionCheck, fence,
-  find, fromAgent, holdWriteSlot, ids, invalid, late, latest, manualComplete, noPending, one, openAttempt, optional, pending, postDetails,
+  find, fromAgent, holdWriteSlot, ids, invalid, isWorkerTask, late, latest, manualComplete, noPending, one, openAttempt, optional, pending, postDetails,
   registerManualPost, requestCancellation, requestVerification, savePost, settleConnector, settleVerification, status, step, targetOf, taskFor, text, time,
   transition, uncertain,
 } from './service.js';
@@ -13,6 +13,22 @@ const HUMAN: typeof WRITE = WRITE.filter(role => role !== 'agent');
 const resource = (ctx: Context, input: Input, kind = TASK) => ctx.get(kind, input.params.id);
 function requireHuman(ctx: Context) {
   if (fromAgent(ctx)) throw new Problem(403, 'PERMISSION_DENIED', 'Only a person can perform this action');
+}
+
+/**
+ * E14: a Worker-route task changes state only through its worker_job (§5.2 syncTaskFromJob). The legacy execution actions
+ * (run_now, retry, reconcile, late decision, handover, manual start/complete/abandon/bundle) would move it behind the
+ * job's back, so they are refused; the §5.14 hub_* operations and post_update replace them. Cancel stays: it is
+ * Worker-aware (requestCancellation, §5.10).
+ */
+const WORKER_ALLOWED_ACTIONS: ReadonlySet<string> = new Set(['cancel']);
+export function refuseWorkerTask(task: Row, action: string) {
+  if (!isWorkerTask(task) || WORKER_ALLOWED_ACTIONS.has(action)) return;
+  throw new Problem(409, 'WORKER_ROUTE_TASK', `This post runs on a SmartSell Worker; ${action} is not available for it. Use post_update, or the post page actions (hub_posts_confirm_result, hub_posts_mark_not_published, hub_posts_retry, hub_jobs_resume, hub_jobs_force_release).`, {
+    task_id: task.id, publish_target_id: task.publish_target_id ?? null,
+    use: ['hub_posts_update', 'hub_posts_confirm_result', 'hub_posts_mark_not_published', 'hub_posts_retry', 'hub_jobs_resume', 'hub_jobs_force_release'],
+    owner_message: '這則貼文由 SmartSell Worker 在指定的機器上發出，不能用舊的執行任務按鈕處理。請到貼文頁使用「確認已發出」「確認沒有發出」「立刻再試」「恢復」或「強制釋放」，或改期、取消。',
+  });
 }
 
 export function retry(ctx: Context, task: Row) {
@@ -173,7 +189,12 @@ export function cancelTask(ctx: Context, task: Row, verifyOnly = false) {
   return next;
 }
 
-function actions(ctx: Context, task: Row) {
+function actions(ctx: Context, task: Row): string[] {
+  if (isWorkerTask(task)) return actionsFor(ctx, task).filter(name => WORKER_ALLOWED_ACTIONS.has(name));
+  return actionsFor(ctx, task);
+}
+
+function actionsFor(ctx: Context, task: Row) {
   if (!WRITE.includes(ctx.role) || FINAL.includes(status(task))) return [];
   const open = pending(ctx, task);
   const list = open ? ['reconcile'] : [];
@@ -243,6 +264,7 @@ function batchApply(ctx: Context, batch: Row) {
     return task;
   });
   const results = tasks.map(task => {
+    refuseWorkerTask(task, action);
     const result = BATCH[action](ctx, task, batch.params as Data);
     const next = ctx.get(TASK, task.id);
     return { task_id: next.id, task_version: next.version, status: next.status, status_reason: next.status_reason,
@@ -266,6 +288,7 @@ function action(name: string, summary: string, handler: (ctx: Context, task: Row
   return { path: `/execution-tasks/:id/${name.replaceAll('_', '-')}`, method: 'POST', name: `publishing_${name}`, summary, roles: human ? HUMAN : WRITE,
     run(ctx, input) {
       const task = resource(ctx, input);
+      refuseWorkerTask(task, name);
       const version = input.expectedVersion ?? input.body.expected_version;
       if (version !== undefined && task.version !== version) throw conflict('VERSION_CONFLICT', 'The task changed');
       return handler(ctx, task, input.body);
@@ -347,7 +370,11 @@ const executionOperations: Operation[] = [
     return detail(ctx, task);
   } },
   { path: '/execution-exceptions', method: 'GET', name: 'publishing_list_exceptions', roles: READ, summary: 'List execution exceptions', run: (ctx, input) => listTasks(ctx, input.query).filter(row => ['blocked', 'outcome_unknown', 'manual', 'failed', 'cancel_pending'].includes(status(row))) },
-  { path: '/execution-tasks/:id/manual-bundle', method: 'GET', name: 'publishing_get_manual_bundle', roles: HUMAN, summary: 'Read the approved manual bundle', run: (ctx, input) => manualBundle(ctx, resource(ctx, input)) },
+  { path: '/execution-tasks/:id/manual-bundle', method: 'GET', name: 'publishing_get_manual_bundle', roles: HUMAN, summary: 'Read the approved manual bundle', run(ctx, input) {
+    const task = resource(ctx, input);
+    refuseWorkerTask(task, 'manual_bundle');
+    return manualBundle(ctx, task);
+  } },
   action('run_now', 'Run prechecks and dispatch the available execution path', runNow),
   action('retry', 'Queue a verified-safe retry', retry),
   { ...action('reconcile', 'Request verification of an unresolved outcome', reconcile), accepted: acceptsVerification },
@@ -378,7 +405,13 @@ const executionOperations: Operation[] = [
   } },
   { path: '/platform-posts/register', method: 'POST', name: 'posts_register_manual', roles: WRITE, summary: 'Register a post and its evidence; an agent can report an existing external post for metrics import', run(ctx, { body }) {
     const targetId = body.publish_target_id ?? body.target_id;
-    if (targetId) return registerManualPost(ctx, ctx.get('publish_target', text(targetId, 'publish_target_id')), body);
+    if (targetId) {
+      const target = ctx.get('publish_target', text(targetId, 'publish_target_id'));
+      const task = taskFor(ctx, target);
+      // E14: a Worker post's result is confirmed with hub_posts_confirm_result (§5.8 URL rules, job → succeeded).
+      if (task) refuseWorkerTask(task, 'register_manual');
+      return registerManualPost(ctx, target, body);
+    }
     const account = ctx.get('social_account', text(body.social_account_id, 'social_account_id'));
     const agent = fromAgent(ctx);
     // A historical post must not appear to have been published at registration time.

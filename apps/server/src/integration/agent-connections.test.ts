@@ -16,6 +16,7 @@ import { registerOperationRoutes } from '../operation-server.js';
 import { discoverOperations, runScopedOperation } from '../operations.js';
 import { discover } from '../registry.js';
 import { operationRecords } from './operation-records.js';
+import { hubInstructions } from './mcp-hub-instructions.js';
 
 type Json = Record<string, any>;
 const accept = 'application/json, text/event-stream';
@@ -58,7 +59,13 @@ async function fixture(t: TestContext, store: Store = new MemoryStore()) {
   });
   const requestEnrollment = (path: string, code: string) => fetch(base + path, { method: 'POST',
     headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) });
-  return { config, store, request, requestEnrollment, rpc, call, connect, records, owner, cookie, root, wid, session };
+  /** A connection created before phase 1 has no tool_profile: it keeps the legacy list and instructions (§7.4). */
+  const legacyProfile = (id: string) => store.workspace(session, wid, unit => unit.command({ module: 'agent', action: 'legacy_profile_fixture',
+    key: `legacy-profile/${id}`, fingerprint: '' }, async () => {
+    const row = await unit.context.get('mcp_runtime', 'credential', id);
+    await unit.context.update('mcp_runtime', 'credential', id, { tool_profile: null }, row!.version);
+  }));
+  return { config, store, request, requestEnrollment, rpc, call, connect, records, owner, cookie, root, wid, session, legacyProfile };
 }
 
 const ok = (result: Json) => {
@@ -109,8 +116,10 @@ test('legacy tokens keep their Commands job tools and gain the generic Operation
 });
 
 test('Codex can find both Worker social status tools and gets a specific pairing error', async t => {
-  const { rpc, call, connect } = await fixture(t);
-  const { token } = await connect({ label: 'Codex', client: 'codex' });
+  const { rpc, call, connect, legacyProfile } = await fixture(t);
+  const { token, id } = await connect({ label: 'Codex', client: 'codex' });
+  // The legacy catalog and instructions belong to pre-phase-1 connections; hub_v1 connections list the 11 hub tools (§7.4, §7.5).
+  await legacyProfile(id);
   const init = await rpc(token, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'Codex fixture', version: '1' } });
   assert.match(init.instructions, /worker_social_status_request.*recent_posts.*worker_social_status_get/);
   const tools = (await rpc(token, 'tools/list')).tools as Json[];
@@ -130,7 +139,7 @@ test('Codex can find both Worker social status tools and gets a specific pairing
 });
 
 test('agent connections issue, list, survive logout, touch last use and revoke', async t => {
-  const { request, rpc, connect, owner, cookie, root, records } = await fixture(t);
+  const { request, rpc, call, connect, owner, cookie, root, records } = await fixture(t);
   await request(`${root}/agent-connections`, { method: 'POST', status: 403, body: { label: 'No CSRF' }, headers: { cookie } });
   await request(`${root}/agent-connections`, { method: 'POST', status: 422, body: { label: 'Bad', expires_days: 400 }, headers: owner });
   await request(`${root}/agent-connections`, { method: 'POST', status: 422, body: { label: 'Bad', client: 'cursor' }, headers: owner });
@@ -148,11 +157,14 @@ test('agent connections issue, list, survive logout, touch last use and revoke',
   assert.ok(!JSON.stringify(listed).includes(created.token));
 
   const initialized = await rpc(created.token, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
-  assert.match(initialized.instructions, /HUMAN_REQUIRED/);
+  // §7.4/§7.5: a new connection is hub_v1: the hub instructions and only the 11 hub tools in the list.
+  assert.equal(initialized.instructions, hubInstructions);
   const names = (await rpc(created.token, 'tools/list')).tools.map((tool: Json) => tool.name);
-  for (const name of ['smartsell_operations_describe', 'smartsell_operation_call', 'workspace_brand_create', 'content_commit_revision',
-    'publishing_request_approval', 'agent_jobs_claim', 'search_query']) assert.ok(names.includes(name), name);
+  assert.deepEqual(names, ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
+    'posts_list', 'post_get', 'task_get', 'publishing_pause']);
   assert.ok(!names.includes('publishing_approve'));
+  // The legacy tools are hidden from the list but still callable.
+  assert.ok(Array.isArray(ok(await call(created.token, 'smartsell_operations_describe', { q: 'brand' })).data));
   const [touched] = (await request(`${root}/agent-connections`, { headers: { cookie } })).data;
   assert.ok(Date.parse(touched.last_used_at) > Date.now() - 60_000);
   const [mirror] = (await records()).list('agent_connection');
@@ -197,7 +209,9 @@ async function testEnrollment(t: TestContext, backingStore?: Store) {
   assert.equal(redemption, `${path}/redeem`);
   const raced = await Promise.all(Array.from({ length: 5 }, () => requestEnrollment(redemption, next.code)));
   assert.deepEqual(raced.map(response => response.status).sort(), [201, 401, 401, 401, 401]);
-  const { data: { token } } = await raced.find(response => response.status === 201)!.json();
+  const { data: { token, connection_id, workspace_id, client } } = await raced.find(response => response.status === 201)!.json();
+  // The laptop App writes these into config.json (§6.2 step 3).
+  assert.deepEqual([connection_id, workspace_id, client], [next.id, wid, 'codex']);
   assert.ok(/^ss_command_/.test(token));
   const fresh = async () => (await list()).find(row => row.id === next.id)!;
   assert.equal((await fresh()).label, 'Codex');
@@ -262,6 +276,42 @@ test('revoking a connection stops the Agent and returns its Operation job lease'
     ['agent_connection_create', 'agent_connection_revoke']);
   const [listed] = (await request(`${root}/agent-connections`, { headers: owner })).data;
   assert.equal(listed.revoked, true);
+});
+
+test('E13: a connection revokes itself with its own Bearer token, never another one, and the revocation is audited', async t => {
+  const { request, rpc, connect, owner, root, records } = await fixture(t);
+  const first = await connect({ label: 'MacBook · Codex', client: 'codex' });
+  const second = await connect({ label: 'MacBook · Claude', client: 'claude_code' });
+  // No token, a malformed token or a session cookie alone are refused; nothing changes.
+  await request('/api/v1/agent-connections/self', { method: 'DELETE', status: 401 });
+  await request('/api/v1/agent-connections/self', { method: 'DELETE', status: 401, headers: { authorization: 'Bearer ss_command_not-a-token' } });
+  await request('/api/v1/agent-connections/self', { method: 'DELETE', status: 401, headers: owner });
+  await rpc(first.token, 'tools/list');
+
+  await request('/api/v1/agent-connections/self', { method: 'DELETE', status: 204, headers: { authorization: `Bearer ${first.token}` } });
+  await rpc(first.token, 'tools/list', {}, 401);
+  await rpc(second.token, 'tools/list');
+  // Repeating it with the dead token is a 401, not a silent success.
+  await request('/api/v1/agent-connections/self', { method: 'DELETE', status: 401, headers: { authorization: `Bearer ${first.token}` } });
+  // The App's per-id path accepts the Bearer token only for that same connection.
+  const third = await connect({ label: 'MacBook · Codex 2', client: 'codex' });
+  await request(`${root}/agent-connections/${second.id}`, { method: 'DELETE', status: 403, headers: { authorization: `Bearer ${third.token}` } });
+  await rpc(second.token, 'tools/list');
+  await request(`${root}/agent-connections/${third.id}`, { method: 'DELETE', status: 204, headers: { authorization: `Bearer ${third.token}` } });
+  await rpc(third.token, 'tools/list', {}, 401);
+
+  const ctx = await records();
+  const byId = new Map(ctx.list('agent_connection').map(row => [row.id, row]));
+  assert.equal(byId.get(first.id)!.revoked, true);
+  assert.equal(byId.get(first.id)!.revoked_via, 'self');
+  assert.equal(byId.get(second.id)!.revoked, false);
+  const audit = ctx.list('activity_event').filter(row => row.action === 'agent_connection_self_revoke')
+    .sort((a, b) => String(a.occurred_at).localeCompare(String(b.occurred_at)));
+  assert.deepEqual(audit.map(row => row.resource_id), [first.id, third.id]);
+  assert.equal(audit[0]!.actor_type, 'agent');
+  assert.equal(audit[0]!.credential_id, first.id);
+  const listed = (await request(`${root}/agent-connections`, { headers: owner })).data as Json[];
+  assert.deepEqual(listed.map(row => [row.id, row.revoked]).sort(), [[first.id, true], [second.id, false], [third.id, true]].sort());
 });
 
 test('operation tools write through Operations with attribution, activity and detailed errors', async t => {

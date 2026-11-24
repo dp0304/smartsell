@@ -1,6 +1,6 @@
-import { idempotencyPattern, Problem, type Data, type Input } from '@smartsell/contracts';
+import { idempotencyPattern, Problem, READ, type Context, type Data, type Input } from '@smartsell/contracts';
 import { headerAcceptsEventStream, mcpEventStream } from '../extensions/mcp-sse.js';
-import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { invalid, requestObject } from '../auth.js';
 import { mcpAuditBusinessStatus, mcpAuditErrorCode, summarizeMcpTarget } from './mcp-call-audit.js';
@@ -26,10 +26,18 @@ import type { OperationExecutor } from '../operation-server.js';
 import { agentInstructions, registerAgentConnections, touchAgentConnection, verifyAgentConnection, workerSocialRequestKey, type SealedCredential } from './agent-connections.js';
 import { workerSocialStatusToolNames } from '../modules/account/worker-social-status.js';
 import { humanRequired } from '../agent-actor.js';
+import { agentTokenCodec, createAgentCredentials, credentialRow, toolProfile, type ToolProfile } from './agent-credential.js';
+import { createHubTools, HUB_TOOL_SET, HUB_TOOLS, isHubTool } from './mcp-hub-tools.js';
+import { hubInstructions } from './mcp-hub-instructions.js';
+import { registerAgentUploads } from './agent-uploads.js';
+import { createMediaHost } from './media-host.js';
+import { registerAgentAlertStream } from '../modules/alerts/index.js';
+import { configurePosting } from '../modules/posting/model.js';
+import { scopedBrandContext } from './brand-access.js';
 
 type Credential = SealedCredential;
 type Access = 'read' | 'write';
-interface Grant { row: Entity; tools: readonly string[]; access: Access; label?: string; connection: boolean }
+interface Grant { row: Entity; tools: readonly string[]; access: Access; label?: string; connection: boolean; profile: ToolProfile }
 /** Filled after the Operation routes register, so MCP tools share their executor. */
 export interface OperationHost { mounted?: readonly Registered[]; execute?: OperationExecutor }
 interface Options { host?: OperationHost; csrf?(request: FastifyRequest): void; origin?: string }
@@ -120,7 +128,10 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     for (const stream of streams) stream.destroy();
     for (const request of active) request.abort();
   });
-  const key = createHmac('sha256', secret).update('smartsell:command-mcp:v1').digest();
+  const codec = agentTokenCodec(secret);
+  const { key, seal, open } = codec;
+  const publicOrigin = (origin ?? operationApi?.config.origin ?? 'http://127.0.0.1:3401').replace(/\/+$/, '');
+  configurePosting({ publicOrigin });
   const intel = intelMcpCommands(MCP_TOOLS, operationApi);
   const lookup = (module: string, action: string) => module === 'intel' ? intel[action] : registry.get(module)?.get(action);
   const operations = new Map(operationApi?.operations.filter(op => op.method === 'GET' && !op.external &&
@@ -151,14 +162,25 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     return built = { byName, tools: [...names.map(name => operationTool(byName.get(name)!)), ...genericTools] };
   }
   /** Agent connections use Operations for Agent jobs; legacy tokens keep the Commands job tools they were issued. */
-  function catalog(connection: boolean): readonly McpToolDefinition[] {
+  function legacyCatalog(connection: boolean): readonly McpToolDefinition[] {
     const ops = operationCatalog()?.tools;
     if (!ops) return tools;
     return connection
       ? [...tools.filter(tool => tool.module === 'intel' || tool.result === 'approved_read'), ...ops]
       : [...tools, ...ops.filter(tool => !legacyNames.has(tool.name))];
   }
-  const definition = (name: string, connection: boolean) => catalog(connection).find(tool => tool.name === name);
+  /**
+   * §7.4: a hub_v1 connection can call the 11 hub tools plus the whole legacy catalog (a hub tool wins a name clash such as
+   * posts_list); tools/list shows only the hub tools unless SMARTSELL_MCP_LIST_LEGACY=1 (debugging).
+   */
+  function catalog(connection: boolean, profile: ToolProfile = 'legacy'): readonly McpToolDefinition[] {
+    const legacy = legacyCatalog(connection);
+    return connection && profile === 'hub_v1' ? [...HUB_TOOLS, ...legacy.filter(tool => !HUB_TOOL_SET.has(tool.name))] : legacy;
+  }
+  function listedCatalog(connection: boolean, profile: ToolProfile): readonly McpToolDefinition[] {
+    return connection && profile === 'hub_v1' && process.env.SMARTSELL_MCP_LIST_LEGACY !== '1' ? HUB_TOOLS : catalog(connection, profile);
+  }
+  const definition = (name: string, connection: boolean, profile: ToolProfile = 'legacy') => catalog(connection, profile).find(tool => tool.name === name);
 
   function toolAllowed(unit: Unit, name: string) {
     const op = operations.get(name);
@@ -170,6 +192,15 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
   }
   function toolPermitted(unit: Unit, tool: McpToolDefinition, access: Access) {
     if (tool.name === describeName) return true;
+    if (isHubTool(tool)) {
+      // Hub tools read and write the whole workspace (machines, channels), so a brand-scoped member does not get them.
+      if (unit.brandScopes?.length || !READ.includes(unit.context.role)) return false;
+      if (tool.operation) {
+        const op = operationCatalog()?.byName.get(tool.operation);
+        return !!op && operationAllowed(unit, op, access);
+      }
+      return tool.annotations.readOnlyHint || access === 'write';
+    }
     if (tool.name === callName) return access === 'write';
     const op = tool.operation ? operationCatalog()?.byName.get(tool.operation) : undefined;
     if (op) return operationAllowed(unit, op, access);
@@ -208,37 +239,22 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
           required: (inputSchema.required ?? []).filter(field => field !== 'workspace_id') } }) };
     });
   }
-  function seal(credential: Credential) {
-    const nonce = randomBytes(12);
-    const cipher = createCipheriv('aes-256-gcm', key, nonce);
-    const bytes = Buffer.concat([cipher.update(JSON.stringify(credential)), cipher.final()]);
-    return `ss_command_${Buffer.concat([nonce, cipher.getAuthTag(), bytes]).toString('base64url')}`;
-  }
-  function open(token: string): Credential | undefined {
-    if (!/^ss_command_[A-Za-z0-9_-]{60,500}$/.test(token)) return;
-    try {
-      const data = Buffer.from(token.slice('ss_command_'.length), 'base64url');
-      const cipher = createDecipheriv('aes-256-gcm', key, data.subarray(0, 12));
-      cipher.setAuthTag(data.subarray(12, 28));
-      return JSON.parse(Buffer.concat([cipher.update(data.subarray(28)), cipher.final()]).toString());
-    } catch { return undefined; }
-  }
   function bearerCredential(req: FastifyRequest) {
-    return open(/^Bearer (.+)$/i.exec(req.headers.authorization ?? '')?.[1] ?? '');
+    return codec.bearer(req);
   }
   async function check(unit: Unit, credential: Credential): Promise<Grant> {
-    const row = await unit.context.get('mcp_runtime', 'credential', credential.id);
-    if (!row || row.data.actor_id !== unit.context.actorId || row.data.revoked === true || !(row.data.expires > Date.now())) throw unauthenticated();
+    const row = await credentialRow(unit, credential);
     const connection = row.data.kind === 'agent_connection';
+    const profile = connection ? toolProfile(row) : 'legacy';
     // A connection's tools follow the live catalog; a legacy token keeps the list fixed when it was issued.
-    return { row, connection, access: row.data.access === 'read' ? 'read' : 'write',
-      tools: connection ? catalog(true).map(tool => tool.name) : row.data.tools as string[],
+    return { row, connection, profile, access: row.data.access === 'read' ? 'read' : 'write',
+      tools: connection ? catalog(true, profile).map(tool => tool.name) : row.data.tools as string[],
       ...(typeof row.data.label === 'string' && { label: row.data.label }) };
   }
   function withCredential<T>(credential: Credential, run: (unit: Unit, grant: Grant) => Promise<T>) {
     return store.workspace(credential.sessionHash, credential.workspaceId, async unit => run(unit, await check(unit, credential)), credential.id);
   }
-  if (csrf) registerAgentConnections(app, { store, secret, sessionHash, csrf, seal,
+  if (csrf) registerAgentConnections(app, { store, secret, sessionHash, csrf, seal, open,
     mcpUrl: new URL('/mcp', origin ?? operationApi?.config.origin ?? 'http://127.0.0.1:3401').href });
   app.post<{ Params: { wid: string } }>('/api/v1/workspaces/:wid/tokens', async (req, reply) => {
     const input = requestObject(req.body);
@@ -284,6 +300,7 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     async handler(req, reply) {
       let credential: Credential | undefined;
       let connection = false;
+      let profile: ToolProfile = 'legacy';
       let replayed: true | undefined;
       let auditOutput: unknown;
       const auditArgs = isRecord(req.body) && isRecord(req.body.params) ? req.body.params.arguments : undefined;
@@ -348,11 +365,33 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
           return host.execute!(unit, op, approvedInput(op.name, input), { requestId: req.id, source: 'mcp', grantId: selected.id, credentialLabel: grant.label });
         });
       }
+      const hub = createHubTools({
+        origin: publicOrigin,
+        read(principal, fn) {
+          const selected = selectedFor(principal);
+          return withCredential(selected, async unit => {
+            const { records } = await operationRecords(unit.context, true);
+            let ctx: Context = enrich(makeContext(records, unit.context, unit.context.role, req.id), undefined, selected.id);
+            if (unit.brandScopes?.length) ctx = scopedBrandContext(ctx, unit.brandScopes);
+            return fn(ctx);
+          });
+        },
+        operation(principal, name, input) {
+          const selected = selectedFor(principal);
+          const op = operationCatalog()?.byName.get(name);
+          if (!op || !host.execute) throw new Problem(503, 'UNAVAILABLE', `${name} is not available on this server`);
+          return withCredential(selected, async (unit, grant) => {
+            if (humanOnly(op)) throw humanRequired(op.name);
+            if (!operationAllowed(unit, op, grant.access)) throw new Problem(403, 'PERMISSION_DENIED', `${op.name} is not available to this credential`);
+            return host.execute!(unit, op, input, { requestId: req.id, source: 'mcp', grantId: selected.id, credentialLabel: grant.label });
+          });
+        },
+      });
       const handler = createMcpHandler({ ...bridge, allowedOrigins: [...origins], additionalTools,
         auditEarlyDenials: true,
         async audit(event) {
           const selected = selectedFor(event);
-          const tool = definition(event.toolName, connection);
+          const tool = definition(event.toolName, connection, profile);
           const name = tool?.name === callName && isRecord(auditArgs) ? auditArgs.operation : tool?.operation ?? tool?.name;
           const op = typeof name === 'string' ? operationCatalog()?.byName.get(name) ?? operations.get(name) : undefined;
           const persist = async (unit: Unit) => {
@@ -377,7 +416,8 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
                 ...(event.code && { error_code: mcpAuditErrorCode(event.code) }),
                 ...(event.outcome === 'success' && { agent_job_id, task_id, device_id, status: mcpAuditBusinessStatus(auditOutput), replayed }),
               }, row.version);
-              if (event.outcome === 'success' && event.toolName === describeName) await verifyAgentConnection(context, selected.id);
+              // §7.4 (B07): any successful tool call verifies the connection, not only smartsell_operations_describe.
+              if (event.outcome === 'success') await verifyAgentConnection(context, selected.id);
             });
           };
           // A recovered local connection may require its credential to resolve the backing session.
@@ -393,7 +433,9 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
             await store.workspace(selected.sessionHash, selected.workspaceId, persist);
           }
         },
-        tools: () => catalog(connection), instructions: agentInstructions,
+        tools: () => catalog(connection, profile),
+        listed: () => listedCatalog(connection, profile),
+        instructions: () => connection && profile === 'hub_v1' ? hubInstructions : agentInstructions,
         operationTaskKey: key.toString('hex'),
         readOperation: (principal, operationId) => {
           const selected = selectedFor(principal);
@@ -413,12 +455,17 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
             }),
         } }),
         // Operation tools authorize inside their own transaction, against the live credential and role.
-        authorize: invocation => invocation.tool.result === 'approved_read' || invocation.tool.result === 'operation_call' || bridge.authorize(invocation),
-        dispatch: async invocation => invocation.tool.result === 'approved_read'
+        authorize: invocation => invocation.tool.result === 'approved_read' || invocation.tool.result === 'operation_call' ||
+          invocation.tool.result === 'hub' || bridge.authorize(invocation),
+        dispatch: async invocation => invocation.tool.result === 'hub' ? hub.dispatch(invocation) : invocation.tool.result === 'approved_read'
           ? (await invokeRead(invocation.principal, invocation.tool.name, invocation.input)).body
           : invocation.tool.result === 'operation_call' ? invokeOperation(invocation.principal, invocation.tool, invocation.input.body)
             : bridge.dispatch(invocation),
         filterOutput: ({ tool }, raw, metadata) => {
+          if (tool.result === 'hub') {
+            auditOutput = raw;
+            return { data: metadata };
+          }
           if (tool.module === 'intel') return intelMcpOutput(tool.action, raw);
           if (tool.result === 'approved_read') {
             const { data, next_cursor } = metadata;
@@ -442,11 +489,12 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
           try {
             return await withCredential(selected, async (unit, grant) => {
               connection = grant.connection;
+              profile = grant.profile;
               if (grant.connection) await touchAgentConnection(unit, grant.row);
               return {
                 tenantId: unit.context.tenantId, workspaceId: selected.workspaceId, actorId: unit.context.actorId, tokenId: selected.id,
                 allowedTools: grant.tools.filter(name => {
-                  const tool = definition(name, grant.connection);
+                  const tool = definition(name, grant.connection, grant.profile);
                   return !!tool && toolPermitted(unit, tool, grant.access);
                 }),
               } satisfies McpPrincipal;
@@ -461,6 +509,15 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
       return serveMcpRequest(req, reply, handler, active);
     },
   });
+  if (operationApi) {
+    // C4/C5/C13: the agent upload routes (S5) and the owner alert stream (S10) authenticate with the same Agent credential,
+    // mounted after /mcp (§6.4, §11.2).
+    const credentials = createAgentCredentials({ store, codec, operations: operationApi.operations });
+    const media = (operationApi as { media?: ReturnType<typeof createMediaHost> }).media ?? createMediaHost(operationApi.config);
+    const uploads = registerAgentUploads(app, { credentials, media: media.media, config: operationApi.config });
+    app.addHook('preClose', async () => { await uploads?.idle?.(); });
+    registerAgentAlertStream(app, { credentials });
+  }
   return async (req: FastifyRequest, workspace: string, name: string) => {
     const workerOperation = (name === 'worker_catalog_list' || name === 'worker_catalog_request_import' || workerSocialStatusToolNames.has(name))
       ? operationCatalog()?.byName.get(name) : undefined;

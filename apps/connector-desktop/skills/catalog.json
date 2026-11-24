@@ -1,5 +1,5 @@
 [
-  { "id": "smartsell-video-publish", "title": "视频发布与查回", "description": "由 Codex 或 Claude 核对账号和视频版本、排期送审，并查回已授权的官方执行结果或当前人工处理步骤。" },
-  { "id": "smartsell-product-listing", "title": "商品上架核对与导入", "description": "由 Codex 或 Claude 核对商品、SKU 和店铺，按绑定设备发起受支持的目录导入，并查回暂不支持的上架请求。" },
-  { "id": "smartsell-data-collection", "title": "数据采集与核对", "description": "由 Codex 或 Claude 发起已授权的只读采集、查回任务和来源观测，并区分零值、缺失和权限限制。" }
+  { "id": "smartsell-video-publish", "title": "影片發布與查回", "description": "由 Codex 或 Claude 以 SmartSell 中樞工具上傳影片、一次排程到多個帳號，並查回每則貼文的狀態與網址（第 1 階段：X、TikTok）。" },
+  { "id": "smartsell-product-listing", "title": "商品與店鋪（第 1 階段不提供）", "description": "主人要求上架或匯入商品時，如實說明第 1 階段的 SmartSell 不管理商品與店鋪，不改用其他工具。" },
+  { "id": "smartsell-data-collection", "title": "帳號狀態與貼文查回", "description": "由 Codex 或 Claude 查帳號的登入與阻擋、SmartSell 排程或發出的貼文；第 1 階段不讀平台上其他作品與成效數字。" }
 ]

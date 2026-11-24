@@ -3,6 +3,11 @@ import { exportDevicePublicKey, fields, opaqueId, parseConnectorClaim, timestamp
 import { PermitError, parseConsumePermitDecision, parseSubmitPermitDecision, type ConsumePermitRequest, type SubmitPermitClient, type SubmitPermitRequest } from './permit.ts';
 import type { Report } from './workflow.ts';
 import { parseSocialStatusClaim, parseSocialStatusResult, type SocialStatusClaim, type SocialStatusResult } from './social-status.ts';
+import type { ClaimRequest, ClaimResponse, GoRequest, GoResponse, HeartbeatV2Request, HeartbeatV2Response, JobReport } from '../../../packages/contracts/src/phase1.ts';
+import { guardSocketTypeOfService } from './socket-guard.ts';
+
+// Every signed hub request goes through global fetch: keep a reset hub connection from crashing the Worker (socket-guard.ts).
+guardSocketTypeOfService();
 
 export type DeviceAction = 'heartbeat' | 'claim' | 'catalog.claim' | 'catalog.upload' | 'channels.register' | 'browser.identity' | 'mobile.identity' | 'mobile.report' | 'attempt.ready' | 'attempt.permit' | 'attempt.consume' | 'attempt.report' | 'zhihu.stats.claim' | 'zhihu.stats.report' | 'social.status.claim' | 'social.status.report';
 export type ZhihuStatsClaim = { id: string; workspace_id: string; device_id: string; fencing_token: number; lease_expires_at: string } & (
@@ -16,7 +21,9 @@ export type ZhihuLoginCheckResult = { status: 'completed'; profile_slug?: never;
   | { status: 'blocked'; reason: Exclude<ZhihuStatsBlockReason, 'identity_mismatch'> };
 export type CatalogExport = { csv: string; xlsx_base64?: never } | { csv?: never; xlsx_base64: string };
 export type DeviceBindings = { social: Record<string, number>; commerce: Record<string, number> };
-export type ChannelSelection = { kind: 'social' | 'store'; platform: string; external_id: string; observed_at: string; display_name?: string; portal_url?: string };
+export type ChannelSelection = { kind: 'social' | 'store'; platform: string; external_id: string; observed_at: string; display_name?: string; portal_url?: string;
+  /** Phase 1 (§8.16): the per-channel Chrome profile, the visible handle and the automation notice the owner accepted. */
+  profile_key?: string; handle?: string; automation_notice_version?: string };
 export type ChannelRegistration = Pick<ChannelSelection, 'kind' | 'platform' | 'external_id'> & { resource_id: string; device_id: string };
 
 export function channelSelectionKey({ kind, platform, external_id }: Pick<ChannelSelection, 'kind' | 'platform' | 'external_id'>) {
@@ -180,13 +187,18 @@ export class SignedDeviceClient implements SubmitPermitClient {
   async registerChannels(selections: readonly ChannelSelection[]): Promise<ChannelRegistration[]> {
     if (selections.length < 1 || selections.length > 20) throw new TypeError('Invalid channel selection count');
     const expected = new Map<string, Pick<ChannelSelection, 'kind' | 'platform' | 'external_id'>>();
-    const rows = selections.map(({ kind, platform, external_id, observed_at, display_name, portal_url }) => {
+    const rows = selections.map(({ kind, platform, external_id, observed_at, display_name, portal_url, profile_key, handle, automation_notice_version }) => {
       const identity = { kind, platform, external_id };
       const key = channelSelectionKey(identity);
       if ((kind !== 'social' && kind !== 'store') || !/^[a-z][a-z0-9_]{0,39}$/.test(platform) ||
-        !/^[a-zA-Z0-9][a-zA-Z0-9_.:/|+-]{0,159}$/.test(external_id) || expected.has(key)) throw new TypeError('Invalid channel selection');
+        !/^[a-zA-Z0-9][a-zA-Z0-9_.:/|+-]{0,159}$/.test(external_id) || expected.has(key) ||
+        (profile_key !== undefined && !/^ch-[0-9a-f]{12}$/.test(profile_key)) ||
+        (handle !== undefined && !/^[A-Za-z0-9_.]{1,64}$/.test(handle)) ||
+        (automation_notice_version !== undefined && !/^[a-z0-9-]{1,80}$/.test(automation_notice_version))) throw new TypeError('Invalid channel selection');
       expected.set(key, identity);
-      return { ...identity, observed_at: timestamp(observed_at, 'observed_at'), display_name, portal_url };
+      return { ...identity, observed_at: timestamp(observed_at, 'observed_at'), display_name, portal_url,
+        ...(profile_key !== undefined && { profile_key }), ...(handle !== undefined && { handle }),
+        ...(automation_notice_version !== undefined && { automation_notice_version }) };
     });
     const { registrations } = fields(await this.#send('channels.register', { confirmed: true, selections: rows }), ['registrations']);
     if (!Array.isArray(registrations) || registrations.length !== rows.length) throw new Error('Unexpected channel registrations');
@@ -295,4 +307,192 @@ export class SignedDeviceClient implements SubmitPermitClient {
   }
   async consume(input: ConsumePermitRequest) { return parseConsumePermitDecision(await this.#send('attempt.consume', input)); }
   report(report: Report) { return this.#send('attempt.report', report); }
+}
+
+// ---------- Phase 1 signed device protocol (§5.4, §6.6, §8.13, Appendix B.2) ----------
+// The v2 client keeps the same Ed25519 request bytes as SignedDeviceClient but
+// surfaces structured errors (code, Retry-After, Date) that the Worker runtime
+// needs for its error table (§8.2). It never retries on its own.
+
+/** Signed actions of the Phase 1 job protocol. Media and evidence embed their scope in the action string. */
+export type DeviceProtocolAction = 'heartbeat' | 'jobs.claim' | 'jobs.report' | 'jobs.go' | 'driver_config.read' | 'channels.register'
+  | `media.read:${string}:${string}:${number}` | `evidence.upload:${string}:${number}`;
+
+/** A non-2xx hub response. `details` carries extra fields of the error envelope (for example `expected` of SEQ_GAP). */
+export class DeviceHttpError extends Error {
+  constructor(readonly status: number, readonly code: string | null, readonly details: Record<string, unknown>,
+    readonly retryAfterMs: number | null, readonly serverDate: number | null) {
+    super(`Hub rejected the device request (HTTP ${status}${code ? ` ${code}` : ''})`);
+    this.name = 'DeviceHttpError';
+  }
+}
+/** The hub could not be reached or did not answer in time. */
+export class DeviceNetworkError extends Error {
+  constructor(readonly kind: 'network' | 'timeout', options?: { cause?: unknown }) {
+    super(kind === 'timeout' ? 'Hub request timed out' : 'Hub is unreachable', options);
+    this.name = 'DeviceNetworkError';
+  }
+}
+
+export function deviceSignatureHeaders(key: KeyObject, workspaceId: string, deviceId: string, action: string, rawBody: Uint8Array, nowMs: number) {
+  const ts = new Date(nowMs).toISOString();
+  const nonce = randomBytes(18).toString('base64url');
+  const digest = createHash('sha256').update(rawBody).digest('hex');
+  const bytes = Buffer.from(JSON.stringify(['smartsell.device.v1', workspaceId, deviceId, action, ts, nonce, digest]));
+  return {
+    'x-smartsell-workspace': workspaceId, 'x-smartsell-device': deviceId, 'x-smartsell-timestamp': ts,
+    'x-smartsell-nonce': nonce, 'x-smartsell-signature': signature(key, bytes),
+  };
+}
+
+export interface DeviceExchange<T> { data: T; sentAt: number; receivedAt: number; serverDate: number | null }
+
+function retryAfter(value: string | null, now: number) {
+  if (!value) return null;
+  if (/^\d+$/.test(value.trim())) return Number(value.trim()) * 1000;
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? Math.max(0, at - now) : null;
+}
+function serverDate(headers: Headers) {
+  const value = headers.get('date');
+  const at = value ? Date.parse(value) : NaN;
+  return Number.isFinite(at) ? at : null;
+}
+const responseLimit = 4 * 1024 * 1024;
+async function readLimited(response: Response, limit = responseLimit) {
+  const reader = response.body?.getReader();
+  if (!reader) return Buffer.alloc(0);
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > limit) throw new Error('Hub response too large');
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  return Buffer.concat(chunks);
+}
+async function httpError(response: Response, now: number) {
+  let code: string | null = null;
+  let details: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse((await readLimited(response, 64 * 1024)).toString('utf8')) as { error?: Record<string, unknown> };
+    const error = parsed?.error;
+    if (error && typeof error === 'object') {
+      code = typeof error.code === 'string' ? error.code : null;
+      const nested = error.details && typeof error.details === 'object' ? error.details as Record<string, unknown> : {};
+      details = { ...nested, ...Object.fromEntries(Object.entries(error).filter(([name]) => name !== 'code' && name !== 'details')) };
+    }
+  } catch { /* A non-JSON error body still yields the HTTP status. */ }
+  return new DeviceHttpError(response.status, code, details, retryAfter(response.headers.get('retry-after'), now), serverDate(response.headers));
+}
+
+export interface DeviceProtocolClientOptions {
+  origin: string; workspaceId: string; deviceId: string; key: KeyObject;
+  /** Hub-corrected time used for the signature timestamp (§8.2 clock). */
+  now: () => number;
+  /** Raw local time used to measure round trips; defaults to Date.now. */
+  localNow?: () => number;
+  fetch?: typeof fetch;
+}
+
+export class DeviceProtocolClient {
+  readonly origin: string;
+  readonly #fetch: typeof fetch;
+  readonly #localNow: () => number;
+  constructor(private readonly options: DeviceProtocolClientOptions) {
+    this.origin = apiOrigin(options.origin);
+    opaqueId(options.workspaceId, 'workspace_id');
+    opaqueId(options.deviceId, 'device_id');
+    this.#fetch = options.fetch ?? fetch;
+    this.#localNow = options.localNow ?? Date.now;
+  }
+
+  get deviceId() { return this.options.deviceId; }
+  get workspaceId() { return this.options.workspaceId; }
+
+  async #call(method: 'GET' | 'POST' | 'PUT', path: string, action: DeviceProtocolAction, body: Uint8Array, timeoutMs: number,
+    extra: Record<string, string> = {}, signal?: AbortSignal): Promise<{ response: Response; sentAt: number }> {
+    const headers = { ...deviceSignatureHeaders(this.options.key, this.options.workspaceId, this.options.deviceId, action, body, this.options.now()), ...extra };
+    const sentAt = this.#localNow();
+    const timeout = AbortSignal.timeout(timeoutMs);
+    try {
+      const response = await this.#fetch(new URL(path, this.origin), {
+        method, headers, redirect: 'error', credentials: 'omit', cache: 'no-store',
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+        ...(method === 'GET' ? {} : { body: Uint8Array.from(body) }),
+      });
+      return { response, sentAt };
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      throw new DeviceNetworkError(timeout.aborted ? 'timeout' : 'network', { cause: error });
+    }
+  }
+
+  async #json<T>(method: 'POST' | 'PUT', path: string, action: DeviceProtocolAction, payload: unknown, timeoutMs: number,
+    raw?: { bytes: Uint8Array; headers: Record<string, string> }): Promise<DeviceExchange<T>> {
+    const body = raw ? raw.bytes : Buffer.from(JSON.stringify(payload));
+    const { response, sentAt } = await this.#call(method, path, action, body, timeoutMs,
+      raw ? raw.headers : { 'content-type': 'application/json' });
+    const receivedAt = this.#localNow();
+    if (!response.ok) throw await httpError(response, receivedAt);
+    let parsed: unknown;
+    try { parsed = JSON.parse((await readLimited(response)).toString('utf8')); }
+    catch (error) { throw new DeviceNetworkError('network', { cause: error }); }
+    const data = parsed && typeof parsed === 'object' && 'data' in parsed ? (parsed as { data: T }).data : parsed as T;
+    return { data, sentAt, receivedAt, serverDate: serverDate(response.headers) };
+  }
+
+  heartbeat(body: HeartbeatV2Request, timeoutMs = 10_000) {
+    return this.#json<HeartbeatV2Response>('POST', '/api/v1/device/heartbeat', 'heartbeat', body, timeoutMs);
+  }
+  claim(body: ClaimRequest, timeoutMs = 10_000) {
+    return this.#json<ClaimResponse>('POST', '/api/v1/device/jobs/claim', 'jobs.claim', body, timeoutMs);
+  }
+  report(body: JobReport, timeoutMs = 10_000) {
+    return this.#json<{ status?: string }>('POST', '/api/v1/device/jobs/report', 'jobs.report', body, timeoutMs);
+  }
+  go(body: GoRequest, timeoutMs = 20_000) {
+    return this.#json<GoResponse & { server_time?: string }>('POST', '/api/v1/device/jobs/go', 'jobs.go', body, timeoutMs);
+  }
+  registerChannels(selections: readonly ChannelSelection[], timeoutMs = 10_000) {
+    return this.#json<{ registrations: ChannelRegistration[] }>('POST', '/api/v1/device/channels/register', 'channels.register',
+      { confirmed: true, selections }, timeoutMs);
+  }
+
+  /** Signed media download (§6.6). Returns the open response (200 or 206); the caller streams the body. */
+  async openMedia(fileId: string, jobId: string, fence: number, options: { start?: number; etag?: string; signal?: AbortSignal; timeoutMs?: number } = {}) {
+    opaqueId(fileId, 'file_id');
+    opaqueId(jobId, 'job_id');
+    if (!Number.isSafeInteger(fence) || fence < 1) throw new TypeError('Invalid fencing token');
+    const headers: Record<string, string> = { 'x-smartsell-job': jobId, 'x-smartsell-fence': String(fence) };
+    if (options.start && options.start > 0) {
+      headers.range = `bytes=${options.start}-`;
+      if (options.etag) headers['if-range'] = options.etag;
+    }
+    const { response } = await this.#call('GET', `/api/v1/device/media/${encodeURIComponent(fileId)}`, `media.read:${fileId}:${jobId}:${fence}`,
+      new Uint8Array(0), options.timeoutMs ?? 30_000, headers, options.signal);
+    if (response.status !== 200 && response.status !== 206) throw await httpError(response, this.#localNow());
+    return response;
+  }
+
+  /** Evidence upload (§8.13): raw JPEG/PNG bytes with PUT so the root guard accepts the body. */
+  uploadEvidence(jobId: string, fence: number, bytes: Uint8Array, mime: 'image/jpeg' | 'image/png', timeoutMs = 30_000) {
+    opaqueId(jobId, 'job_id');
+    if (!Number.isSafeInteger(fence) || fence < 1) throw new TypeError('Invalid fencing token');
+    if (bytes.byteLength > 4 * 1024 * 1024) throw new TypeError('Evidence exceeds 4 MiB');
+    return this.#json<unknown>('PUT', `/api/v1/device/evidence/${encodeURIComponent(jobId)}`, `evidence.upload:${jobId}:${fence}`, undefined, timeoutMs,
+      { bytes, headers: { 'content-type': mime, 'x-smartsell-fence': String(fence) } });
+  }
+
+  /** Selector data file (§8.11); served as a raw JSON file without the {data} envelope. */
+  async driverConfig(timeoutMs = 10_000): Promise<DeviceExchange<Buffer>> {
+    const { response, sentAt } = await this.#call('GET', '/api/v1/device/driver-config', 'driver_config.read', new Uint8Array(0), timeoutMs);
+    const receivedAt = this.#localNow();
+    if (!response.ok) throw await httpError(response, receivedAt);
+    return { data: await readLimited(response, 1024 * 1024), sentAt, receivedAt, serverDate: serverDate(response.headers) };
+  }
 }

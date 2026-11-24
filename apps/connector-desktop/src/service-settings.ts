@@ -62,3 +62,43 @@ export function workbenchOrigin(origin: string | undefined) {
     isIP(url.hostname.replace(/^\[|\]$/g, '')) || /(?:^|\.)localhost\.?$/i.test(url.hostname)) return;
   return url.origin;
 }
+
+/** What this machine does (§2.9 step 5, §6.2): a posting Worker, or the owner's laptop (Codex relay + alerts). */
+export type AppRole = 'worker' | 'agent';
+export interface AppSettings {
+  role: AppRole | null;
+  /** Login item; turned on after the first pairing, can be switched off in the settings (§8.2). */
+  autostart: boolean | null;
+  /** Legacy work lines (抖音、小紅書、知乎、商品匯入) live under 「進階」 and stay off by default (§8.17). */
+  legacy_lines: boolean;
+  /** Laptop mode: hub address typed before the first Codex connection. */
+  agent_hub_origin: string | null;
+}
+
+const DEFAULT_APP_SETTINGS: AppSettings = { role: null, autostart: null, legacy_lines: false, agent_hub_origin: null };
+
+function appSettingsValue(value: unknown): AppSettings {
+  const row = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const origin = typeof row.agent_hub_origin === 'string' ? URL.parse(row.agent_hub_origin) : null;
+  return {
+    role: row.role === 'worker' || row.role === 'agent' ? row.role : null,
+    autostart: typeof row.autostart === 'boolean' ? row.autostart : null,
+    legacy_lines: row.legacy_lines === true,
+    agent_hub_origin: origin && (origin.protocol === 'https:' || ['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname)) ? origin.origin : null,
+  };
+}
+
+export function appSettings(path: string) {
+  return {
+    load(): AppSettings {
+      try { return appSettingsValue(JSON.parse(readFileSync(path, 'utf8'))); }
+      catch { return { ...DEFAULT_APP_SETTINGS }; }
+    },
+    save(patch: Partial<AppSettings>): AppSettings {
+      const next = appSettingsValue({ ...this.load(), ...patch });
+      try { saveSetting(path, `${JSON.stringify(next, null, 2)}\n`); }
+      catch { throw new Error('無法儲存 SmartSell 的設定。'); }
+      return next;
+    },
+  };
+}

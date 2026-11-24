@@ -1,10 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import { browserUse } from '../../scripts/playwright-browser.mjs';
 
 export default defineConfig({
   testDir: './test',
   workers: 1,
   use: {
-    ...(process.env.SMARTSELL_TEST_CHROME ? { launchOptions: { executablePath: process.env.SMARTSELL_TEST_CHROME } } : { channel: 'chromium' }),
+    // SMARTSELL_TEST_CHROME, SMARTSELL_PLAYWRIGHT_CHANNEL, bundled Chromium, then the installed Google Chrome.
+    ...browserUse(),
     timezoneId: 'UTC',
     actionTimeout: 6000,
   },

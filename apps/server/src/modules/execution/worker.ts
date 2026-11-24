@@ -1,6 +1,6 @@
 import { Problem, type Context, type Data, type Row } from '@smartsell/contracts';
 import { closeTarget, localMinute } from '../../../../../packages/domain/src/publishing/index.js';
-import { ATTEMPT, FINAL, SLOT, TASK, after, availableWriteSlot, blockExecution, executionCheck, conflict, confirmCancellation, endAttempt, fence, find, holdWriteSlot, late, matchingPost, openAttempt, optional, pending, publish,
+import { ATTEMPT, FINAL, SLOT, TASK, isWorkerTask, after, availableWriteSlot, blockExecution, executionCheck, conflict, confirmCancellation, endAttempt, fence, find, holdWriteSlot, late, matchingPost, openAttempt, optional, pending, publish,
   activeVerification, attachEvidence, requestVerification, settleConnector, settleVerification, status, step, targetOf, text, time, transition, uncertain, url, verificationDelay } from './service.js';
 import { handover, retry } from './ops.js';
 import { isJobPaused } from '../ops/controls.js';
@@ -66,6 +66,8 @@ export function createExecutionWorker(transact: Transact, adapters: readonly Exe
     async dispatch(taskId: string) {
       const claim = await transact(ctx => {
         const task = ctx.get(TASK, taskId);
+        // §5.2: Worker-route tasks belong to the job engine (modules/worker); this executor never dispatches them.
+        if (isWorkerTask(task)) return undefined;
         if (task.schedule_kind === 'manual_date' || !['scheduled', 'queued'].includes(status(task)) || (!task.run_requested_at && time(task.due_at) > time(ctx.now)) || time(task.next_retry_at) > time(ctx.now)) return undefined;
         if (pending(ctx, task) || task.active_attempt_id || dispatchPaused(ctx, task)) return;
         const check = executionCheck(ctx, task);
@@ -280,6 +282,7 @@ export function createExecutionWorker(transact: Transact, adapters: readonly Exe
         const requests = new Set(ctx.list('execution_verification').filter(row => row.status === 'requested' &&
           (!row.available_at || time(row.available_at) <= time(ctx.now))).map(row => row.attempt_id));
         return ctx.list(TASK).flatMap<{ id: string; action: 'dispatch' | 'reconcile' }>(task => {
+          if (isWorkerTask(task)) return [];
           const attempt = pending(ctx, task);
           if (attempt && (attempt.executor === 'api' || attempt.executor === 'connector' && attemptAdapter(ctx, task, attempt)?.observeConnector) &&
             ['accepted', 'unknown'].includes(status(attempt)) && requests.has(attempt.id)) {
@@ -317,6 +320,7 @@ function retryPreSubmit(ctx: Context, task: Row, reason: string, count = Number(
 export function scanWorkspaceExecution(ctx: Context, options?: { manualDatesOnly: boolean }) {
   if (!options?.manualDatesOnly) scanExecution(ctx);
   for (const task of ctx.list(TASK)) {
+    if (isWorkerTask(task)) continue;
     if (options?.manualDatesOnly && task.schedule_kind !== 'manual_date') continue;
     if (!task.publish_target_id || task.status !== 'queued' || task.restore_hold || task.active_attempt_id || pending(ctx, task) ||
       (!task.run_requested_at && time(task.due_at) > time(ctx.now)) || time(task.next_retry_at) > time(ctx.now) || dispatchPaused(ctx, task)) continue;
@@ -339,7 +343,7 @@ export function scanExecution(ctx: Context) {
     }
   }
   for (const task of ctx.list(TASK)) {
-    if (!task.publish_target_id || FINAL.includes(status(task))) continue;
+    if (!task.publish_target_id || FINAL.includes(status(task)) || isWorkerTask(task)) continue;
     const attempt = find(ctx, ATTEMPT, task.active_attempt_id);
     const connector = attempt?.executor === 'connector' ? ctx.list('connector_task').find(row => row.attempt_id === attempt.id) : undefined;
     if (attempt && connector?.status === 'abandoned' && !pending(ctx, task)) {
@@ -437,7 +441,7 @@ export function scanExecution(ctx: Context) {
 
 /** Called by restore orchestration before any dispatch resumes. */
 export function holdRestoredExecution(ctx: Context) {
-  return ctx.list(TASK).filter(task => !FINAL.includes(status(task))).map(task => {
+  return ctx.list(TASK).filter(task => !FINAL.includes(status(task)) && !isWorkerTask(task)).map(task => {
     const open = pending(ctx, task);
     if (open) {
       if (task.active_attempt_id === open.id || open.status === 'in_progress' || open.status === 'submitted') {

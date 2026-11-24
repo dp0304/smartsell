@@ -3,6 +3,7 @@ import { PUBLISH_ASSIST_WAIT_SECONDS, PUBLISH_RESULT_REPORT_SECONDS } from '../.
 import { attachMediaEvidence } from '../../extensions/media-files.js';
 import { reconcileConnectorTask } from '../account/connector-service.js';
 import { approvalValid, assessTarget, closeTarget, digest, invalidateTargets } from '../../../../../packages/domain/src/publishing/index.js';
+import { cancelWorkerTask, dispatchWorkerJob, isWorkerRoute } from '../worker/engine.js';
 
 export const TASK = 'execution_task', ATTEMPT = 'execution_attempt', POST = 'platform_post', SLOT = 'account_write_slot';
 export const FINAL = ['published', 'cancelled', 'expired', 'failed'];
@@ -12,6 +13,8 @@ export function verificationDelay(task: Row, index = 0) {
   return Number(schedule[Math.min(index, schedule.length - 1)]);
 }
 const REFROZEN = ['scheduled', 'queued', 'blocked'];
+/** §5.2: a task routed to the Worker job engine. Its state is written only by syncTaskFromJob (modules/worker/sync.ts). */
+export const isWorkerTask = (task: Row | null | undefined) => Array.isArray(task?.route) && (task!.route as Data[])[0]?.executor === 'worker';
 export const status = (row: Row) => String(row.status);
 export const time = (value: unknown) => typeof value === 'string' ? Date.parse(value) : NaN;
 export const after = (ctx: Context, seconds: number) => new Date(time(ctx.now) + seconds * 1000).toISOString();
@@ -94,7 +97,9 @@ export function ensureTask(ctx: Context, target: Row) {
   const existing = taskFor(ctx, target);
   if (existing?.snapshot_generation === generation(target) && existing?.frozen_hash === target.frozen_hash) {
     if (target.execution_task_id !== existing.id) ctx.update('publish_target', target.id, { execution_task_id: existing.id });
-    return existing;
+    // §5.2: re-dispatch when no live job exists (for example after a pause was released). dispatchWorkerJob is idempotent.
+    if (isWorkerTask(existing) || isWorkerRoute(ctx, target)) dispatchWorkerJob(ctx, ctx.get('publish_target', target.id), ctx.get(TASK, existing.id));
+    return ctx.get(TASK, existing.id);
   }
   if (existing && (!REFROZEN.includes(status(existing)) || existing.active_attempt_id || pending(ctx, existing))) {
     throw conflict('TASK_ALREADY_STARTED', 'The existing execution cannot be refrozen');
@@ -111,7 +116,8 @@ export function ensureTask(ctx: Context, target: Row) {
     approval_request_id: target.approval_request_id ?? null, frozen: structuredClone(assessed.payload),
     frozen_hash: assessed.hash, snapshot_generation: generation(target), frozen_version: Number(existing?.frozen_version ?? 0) + 1,
     due_at: target.scheduled_at ?? null, schedule_kind: target.schedule_kind ?? 'asap', schedule_tz: target.schedule_tz ?? null,
-    route: [target.schedule_kind !== 'manual_date' && assessed.route === 'api' ? { executor: 'api', reason: 'capability_advertised' } :
+    route: [assessed.route === 'worker' && target.schedule_kind !== 'manual_date' ? workerRouteEntry(ctx, target)
+      : target.schedule_kind !== 'manual_date' && assessed.route === 'api' ? { executor: 'api', reason: 'capability_advertised' } :
       { executor: 'manual', reason: target.schedule_kind === 'manual_date' ? 'manual_date' : 'manual_fallback' }],
     assignee_user_id: existing?.assignee_user_id ?? target.owner_user_id ?? null,
     late_policy: latePolicy, grace_minutes: target.grace_minutes ?? policy.grace_minutes ?? (latePolicy === 'skip' ? 0 : 30),
@@ -123,10 +129,19 @@ export function ensureTask(ctx: Context, target: Row) {
   const task = existing ? transition(ctx, existing, state, 'refrozen', values) : ctx.create(TASK, { ...values, status: state, attempt_count: 0, auto_retry_count: 0, fencing_token: 0, active_attempt_id: null });
   if (target.execution_task_id !== task.id) ctx.update('publish_target', target.id, { execution_task_id: task.id });
   ctx.emit(existing ? 'execution.task.refrozen' : 'execution.task.created', { task_id: task.id, publish_target_id: target.id, frozen_hash: task.frozen_hash, snapshot_generation: task.snapshot_generation });
-  return task;
+  // §5.2: dispatch-ahead in the same transaction; the Worker claims it within its 24 h horizon.
+  if (isWorkerTask(task)) dispatchWorkerJob(ctx, ctx.get('publish_target', target.id), task);
+  return ctx.get(TASK, task.id);
+}
+
+function workerRouteEntry(ctx: Context, target: Row): Data {
+  const binding = ctx.list('account_execution_binding').find(row => row.social_account_id === target.social_account_id);
+  return { executor: 'worker', device_id: typeof binding?.device_id === 'string' ? binding.device_id : null };
 }
 
 export function late(ctx: Context, task: Row, availableAt = ctx.now) {
+  // The Worker route has its own lateness limit (not_after, §5.6); the legacy late policy never touches it.
+  if (isWorkerTask(task)) return;
   const delay = time(availableAt) - time(task.due_at);
   if (task.late_override_at || !(delay > Number(task.grace_minutes) * 60_000)) return;
   const timing = { delay_minutes: Math.floor(delay / 60_000), late_evaluated_at: ctx.now };
@@ -241,6 +256,8 @@ export function confirmCancellation(ctx: Context, task: Row, reason: string) {
 export function requestCancellation(ctx: Context, target: Row, verifyOnly = false) {
   const task = taskFor(ctx, target);
   if (!task || task.status === 'cancelled') return task ?? null;
+  // §5.10: the Worker route looks at the job first (a Worker attempt is not side-effecting before the click).
+  if (isWorkerTask(task) && task.status !== 'cancel_pending' && !FINAL.includes(status(task))) return cancelWorkerTask(ctx, target, task);
   if (task.status === 'cancel_pending') {
     if (!verifyOnly && task.cancel_verify_only === true) {
       const next = ctx.update(TASK, task.id, { cancel_verify_only: false });

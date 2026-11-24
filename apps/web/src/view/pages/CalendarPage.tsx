@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, List, Rows3 } from 'lucide-react';
-import { AgentPrompt, addDays, monthGrid, type CalendarEvent } from '@smartsell/ui';
+import { addDays, monthGrid, type CalendarEvent } from '@smartsell/ui';
 import { copy } from '../copy';
 import { todayIn } from '../data/period';
 import { useView, useViewContext, workspaceZone } from '../data/use-view';
@@ -101,15 +101,15 @@ export function CalendarPage() {
       const current = state.event ? all.find(event => event.id === state.event) : undefined;
       const from = view.range?.from ?? state.from, to = view.range?.to ?? state.to;
       const past = to < today;
-      const prompt = campaignId && planName.get(campaignId) ? fill(l(t.emptyPromptPlan), { plan: planName.get(campaignId)! })
-        : past ? fill(l(t.emptyPromptPast), { month: rangeLabel })
-          : unit ? fill(l(t.emptyPromptWeek), { range: rangeLabel }) : fill(l(t.emptyPromptMonth), { month: rangeLabel });
       return <div className="cal-body">
         {locked.length > 0 && <p className="vs-notice cal-notice" role="note">{fill(l(t.noPermissionNote), { kinds: locked.map(kind => kindLabel(kind, lang)).join(lang === 'en' ? ', ' : '、') })}</p>}
         {state.event && !current && !read.isPlaceholderData && <p className="vs-notice cal-notice" role="status">{l(t.notOnCalendar)}
           <button type="button" className="vs-link-button" onClick={() => update(eventParams(params, null))}>{l(t.close)}</button></p>}
         {all.length ? <CalendarSummaryStrip summary={summary} from={from} to={to} today={today} timeZone={zone} base={base} onOpen={open} />
-          : <AgentPrompt title={l(copy.pages.calendarEmpty)} detail={l(t.emptyDetail)} prompt={prompt} agentHref={`${base}/agent`} />}
+          : <div className="cal-empty vs-notice" role="status"><p><strong>{l(copy.pages.calendarEmpty)}</strong></p>
+            <p className="muted">{l(['在 Codex 說「明天 9:00 把 video.mp4 發到 X」，排好的貼文會出現在今日與這裡。', 'Tell Codex "post video.mp4 to X tomorrow at 9:00"; scheduled posts show up on Today and here.'])}</p>
+            <div className="vs-actions"><RouterLink to={base} className="vs-btn">{l(['今日', 'Today'])}</RouterLink><RouterLink to={`${base}/channels`} className="vs-btn">{l(['帳號', 'Channels'])}</RouterLink>
+              <RouterLink to={`${base}/agent`} className="vs-btn">{l(['連接 Codex', 'Connect Codex'])}</RouterLink></div></div>}
         <KindFilter shown={state.kinds} counts={summary.counts} sources={sources} onToggle={kind => update(toggleKindParams(params, state.kinds, kind, available))} onAll={() => update(allKindsParams(params))} />
         {all.length > 0 && !shown.length && <p className="vs-notice cal-notice" role="status">{fill(l(t.filteredEmpty), { n: all.length })}
           <button type="button" className="vs-link-button" onClick={() => update(allKindsParams(params))}>{l(t.clearFilters)}</button></p>}

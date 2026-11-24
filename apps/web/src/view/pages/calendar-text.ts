@@ -54,11 +54,14 @@ export const kindLabel = (kind: string, lang: Lang) => (kindText[kind] ?? [kind,
 
 export const needsText: Record<string, Tuple> = {
   approval: ['待審批', 'Needs approval'], late_decision: ['待決定', 'Needs a decision'], outcome_unknown: ['結果待核實', 'Outcome to verify'],
+  needs_owner: ['要你處理', 'Needs you'], missed: ['沒有發出', 'Missed'],
 };
 /** Why an event waits for the person, in words that fit its kind. */
 export function needsDetail(kind: string, needs: string): Tuple {
   if (needs === 'late_decision') return ['已超過預定時間還沒發出，需要你決定改期、照發或取消。', 'It missed its scheduled time; decide whether to reschedule, publish anyway or cancel.'];
   if (needs === 'outcome_unknown') return ['系統無法確認這則是否已經發出，請到平台上核實結果。', 'We could not confirm whether this went out; check the result on the platform.'];
+  if (needs === 'needs_owner') return ['機器停下來等你處理，請看下方的說明。', 'The machine stopped and waits for you; see below.'];
+  if (needs === 'missed') return ['這則沒有發出，可以改到別的時間。', 'This did not go out; you can reschedule it.'];
   if (kind === 'ad_flight') return ['投放方案正在等你核准，核准前不會開始投放。', 'This ad proposal waits for your approval; nothing is spent before you approve.'];
   if (kind === 'deliverable_due') return ['達人已交付作品，需要你驗收。', 'The creator has delivered; it needs your review.'];
   return ['Agent 已送審，需要你核准或退回後才會發布。', 'Your agent submitted this; it goes out only after you approve or return it.'];
@@ -88,6 +91,12 @@ const statusOverride: Record<string, [Tone, string, string]> = {
 const kindStatusOverride: Record<string, Record<string, [Tone, string, string]>> = {
   milestone: { open: ['neutral', '未完成', 'Open'] }, production_due: { open: ['neutral', '未完成', 'Open'] },
   promotion: { expired: ['neutral', '已結束', 'Ended'], active: ['good', '進行中', 'Running'] },
+  // Phase 1 posts carry derivePostStatus values (§3.4).
+  publish: { awaiting_approval: ['warning', '待你核准', 'Awaiting approval'], needs_owner: ['critical', '要你處理', 'Needs you'], missed: ['critical', '沒有發出', 'Missed'],
+    unknown: ['critical', '結果不明', 'Result unknown'], cancelling: ['neutral', '取消中', 'Cancelling'], confirming: ['info', '確認結果中', 'Confirming'],
+    publishing: ['info', '發布中', 'Publishing'], ready: ['info', '已準備好', 'Ready'], blocked: ['warning', '被擋下', 'Blocked'],
+    // E37: the owner rejected it (the same word as the post page).
+    rejected: ['neutral', '已駁回', 'Rejected'] },
   post: { live: ['good', '已上線', 'Live'], deleted: ['neutral', '已刪除', 'Deleted'], removed_by_platform: ['serious', '被平台移除', 'Removed by platform'] },
 };
 export function eventStatus(kind: string, status: string | null | undefined, lang: Lang): { tone: Tone; label: string } | null {

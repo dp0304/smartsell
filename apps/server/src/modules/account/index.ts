@@ -1,11 +1,15 @@
-import { ADMIN, READ, type Context, type Data, type Operation, type Role, type Row } from '@smartsell/contracts';
+import { ADMIN, DRIVER_PROVIDERS, READ, type Context, type Data, type Operation, type Role, type Row } from '@smartsell/contracts';
 import { audit, fail, find, integer, one, select, text, time } from './input.ts';
 import { type AccountServices, connectShopifyMerchant, connectionContext, invalidateConnectionCapabilities, providers, publicConnection, startOAuth, storeProviders } from './oauth.ts';
 import { type Limits, type Terms, countAutoGrants, defaultLimits, haltSources, limits, policy, setPolicy, windows } from './auto-control.ts';
 import { drainConnectorTasks } from './connector-service.ts';
 import { bindingFor, blocked, connectorReady, issuePairingCode, online, sessionFor } from './device-control.ts';
 import { activeMigration, completeMigration, migrationImpact, migrationStatus, startMigration } from './migration.ts';
-import { createOwnedSocialAccount, ownedSocialProviders } from './social-accounts.js';
+import { createOwnedSocialAccount, normalizeDisplayHandle, normalizeXHandle, ownedSocialProviders } from './social-accounts.js';
+import { channelOperations } from './channel-ops.js';
+import { ensureChannelSettings } from './channel-settings.js';
+import { machineOperations } from './machine-ops.js';
+import { workspace } from '../workspace/brands.js';
 import { providerCatalog } from '../../../../../packages/adapters/src/provider-catalog.ts';
 import type { CapabilityReport, ProviderKey } from '../../../../../packages/adapters/src/adapter-types.ts';
 
@@ -19,7 +23,7 @@ export interface Services extends AccountServices {
 }
 const STAFF = ['owner', 'admin', 'manager', 'editor'] as const;
 const INTERNAL_READ = READ.filter(role => role !== 'agent');
-const accountFields = ['provider', 'external_account_id', 'display_name', 'brand_id', 'owner_id', 'default_timezone', 'status'];
+const accountFields = ['provider', 'external_account_id', 'handle', 'display_name', 'brand_id', 'owner_id', 'default_timezone', 'status'];
 const appProvider: Record<string, string> = { instagram: 'meta_instagram', facebook: 'meta_facebook', tiktok: 'tiktok', douyin: 'douyin', xhs: 'xiaohongshu', xiaohongshu: 'xiaohongshu' };
 
 function zone(value: unknown) {
@@ -189,11 +193,15 @@ export function createOperations(services: Services = {}): Operation[] {
       .map(row => select(row, accountFields))),
     op('POST', '/social-accounts', 'register_owned_social_account', ADMIN, (ctx, { body }) => {
       const provider = one(body.provider, ownedSocialProviders);
-      const externalId = text(body.external_account_id);
+      // X is identified by its lowercase handle (phase1-design §3.3); other platforms keep their platform IDs.
+      const externalId = provider === 'x' ? normalizeXHandle(text(body.external_account_id, 40)) : text(body.external_account_id);
+      const handle = provider === 'x' ? externalId : normalizeDisplayHandle(body.handle);
       if (body.owned_account_confirmed !== true) fail('ACCOUNT_OWNERSHIP_REQUIRED', 422);
       if (find(ctx, 'social_account', { provider, external_account_id: externalId })) fail('ACCOUNT_ALREADY_REGISTERED');
       const row = createOwnedSocialAccount(ctx, { provider, external_account_id: externalId, display_name: text(body.display_name),
-        brand_id: activeBrand(ctx, body.brand_id), owner_id: ctx.actorId, default_timezone: zone(body.default_timezone ?? 'UTC') }, 'ownership_attested');
+        brand_id: activeBrand(ctx, body.brand_id), owner_id: ctx.actorId, default_timezone: zone(body.default_timezone ?? workspace(ctx).default_timezone ?? 'UTC'), handle }, 'ownership_attested');
+      // Worker-driven platforms get their channel settings now; others get them when the hub first schedules for them.
+      if ((DRIVER_PROVIDERS as readonly string[]).includes(provider)) ensureChannelSettings(ctx, row.id);
       return select(row, accountFields);
     }),
     op('GET', accountPath, 'get_social_account', READ, (ctx, { params }) => select(ctx.get('social_account', params.id), accountFields)),
@@ -465,7 +473,7 @@ export function createOperations(services: Services = {}): Operation[] {
           (existing.mobile_app ?? null) !== app) fail('USE_BINDING_MIGRATION');
         if (existing.mode === mode) return { binding: existing, ...affected };
         const binding = ctx.update('account_execution_binding', existing.id, { mode });
-        ctx.emit('account.binding.changed', { binding_id: binding.id, social_account_id: account.id });
+        ctx.emit('account.binding.changed', { binding_id: binding.id, social_account_id: account.id, device_id: binding.device_id ?? null });
         return { binding, ...affected };
       }
       if (existing) drainConnectorTasks(ctx, row => row.binding_id === existing.id);
@@ -474,7 +482,7 @@ export function createOperations(services: Services = {}): Operation[] {
       const row = existing ? ctx.update('account_execution_binding', existing.id, patch) : ctx.create('account_execution_binding', patch);
       if (existing) for (const old of ctx.list('browser_session').filter(session => session.binding_id === existing.id && session.status !== 'revoked')) ctx.update('browser_session', old.id, { status: 'revoked' });
       if (channel === 'browser') ctx.create('browser_session', { social_account_id: account.id, device_id: device?.id, binding_id: row.id, status: 'pending_identity' });
-      ctx.emit('account.binding.changed', { binding_id: row.id, social_account_id: account.id });
+      ctx.emit('account.binding.changed', { binding_id: row.id, social_account_id: account.id, device_id: device?.id ?? null });
       return { binding: row, ...affected };
     }),
     op('POST', `${bindPath}/auto-mode`, 'enable_auto_mode', ADMIN, (ctx, { params, body }) => {
@@ -539,6 +547,9 @@ export function createOperations(services: Services = {}): Operation[] {
       ctx.emit('account.block.resolved', { block_id: block.id });
       return ctx.update('account_block', block.id, { status: 'resolved', resolved_at: ctx.now, resolved_by: ctx.actorId });
     }),
+    // Phase 1 hub operations keep their full hub_* names (phase1-design §4.6); never wrap them in op().
+    ...channelOperations,
+    ...machineOperations,
   ];
 }
 

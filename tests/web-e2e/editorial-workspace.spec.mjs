@@ -32,9 +32,11 @@ async function signIn(page, dev, email, password) {
   await page.locator('input[name=identifier]').fill(email);
   await page.locator('input[name=password]').fill(password);
   await page.getByRole('button', { name: /^(登入|Sign in)$/ }).click();
-  // Sign-in lands on the dashboard; these checks cover the advanced workbench, so open it directly.
-  await expect(page).toHaveURL(/\/app\/[^/]+$/);
-  await page.goto(page.url().replace(/\/app\/([^/]+)$/, '/w/$1/home'));
+  // Sign-in lands on the dashboard, which sends an unconfigured workspace on to its first-run wizard (§2.9, setup-landing.tsx)
+  // as soon as its setup reads answer; that redirect races this check, so either page is the landing. These checks cover the
+  // advanced workbench, so open it directly.
+  await expect(page).toHaveURL(/\/app\/[^/]+(?:\/get-started)?$/);
+  await page.goto(page.url().replace(/\/app\/([^/]+)(?:\/get-started)?$/, '/w/$1/home'));
   await expect(page.locator('.workspace-main').getByRole('heading').first()).toBeVisible();
 }
 

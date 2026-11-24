@@ -1,3 +1,5 @@
+import { browserUse } from './scripts/playwright-browser.mjs';
+
 export default {
   testDir: './tests/web-e2e',
   // Each test owns its HTTP ports, sessions and data directory.
@@ -7,7 +9,8 @@ export default {
   globalTimeout: 600_000,
   expect: { timeout: 5_000 },
   use: {
-    channel: 'chromium',
+    // Bundled Chromium when installed, else the installed Google Chrome; SMARTSELL_PLAYWRIGHT_CHANNEL overrides.
+    ...browserUse(),
     viewport: { width: 1280, height: 800 },
     timezoneId: 'UTC',
     actionTimeout: 6_000,

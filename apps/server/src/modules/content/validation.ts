@@ -1,3 +1,4 @@
+import { xWeightedLength } from '@smartsell/contracts';
 import { checkUsage } from '../asset/command-rights.ts';
 import type { Context, Entity, Fields } from '../types.ts';
 import { fail, hash, list, render } from './model.ts';
@@ -6,7 +7,10 @@ import { isEstimatedPrice } from '../commerce/listings.ts';
 export async function assetUsage(ctx: Context, media: Fields, platform: string, market: string | null, body: string, at: string, brand?: string) {
   const version = await ctx.get('asset', 'asset_version', media.asset_version_id);
   const asset = version?.data.asset_id ? await ctx.get('asset', 'asset', version.data.asset_id) : undefined;
-  if (!asset || asset.data.status === 'archived' || (brand && asset.data.brand_id !== brand) || (media.asset_id && media.asset_id !== asset.id)) return { allowed: false };
+  if (!asset || asset.data.status === 'archived' || (media.asset_id && media.asset_id !== asset.id)) return { allowed: false };
+  // phase1-design §3.8: owned or brandless media serve any brand in the workspace and need no rights grant.
+  if (asset.data.ownership === 'owned' || asset.data.brand_id === null) return { allowed: true, code: 'owned' } as { allowed: boolean; code: string; grant_id?: string; attribution_text?: string };
+  if (brand && asset.data.brand_id !== brand) return { allowed: false };
   const result = await checkUsage(ctx, {
     platform, market: market ?? '*', purpose: 'organic', at,
     asset_version_id: media.asset_version_id, modification: !!(media.crop || media.rendition_id),
@@ -25,7 +29,14 @@ const defaults: Record<string, Fields> = {
   facebook: { max_characters: 63206 },
   tiktok: { max_characters: 2200, supports_captions: false },
   youtube: { max_characters: 5000 },
+  x: { max_media: 4, supports_captions: false },
 };
+/** X counts weighted characters (CJK 2, URL 23); the default limit is 280 unless the channel sets caption_limit (§4.4). */
+async function xCaptionLimit(ctx: Context, accountId: string | undefined) {
+  if (!accountId) return 280;
+  const settings = (await list(ctx, 'channel_settings', 'account')).find(row => row.data.social_account_id === accountId);
+  return typeof settings?.data.caption_limit === 'number' ? settings.data.caption_limit : 280;
+}
 const formatAliases: Record<string, string> = { feed_image: 'image', long_video: 'video', short_video: 'short' };
 const publishOperations = new Set(['publish', 'publish_story', 'publish_short', 'publish_schedule']);
 const minimumMedia: Record<string, number> = { feed_image: 1, carousel: 2, reel: 1, story: 1, short_video: 1, long_video: 1 };
@@ -231,6 +242,7 @@ export async function validate(ctx: Context, variant: Fields, draft: Fields, acc
     for (const [rule, value, field] of [['max_characters', preview.char_count, 'body'], ['max_hashtags', preview.hashtags.length, 'body'], ['max_media', media.length, 'media']] as const) {
       if (typeof rules[rule] === 'number' && value > rules[rule]) add('blocking', rule, field, target);
     }
+    if (variant.platform === 'x' && xWeightedLength(draft.body) > await xCaptionLimit(ctx, target)) add('blocking', 'max_characters', 'body', target);
     for (const field of Array.isArray(rules.required_fields) ? rules.required_fields : []) {
       if (typeof field === 'string' && field.split('.').reduce((parent, key) => parent?.[key], draft) == null) add('blocking', 'required_field', field, target);
     }

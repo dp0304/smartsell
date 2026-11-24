@@ -1,8 +1,8 @@
 import type { DecisionItem } from '@smartsell/ui';
 import type { AgentConnection } from './types';
 
-/** Pages that read a period, with the server's default length for each. */
-export const periodDefaults: Record<string, number> = { '': 7, social: 30, ads: 30 };
+/** Pages that read a period, with the server's default length for each (the old overview moved to /overview). */
+export const periodDefaults: Record<string, number> = { overview: 7, social: 30, ads: 30 };
 
 export function sectionOf(pathname: string) {
   return /^\/app\/[^/]+\/?([^/?#]*)/.exec(pathname)?.[1] ?? '';

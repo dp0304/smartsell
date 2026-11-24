@@ -1,5 +1,5 @@
 import { constants, createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, open, rename, rm } from 'node:fs/promises';
+import { chmod, mkdir, open, rename, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -11,6 +11,11 @@ export interface Storage {
   readonly bucket: string;
   read(key: string, range?: ByteRange): Promise<ObjectBytes>;
   write(key: string, object: WriteObject): Promise<void>;
+  /**
+   * Optional: take ownership of `object.path` (the caller must not reuse it). Local storage renames instead of
+   * copying, so a 1 GB assembled upload is not written twice. Callers fall back to write() when absent.
+   */
+  move?(key: string, object: WriteObject): Promise<void>;
   remove(key: string): Promise<void>;
   presignUpload?(key: string, size: number, expires: number): { url: string; method: 'PUT'; headers: Record<string, string> };
 }
@@ -27,6 +32,20 @@ export function objectKey(key: string) {
 
 export function localStorage(root: string): Storage {
   const pathFor = (key: string) => resolve(root, objectKey(key));
+  async function write(key: string, object: WriteObject) {
+    const path = pathFor(key);
+    const temp = `${path}.part`;
+    await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+    await rm(temp, { force: true });
+    try {
+      await pipeline(createReadStream(object.path), createWriteStream(temp, { flags: 'wx', mode: 0o600 }));
+      const file = await open(temp, 'r+');
+      try { await file.sync(); } finally { await file.close(); }
+      await rename(temp, path);
+    } finally {
+      await rm(temp, { force: true });
+    }
+  }
   return {
     bucket: 'local',
     async read(key, range) {
@@ -43,18 +62,20 @@ export function localStorage(root: string): Storage {
         throw error;
       }
     },
-    async write(key, object) {
+    write,
+    async move(key, object) {
       const path = pathFor(key);
-      const temp = `${path}.part`;
       await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-      await rm(temp, { force: true });
       try {
-        await pipeline(createReadStream(object.path), createWriteStream(temp, { flags: 'wx', mode: 0o600 }));
-        const file = await open(temp, 'r+');
+        const file = await open(object.path, 'r+');
         try { await file.sync(); } finally { await file.close(); }
-        await rename(temp, path);
-      } finally {
-        await rm(temp, { force: true });
+        await chmod(object.path, 0o600);
+        await rename(object.path, path);
+      } catch (error) {
+        // Different volume: copy, then drop the source.
+        if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
+        await write(key, object);
+        await rm(object.path, { force: true });
       }
     },
     async remove(key) {

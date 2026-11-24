@@ -1,0 +1,12 @@
+{
+  "id": "test-clip-v1",
+  "file": "test-clip.mp4",
+  "mime": "video/mp4",
+  "sha256": "55eb03e865a09a42313faee1b3a2f53b6d5157bf5a69fc0c8dae507342e4a877",
+  "bytes": 278087,
+  "width": 720,
+  "height": 1280,
+  "duration_ms": 4000,
+  "has_audio": false,
+  "generated_by": "ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=30:duration=4 -c:v libx264 -profile:v high -pix_fmt yuv420p -preset medium -b:v 520k -maxrate 600k -bufsize 1200k -g 60 -an -movflags +faststart -map_metadata -1 -fflags +bitexact -flags:v +bitexact test-clip.mp4"
+}

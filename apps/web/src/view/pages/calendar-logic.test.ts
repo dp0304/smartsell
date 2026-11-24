@@ -135,3 +135,11 @@ test('decision links and permalinks', () => {
   assert.equal(safePermalink('javascript:alert(1)'), null);
   assert.equal(safePermalink('not a url'), null);
 });
+
+test('E37: a post the owner rejected reads 已駁回 in the calendar and is never marked overdue', async () => {
+  const { eventStatus } = await import('./calendar-text');
+  assert.deepEqual(eventStatus('publish', 'rejected', 'zh'), { tone: 'neutral', label: '已駁回' });
+  assert.deepEqual(eventStatus('publish', 'rejected', 'en'), { tone: 'neutral', label: 'Rejected' });
+  const now = new Date('2026-11-20T12:00:00.000Z');
+  assert.equal(isOverdue(event('rejected', 'publish', '2026-11-20T08:00:00.000Z', { status: 'rejected' }), now, '2026-11-20', 'UTC'), false);
+});

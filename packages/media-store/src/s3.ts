@@ -63,12 +63,12 @@ export function s3Storage(options: S3Options): Storage {
     return { ...requestHeaders, authorization: `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signed}` };
   }
 
-  async function send(method: string, key: string, headers: Record<string, string> = {}, hash = sha(''), body?: Readable) {
+  async function send(method: string, key: string, headers: Record<string, string> = {}, hash = sha(''), body?: Readable, timeoutMs = 120_000) {
     const url = urlFor(endpoint, key);
     try {
       return await transport(url, {
         method, headers: signature(method, url, headers, hash), redirect: 'error',
-        signal: AbortSignal.timeout(120_000), ...(body && { body: Readable.toWeb(body) as unknown as BodyInit, duplex: 'half' }),
+        signal: AbortSignal.timeout(timeoutMs), ...(body && { body: Readable.toWeb(body) as unknown as BodyInit, duplex: 'half' }),
       });
     } catch {
       body?.destroy();
@@ -109,7 +109,9 @@ export function s3Storage(options: S3Options): Storage {
       return { stream: Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), size };
     },
     async write(key, object) {
-      const response = await send('PUT', key, { 'content-length': String(object.size), 'content-type': object.mime }, object.sha256, createReadStream(object.path));
+      // Large agent uploads (up to 4 GiB) get the same size-scaled deadline as snapshots: max(120 s, 30 s per 100 MB).
+      const timeoutMs = Math.max(120_000, Math.ceil(object.size / 100_000_000 * 30_000));
+      const response = await send('PUT', key, { 'content-length': String(object.size), 'content-type': object.mime }, object.sha256, createReadStream(object.path), timeoutMs);
       await check(response, 200);
       await response.body?.cancel();
     },

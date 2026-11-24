@@ -3,6 +3,7 @@ import { admins, DomainError, text, writers, type Commands, type Context, type E
 import { getConsentText, recordLeadConsent, serviceContactCustomers } from '../lifecycle/index.ts';
 import { flag, invalid, object, oneOf } from '../lifecycle/validation.ts';
 import { conflict, opaque, own, publicId, traffic } from './policy.ts';
+import { productionSemantics } from '../../production.ts';
 
 const channels = ['email', 'sms', 'whatsapp'] as const;
 type Channel = typeof channels[number];
@@ -69,7 +70,7 @@ export async function viewLandingPage(ctx: Context, slug: string): Promise<Publi
 
 function contactKey() {
   const raw = process.env.SMARTSELL_TRAFFIC_CONTACT_KEY;
-  if (raw === undefined && process.env.NODE_ENV !== 'production') return undefined;
+  if (raw === undefined && !productionSemantics()) return undefined;
   if (!raw || !/^[A-Za-z0-9_-]{43}$/.test(raw) || Buffer.from(raw, 'base64url').length !== 32) {
     throw new DomainError('contact_storage_unavailable', 'Lead contact storage is unavailable', 503);
   }
@@ -89,7 +90,7 @@ function encodeContact(ctx: Context, id: string, contact: Contact) {
 
 function decodeContact(ctx: Context, id: string, row: Entity): Contact {
   const key = contactKey();
-  if (!row.data.ciphertext && process.env.NODE_ENV !== 'production') return row.data.contact;
+  if (!row.data.ciphertext && !productionSemantics()) return row.data.contact;
   if (!key) throw new DomainError('contact_storage_unavailable', 'Lead contact storage is unavailable', 503);
   try {
     const cipher = createDecipheriv('aes-256-gcm', key, Buffer.from(row.data.iv, 'base64url'));

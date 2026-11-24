@@ -32,7 +32,7 @@ export const copy = {
     noMetrics: ['此期間沒有可顯示的指標', 'No metrics are available for this period'],
     spendByCurrency: ['此期間沒有單一可用幣別，請在投放頁查看分幣別數據。', 'There is no single currency for this period. See spend by currency on the Ads page.'],
     thisWeek: ['發布概況', 'Publishing'], upcoming: ['接下來的發布', 'Upcoming posts'],
-    scheduled: ['已排程', 'Scheduled'], published: ['已發布', 'Published'], failed: ['失敗', 'Failed'], outcomeUnknown: ['結果待核實', 'Outcome unknown'],
+    scheduled: ['已排程', 'Scheduled'], published: ['已發布', 'Published'], failed: ['沒有發出', 'Not posted'], outcomeUnknown: ['結果不明', 'Result unknown'],
     livePlans: ['進行中的推廣計劃', 'Live plans'], completeness: ['內容完成度', 'Content completeness'], completenessUnknown: ['完成度未知', 'Completeness unknown'],
     publishedOfPlanned: ['已發布 {a} / 規劃 {b}', '{a} published of {b} planned'], agentRecent: ['Agent 最近做了什麼', 'What your agent did recently'],
     lastSeen: ['最後連線', 'Last seen'], neverSeen: ['尚未連線', 'Not seen yet'], alerts: ['需要注意', 'Alerts'], noAlerts: ['目前沒有異常', 'No alerts right now'],

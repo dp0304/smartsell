@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test as base } from '@playwright/test';
 import { localDev } from './local-dev.mjs';
-import { previousCodexRouting } from '../../apps/web/src/view/pages/setup-codex-routing.ts';
+import { expectStepStatus, expectWizardStep, finishLater, showMoreModules, wizardNav, wizardPanel } from './phase1-shell.mjs';
+import { codexRouting, previousCodexRouting } from '../../apps/web/src/view/pages/setup-codex-routing.ts';
 
 // The agent-first loop: a person connects an agent, the agent enters everything over MCP,
 // and the person only looks at the dashboard and makes the decision the agent may not make.
@@ -14,6 +15,9 @@ test.use({ viewport: { width: 1280, height: 800 }, trace: 'off', screenshot: 'of
 
 const day = 86_400_000;
 const agentLabel = 'E2E Claude';
+// Phase 1 lists only the 11 hub tools to a connection (§7.1); older tools stay callable by name (§7.4).
+const HUB_TOOLS = ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
+  'posts_list', 'post_get', 'task_get', 'publishing_pause'];
 const names = { brand: '晨光保養', store: '晨光官方商店', product: '夏日防曬乳', plan: '夏季防曬上市計劃', content: '防曬乳開箱貼文', account: '晨光粉絲專頁' };
 
 /** First-time setup through REST; the browser context keeps the owner session cookie. */
@@ -80,43 +84,8 @@ async function expectNoHorizontalOverflow(page, where) {
   expect(width.content, `document scroll width on ${where}`).toBeLessThanOrEqual(width.viewport);
 }
 
-test('guided enrollment registers both stdio clients and preflight leaves verification pending', async ({ page, dev }) => {
-  const { app, rest } = await ownerSession(page, dev);
-  const old = await rest('POST', '/agent-connections', { label: 'Previously issued', client: 'claude_code' }, 201);
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', { value: { async writeText(text) {
-      if (!globalThis.allowPromptCopy) throw new Error('Clipboard disabled in fixture');
-      globalThis.didCopyPrompt = text.startsWith("python3 -I - <<'SMARTSELL_SETUP'");
-    } } });
-  });
-  await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto(`${app}/get-started?step=agent`);
-  const step = page.getByRole('region', { name: '主 Agent', exact: true });
-  const next = step.getByRole('button', { name: '下一步', exact: true });
-  const refresh = step.getByRole('button', { name: '重新檢查狀態' });
-  const check = step.getByRole('textbox', { name: '核對提示詞' });
-  await expect(check).toBeVisible();
-  expect(!(await check.inputValue()).includes(old.token)).toBe(true);
-  await step.getByRole('button', { name: '複製核對提示詞' }).press('Enter');
-  await expect(step.getByText('已選取文字，請用鍵盤快捷鍵手動複製。')).toBeVisible();
-  expect(await check.evaluate(field => field.selectionStart === 0 && field.selectionEnd === field.value.length)).toBe(true);
-  await refresh.click();
-  await expect(next).toHaveCount(0);
-  await expectNoHorizontalOverflow(page, 'old connection at 360px');
-
-  const home = await mkdtemp(join(tmpdir(), 'smartsell-agent-prompt-'));
-  try {
-    const bin = join(home, 'bin');
-    await mkdir(bin);
-    const codexHome = join(home, 'custom-codex-home');
-    await mkdir(codexHome);
-    const defaultRules = join(codexHome, 'AGENTS.md');
-    const rules = join(codexHome, 'AGENTS.override.md');
-    const userRules = '# Existing override\r\nKeep these rules verbatim.';
-    await writeFile(defaultRules, '# Existing default');
-    await writeFile(rules, userRules);
-    // CLI doubles record only stdio registrations. The relay itself runs against the disposable server.
-    const cliFixture = `#!/bin/sh
+// CLI doubles record only stdio registrations. The relay itself runs against the disposable server.
+const cliFixture = `#!/bin/sh
 if [ "$1" = mcp ] && [ "$2" = get ]; then
   python3 -I -c 'import json, sys; from pathlib import Path; name, command, *args = Path.home().joinpath("codex.registration").read_text().splitlines(); assert name == sys.argv[1]; print(json.dumps({"enabled": True, "transport": {"type": "stdio", "command": command, "args": args}}))' "$3"
   exit $?
@@ -130,8 +99,7 @@ fi
 [ "$2" = -- ] && [ "$4" = -I ] && [ -f "$5" ] || exit 1
 printf '%s\\n' "$1" "$3" "$4" "$5" > "$HOME/$(basename "$0").registration"
 `;
-    for (const cli of ['codex', 'claude']) await writeFile(join(bin, cli), cliFixture, { mode: 0o700 });
-    const terminal = String.raw`
+const terminal = String.raw`
 import errno, json, os, pty, sys, termios
 path, secret = json.load(sys.stdin)
 pid, fd = pty.fork()
@@ -154,21 +122,80 @@ while True:
 print(buffer.decode(errors='replace').replace(secret, '[redacted]'))
 sys.exit(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]))
 `;
-    const run = (executable, args, input = '') => new Promise((resolve, reject) => {
-      const child = spawn(executable, args, { cwd: home, env: { HOME: home, CODEX_HOME: codexHome, PATH: `${bin}:${process.env.PATH}` }, timeout: 30_000 });
-      let out = '';
-      child.stdout.setEncoding('utf8').on('data', text => { out += text; });
-      child.stderr.resume();
-      child.stdin.on('error', () => {});
-      child.stdin.end(input);
-      child.on('error', reject);
-      child.on('close', code => resolve({ code, out }));
-    });
+
+/** A disposable HOME with CLI doubles for codex and claude and a CODEX_HOME; `run` executes inside it. */
+async function promptSandbox(home) {
+  const bin = join(home, 'bin');
+  await mkdir(bin);
+  const codexHome = join(home, 'custom-codex-home');
+  await mkdir(codexHome);
+  for (const cli of ['codex', 'claude']) await writeFile(join(bin, cli), cliFixture, { mode: 0o700 });
+  const run = (executable, args, input = '') => new Promise((resolve, reject) => {
+    const child = spawn(executable, args, { cwd: home, env: { HOME: home, CODEX_HOME: codexHome, PATH: `${bin}:${process.env.PATH}` }, timeout: 30_000 });
+    let out = '';
+    child.stdout.setEncoding('utf8').on('data', text => { out += text; });
+    child.stderr.resume();
+    child.stdin.on('error', () => {});
+    child.stdin.end(input);
+    child.on('error', reject);
+    child.on('close', code => resolve({ code, out }));
+  });
+  return { bin, codexHome, run };
+}
+
+// The prompt enrollment (now under 「進階：舊的接入方式（提示詞）」, §9.8) end to end, against the default phase-1 tool list:
+// its preflight and check prompt use smartsell_overview, which every hub_v1 connection lists (§7.1, §7.4; W-specs.md #4).
+test('guided enrollment registers both stdio clients and preflight leaves verification pending', async ({ page, dev }) => {
+  const { app, rest } = await ownerSession(page, dev);
+  const old = await rest('POST', '/agent-connections', { label: 'Previously issued', client: 'claude_code' }, 201);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: { async writeText(text) {
+      if (!globalThis.allowPromptCopy) throw new Error('Clipboard disabled in fixture');
+      globalThis.didCopyPrompt = text.startsWith("python3 -I - <<'SMARTSELL_SETUP'");
+    } } });
+  });
+  await page.setViewportSize({ width: 360, height: 800 });
+  // Phase 1: the wizard's last step (連接 Codex) leads with the §6.2 ways; the prompt enrollment moved under 「進階」 (§9.8).
+  await page.goto(`${app}/get-started?step=agent`);
+  const step = await expectWizardStep(page, 'agent');
+  const legacy = page.getByRole('main').locator('details').filter({ has: page.getByText(/^(進階：舊的接入方式（提示詞）|Advanced: the previous setup \(prompt\))$/) });
+  const openLegacy = async () => {
+    if (await legacy.getAttribute('open') === null) await legacy.locator('summary').first().click();
+    await expect(legacy).toHaveAttribute('open', '');
+  };
+  // Not verified until an Agent has called a tool over MCP: the step stays 待設定 and says nothing about a verified Agent.
+  const pending = async (locale = 'zh-Hant') => {
+    await expectStepStatus(page, 'agent', 'todo', locale);
+    await expect(step.getByText(/^(已有 Agent 透過 MCP 呼叫過 SmartSell。|An Agent has called SmartSell over MCP\.)$/)).toHaveCount(0);
+  };
+  await openLegacy();
+  const check = step.getByRole('textbox', { name: '核對提示詞' });
+  await expect(check).toBeVisible();
+  expect(!(await check.inputValue()).includes(old.token)).toBe(true);
+  // The check prompt names a tool phase-1 connections list (W-specs.md #4).
+  expect(await check.inputValue()).toContain('用空參數呼叫 smartsell_overview');
+  await step.getByRole('button', { name: '複製核對提示詞' }).press('Enter');
+  await expect(step.getByText('已選取文字，請用鍵盤快捷鍵手動複製。')).toBeVisible();
+  expect(await check.evaluate(field => field.selectionStart === 0 && field.selectionEnd === field.value.length)).toBe(true);
+  await pending();
+  await expectNoHorizontalOverflow(page, 'old connection at 360px');
+
+  const home = await mkdtemp(join(tmpdir(), 'smartsell-agent-prompt-'));
+  try {
+    const { bin, codexHome, run } = await promptSandbox(home);
+    const defaultRules = join(codexHome, 'AGENTS.md');
+    const rules = join(codexHome, 'AGENTS.override.md');
+    const userRules = '# Existing override\r\nKeep these rules verbatim.';
+    await writeFile(defaultRules, '# Existing default');
+    await writeFile(rules, userRules);
     const installed = new Set();
     for (const [client, cli] of [['codex', 'codex'], ['claude_code', 'claude']]) {
       const english = cli === 'claude';
-      if (english) await page.getByRole('combobox').filter({ has: page.getByRole('option', { name: 'English' }) }).selectOption('en');
-      const panel = english ? page.getByRole('region', { name: 'Main agent', exact: true }) : step;
+      if (english) {
+        await page.getByRole('combobox').filter({ has: page.getByRole('option', { name: 'English' }) }).selectOption('en');
+        await openLegacy();
+      }
+      const panel = english ? wizardPanel(page, 'agent', 'en') : step;
       await panel.getByRole('button', { name: english ? 'Add another connection' : '產生新的接入提示詞' }).click();
       await panel.getByRole('combobox', { name: english ? 'Agent client' : '用哪個 Agent' }).selectOption(client);
       await panel.getByRole('button', { name: english ? 'Generate setup prompt' : '產生接入提示詞', exact: true }).click();
@@ -184,11 +211,8 @@ sys.exit(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]))
         await step.getByRole('button', { name: '複製終端機指令' }).press('Enter');
         await expect(step.getByText('已複製提示詞。')).toBeVisible();
         expect(await page.evaluate(() => globalThis.didCopyPrompt)).toBe(true);
-        await step.getByRole('button', { name: '暫時跳過這一步' }).click();
-        await page.getByRole('region', { name: '桌面 Worker' }).getByRole('button', { name: '上一步' }).click();
-        expect((await field.inputValue()) === prompt).toBe(true);
-        await refresh.click();
-        await expect(next).toHaveCount(0);
+        // Leaving the step and coming back keeps the one-time prompt: covered by its own test below (W-specs.md #3).
+        await pending();
       }
       const installer = join(home, `${cli}.sh`);
       await writeFile(installer, `${prompt}\n`);
@@ -212,26 +236,30 @@ sys.exit(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]))
         { id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: cli, version: 'fixture' } } },
         { method: 'notifications/initialized' },
         { id: 2, method: 'tools/list' },
-        { id: 3, method: 'tools/call', params: { name: 'smartsell_operations_describe', arguments: {} } },
+        { id: 3, method: 'tools/call', params: { name: 'smartsell_overview', arguments: {} } },
       ];
       const native = await run(executable, args, messages.map(message => JSON.stringify({ jsonrpc: '2.0', ...message })).join('\n') + '\n');
       expect(native.code).toBe(0);
       const responses = native.out.trim().split('\n').map(JSON.parse);
-      expect(responses.find(message => message.id === 2).result.tools.map(tool => tool.name)).toContain('smartsell_operations_describe');
+      // The registered relay sees exactly the 11 hub tools, and the tool the check prompt names is among them.
+      expect(responses.find(message => message.id === 2).result.tools.map(tool => tool.name)).toEqual(HUB_TOOLS);
       expect(responses.find(message => message.id === 3).result.isError).toBeFalsy();
       if (english) {
-        const row = panel.getByRole('listitem').filter({ hasText: 'Claude Code' });
-        await expect(row).toContainText('Recent MCP activity', { timeout: 15_000 });
+        await expect(panel.getByText('MCP connection verified', { exact: true })).toBeVisible({ timeout: 15_000 });
+        await expectStepStatus(page, 'agent', 'done', 'en');
       } else {
-        await refresh.click();
-        await expect(next).toBeVisible();
+        await expect(step.getByText('已有 Agent 透過 MCP 呼叫過 SmartSell。', { exact: true })).toBeVisible({ timeout: 15_000 });
+        await expectStepStatus(page, 'agent', 'done');
         const installedRules = await readFile(rules, 'utf8');
         expect(installedRules.startsWith(`${userRules}\n\n`)).toBe(true);
         expect(installedRules.match(/BEGIN SmartSell managed social routing/g)).toHaveLength(1);
-        expect(installedRules).toContain('mode: "recent_posts", platform: "x"');
+        // The current managed block (v3, COH-2): phase-1 hub tools only, no legacy Worker social-status tools.
+        expect(installedRules).toContain(codexRouting);
+        expect(installedRules).not.toContain('worker_social_status');
         expect(await readFile(defaultRules, 'utf8')).toBe('# Existing default');
         await page.reload();
-        const repair = step.locator('details').filter({ hasText: '修復 Codex 連線或補上社媒路由' });
+        await openLegacy();
+        const repair = legacy.locator('details').filter({ hasText: '修復 Codex 連線或補上社媒路由' });
         await repair.locator('summary').click();
         const repairCommand = await repair.getByRole('textbox', { name: '本機終端機指令', exact: true }).inputValue();
         const registration = join(home, `${cli}.registration`);
@@ -239,7 +267,7 @@ sys.exit(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]))
         const userSuffix = '\n\n# Other instructions\r\nLeave this intact.';
         const originalBlock = `${userRules}\n\n${previousCodexRouting}${userSuffix}`;
         const upgradedBlock = `${installedRules.trimEnd()}${userSuffix}`;
-        expect(upgradedBlock).toContain('UUID v4');
+        expect(upgradedBlock).toBe(`${userRules}\n\n${codexRouting}${userSuffix}`);
         const editedBlock = originalBlock.replace('其他工作照常。', '使用者修改了這段。');
         await writeFile(rules, editedBlock);
         expect((await run('/bin/sh', [], `${repairCommand}\n`)).code).toBe(1);
@@ -256,8 +284,55 @@ sys.exit(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]))
       expect(connections.some(row => row.client === client && row.id !== old.id && row.mcp_client_verified_at)).toBe(true);
       expect(connections.some(row => row.id === old.id && !row.revoked && !row.last_used_at)).toBe(true);
     }
-    await expect(page.getByRole('region', { name: 'Main agent' }).getByRole('button', { name: 'Next step' })).toBeVisible();
+    await expectStepStatus(page, 'agent', 'done', 'en');
+    // The Agent page lists each connection: the enrolled Claude Code one has been used, the older token never.
+    await page.goto(`${app}/agent`);
+    const connections = page.getByRole('main').locator('section').filter({ has: page.getByRole('heading', { level: 2, name: 'Connected agents', exact: true }) });
+    const claude = connections.getByRole('listitem').filter({ has: page.getByText('Claude Code', { exact: true }) });
+    await expect(claude).toHaveCount(1);
+    await expect(claude).toContainText('Last used');
+    await expect(claude).not.toContainText('Never used');
+    await expect(connections.getByRole('listitem').filter({ has: page.getByText('Previously issued', { exact: true }) })).toContainText('Never used');
   } finally { await rm(home, { recursive: true, force: true }); }
+});
+
+/** Opens the prompt enrollment under 「進階」 in the wizard's Codex step and issues a Codex prompt. */
+async function issueCodexPrompt(page, app) {
+  await page.goto(`${app}/get-started?step=agent`);
+  const step = await expectWizardStep(page, 'agent');
+  await step.getByText('進階：舊的接入方式（提示詞）', { exact: true }).click();
+  await step.getByRole('combobox', { name: '用哪個 Agent' }).selectOption('codex');
+  await step.getByRole('button', { name: '產生接入提示詞', exact: true }).click();
+  const field = step.locator('.setup-agent-current').getByRole('textbox', { name: '本機終端機指令', exact: true });
+  await expect(field).toBeVisible();
+  return { step, field, prompt: await field.inputValue(), code: await step.getByRole('textbox', { name: /一次性接入碼/ }).inputValue() };
+}
+
+test('the prompt enrollment passes its MCP preflight against the default phase-1 tool list', async ({ page, dev }) => {
+  // W-specs.md #4: the preflight requires smartsell_overview, which every phase-1 connection lists.
+  const { app } = await ownerSession(page, dev);
+  const { prompt, code } = await issueCodexPrompt(page, app);
+  const home = await mkdtemp(join(tmpdir(), 'smartsell-agent-prompt-'));
+  try {
+    const { run } = await promptSandbox(home);
+    const installer = join(home, 'codex.sh');
+    await writeFile(installer, `${prompt}\n`);
+    const result = await run('python3', ['-I', '-c', terminal], JSON.stringify([installer, code]));
+    expect(result.out).toContain('MCP 預檢通過');
+    expect(result.code, result.out).toBe(0);
+  } finally { await rm(home, { recursive: true, force: true }); }
+});
+
+test('the issued one-time prompt survives leaving the Codex step and coming back', async ({ page, dev }) => {
+  // W-specs.md #3: the issued enrollment lives in the wizard, not in the step component.
+  const { app } = await ownerSession(page, dev);
+  const { prompt } = await issueCodexPrompt(page, app);
+  await page.getByRole('main').getByRole('button', { name: '上一步', exact: true }).click();
+  await expectWizardStep(page, 'notifications');
+  await page.getByRole('main').getByRole('button', { name: '下一步', exact: true }).click();
+  const step = await expectWizardStep(page, 'agent');
+  await step.getByText('進階：舊的接入方式（提示詞）', { exact: true }).click();
+  await expect(step.locator('.setup-agent-current').getByRole('textbox', { name: '本機終端機指令', exact: true })).toHaveValue(prompt, { timeout: 3_000 });
 });
 
 test('an agent enters a launch over MCP and the owner sees it and approves it in the dashboard', async ({ page, dev }) => {
@@ -268,20 +343,24 @@ test('an agent enters a launch over MCP and the owner sees it and approves it in
   const connection = await rest('POST', '/agent-connections', { label: agentLabel, client: 'claude_code', expires_days: 30 }, 201);
   expect(connection).toMatchObject({ label: agentLabel, client: 'claude_code', token: expect.any(String), mcp_url: `${dev.origin}/mcp` });
 
-  // An issued credential alone leaves setup on the first step until the agent connects.
+  // An issued credential alone does not complete setup: the empty workspace opens the wizard, and its Codex step stays
+  // 待設定 and asks the owner to finish the connection, until the agent calls a tool (§2.9).
   await page.goto(`${dev.origin}/`);
   const main = page.getByRole('main');
-  await expect(main.getByRole('heading', { name: '開始設定', exact: true })).toBeVisible();
   await expect(page).toHaveURL(url => url.pathname === `/app/${ws}/get-started`);
-  const agentStep = main.getByRole('region', { name: '主 Agent', exact: true });
-  await expect(agentStep.getByText('第 1 步，共 2 步', { exact: true })).toBeVisible();
-  const issued = agentStep.getByRole('listitem').filter({ hasText: agentLabel });
-  await expect(issued).toContainText('憑證已發出，尚未使用');
-  await main.getByRole('link', { name: '稍後設定，前往總覽', exact: true }).click();
-  await expect(page).toHaveURL(app);
+  await expectWizardStep(page, 'workspace');
+  await expectStepStatus(page, 'agent', 'todo');
+  await wizardNav(page).getByRole('button', { name: /^連接 Codex/ }).click();
+  const agentStep = await expectWizardStep(page, 'agent');
+  await agentStep.getByText('進階：舊的接入方式（提示詞）', { exact: true }).click();
+  await expect(agentStep.getByText('完整退出並重開原客戶端，再貼上核對提示詞。成功呼叫 MCP 工具後重新檢查狀態。', { exact: true })).toBeVisible();
+  await expect(agentStep.getByText('已有 Agent 透過 MCP 呼叫過 SmartSell。', { exact: true })).toHaveCount(0);
+  expect(await finishLater(page)).toBe(app);
   const nav = page.getByRole('navigation', { name: '看板導覽' });
-  await expect(nav).toBeVisible();
-  await expect(main.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  // Phase 1 shows only the core pages (§9.1); 顯示其他模組 brings products, plans and the other modules back.
+  await expect(nav.getByRole('link', { name: '商品', exact: true })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: '總覽', exact: true })).toHaveCount(0);
+  await showMoreModules(page, app);
   await nav.getByRole('link', { name: '商品', exact: true }).click();
   await expect(page).toHaveURL(`${app}/products`);
   await expect(page.getByRole('heading', { level: 1, name: '商品' })).toBeVisible();
@@ -291,11 +370,12 @@ test('an agent enters a launch over MCP and the owner sees it and approves it in
   // The agent's session: handshake, then only the tools an agent may use.
   const agent = mcpClient(connection.mcp_url, connection.token);
   const initialized = await agent.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'web-e2e-agent', version: '1' } });
-  expect(initialized.instructions).toMatch(/HUMAN_REQUIRED/);
+  // §7.5: the phase-1 server instructions; only the owner approves posts.
+  expect(initialized.instructions).toMatch(/^SmartSell schedules the owner's social posts/);
+  expect(initialized.instructions).toContain('Only the owner approves posts');
+  // §7.1, §7.4: the list carries only the hub tools; the older tools below are called by name.
   const tools = (await agent.rpc('tools/list')).tools.map(entry => entry.name);
-  for (const name of ['workspace_brand_create', 'commerce_product_create', 'campaign_create_draft', 'content_create_item',
-    'content_create_variant', 'content_commit_revision', 'publishing_create_target', 'publishing_request_approval']) expect(tools).toContain(name);
-  expect(tools).not.toContain('publishing_approve');
+  expect(tools).toEqual(HUB_TOOLS);
 
   const brand = await agent.write('workspace_brand_create', { body: { name: names.brand, slug: `morning-${Date.now()}` } });
   expect(brand.created_via).toBe('agent');
@@ -329,9 +409,17 @@ test('an agent enters a launch over MCP and the owner sees it and approves it in
   expect(refused.structuredContent.error.code).toBe('HUMAN_REQUIRED');
   expect((await rest('GET', `/publish-targets/${target.id}`)).plan_status).toBe('awaiting_approval');
 
-  // Overview: the pending decision is at the top, attributed to the agent.
-  const homeRead = responseFor(page, 'GET', `${root}/views/home`);
+  // Today (§9.2): 「待你決定」 is part of 要你處理, so the approval waits there with its own actions.
   await page.goto(app);
+  await expect(main.getByRole('heading', { level: 1, name: '今日', exact: true })).toBeVisible();
+  const approvalCard = main.getByRole('article', { name: /的貼文等你核准$/ }).filter({ hasText: names.account });
+  await expect(approvalCard).toHaveCount(1);
+  await expect(approvalCard).toContainText('夏天出門前，先擦一層防曬。');
+  await expect(approvalCard.getByRole('button', { name: '核准 / 駁回', exact: true })).toBeVisible();
+  // The old overview stays behind 顯示其他模組 (§9.1): the pending decision is at its top, attributed to the agent.
+  const homeRead = responseFor(page, 'GET', `${root}/views/home`);
+  await nav.getByRole('link', { name: '總覽', exact: true }).click();
+  await expect(page).toHaveURL(`${app}/overview`);
   expect((await homeRead).status()).toBe(200);
   await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   // The overview lists decisions as compact rows that link to the decision page.
@@ -355,7 +443,7 @@ test('an agent enters a launch over MCP and the owner sees it and approves it in
 
   // Phone width: every page stays inside the viewport and the navigation moves behind the menu button.
   await page.setViewportSize({ width: 360, height: 780 });
-  for (const path of ['', '/products', '/plans', '/calendar', '/social', '/ads', '/decisions', '/agent', '/settings']) {
+  for (const path of ['', '/overview', '/machines', '/channels', '/products', '/plans', '/calendar', '/social', '/ads', '/decisions', '/agent', '/settings']) {
     await page.goto(`${app}${path}`);
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
     // Measure once every read on the page has rendered, not the loading placeholder.

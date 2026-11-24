@@ -27,7 +27,8 @@ export interface McpPrincipal {
 export type McpAuthorization =
   | { readonly mode: 'list'; readonly principal: McpPrincipal; readonly tool: McpToolDefinition }
   | { readonly mode: 'call'; readonly principal: McpPrincipal; readonly tool: McpToolDefinition; readonly input: Readonly<McpDispatchInput> };
-export type McpInvocation = Extract<McpAuthorization, { mode: 'call' }>;
+/** `signal` aborts when the client disconnects (long waits such as channel_check stop polling). */
+export type McpInvocation = Extract<McpAuthorization, { mode: 'call' }> & { readonly signal?: AbortSignal };
 
 export interface McpOutputDecision {
   /** Purpose-scoped DTO approved by the server egress policy. Put imported content in untrustedContent. */
@@ -72,8 +73,10 @@ export interface McpHandlerOptions {
   additionalTools?: readonly McpToolDefinition[];
   /** Replace the static catalog with the tools this verified principal's credential kind exposes. */
   tools?(principal: McpPrincipal): readonly McpToolDefinition[];
-  /** Agent guidance returned by initialize. */
-  instructions?: string;
+  /** Agent guidance returned by initialize, fixed or per verified principal (hub_v1 connections get §7.5). */
+  instructions?: string | ((principal: McpPrincipal) => string | undefined);
+  /** The tools tools/list shows, when they differ from the callable catalog (§7.4: listed vs callable). */
+  listed?(principal: McpPrincipal): readonly McpToolDefinition[];
   listTools?(principal: McpPrincipal, tasks: boolean): Awaitable<unknown[]>;
   resources?: {
     templates(principal: McpPrincipal): Awaitable<unknown[]>;
@@ -179,6 +182,21 @@ function operationProblem(error: unknown): JsonRecord {
     ...(isRecord(error.details) && { details: error.details }) };
 }
 
+/**
+ * Hub tools (§7.3): INVALID_ARGUMENTS carries its issues; business errors carry code, message, details and web_url.
+ * A 503 keeps its code and message (an explicit "not available" instead of a generic failure).
+ */
+function hubProblem(error: unknown): JsonRecord {
+  const status = isRecord(error) && typeof error.status === 'number' ? error.status : 500;
+  if (!isRecord(error) || typeof error.code !== 'string' || (status >= 500 && status !== 503)) return { code: 'INTERNAL_ERROR', message: 'The operation failed' };
+  const message = typeof error.message === 'string' ? error.message.slice(0, 2000) : '';
+  const details = isRecord(error.details) ? { ...error.details } : undefined;
+  if (error.code === 'INVALID_ARGUMENTS' && details && Array.isArray(details.issues)) return { code: error.code, message, issues: details.issues };
+  const webUrl = details && typeof details.web_url === 'string' ? details.web_url : undefined;
+  if (details) delete details.web_url;
+  return { code: error.code.toUpperCase(), message, ...(details && Object.keys(details).length && { details }), ...(webUrl && { web_url: webUrl }) };
+}
+
 function detailedError(id: RequestId, error: JsonRecord): Response {
   return rpcResult(id, { isError: true, content: [{ type: 'text', text: JSON.stringify({ error }) }], structuredContent: { error } });
 }
@@ -271,7 +289,7 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
     return principal.allowedTools.includes(tool.name) && (!tool.needsOutputPolicy || !!filterOutput);
   }
 
-  async function callTool(id: RequestId, principal: McpPrincipal, value: unknown, tasks: boolean): Promise<Response> {
+  async function callTool(id: RequestId, principal: McpPrincipal, value: unknown, tasks: boolean, signal?: AbortSignal): Promise<Response> {
     const params = isRecord(value) ? value : undefined;
     const name = typeof params?.name === 'string' ? params.name : undefined;
     const tool = name === undefined ? undefined : options.tools ? catalog(principal).find(tool => tool.name === name)
@@ -296,17 +314,25 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
     if (name === undefined) return reject('INVALID_INPUT', rpcError(id, -32602, 'Invalid tool call parameters'));
     const progressToken = isRecord(params._meta) ? params._meta.progressToken : undefined;
     if (!tool || !granted(principal, tool)) return reject('TOOL_UNAVAILABLE');
-    const detailed = tool.result === 'operation_call';
+    const hub = tool.result === 'hub';
+    const detailed = tool.result === 'operation_call' || hub;
     const args = params.arguments === undefined && detailed ? {} : params.arguments;
-    if (!isRecord(args)) return reject('INVALID_INPUT');
-    // Operation tools default to the credential's single workspace.
-    const workspace = args.workspace_id === undefined && detailed ? principal.workspaceId : args.workspace_id;
+    if (!isRecord(args)) return hub ? reject('INVALID_ARGUMENTS', detailedError(id, { code: 'INVALID_ARGUMENTS', message: 'arguments must be an object',
+      issues: [{ path: '', code: 'invalid_type', message: 'arguments must be an object' }] }), 'failed') : reject('INVALID_INPUT');
+    // Operation tools default to the credential's single workspace; hub tools have no workspace field (strict schemas).
+    const workspace = hub || args.workspace_id === undefined && detailed ? principal.workspaceId : args.workspace_id;
     if (workspace !== principal.workspaceId) return reject(tool.result === 'approved_read' ? 'NOT_FOUND' : 'TOOL_UNAVAILABLE');
     let input: McpDispatchInput | undefined;
     try { input = tool.parse(args); }
-    catch { return reject('INTERNAL_ERROR', undefined, 'failed'); }
+    catch (error) {
+      // A strict schema names the offending fields (§7.3, B16); never turn that into INTERNAL_ERROR or a bare INVALID_INPUT.
+      if (isRecord(error) && error.code === 'INVALID_ARGUMENTS' && error.status === 422) {
+        return reject('INVALID_ARGUMENTS', detailedError(id, hubProblem(error)), 'failed');
+      }
+      return reject('INTERNAL_ERROR', undefined, 'failed');
+    }
     if (!input) return reject('INVALID_INPUT');
-    const invocation: McpInvocation = { mode: 'call', principal, tool, input };
+    const invocation: McpInvocation = { mode: 'call', principal, tool, input, ...(signal && { signal }) };
     const jobId = tool.result === 'job' ? input.params.id : detailed && tool.name.startsWith('agent_jobs_') && isRecord(args.params)
       ? args.params.id : input.body.agent_job_id;
     const started = performance.now();
@@ -330,6 +356,25 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
         result = toolError(id, code);
       } else {
         const raw = taskRequested ? await options.readOperation!(principal, input.params.id!) : await dispatch(invocation);
+        if (hub) {
+          // Hub tools answer with their own JSON (§7.2 outputs), in structuredContent and as the text block.
+          const output = isRecord(raw) ? raw : undefined;
+          if (filterOutput && output) await filterOutput(invocation, raw, output);
+          const text = output && JSON.stringify(output);
+          if (!output || !text) {
+            code = 'RESULT_UNAVAILABLE';
+            result = toolError(id, code);
+          } else if (new TextEncoder().encode(text).byteLength > maxResultBytes) {
+            code = 'RESULT_TOO_LARGE';
+            result = detailedError(id, { code, message: 'The result exceeds 128 KB. Narrow it with filters or a smaller limit.' });
+          } else {
+            outcome = 'success';
+            result = rpcResult(id, { content: [{ type: 'text', text }], structuredContent: output });
+          }
+          try { await audit?.({ ...metadata, stage: 'finish', outcome, elapsedMs: Math.round(performance.now() - started), ...(code ? { code } : {}) }); }
+          catch { return toolError(id, 'AUDIT_UNAVAILABLE'); }
+          return result;
+        }
         const projected = projectMcpResult(tool, raw);
         const decision = projected && (filterOutput ? await filterOutput(invocation, raw, projected) : { data: projected });
         const output = decision && normalizedOutput(decision);
@@ -366,7 +411,7 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
       }
     } catch (error) {
       if (detailed) {
-        const problem = operationProblem(error);
+        const problem = hub ? hubProblem(error) : operationProblem(error);
         code = String(problem.code);
         result = detailedError(id, problem);
       } else {
@@ -491,7 +536,7 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
       return rpcError(null, -32600, 'Invalid request ID', 400);
     }
     const params = message.params === undefined ? {} : message.params;
-    if (method === 'tools/call') return callTool(id, principal, params, tasks);
+    if (method === 'tools/call') return callTool(id, principal, params, tasks, request.signal);
     if (!isRecord(params)) return rpcError(id, -32602, 'Invalid parameters');
     switch (method) {
       case 'initialize': {
@@ -507,9 +552,10 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
           try { enableTasks = await authorize({ mode: 'list', principal, tool: job }); }
           catch { return rpcError(id, -32603, 'Task authorization unavailable'); }
         }
+        const instructions = typeof options.instructions === 'function' ? options.instructions(principal) : options.instructions;
         const initialized = rpcResult(id, {
           protocolVersion, serverInfo: { name: 'smartsell', version: '0.1.0' },
-          ...(options.instructions && { instructions: options.instructions }),
+          ...(instructions && { instructions }),
           capabilities: { tools: {}, ...(options.resources && { resources: {} }),
             ...(enableTasks && { tasks: { requests: { tools: { call: {} } } } }) },
         });
@@ -524,7 +570,7 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
         if (params.cursor !== undefined) return rpcError(id, -32602, 'Invalid cursor');
         try {
           const tools = options.listTools ? await options.listTools(principal, tasks) : [];
-          if (!options.listTools) for (const tool of catalog(principal)) {
+          if (!options.listTools) for (const tool of options.listed?.(principal) ?? catalog(principal)) {
             if (!granted(principal, tool) || await authorize({ mode: 'list', principal, tool }) !== true) continue;
             const { name, description, inputSchema, outputSchema, annotations } = tool;
             tools.push({ name, description, inputSchema, outputSchema, annotations,

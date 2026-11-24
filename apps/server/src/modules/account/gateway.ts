@@ -1,7 +1,9 @@
 import type { Context } from '@smartsell/contracts';
 import type { ProviderKey, RawRequest } from '../../../../../packages/adapters/src/adapter-types.ts';
-import { handleDeviceRequest, type ConnectorServices, type DeviceAction } from './connector-service.ts';
-import { pairDevice, type SignedDeviceRequest } from './device-control.ts';
+import type { Row } from '@smartsell/contracts';
+import { deviceBodyLimits, handleDeviceRequest, type ConnectorServices, type DeviceAction } from './connector-service.ts';
+import { authenticateDevice, pairDevice, type SignedDeviceRequest } from './device-control.ts';
+import { refreshHostCaches } from '../worker/host-cache.ts';
 import { fail, object, text } from './input.ts';
 import { acceptWebhook, completeOAuth, digest, type AccountServices } from './oauth.ts';
 import { WorkerCatalogRequestError, workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
@@ -47,7 +49,9 @@ export function createAccountGateway(deps: AccountGatewayDependencies) {
       return deps.transaction(workspace, ctx => pairDevice(ctx, body));
     },
     async device(action: DeviceAction, rawBody: Uint8Array, signed: SignedDeviceRequest, attemptId?: string, workspaceHint?: string, requestId?: string) {
-      if (rawBody.byteLength > (action === 'catalog.upload' ? workerCatalogUploadBodyLimit : 128_000)) fail('DEVICE_BODY_TOO_LARGE', 413);
+      if (rawBody.byteLength > (action === 'catalog.upload' ? workerCatalogUploadBodyLimit : deviceBodyLimits[action] ?? 128_000)) fail('DEVICE_BODY_TOO_LARGE', 413);
+      // latest_worker and driver_config come from files: read them before, never inside, the transaction (§0 rule 8).
+      if (action === 'heartbeat') await refreshHostCaches();
       if (attemptId !== undefined) {
         let body: unknown;
         try { body = JSON.parse(Buffer.from(rawBody).toString('utf8')); } catch { fail('INVALID_DEVICE_BODY', 422); }
@@ -65,6 +69,26 @@ export function createAccountGateway(deps: AccountGatewayDependencies) {
       });
       if ('error' in outcome) throw outcome.error;
       return outcome.data;
+    },
+    /**
+     * A signed GET/PUT outside the JSON device routes (§5.4: media, evidence, driver-config). Verifies the signature and runs
+     * `run` in one short transaction; streaming and storage IO happen after it returns.
+     */
+    async signed<T>(action: string, rawBody: Uint8Array, signed: SignedDeviceRequest, workspaceHint: string | undefined, bodyLimit: number,
+      run: (ctx: Context, device: Row) => T | Promise<T>): Promise<T> {
+      const workspace = await deps.deviceWorkspace(text(signed.device_id), workspaceHint);
+      if (!workspace) fail('DEVICE_NOT_FOUND', 401);
+      return deps.transaction(workspace, async ctx => run(ctx, authenticateDevice(ctx, action, rawBody, signed, bodyLimit)));
+    },
+    /** A follow-up write for an already authenticated signed request (evidence record after the bytes are stored). */
+    async continued<T>(deviceId: string, workspaceHint: string | undefined, run: (ctx: Context, device: Row) => T | Promise<T>): Promise<T> {
+      const workspace = await deps.deviceWorkspace(deviceId, workspaceHint);
+      if (!workspace) fail('DEVICE_NOT_FOUND', 401);
+      return deps.transaction(workspace, async ctx => {
+        const device = ctx.get('connector_device', deviceId);
+        if (device.status !== 'active') fail('DEVICE_INACTIVE', 401);
+        return run(ctx, device);
+      });
     },
   };
 }

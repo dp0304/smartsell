@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { expect, test as base } from '@playwright/test';
 import { localDev } from './local-dev.mjs';
+import { expectToday } from './phase1-shell.mjs';
 
 const { Secret, TOTP } = createRequire(new URL('../../packages/identity/package.json', import.meta.url))('otpauth');
 const test = base.extend({ dev: localDev });
@@ -115,9 +116,11 @@ test('Commands invitation acceptance leaves the owner and invited reviewer in se
     expect((await reviewer.request.get(`${dev.origin}${sessionPath}`)).status()).toBe(401);
     await fillCredentials(reviewer, reviewerEmail, reviewerPassword);
     await submit(reviewer, 'Sign in', sessionPath, 200);
-    // Without a return path, sign-in lands on the dashboard overview.
+    // Without a return path, sign-in lands on the dashboard index, which is Today in phase 1 (§9.1). A reviewer
+    // cannot set the workspace up, so no wizard and no 「開始設定」 entry.
     await expect(reviewer).toHaveURL(`${dev.origin}/app/${workspaceId}`);
-    await expect(reviewer.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+    await expectToday(reviewer, 'en');
+    await expect(reviewer.getByRole('link', { name: 'Get started', exact: true })).toHaveCount(0);
     await expect(reviewer.getByRole('navigation', { name: 'Dashboard navigation' })).toBeVisible();
     const { data } = await (await reviewer.request.get(`${dev.origin}${sessionPath}`)).json();
     expect(data.user.id).not.toBe(userId);

@@ -130,11 +130,14 @@ for (const backend of ['Commands SQLite', 'Operations PostgreSQL', 'Commands Pos
     const [social, store] = initial.registrations;
     for (const [entry, selection] of [[social, tiktok], [store, amazon]]) {
       assert.match(entry.resource_id, /^[0-9a-f-]{36}$/);
+      // Hub channels (phase1-design §8.16) also return the hub's Chrome profile key for the Worker to adopt.
       assert.deepEqual(entry, { kind: selection.kind, platform: selection.platform, external_id: selection.external_id,
-        resource_id: entry.resource_id, device_id: first.id });
+        resource_id: entry.resource_id, device_id: first.id, ...(selection.kind === 'social' && { profile_key: entry.profile_key }) });
     }
+    assert.match(social.profile_key, /^ch-[0-9a-f]{12}$/);
+    // phase1-design §3.9: with no brand yet, Worker channels go into a brand named after the workspace.
     const [brand] = await req('GET', '/brands');
-    assert.equal(brand.name, 'Worker channels');
+    assert.equal(brand.name, 'Worker channel fixture');
     const [account] = await req('GET', '/social-accounts');
     assert.equal(account.id, social.resource_id);
     assert.equal(account.brand_id, brand.id);

@@ -1,19 +1,23 @@
-import { ADMIN, type Context, type Data, type Role, type Row } from '@smartsell/contracts';
+import { ADMIN, AUTOMATION_NOTICE_VERSION, type Context, type Data, type Role, type Row } from '@smartsell/contracts';
 import { createWorkerStore } from '../commerce/store-operations.js';
 import { bindRegisteredWorkerStore, externalStoreId, workerCatalogBindingFor } from '../commerce/worker-catalog.js';
-import { saveBrand } from '../workspace/brands.js';
+import { saveBrand, workspace } from '../workspace/brands.js';
 import { bindingFor, sessionFor } from './device-control.js';
 import { audit, fail, matches, object, one, text, time } from './input.js';
 import { activeMigration } from './migration.js';
 import { storeProviders } from './oauth.js';
-import { createOwnedSocialAccount, ownedSocialProviders } from './social-accounts.js';
+import { CHANNEL_SETTINGS, PROFILE_KEY, ensureChannelSettings, isHubProvider, workerEngine } from './channel-settings.js';
+import { createOwnedSocialAccount, normalizeDisplayHandle, ownedSocialProviders } from './social-accounts.js';
 
 type SocialProvider = typeof ownedSocialProviders[number];
+/** Worker App additions (phase1-design §8.16): observed handle, the local Chrome profile key and the notice version shown. */
+type ChannelExtras = { handle?: string | null; profile_key?: string; automation_notice_version?: string };
 type Selection = { external_id: string; identity: string; display_name: string; observed_at: string; portal_url?: string } & (
-  { kind: 'social'; platform: SocialProvider } | { kind: 'store'; platform: typeof storeProviders[number] }
+  ({ kind: 'social'; platform: SocialProvider } & ChannelExtras) | { kind: 'store'; platform: typeof storeProviders[number] }
 );
 
 const socialHosts: Record<SocialProvider, readonly string[]> = {
+  x: ['x.com'],
   douyin: ['creator.douyin.com', 'www.douyin.com'],
   xiaohongshu: ['creator.xiaohongshu.com', 'www.xiaohongshu.com'],
   tiktok: ['www.tiktok.com', 'tiktok.com', 'studio.tiktok.com'],
@@ -22,6 +26,7 @@ const socialHosts: Record<SocialProvider, readonly string[]> = {
   youtube: ['studio.youtube.com', 'www.youtube.com', 'youtube.com'],
 };
 const socialIdentities: Record<SocialProvider, RegExp> = {
+  x: /^[a-z0-9_]{1,15}$/,
   douyin: /^[A-Za-z0-9_.-]{2,64}$/,
   xiaohongshu: /^[0-9a-f]{24}$/,
   tiktok: /^[0-9]{8,25}$/,
@@ -43,9 +48,13 @@ function storeIdentity(platform: string, id: string) {
 
 function parseSelection(ctx: Context, value: unknown): Selection {
   const row = object(value);
-  onlyFields(row, ['kind', 'platform', 'external_id', 'display_name', 'observed_at', 'portal_url']);
+  const extras = ['handle', 'profile_key', 'automation_notice_version'];
+  onlyFields(row, ['kind', 'platform', 'external_id', 'display_name', 'observed_at', 'portal_url', ...extras]);
   const kind = one(row.kind, ['social', 'store'] as const);
-  const raw = text(row.external_id, 160).trim();
+  if (kind === 'store' && extras.some(key => row[key] !== undefined)) fail('INVALID_WORKER_CHANNEL_INPUT', 422);
+  let raw = text(row.external_id, 160).trim();
+  // X identity is the handle, compared without case and without a leading '@' (§3.3).
+  if (kind === 'social' && row.platform === 'x') raw = raw.replace(/^@/, '').toLowerCase();
   if (/^https?:/i.test(raw)) fail('INVALID_WORKER_CHANNEL_INPUT', 422);
   const at = matches(row.observed_at, timestamp, 40);
   const observed = Date.parse(at);
@@ -64,7 +73,17 @@ function parseSelection(ctx: Context, value: unknown): Selection {
     const platform = one(row.platform, ownedSocialProviders);
     const externalId = matches(raw, socialIdentities[platform], 128);
     if (url && !socialHosts[platform].includes(url.hostname)) fail('WORKER_CHANNEL_PORTAL_INVALID', 422);
-    return { ...common, kind, platform, external_id: externalId, identity: externalId, display_name: displayName ?? externalId };
+    let handle: string | null | undefined;
+    try { handle = row.handle === undefined ? undefined : normalizeDisplayHandle(row.handle); } catch { fail('INVALID_WORKER_CHANNEL_INPUT', 422); }
+    if (platform === 'x') {
+      if (handle != null && handle !== externalId) fail('INVALID_WORKER_CHANNEL_INPUT', 422);
+      handle = externalId;
+    }
+    const profileKey = row.profile_key === undefined ? undefined : matches(row.profile_key, PROFILE_KEY, 64);
+    const notice = row.automation_notice_version === undefined ? undefined : text(row.automation_notice_version, 100);
+    if (notice !== undefined && notice !== AUTOMATION_NOTICE_VERSION) fail('AUTOMATION_NOTICE_OUTDATED', 409, { current_version: AUTOMATION_NOTICE_VERSION });
+    return { ...common, kind, platform, external_id: externalId, identity: externalId, display_name: displayName ?? (handle ? `@${handle}` : externalId),
+      ...(handle !== undefined && { handle }), ...(profileKey && { profile_key: profileKey }), ...(notice && { automation_notice_version: notice }) };
   }
   const platform = one(row.platform, storeProviders);
   const externalId = externalStoreId(raw);
@@ -84,16 +103,33 @@ function registrationAuthorizer(ctx: Context, device: Row) {
   return authorizer.userId;
 }
 
-function intakeBrand(ctx: Context) {
-  const allocated = ctx.list('worker_channel_scope')[0];
-  if (allocated) return String(allocated.brand_id);
-  const slugs = new Set(ctx.list('brand').map(row => row.slug));
-  const base = 'worker-channels';
-  let slug = base;
-  for (let suffix = 2; slugs.has(slug); suffix++) slug = `${base}-${suffix}`;
-  const brand = saveBrand(ctx, { body: { name: 'Worker channels', slug }, params: {}, query: {} });
+/**
+ * Worker-registered accounts and stores go into the workspace's default brand: the scoped brand if it is still active, else
+ * the first active brand, else a new brand named after the workspace. That brand gets a worker_channel_scope row (§3.9).
+ */
+export function defaultBrand(ctx: Context) {
+  const active = ctx.list('brand').filter(row => row.status === 'active')
+    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id.localeCompare(b.id));
+  const scoped = ctx.list('worker_channel_scope').find(row => active.some(brand => brand.id === row.brand_id));
+  if (scoped) return String(scoped.brand_id);
+  const brand = active[0] ?? workspaceBrand(ctx);
   ctx.create('worker_channel_scope', { brand_id: brand.id });
   return brand.id;
+}
+
+function workspaceBrand(ctx: Context) {
+  const raw = workspace(ctx).name;
+  const name = typeof raw === 'string' && raw.trim() ? raw.trim().slice(0, 120) : 'SmartSell';
+  const base = name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'default';
+  const slugs = new Set(ctx.list('brand').map(row => row.slug));
+  let slug = base;
+  for (let suffix = 2; slugs.has(slug); suffix++) slug = `${base}-${suffix}`;
+  return saveBrand(ctx, { body: { name, slug }, params: {}, query: {} });
+}
+
+function workspaceZone(ctx: Context) {
+  const zone = workspace(ctx).default_timezone;
+  return typeof zone === 'string' && zone ? zone : 'UTC';
 }
 
 function assertBrandScope(ctx: Context, brandId: unknown, alreadyAssigned: boolean) {
@@ -103,7 +139,10 @@ function assertBrandScope(ctx: Context, brandId: unknown, alreadyAssigned: boole
   if (!alreadyAssigned && !ctx.list('worker_channel_scope').some(row => row.brand_id === brandId)) fail('WORKER_CHANNEL_BRAND_SCOPE', 403);
 }
 
-function bindSocial(ctx: Context, account: Row, device: Row, observedAt: string) {
+/** A session the owner fixed by signing in again on the Worker may be registered again (§3.3 重新登記). */
+const reRegistrable = ['pending_identity', 'login_required', 'challenge', 'identity_mismatch'];
+
+function bindSocial(ctx: Context, account: Row, device: Row, observedAt: string, observed: { identity: string; handle: string | null }) {
   if (account.status !== 'active' || activeMigration(ctx, account.id)) fail('WORKER_CHANNEL_ACCOUNT_UNAVAILABLE', 409);
   const existing = bindingFor(ctx, account.id);
   if (existing && (existing.device_id !== device.id || existing.connector_channel !== 'browser' ||
@@ -114,12 +153,17 @@ function bindSocial(ctx: Context, account: Row, device: Row, observedAt: string)
     mobile_device_id: null, mobile_app: null, connector_mode: 'assist', paused: false,
   });
   const session = sessionFor(ctx, binding);
-  if (session?.status === 'verified') return;
-  if (session && session.status !== 'pending_identity') fail('WORKER_CHANNEL_SESSION_UNAVAILABLE', 409);
-  const status = { status: 'verified', verified_at: ctx.now, observed_at: observedAt };
+  const observation = { checked_at: ctx.now, observed_identity: observed.identity, observed_handle: observed.handle };
+  if (session?.status === 'verified') {
+    ctx.update('browser_session', session.id, observation);
+    return false;
+  }
+  if (session && !reRegistrable.includes(String(session.status))) fail('WORKER_CHANNEL_SESSION_UNAVAILABLE', 409);
+  const status = { status: 'verified', verified_at: ctx.now, observed_at: observedAt, ...observation };
   if (session) ctx.update('browser_session', session.id, status);
   else ctx.create('browser_session', { social_account_id: account.id, binding_id: binding.id, device_id: device.id, ...status });
-  if (!existing) ctx.emit('account.binding.changed', { binding_id: binding.id, social_account_id: account.id });
+  if (!existing) ctx.emit('account.binding.changed', { binding_id: binding.id, social_account_id: account.id, device_id: device.id });
+  return true;
 }
 
 export function registerWorkerChannels(ctx: Context, device: Row, body: Data) {
@@ -137,24 +181,48 @@ export function registerWorkerChannels(ctx: Context, device: Row, body: Data) {
   const authorizerContext = { ...ctx, actorId: authorizerId };
   const registrations = [...selections.values()].map(selection => {
     const { kind, platform, external_id, identity, display_name, observed_at, portal_url } = selection;
+    let profileKey: string | undefined;
     const rows = kind === 'social'
       ? ctx.list('social_account').filter(row => row.provider === platform && row.external_account_id === external_id)
       : ctx.list('store').filter(row => row.provider === platform && typeof row.external_store_id === 'string' && storeIdentity(platform, row.external_store_id) === identity);
     if (rows.length > 1) fail('WORKER_CHANNEL_IDENTITY_AMBIGUOUS', 409);
     let resource = rows[0];
     if (kind === 'social') {
+      const handle = selection.handle;
       resource ??= createOwnedSocialAccount(authorizerContext, { provider: platform, external_account_id: external_id, display_name,
-        brand_id: intakeBrand(ctx), owner_id: authorizerId, default_timezone: 'UTC' }, 'worker_channel_registration');
-      bindSocial(ctx, resource, device, observed_at);
+        brand_id: defaultBrand(ctx), owner_id: authorizerId, default_timezone: workspaceZone(ctx), handle: handle ?? null }, 'worker_channel_registration');
+      const bound = bindSocial(ctx, resource, device, observed_at, { identity: external_id, handle: handle ?? (typeof resource.handle === 'string' ? resource.handle : null) });
+      if (handle != null && resource.handle !== handle) resource = ctx.update('social_account', resource.id, { handle });
+      if (isHubProvider(platform)) profileKey = recordChannel(ctx, resource, device, selection.profile_key, selection.automation_notice_version, bound);
     } else {
-      resource ??= createWorkerStore(ctx, { provider: platform, external_store_id: identity, name: display_name, brand_id: intakeBrand(ctx) });
+      resource ??= createWorkerStore(ctx, { provider: platform, external_store_id: identity, name: display_name, brand_id: defaultBrand(ctx) });
       const binding = workerCatalogBindingFor(ctx, resource.id);
       if (binding && binding.device_id !== device.id) fail('WORKER_CHANNEL_ALREADY_BOUND', 409);
       assertBrandScope(ctx, resource.brand_id, Boolean(binding));
       bindRegisteredWorkerStore(authorizerContext, resource, device, portal_url);
     }
     if (!rows.length) audit(ctx, 'account.worker_channel.registered', { kind, platform, resource_id: resource.id, device_id: device.id, approved_by: authorizerId });
-    return { kind, platform, external_id, resource_id: resource.id, device_id: device.id };
+    return { kind, platform, external_id, resource_id: resource.id, device_id: device.id, ...(profileKey && { profile_key: profileKey }) };
   });
   return { registrations };
+}
+
+/**
+ * Channel settings for a Worker-registered hub account (§8.16 step 5). The profile key is fixed once created, so the response
+ * returns the hub's key for the Worker to adopt. The automation notice ack comes from the Worker App's confirmation dialog.
+ */
+function recordChannel(ctx: Context, account: Row, device: Row, profileKey: string | undefined, noticeVersion: string | undefined, bound: boolean) {
+  const settings = ensureChannelSettings(ctx, account.id, { profileKey });
+  const ack = noticeVersion === AUTOMATION_NOTICE_VERSION && settings.automation_notice_ack?.version !== AUTOMATION_NOTICE_VERSION;
+  // The machine's heartbeat channel list changed (new binding or verified session) or its settings did (§5.4.1).
+  if (bound || ack) workerEngine().bumpSyncGeneration(ctx, [device.id], 'channel_registered');
+  if (ack) {
+    ctx.update(CHANNEL_SETTINGS, settings.id, {
+      automation_notice_ack: { at: ctx.now, via: 'worker_app', by: `device:${device.id}`, version: AUTOMATION_NOTICE_VERSION },
+      settings_generation: settings.settings_generation + 1,
+    });
+    audit(ctx, 'account.automation_notice.acknowledged', { social_account_id: account.id, via: 'worker_app', device_id: device.id, version: AUTOMATION_NOTICE_VERSION });
+    ctx.emit('account.automation_notice.acked', { social_account_id: account.id });
+  }
+  return settings.chrome_profile_key;
 }

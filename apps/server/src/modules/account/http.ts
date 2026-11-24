@@ -5,11 +5,16 @@ import { providers } from './oauth.ts';
 import type { DeviceAction } from './connector-service.ts';
 import { createAccountGateway, type AccountGatewayDependencies } from './gateway.ts';
 import { workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
+import { mountWorkerDeviceFiles, provideSignedWorkerDownloads, type WorkerDeviceFiles } from '../worker/device-http.ts';
 
 const deviceRoutes = [
   ['/api/v1/device/heartbeat', 'heartbeat'],
   ['/api/v1/device/claim', 'claim'],
   ['/api/v1/device/channels/register', 'channels.register'],
+  // Phase 1 job protocol (§5.4, Appendix B.2).
+  ['/api/v1/device/jobs/claim', 'jobs.claim'],
+  ['/api/v1/device/jobs/report', 'jobs.report'],
+  ['/api/v1/device/jobs/go', 'jobs.go'],
   ['/api/v1/device/catalog/claim', 'catalog.claim'],
   ['/api/v1/device/catalog/upload', 'catalog.upload'],
   ['/api/v1/device/zhihu-stats/claim', 'zhihu.stats.claim'],
@@ -28,8 +33,10 @@ const deviceRoutes = [
 type Params = { id?: string; provider?: string; endpoint?: string };
 
 /** Encapsulated parsers preserve raw bytes for the device and platform signature boundaries. */
-export function mountAccountIngress(app: FastifyInstance, dependencies: AccountGatewayDependencies, options: { deviceOnly?: boolean } = {}) {
+export function mountAccountIngress(app: FastifyInstance, dependencies: AccountGatewayDependencies, options: { deviceOnly?: boolean; files?: WorkerDeviceFiles } = {}) {
   const gateway = createAccountGateway(dependencies);
+  // §8.18: Workers download their own updates with a device signature; the download route lives on the root app (S1).
+  provideSignedWorkerDownloads(app, gateway);
   app.register(async ingress => {
     ingress.removeAllContentTypeParsers();
     ingress.addContentTypeParser('*', { parseAs: 'buffer', bodyLimit: 128_000 }, (_request, body, done) => done(null, body));
@@ -37,7 +44,12 @@ export function mountAccountIngress(app: FastifyInstance, dependencies: AccountG
       reply.header('cache-control', 'no-store').header('referrer-policy', 'no-referrer');
     });
     ingress.setErrorHandler((error, _request, reply) => {
-      if (error instanceof Problem) return reply.code(error.status).send({ error: { code: error.code } });
+      if (error instanceof Problem) {
+        // SEQ_GAP carries `expected` (S6 ledger 1); DEVICE_BUSY tells the Worker when to retry (§2.10).
+        if (error.code === 'DEVICE_BUSY') reply.header('retry-after', '1');
+        const details = error.details && typeof error.details === 'object' ? error.details : undefined;
+        return reply.code(error.status).send({ error: { code: error.code, ...(details && { ...details, details }) } });
+      }
       const candidate = error && typeof error === 'object' && 'statusCode' in error ? error.statusCode : undefined;
       const status = typeof candidate === 'number' && candidate >= 400 && candidate < 500 ? candidate : 500;
       return reply.code(status).send({ error: { code: status === 500 ? 'ACCOUNT_INGRESS_FAILURE' : 'ACCOUNT_REQUEST_INVALID' } });
@@ -72,6 +84,7 @@ export function mountAccountIngress(app: FastifyInstance, dependencies: AccountG
         }),
       }));
     }
+    mountWorkerDeviceFiles(ingress, gateway, options.files ?? {});
     for (const [path, action] of deviceRoutes) {
       const limits = action === 'catalog.upload' ? { bodyLimit: workerCatalogUploadBodyLimit } : {};
       ingress.post<{ Params: Params }>(path, limits, async (request, reply) => {

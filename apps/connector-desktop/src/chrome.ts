@@ -14,12 +14,25 @@ export class ChromeUnavailable extends Error {
   constructor() { super('找不到 Google Chrome。请安装 Chrome 后重试。'); }
 }
 
+declare const RELEASE: { packaged?: boolean } | undefined;
+/** True only inside an installer build (esbuild defines RELEASE.packaged). Test switches are refused there. */
+export function isPackagedBuild() {
+  return typeof RELEASE !== 'undefined' && RELEASE?.packaged === true;
+}
+/** SMARTSELL_TEST_MODE=1 is honoured only outside packaged builds (§8.14). */
+export function testModeEnabled(env: NodeJS.ProcessEnv = process.env) {
+  return env.SMARTSELL_TEST_MODE === '1' && !isPackagedBuild();
+}
+
 export async function findChrome(platform = process.platform, env = process.env, home = homedir()) {
   const executable = 'Google Chrome.app/Contents/MacOS/Google Chrome';
-  const paths = platform === 'darwin' ? [join('/Applications', executable), join(home, 'Applications', executable)]
+  // The override exists for CI and the headless runner; it is ignored outside test mode.
+  const override = testModeEnabled(env) && env.SMARTSELL_CHROME_PATH ? [env.SMARTSELL_CHROME_PATH] : [];
+  const paths = [...override, ...(platform === 'darwin' ? [join('/Applications', executable), join(home, 'Applications', executable)]
     : platform === 'win32' ? [env.ProgramW6432, env.ProgramFiles, env['ProgramFiles(x86)'], env.LOCALAPPDATA]
       .filter((value): value is string => Boolean(value && /^[A-Za-z]:[\\/]/.test(value)))
-      .map(root => join(root, 'Google', 'Chrome', 'Application', 'chrome.exe')) : [];
+      .map(root => join(root, 'Google', 'Chrome', 'Application', 'chrome.exe'))
+    : platform === 'linux' ? ['/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/opt/google/chrome/chrome'] : [])];
   for (const path of paths) {
     try { await access(path, constants.X_OK); return path; }
     catch { /* Try the next standard installation directory. */ }
@@ -30,11 +43,23 @@ export async function findChrome(platform = process.platform, env = process.env,
 const closedError = () => new Error('Chrome 会话已关闭。请重新打开渠道页面。');
 const failedError = () => new Error('无法连接到连接器专用 Chrome。请关闭该专用窗口后重试。');
 
-type Pending = { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout };
+type Pending = { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout; method: string };
+export type CdpEvent = { method: string; params: Record<string, unknown>; sessionId?: string };
+/** Raised for a CDP protocol error; `cdpMessage` keeps Chrome's text for driver diagnostics. */
+export class CdpCallError extends Error {
+  constructor(message: string, readonly cdpMethod: string, readonly cdpMessage: string) { super(message); this.name = 'CdpCallError'; }
+}
+/** The subset of the Chrome pipe that drivers/cdp-page.ts uses (§8.1 `pipe()`). */
+export interface CdpPipe {
+  readonly closed: boolean;
+  send<T = unknown>(method: string, params?: object, sessionId?: string, timeout?: number): Promise<T>;
+  onEvent(listener: (event: CdpEvent) => void): () => void;
+}
 
-class ChromePipe {
+class ChromePipe implements CdpPipe {
   #id = 0;
   #pending = new Map<number, Pending>();
+  #listeners = new Set<(event: CdpEvent) => void>();
   #remainder: Buffer = Buffer.alloc(0);
   #input: Duplex;
   #closed = false;
@@ -65,14 +90,19 @@ class ChromePipe {
     while ((end = bytes.indexOf(0, start)) >= 0) {
       try {
         const reply = JSON.parse(bytes.toString('utf8', start, end));
-        const pending = this.#pending.get(reply.id);
+        const pending = typeof reply.id === 'number' ? this.#pending.get(reply.id) : undefined;
         if (pending) {
           this.#pending.delete(reply.id);
           clearTimeout(pending.timer);
-          if (reply.error) pending.reject(new Error('Chrome 页面或标签页已变化，请重试。'));
+          if (reply.error) pending.reject(new CdpCallError('Chrome 页面或标签页已变化，请重试。', pending.method, String(reply.error.message ?? '')));
           else pending.resolve(reply.result);
+        } else if (typeof reply.method === 'string' && reply.id === undefined) {
+          const event: CdpEvent = { method: reply.method, params: reply.params ?? {}, sessionId: reply.sessionId };
+          for (const listener of this.#listeners) {
+            try { listener(event); } catch { /* A listener must not break the pipe. */ }
+          }
         }
-      } catch { /* Ignore malformed or unsolicited messages. */ }
+      } catch { /* Ignore malformed messages. */ }
       start = end + 1;
     }
     this.#remainder = bytes.subarray(start);
@@ -87,16 +117,30 @@ class ChromePipe {
         this.#pending.delete(id);
         reject(new Error('Chrome 页面没有及时响应，请切回该标签页后重试。'));
       }, timeout);
-      this.#pending.set(id, { resolve: value => resolve(value as T), reject, timer });
+      this.#pending.set(id, { resolve: value => resolve(value as T), reject, timer, method });
       this.#input.write(`${JSON.stringify({ id, method, params, sessionId })}\0`);
     });
   }
+
+  onEvent(listener: (event: CdpEvent) => void) {
+    this.#listeners.add(listener);
+    return () => { this.#listeners.delete(listener); };
+  }
+
+  get pid() { return this.child.pid; }
 
   close() {
     if (this.#closed) return;
     void this.send('Browser.close', {}, undefined, 1000).catch(() => this.child.kill());
   }
 }
+
+/**
+ * Launch options. `headless` is set only by the headless runner (§8.1, §8.14);
+ * `restoreSession: false` keeps per-channel driver profiles from reopening
+ * stale compose tabs. No option adds or removes automation-signalling flags.
+ */
+export interface ChromeLaunchOptions { headless?: boolean; restoreSession?: boolean }
 
 type Tab = { targetId: string; sessionId: string };
 type Target = { targetId: string; type: string; url: string };
@@ -126,9 +170,20 @@ export class ChromeBrowser implements ChannelBrowser {
     click: async (step, signal, menuOpened) => (await this.#observeZhihu(signal, undefined, menuOpened, false, step)).kind === 'clicked',
   });
 
-  constructor(private readonly directory: string, private readonly executable = findChrome) {}
+  constructor(private readonly directory: string, private readonly executable = findChrome, private readonly options: ChromeLaunchOptions = {}) {}
 
   get session() { return this.#pipe?.closed ? 0 : this.#pipe ? this.#generation : 0; }
+
+  /** The profile directory this Chrome instance owns (one per channel, §8.3). */
+  get profileDir() { return this.directory; }
+
+  /** Process id of the Chrome this instance launched, when running. */
+  get pid() { return this.#pipe && !this.#pipe.closed ? this.#pipe.pid : undefined; }
+
+  /** Starts Chrome when needed and returns its CDP pipe for drivers/cdp-page.ts. */
+  async pipe(signal?: AbortSignal): Promise<CdpPipe> {
+    return this.#start(signal);
+  }
 
   async #start(signal?: AbortSignal) {
     if (this.#disposed) throw closedError();
@@ -146,12 +201,15 @@ export class ChromeBrowser implements ChannelBrowser {
     const executable = await this.executable();
     if (!executable) throw new ChromeUnavailable();
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
-    const startPage = await this.#hasSavedSession() ? '--restore-last-session' : 'about:blank';
+    const restore = this.options.restoreSession !== false && await this.#hasSavedSession();
+    const startPage = restore ? '--restore-last-session' : 'about:blank';
     if (this.#disposed) throw closedError();
     signal?.throwIfAborted();
+    // Headless runs (CI and E2E only) use a mock keychain so a fresh profile never raises an OS keychain prompt.
+    const headless = this.options.headless ? ['--headless=new', '--use-mock-keychain', '--password-store=basic'] : [];
     const pipe = new ChromePipe(spawn(executable, [
       `--user-data-dir=${this.directory}`, '--remote-debugging-pipe', '--no-first-run', '--no-default-browser-check',
-      '--disable-background-mode', startPage,
+      '--disable-background-mode', ...headless, startPage,
     ], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'], windowsHide: false }));
     try {
       const version = await pipe.send<{ product: string }>('Browser.getVersion', {}, undefined, 12_000);

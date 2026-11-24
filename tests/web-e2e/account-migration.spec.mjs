@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test as base } from '@playwright/test';
 import { localDev } from './local-dev.mjs';
+import { expectWizardStep, finishLater, openAdvancedWorkbench } from './phase1-shell.mjs';
 
 const test = base.extend({ dev: localDev });
 
@@ -40,19 +41,14 @@ async function recoveryFixture(page, dev, request) {
   await page.getByLabel('密碼', { exact: true }).fill(password);
   const login = await clickForResponse(page, page.getByRole('button', { name: '登入', exact: true }), 'POST', `${dev.origin}/api/v1/session`);
   expect(login.status()).toBe(200);
-  // The empty workspace opens setup. Leave it to reach the advanced workbench from the overview.
+  // The empty workspace opens the first-run wizard (§2.9). Leave it for Today, then reach the advanced workbench
+  // from Settings (phase 1 keeps it out of the core navigation, §9.1).
   const dashboard = `/app/${workspace.id}`;
-  const main = page.getByRole('main');
-  await expect(main.getByRole('heading', { name: '開始設定', exact: true })).toBeVisible();
   await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
-  await main.getByRole('link', { name: '稍後設定，前往總覽', exact: true }).click();
-  await expect(page).toHaveURL(dev.origin + dashboard);
-  await expect(main.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  await expectWizardStep(page, 'workspace');
+  expect(await finishLater(page)).toBe(dev.origin + dashboard);
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant');
-  const home = `/w/${workspace.id}/home`;
-  const advanced = page.getByRole('link', { name: '進階工作台', exact: true });
-  await expect(advanced).toHaveAttribute('href', home);
-  await advanced.click();
+  const home = await openAdvancedWorkbench(page, workspace.id);
   await expect(page).toHaveURL(dev.origin + home);
   await expect(page.getByRole('heading', { name: '今日營運', exact: true })).toBeVisible();
   const securityPath = `/w/${workspace.id}/settings/security`;

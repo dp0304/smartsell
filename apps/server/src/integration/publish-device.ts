@@ -7,10 +7,12 @@ import type { ConnectorServices } from '../modules/account/connector-service.js'
 import { authorizeConnectorAttempt } from '../modules/execution/connector.js';
 import { workspaceServices } from './workspace-services.js';
 import type { CustomerEgress } from './customer-egress.js';
+import type { WorkerDeviceFiles } from '../modules/worker/device-http.js';
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 
-export function mountPublishDevice(app: FastifyInstance, store: BackgroundStore, services: Omit<ConnectorServices, 'authorizeTask'>, egress?: CustomerEgress) {
+export function mountPublishDevice(app: FastifyInstance, store: BackgroundStore, services: Omit<ConnectorServices, 'authorizeTask'>, egress?: CustomerEgress,
+  files: WorkerDeviceFiles = {}) {
   const enrich = workspaceServices([], egress);
   const workspace = async (hint?: string) => hint && uuid.test(hint) ? (await store.workspaces()).find(row => row.id === hint) : undefined;
   const route = async (_id: string, hint?: string) => (await workspace(hint))?.id;
@@ -26,5 +28,5 @@ export function mountPublishDevice(app: FastifyInstance, store: BackgroundStore,
       if (!ws) throw new Problem(401, 'DEVICE_NOT_AUTHORIZED', 'Device workspace unavailable');
       return store.transact(ws, false, (records, scope, identity) => run(enrich(makeContext(records, scope, 'owner'), identity)));
     },
-  }, { deviceOnly: true });
+  }, { deviceOnly: true, files });
 }

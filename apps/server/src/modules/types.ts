@@ -7,6 +7,8 @@ export interface Entity {
 }
 export interface Context {
   tenantId: string; workspaceId: string; actorId: string; role: Role; now: string;
+  /** The workspace name the store knows without an identity record (the local/memory store's setup name). Optional. */
+  workspaceName?: string;
   lockOperationRecords?(): Promise<void>;
   get(module: string, kind: string, id: string): Promise<Entity | undefined>;
   list(module: string, kind: string): Promise<Entity[]>;

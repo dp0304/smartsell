@@ -2,6 +2,7 @@ import { Problem } from '@smartsell/contracts';
 import { anthropicBody, decodeAnthropic, decodeOpenAi, openAiBody, record, reportedModel, type ModelTransport } from '../modules/agent/model-client.js';
 import type { AgentModelServices, ModelDestination, ModelRequest, ModelContext } from '../modules/agent/models.js';
 import { assertEmergencyNotStopped } from '../modules/ops/index.js';
+import { productionSemantics } from '../production.js';
 
 // Model calls can take tens of seconds; the old 5-second limit cut off ordinary completions.
 const modelTimeoutMs = Number(process.env.SMARTSELL_MODEL_TIMEOUT_MS ?? 120_000);
@@ -26,7 +27,7 @@ export function agentModelRuntime(env: NodeJS.ProcessEnv = process.env, transpor
       throw new Error('Invalid Agent model binding');
     }
     const url = new URL(binding.endpoint);
-    const loopback = env.NODE_ENV !== 'production' && env.SMARTSELL_AGENT_MODEL_LOOPBACK === '1' &&
+    const loopback = !productionSemantics(env) && env.SMARTSELL_AGENT_MODEL_LOOPBACK === '1' &&
       url.protocol === 'http:' && ['127.0.0.1', '[::1]'].includes(url.hostname);
     if ((!loopback && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash) throw new Error('Invalid Agent model endpoint');
     const key = `${binding.tenantId}/${binding.workspaceId}/${binding.secretId}`;

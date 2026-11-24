@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test as baseTest } from '@playwright/test';
 import { localDev } from '../../../tests/web-e2e/local-dev.mjs';
+import { expectStepStatus, expectWizardStep, finishLater } from '../../../tests/web-e2e/phase1-shell.mjs';
 
 const test = baseTest.extend({ dev: localDev });
 
@@ -22,9 +23,9 @@ test('default workbench performs real versioned writes and renders all module en
   expect(setup.status()).toBe(201);
   const { data: { workspaces: [{ id: wid }] } } = await setup.json();
   const dashboard = `/app/${wid}`;
-  // Explicit deployment setup also enters the guide for an empty workspace. Leave it
+  // Explicit deployment setup also enters the phase-1 wizard (§2.9) for an empty workspace. Leave it
   // undismissed while exercising the advanced workbench through its direct route.
-  await expect(page.getByRole('heading', { name: '開始設定', exact: true })).toBeVisible();
+  await expectWizardStep(page, 'workspace');
   await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
   await page.goto(`${origin}/w/${wid}/home`);
   await expect(page.getByRole('heading', { name: '今日營運' })).toBeVisible();
@@ -76,12 +77,10 @@ test('default workbench performs real versioned writes and renders all module en
   await page.getByLabel('Username or email').fill(email);
   await page.locator('[name=password]').fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const main = page.getByRole('main');
-  await expect(main.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible();
+  // The workspace is still empty (a brand is not setup), so sign-in reopens the wizard on its first open step.
   await expect(page).toHaveURL(url => url.pathname === `${dashboard}/get-started`);
-  const agentStep = main.getByRole('region', { name: 'Main agent', exact: true });
-  await expect(agentStep.getByText('Step 1 of 2', { exact: true })).toBeVisible();
-  await main.getByRole('link', { name: 'Finish later and go to overview', exact: true }).click();
-  await expect(main.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
-  await expect(page).toHaveURL(origin + dashboard);
+  await expectWizardStep(page, 'workspace', { locale: 'en' });
+  await expectStepStatus(page, 'workspace', 'todo', 'en');
+  // 「稍後再設定」 leaves the wizard for the dashboard index, which is Today in phase 1 (§9.1).
+  expect(await finishLater(page, 'en')).toBe(origin + dashboard);
 });

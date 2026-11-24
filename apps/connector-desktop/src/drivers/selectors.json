@@ -1,0 +1,177 @@
+{
+  "schema": "smartsell.driver-selectors.v1",
+  "version": "2026.11.3",
+  "x": {
+    "steps": {
+      "x.ready": {
+        "primary": [{ "css": "[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]" }],
+        "fallback": [{ "role": "textbox", "name": "^(Post text|帖子文本|貼文文字|What['’]s happening\\?|有什(么|麼)新(鲜|鮮)事)" }]
+      },
+      "x.identity": {
+        "primary": [{ "css": "a[data-testid=\"AppTabBar_Profile_Link\"]", "attr": "href", "pattern": "^/([A-Za-z0-9_]{1,15})$" }],
+        "fallback": [{ "role": "link", "name": "^(Profile|个人资料|個人資料)$", "attr": "href", "pattern": "^/([A-Za-z0-9_]{1,15})$" }]
+      },
+      "x.file_input": {
+        "primary": [{ "css": "[role=\"dialog\"] input[type=\"file\"][data-testid=\"fileInput\"]", "hidden": "allow" }],
+        "fallback": [{ "css": "[role=\"dialog\"] input[type=\"file\"]", "hidden": "allow" }]
+      },
+      "x.attached": {
+        "primary": [{ "css": "[role=\"dialog\"] [data-testid=\"attachments\"] video", "hidden": "allow" }, { "css": "[role=\"dialog\"] [data-testid=\"attachments\"] img[src^=\"blob:\"]", "hidden": "allow" }],
+        "fallback": [{ "role": "button", "name": "Remove media|移除(媒体|媒體)" }]
+      },
+      "x.textbox": {
+        "primary": [{ "css": "[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]" }],
+        "fallback": [{ "role": "textbox", "name": "^(Post text|帖子文本|貼文文字|What['’]s happening\\?|有什(么|麼)新(鲜|鮮)事)" }]
+      },
+      "x.post_button": {
+        "primary": [{ "css": "[role=\"dialog\"] [data-testid=\"tweetButton\"]" }],
+        "fallback": [{ "role": "button", "name": "^(Post|Post all|发帖|發佈|發文|發佈全部)$" }]
+      },
+      "x.toast": {
+        "primary": [{ "css": "[data-testid=\"toast\"] a[href*=\"/status/\"]", "attr": "href", "pattern": "/status/(\\d+)" }],
+        "fallback": [{ "css": "[role=\"alert\"]", "text": "Your post was sent|已发送|已傳送|已發佈" }]
+      },
+      "x.reply_settings": {
+        "primary": [{ "scope": "[role=\"dialog\"]", "role": "button", "name": "can reply|可以回复|可以回覆" }],
+        "fallback": [{ "css": "[role=\"dialog\"] [role=\"button\"]", "text": "can reply|可以回复|可以回覆" }]
+      },
+      "x.reply_menu_item": {
+        "primary": [{ "css": "[data-testid=\"Dropdown\"] [role=\"menuitem\"]" }],
+        "fallback": [{ "role": "menuitem", "name": "\\S" }]
+      },
+      "x.discard": {
+        "primary": [{ "css": "[data-testid=\"confirmationSheetConfirm\"]" }],
+        "fallback": [{ "role": "button", "name": "^(Discard|放弃|捨棄)$" }]
+      },
+      "x.tweet": { "primary": [{ "css": "article[data-testid=\"tweet\"]" }], "fallback": [] },
+      "x.tweet_text": { "primary": [{ "css": "[data-testid=\"tweetText\"]" }], "fallback": [] },
+      "x.tweet_time": { "primary": [{ "css": "time[datetime]", "attr": "datetime" }], "fallback": [] },
+      "x.tweet_link": { "primary": [{ "css": "a[href*=\"/status/\"]", "attr": "href", "pattern": "/status/(\\d+)" }], "fallback": [] },
+      "x.tweet_pinned": { "primary": [{ "css": "[data-testid=\"socialContext\"]", "text": "Pinned|已置顶|已置頂" }], "fallback": [] },
+      "x.tweet_author": { "primary": [{ "css": "[data-testid=\"User-Name\"]" }], "fallback": [] },
+      "x.login_button": { "primary": [{ "css": "[data-testid=\"loginButton\"]" }], "fallback": [] },
+      "x.arkose": { "primary": [{ "css": "[id*=\"arkose\" i]", "hidden": "allow" }], "fallback": [] }
+    },
+    "patterns": {
+      "toast_success": "Your post was sent|已发送|已傳送|已發佈",
+      "upload_url": "media/upload\\.json",
+      "create_tweet_url": "/i/api/graphql/[^/]+/CreateTweet",
+      "risk_text": "temporarily blocked from sending posts|looks like it might be automated|account is suspended|over the daily limit for sending posts|already said that|reached your daily limit",
+      "error_text": "Something went wrong",
+      "login_url": "/i/flow/login|/login(?:$|[/?#])",
+      "flow_url": "/i/flow/",
+      "two_factor_text": "verification code|驗證碼|验证码",
+      "risk_url": "/account/access",
+      "captcha_frame": "arkoselabs\\.com|funcaptcha",
+      "risk_codes": "^(185|187|226|326)$",
+      "reply_option_following": "^(Accounts you follow|People you follow|你关注的账号|你关注的人|你跟隨的帳號|你追蹤的帳號)",
+      "reply_option_verified": "^(Only verified accounts|Verified accounts|仅已认证的账号|已认证的账号|已认证账号|僅限已認證的帳號|已認證的帳號|已認證帳號)",
+      "reply_option_mentioned": "^(Only accounts you mention|Only people you mention|仅你提及的账号|只有你提到的账户|僅限你提及的帳號|只有你提及的帳號)",
+      "reply_state_following": "(Accounts|People) you follow can reply|你关注的(账号|人)可以回复|你(跟隨|追蹤)的帳號可以回覆",
+      "reply_state_verified": "verified accounts can reply|已认证的?账号可以回复|已認證的?帳號可以回覆",
+      "reply_state_mentioned": "(accounts|people) you mention can reply|你提(到|及)的(账户|账号)(才能|可以)回复|你提及的帳號(才能|可以)回覆",
+      "compose_path": "/compose/post",
+      "home_path": "/home"
+    }
+  },
+  "tiktok": {
+    "steps": {
+      "tt.ready": {
+        "primary": [{ "css": "input[type=\"file\"][accept=\"video/*\"]", "hidden": "allow" }, { "role": "button", "name": "^(Select video|选择视频|選擇影片)$" }],
+        "fallback": [{ "css": ".upload-text-container" }]
+      },
+      "tt.legacy_frame": { "primary": [{ "frame": "iframe[data-tt=\"Upload_index_iframe\"]", "css": "input[type=\"file\"]", "hidden": "allow" }], "fallback": [] },
+      "tt.file_input": {
+        "primary": [{ "css": "input[type=\"file\"][accept=\"video/*\"]", "hidden": "allow" }],
+        "fallback": [{ "css": "input[type=\"file\"]", "hidden": "allow" }]
+      },
+      "tt.popup_buttons": {
+        "primary": [
+          { "css": "div.common-modal-footer > button[data-type=\"neutral\"]" },
+          { "scope": "[role=\"dialog\"]", "role": "button", "name": "^(Got it|知道了|Not now|暂不|暫不)$" }
+        ],
+        "fallback": [
+          { "css": "tiktok-cookie-banner button", "text": "Decline optional|拒绝可选|拒絕非必要" },
+          { "role": "button", "name": "^(Decline optional cookies|Decline optional|拒绝可选 ?[Cc]ookie|拒絕非必要 ?[Cc]ookie)$" }
+        ]
+      },
+      "tt.uploaded": {
+        "primary": [{ "css": "div.resolution-label-text" }, { "css": "[data-e2e=\"upload_status_container\"]", "text": "^(Uploaded|已上传|已上傳)" }],
+        "fallback": [{ "css": "[data-e2e=\"upload_status_container\"]", "text": "100%" }]
+      },
+      "tt.upload_error": {
+        "primary": [{ "css": "button[aria-label=\"Select file\"]" }],
+        "fallback": [{ "css": "[data-e2e=\"upload_status_container\"]", "text": "(Upload failed|上传失败|上傳失敗|Couldn['’]t upload)" }]
+      },
+      "tt.caption": {
+        "primary": [{ "css": "div[contenteditable=\"true\"][role=\"combobox\"]" }],
+        "fallback": [{ "css": ".public-DraftEditor-content" }, { "css": "div[data-contents=\"true\"]" }]
+      },
+      "tt.mention_popover": { "primary": [{ "css": ".mention-list-popover" }], "fallback": [] },
+      "tt.visibility": {
+        "primary": [{ "css": "div[data-e2e=\"video_visibility_container\"] button[role=\"combobox\"]" }],
+        "fallback": [{ "role": "combobox", "name": "Who can watch|谁可以看|誰可以觀看" }]
+      },
+      "tt.allow_comment": {
+        "primary": [{ "css": "label.Checkbox__root", "text": "^(Comment|评论|留言)$" }],
+        "fallback": [{ "role": "checkbox", "name": "^(Comment|评论|留言)$" }]
+      },
+      "tt.allow_reuse": {
+        "primary": [{ "css": "label.Checkbox__root", "text": "Reuse of content|内容再利用|內容再利用|Duet|Stitch" }],
+        "fallback": [{ "role": "checkbox", "name": "Reuse of content|内容再利用|內容再利用|Duet|Stitch" }]
+      },
+      "tt.show_more": {
+        "primary": [{ "role": "button", "name": "^(Show more|显示更多|顯示更多)$" }],
+        "fallback": [{ "css": "[data-e2e=\"advanced_settings_container\"] [data-e2e=\"show_more\"]" }]
+      },
+      "tt.disclosure": { "primary": [{ "role": "switch", "name": "Disclose post content|披露(帖子|作品)内容|揭露貼文內容" }], "fallback": [] },
+      "tt.disclosure_your_brand": { "primary": [{ "css": "label.Checkbox__root", "text": "^(Your brand|你的品牌|您的品牌)" }], "fallback": [] },
+      "tt.disclosure_branded": { "primary": [{ "css": "label.Checkbox__root", "text": "^(Branded content|品牌内容|品牌內容)" }], "fallback": [] },
+      "tt.ai_label": { "primary": [{ "role": "switch", "name": "AI-generated content|AI 生成" }], "fallback": [] },
+      "tt.ai_confirm": { "primary": [{ "scope": "[role=\"dialog\"]", "role": "button", "name": "^(Turn on|开启|開啟)$" }], "fallback": [] },
+      "tt.post_button": {
+        "primary": [{ "css": "button[data-e2e=\"post_video_button\"]" }],
+        "fallback": [{ "role": "button", "name": "^(Post|发布|發佈)$" }]
+      },
+      "tt.continue_dialog": { "primary": [{ "css": "[role=\"dialog\"]", "text": "Continue to post|继续发布|繼續發佈" }], "fallback": [] },
+      "tt.post_now": { "primary": [{ "scope": "[role=\"dialog\"]", "role": "button", "name": "^(Post now|立即发布|立即發佈)$" }], "fallback": [] },
+      "tt.discard": { "primary": [{ "role": "button", "name": "^(Discard|放弃|捨棄|Cancel|取消)$" }], "fallback": [] },
+      "tt.discard_confirm": { "primary": [{ "scope": "[role=\"dialog\"]", "role": "button", "name": "^(Discard|放弃|捨棄)$" }], "fallback": [] },
+      "tt.content_row": { "primary": [{ "css": "div[data-tt=\"components_PostTable_Container\"] div[data-tt=\"components_PostInfoCell_Container\"]" }], "fallback": [] },
+      "tt.content_empty": { "primary": [{ "css": "body", "text": "No content yet|No posts yet|You haven['’]t posted|还没有作品|暂无内容|尚無內容|還沒有貼文" }], "fallback": [] },
+      "tt.row_link": { "primary": [{ "css": "a[href*=\"/video/\"]", "attr": "href", "pattern": "/video/(\\d+)" }], "fallback": [] },
+      "tt.row_time": { "primary": [{ "css": "time[datetime]", "attr": "datetime" }], "fallback": [] },
+      "tt.handle": {
+        "primary": [{ "css": "[data-e2e=\"user-unique-id\"]", "pattern": "@?([A-Za-z0-9_.]{2,24})" }],
+        "fallback": [{ "css": "[data-e2e=\"nav-profile\"]", "pattern": "@([A-Za-z0-9_.]{2,24})" }]
+      },
+      "tt.captcha": {
+        "primary": [
+          { "css": "#captcha_container", "hidden": "allow" }, { "css": "#captcha-verify-image", "hidden": "allow" },
+          { "css": ".captcha-verify-container", "hidden": "allow" }, { "css": ".captcha_verify_container", "hidden": "allow" },
+          { "css": ".secsdk-captcha-drag-icon", "hidden": "allow" }, { "css": "#secsdk-captcha-drag-wrapper", "hidden": "allow" }
+        ],
+        "fallback": []
+      }
+    },
+    "patterns": {
+      "upload_path": "/tiktokstudio/upload?from=upload",
+      "settings_path": "/tiktokstudio/settings",
+      "content_path": "/tiktokstudio/content",
+      "user_id": "(?:^|\\n)\\s*(?:TikTok User ID|User ID|Account ID|用户 ID|用戶 ID|帳號 ID)\\s*[:：]?\\s*([0-9]{8,25})(?=\\s*(?:\\n|$))",
+      "success_url": "/tiktokstudio/content",
+      "success_text": "Your video has been uploaded|视频已发布|影片已發佈",
+      "post_api": "/tiktok/web/project/post/v1/",
+      "error_text": "Something went wrong",
+      "risk_text": "Too many attempts|Permission Denied|You['’]ve been logged out|not available in your region|TikTok has discontinued",
+      "restricted_text": "Content may be restricted|Copyright issues detected",
+      "login_url": "/login(?:$|[/?#])",
+      "two_factor_url": "/login/verify",
+      "captcha_frame": "verifycenter/captcha",
+      "privacy_PUBLIC_TO_EVERYONE": "^(Everyone|所有人)$",
+      "privacy_MUTUAL_FOLLOW_FRIENDS": "^(Friends|好友|朋友)$",
+      "privacy_FOLLOWER_OF_CREATOR": "^(Followers|粉丝|粉絲)$",
+      "privacy_SELF_ONLY": "^(Only you|Only me|仅自己|只有你|僅自己)$"
+    }
+  }
+}

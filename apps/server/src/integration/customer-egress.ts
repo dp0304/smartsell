@@ -5,6 +5,7 @@ import { Problem, type Context, type Data } from '@smartsell/contracts';
 import { publicAddress } from '../modules/traffic/probe.js';
 import { requestModel, availableModelPurposes, type AgentModelServices } from '../modules/agent/operations.js';
 import { assertEmergencyNotStopped, type OpsServices } from '../modules/ops/index.js';
+import { productionSemantics } from '../production.js';
 
 interface Destination {
   tenantId: string;
@@ -49,7 +50,8 @@ async function post(url: URL, headers: Record<string, string>, body: string) {
 }
 
 export function customerEgress(env: NodeJS.ProcessEnv = process.env) {
-  const allowLoopback = env.NODE_ENV !== 'production' && env.SMARTSELL_WEBHOOK_LOOPBACK === '1';
+  // Same rule as config.allowLoopbackWebhook: never with production semantics (a hub always has them).
+  const allowLoopback = !productionSemantics(env) && env.SMARTSELL_WEBHOOK_LOOPBACK === '1';
   const raw: unknown = env.SMARTSELL_CUSTOMER_EGRESS ? JSON.parse(env.SMARTSELL_CUSTOMER_EGRESS) : [];
   if (!Array.isArray(raw)) throw new Error('Invalid SMARTSELL_CUSTOMER_EGRESS');
   const destinations = new Map<string, Destination>();

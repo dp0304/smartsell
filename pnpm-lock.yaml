@@ -39,6 +39,12 @@ importers:
         specifier: 6.8.11
         version: 6.8.11
     devDependencies:
+      '@smartsell/agent-relay':
+        specifier: workspace:*
+        version: link:../../packages/agent-relay
+      '@smartsell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
@@ -151,6 +157,8 @@ importers:
         version: 7.3.8(@types/node@24.19.2)(jiti@2.7.0)(tsx@4.23.15)
 
   packages/adapters: {}
+
+  packages/agent-relay: {}
 
   packages/connector-tasks: {}
 

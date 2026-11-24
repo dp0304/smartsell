@@ -187,6 +187,8 @@
 .cal-drawer-agent { display: grid; justify-items: start; gap: 8px; padding: 12px; border: 1px dashed var(--line); border-radius: 12px; background: var(--surface-inset); }
 .cal-drawer-agent p { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; }
 .cal-drawer-agent blockquote { justify-self: stretch; margin: 0; padding: 8px 10px; overflow-wrap: anywhere; border-inline-start: 3px solid var(--focus-ring); border-radius: 8px; background: var(--surface-input); }
+.cal-drawer-post { display: grid; justify-items: stretch; gap: 10px; }
+.cal-drawer-post > .vs-btn { justify-self: start; }
 .cal-drawer-source { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
 .cal-drawer-source code { margin-inline-start: 6px; font-size: 11px; user-select: all; }
 

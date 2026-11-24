@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ActivityList, CopyButton, StatusChip, formatDateTime, relativeTime, type ActivityItem, type Tuple } from '@smartsell/ui';
 import { ProblemNotice } from '../../api';
 import { copy, fill } from '../copy';
@@ -8,6 +8,8 @@ import { connectionState, jobBody } from '../data/logic';
 import type { AgentConnection, AgentEnrollment, AgentJob, CreatedConnection } from '../data/types';
 import { Loaded, PageHeader, Section, resourcePath, useFilters, useText } from '../parts';
 import { McpToolCalls } from './McpToolCalls';
+import { AgentConnectWays } from './setup-hub';
+import { useShowMoreModules } from '../../preferences';
 import { SetupAgent } from './setup-agent';
 import { canSetUp } from './setup-data';
 import { ZhihuLoginIncidents } from './zhihu-login-incidents';
@@ -177,18 +179,26 @@ function NativeConnect() {
 
 export function AgentPage() {
   const { l } = useText();
+  const [params, setParams] = useSearchParams();
+  const more = useShowMoreModules();
+  const developer = params.get('tab') === 'developer';
   return <>
-    <PageHeader title={l(copy.agent.title)} subtitle={l(copy.agent.subtitle)} />
-    <div className="vs-columns">
-      <Section title={l(copy.agent.connect)}>
-        <NativeConnect />
-        <details><summary>{l(copy.agent.clientOther)}</summary><AgentConnect /></details>
+    <PageHeader title={l(copy.agent.title)} subtitle={l(['在筆電連接 Codex 或 Claude Code；Agent 透過 MCP 排程貼文，你在這裡看連線與它做了什麼。', 'Connect Codex or Claude Code on your laptop; the Agent schedules posts over MCP and you see its connections and activity here.'])}>
+      <div className="vs-filter-row hub-tabs" role="tablist" aria-label={l(copy.agent.title)}>
+        <button type="button" role="tab" aria-selected={!developer} aria-pressed={!developer} onClick={() => setParams({}, { replace: true })}>{l(['連線', 'Connections'])}</button>
+        <button type="button" role="tab" aria-selected={developer} aria-pressed={developer} onClick={() => setParams({ tab: 'developer' }, { replace: true })}>{l(['開發者', 'Developer'])}</button>
+      </div>
+    </PageHeader>
+    {developer ? <McpToolCalls /> : <div className="vs-columns">
+      <Section title={l(copy.agent.connect)} className="vs-span-2">
+        <AgentConnectWays />
+        <details className="hub-legacy"><summary>{l(['進階：舊的接入方式', 'Advanced: previous setup methods'])}</summary><NativeConnect />
+          <details><summary>{l(copy.agent.clientOther)}</summary><AgentConnect /></details></details>
       </Section>
       <Section title={l(copy.agent.connections)}><Connections /></Section>
-      <Section title={l(copy.agent.delegate)}><p className="muted"><small>{l(copy.agent.delegateHint)}</small></p><Delegate /><h3 className="vs-subhead">{l(copy.agent.openJobs)}</h3><OpenJobs /></Section>
-      <ZhihuLoginIncidents />
       <Section title={l(copy.agent.activity)}><Activity /></Section>
-      <McpToolCalls />
-    </div>
+      {more && <Section title={l(copy.agent.delegate)}><p className="muted"><small>{l(copy.agent.delegateHint)}</small></p><Delegate /><h3 className="vs-subhead">{l(copy.agent.openJobs)}</h3><OpenJobs /></Section>}
+      {more && <ZhihuLoginIncidents />}
+    </div>}
   </>;
 }

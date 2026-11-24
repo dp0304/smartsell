@@ -43,6 +43,8 @@ export function OverdueTag({ event, today, timeZone }: { event: CalendarEvent; t
 export function NeedsMark({ event, base, compact = false }: { event: CalendarEvent; base?: string; compact?: boolean }) {
   const { l } = useText();
   if (!event.needs_human) return null;
+  // A phase 1 post's status chip already says it (待你核准, 要你處理); the mark would repeat it.
+  if (event.kind === 'publish' && (event as CalendarEvent & { post_id?: string }).post_id && !compact) return null;
   const label = l(needsText[event.needs_human] ?? t.needsMarker);
   const body = <><Glyph name="warning" size={12} />{compact ? <span className="vs-sr">{label}</span> : label}</>;
   if (base) return <RouterLink to={decisionHref(base, event)} className="cal-needs" title={label}>{body}</RouterLink>;

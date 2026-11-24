@@ -1,4 +1,5 @@
 import { type Context, type Data, type Input, type Row } from '@smartsell/contracts';
+import { followWorkspaceZone } from '../account/channel-settings.js';
 import { assertUsageAllowed, recordUsage } from '../ops/metering.js';
 import { tenantScope } from '../ops/support.js';
 import type { WorkspaceReadContext } from './search.js';
@@ -24,7 +25,10 @@ export function updateWorkspace(ctx: Context, { body, expectedVersion }: Input) 
   const previous = ctx.list('workspace')[0];
   if (previous && expectedVersion !== previous.version) conflict('Workspace settings version has changed');
   const patch = settings(body);
+  const fromZone = String(previous?.default_timezone ?? workspaceDefaults.default_timezone);
   const row = previous ? ctx.update('workspace', previous.id, patch) : ctx.create('workspace', { ...workspaceDefaults, ...patch });
+  // E42: hub channels still on the old workspace zone follow the new one, in this transaction.
+  if (typeof patch.default_timezone === 'string') followWorkspaceZone(ctx, fromZone, patch.default_timezone);
   ctx.emit('workspace.workspace.updated', { workspace_id: ctx.workspaceId });
   return { ...row, id: ctx.workspaceId };
 }

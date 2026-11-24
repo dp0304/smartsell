@@ -13,6 +13,8 @@ import { PauseSection } from './settings-pause';
 import { text } from './settings-text';
 import { setupText } from './setup-copy';
 import { canSetUp } from './setup-data';
+import { setShowMoreModules, useShowMoreModules } from '../../preferences';
+import { hub } from '../hub-copy';
 import './settings.css';
 
 interface ContextView { role?: string; timezone?: string | null; brands?: Row[]; markets?: Row[] }
@@ -52,14 +54,14 @@ function Summary({ context, accounts, pauses, connections }: {
 
 function BrandMarkets({ brand }: { brand: Row }) {
   const { l, lang } = useText();
-  const { base } = useViewContext();
+  const { ws } = useViewContext();
   const id = String(brand.id);
   const read = useView<Row[]>(`/brands/${encodeURIComponent(id)}/markets`);
   const brandName = String(brand.name ?? brand.id);
   return <Loaded read={read}>{items => {
     const markets = rows(items).sort((a, b) => Number(b.id === brand.default_market_id) - Number(a.id === brand.default_market_id) || Number(a.status !== 'active') - Number(b.status !== 'active'));
     if (!markets.length) return brand.status === 'archived' ? <p className="muted"><small>—</small></p>
-      : <AgentPrompt title={fill(l(text.marketsEmpty), { brand: brandName })} prompt={fill(l(text.marketsPrompt), { brand: brandName })} agentHref={`${base}/agent`} />;
+      : <p className="muted"><small>{fill(l(text.marketsEmpty), { brand: brandName })} · <Link to={`/w/${encodeURIComponent(ws)}/workspace`}>{l(copy.nav.advanced)}</Link></small></p>;
     return <ul className="vs-list st-markets">{markets.map(market => <li key={String(market.id)}>
       <span className="vs-grow"><span className="st-market-name">{String(market.name ?? market.country_code ?? market.id)}</span>
         {market.id === brand.default_market_id && <span className="vs-tag">{l(text.defaultMarket)}</span>}<br />
@@ -72,21 +74,21 @@ function BrandMarkets({ brand }: { brand: Row }) {
 
 function BrandsSection({ brandId }: { brandId?: string }) {
   const { l } = useText();
-  const { base } = useViewContext();
+  const { ws } = useViewContext();
   const read = useView<Row[]>('/brands');
   return <Section title={<span id="st-brands">{l(copy.pages.brands)}</span>}>
     <p className="muted"><small>{l(text.brandsHint)}</small></p>
     <Loaded read={read}>{items => {
       const all = rows(items).sort((a, b) => Number(a.status === 'archived') - Number(b.status === 'archived'));
       const brands = brandId ? all.filter(row => row.id === brandId) : all;
-      if (!brands.length) return <AgentPrompt title={l(copy.pages.noBrands)} prompt={l(copy.pages.brandsPrompt)} agentHref={`${base}/agent`} />;
+      if (!brands.length) return <p className="muted">{l(copy.pages.noBrands)} · <Link to={`/w/${encodeURIComponent(ws)}/workspace`}>{l(copy.nav.advanced)}</Link></p>;
       return <>
         <ul className="st-brands">{brands.map(brand => <li key={String(brand.id)}>
           <div className="vs-row-head"><h3>{String(brand.name ?? brand.id)}</h3>{brand.status === 'archived' ? <StatusChip status="archived" label={text.archived} /> : brand.status && brand.status !== 'active' ? <StatusChip status={String(brand.status)} /> : null}</div>
           <BrandMarkets brand={brand} />
         </li>)}</ul>
         {read.nextCursor && <p className="muted"><small>{l(copy.common.more)}</small></p>}
-        <details className="st-more"><summary>{l(text.addMoreTitle)}</summary><AgentPrompt title={l(text.addMoreDetail)} prompt={l(text.brandsMore)} agentHref={`${base}/agent`} /></details>
+        <details className="st-more"><summary>{l(text.addMoreTitle)}</summary><p className="muted"><small>{l(text.addMoreDetail)}</small> <Link to={`/w/${encodeURIComponent(ws)}/workspace`}>{l(copy.nav.advanced)}</Link></p></details>
       </>;
     }}</Loaded>
   </Section>;
@@ -156,6 +158,26 @@ function LanguageSection() {
   </Section>;
 }
 
+/** 介面 (§9.1): the hidden modules come back into the navigation for this browser. */
+function InterfaceSection() {
+  const { l } = useText();
+  const more = useShowMoreModules();
+  return <Section title={<span id="st-interface">{l(['介面', 'Interface'])}</span>}>
+    <label className="hub-check"><input type="checkbox" checked={more} onChange={event => setShowMoreModules(event.target.checked)} />
+      {l(['顯示其他模組（商品、推廣計劃、社媒成效、投放、待你決定、舊總覽）', 'Show other modules (products, plans, social, ads, decisions, old overview)'])}</label>
+    <p className="muted"><small>{l(['第 1 階段只顯示發文的核心頁面；其他模組的頁面仍在，勾選後出現在左側選單。', 'Phase 1 shows only the posting pages; the other modules still exist and appear in the menu when this is on.'])}</small></p>
+  </Section>;
+}
+
+function NotificationsSection() {
+  const { l } = useText();
+  const { base } = useViewContext();
+  return <Section title={<span id="st-notifications">{l(hub.nav.notifications)}</span>}>
+    <p>{l(hub.push.subtitle)}</p>
+    <div className="vs-actions"><Link className="vs-btn" to={`${base}/settings/notifications`}>{l(hub.push.title)}</Link><Link className="vs-btn" to={`${base}/notifications`}>{l(hub.alerts.title)}</Link></div>
+  </Section>;
+}
+
 function AdvancedSection() {
   const { l } = useText();
   const { ws } = useViewContext();
@@ -198,12 +220,14 @@ export function SettingsPage() {
       <Summary context={context} accounts={accounts} pauses={pauses} connections={connections} />
       <PauseSection pauses={pauses} brands={brandRows} accounts={accountRows} role={role} timeZone={timeZone} />
       <BrandsSection brandId={brandId} />
-      {canSetUp(workspace.role) && <div className="vs-actions"><Link className="vs-btn" to={`${base}/settings/worker-accounts`}>{l(['社群帳號與固定 Worker', 'Social accounts and dedicated workers'])}</Link></div>}
+      {canSetUp(workspace.role) && <div className="vs-actions"><Link className="vs-btn" to={`${base}/channels`}>{l(['發文帳號與機器', 'Posting channels and machines'])}</Link></div>}
       <AccountsSection accounts={accounts} brands={brandRows} brandsLoaded={Array.isArray(brands.value)} markets={rows(context.value?.markets)} role={role} brandId={brandId}
         workspaceZone={context.value?.timezone} pausedAccounts={paused} />
       <MembersSection brandNames={brandNames} role={role} />
       <AgentSection connections={connections} />
+      <NotificationsSection />
       <LanguageSection />
+      <InterfaceSection />
       <AdvancedSection />
     </div>
   </>;

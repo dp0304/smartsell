@@ -1,4 +1,6 @@
-import { ADMIN, READ, type Context, type Input, type Operation, type Row } from '@smartsell/contracts';
+import { ADMIN, READ, type Context, type EffectiveMode, type Input, type Operation, type PostStatus, type RouteKind, type Row } from '@smartsell/contracts';
+import { excerpt, caption, isHubProvider } from './hub-model.js';
+import { postSummaryOf } from './posts.js';
 import { operations as adsOperations } from '../../ads/workspace-operations.js';
 import { addDays, dayStart, localDay } from '../../analytics/shared.js';
 import { COMMERCE_WRITE } from '../../commerce/store-operations.js';
@@ -57,11 +59,14 @@ const byId = (rows: Row[]) => new Map(rows.map(row => [row.id, row]));
 
 export const calendarKinds = ['publish', 'post', 'plan', 'milestone', 'production_due', 'deliverable_due', 'live', 'ad_flight', 'promotion'] as const;
 export type CalendarKind = typeof calendarKinds[number];
-type NeedsHuman = 'approval' | 'late_decision' | 'outcome_unknown' | null;
+type NeedsHuman = 'approval' | 'late_decision' | 'outcome_unknown' | 'needs_owner' | 'missed' | null;
 export interface CalendarEvent {
   id: string; kind: CalendarKind; starts_at: string; ends_at: string | null; all_day: boolean; title: string; status: string | null;
   platform: string | null; brand_id: string | null; campaign_id: string | null; social_account_id: string | null;
   resource: { type: string; id: string }; needs_human: NeedsHuman; permalink: string | null;
+  /** Phase 1 publish events on hub channels (§9.7): the same post status, route and links as the post page. */
+  post_id?: string; post_status?: PostStatus; channel?: { id: string; provider: string; handle: string | null };
+  machine?: { id: string; name: string; online: boolean } | null; route_kind?: RouteKind; mode?: EffectiveMode; url?: string | null;
 }
 export interface CalendarOptions { period: ViewPeriod; kinds?: readonly CalendarKind[]; brand_id?: string; campaign_id?: string; input?: Input }
 
@@ -145,6 +150,22 @@ export function calendarEvents(ctx: Context, options: CalendarOptions): Calendar
         const approval = target.plan_status === 'awaiting_approval' && OPEN_APPROVAL.includes(String(approvals.get(String(target.approval_request_id))?.status));
         const account = accounts.get(String(target.social_account_id));
         shownTargets.add(target.id);
+        if (isHubProvider(account?.provider) && ctx.list('channel_settings').some(row => row.social_account_id === account!.id)) {
+          // Phase 1 posts (hub channels with channel_settings, §3.3): one derivation for status and route (§9.7); the title names
+          // the account and the caption (H05). Older accounts without channel settings keep the legacy event below.
+          const post = postSummaryOf(ctx, target);
+          const words = excerpt(caption(ctx, target).replace(/\s+/g, ' ').trim(), 40);
+          add('publish', 'publish_target', target.id, start, {
+            all_day: manualDate, title: `${post.channel.label}${words ? ` · ${words}` : ''}`, status: post.status, platform: platformName(account?.provider),
+            brand_id: text(target.brand_id), campaign_id: text(target.campaign_id), social_account_id: text(target.social_account_id), permalink: post.url,
+            needs_human: post.status === 'awaiting_approval' ? 'approval' : post.status === 'unknown' ? 'outcome_unknown' : post.status === 'needs_owner' ? 'needs_owner'
+              : post.status === 'missed' ? 'missed' : null,
+            post_id: post.post_id, post_status: post.status, channel: { id: post.channel.id, provider: post.channel.provider, handle: post.channel.handle },
+            machine: post.machine ? { id: post.machine.id, name: post.machine.name, online: post.machine.online } : null,
+            route_kind: post.route_kind, mode: post.mode, url: post.url,
+          });
+          continue;
+        }
         add('publish', 'publish_target', target.id, start, {
           all_day: manualDate, title: text(target.title) ?? text(items.get(String(target.content_item_id))?.title) ?? text(account?.display_name) ?? 'Publication',
           status, platform: platformName(account?.platform ?? account?.provider), brand_id: text(target.brand_id), campaign_id: text(target.campaign_id),

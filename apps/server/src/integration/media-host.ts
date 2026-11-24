@@ -3,7 +3,8 @@ import { Problem, type Context, type Data, type Row } from '@smartsell/contracts
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Config } from '../config.js';
 import { makeContext } from '../context.js';
-import { createMediaFiles, mediaStorageFromEnv, registerMediaFiles, requireMediaFile } from '../extensions/media-files.js';
+import { createMediaFiles, mediaStorageFromConfig, registerMediaFiles, requireMediaFile } from '../extensions/media-files.js';
+import { expireAgentUploads } from './agent-uploads.js';
 import { originGuard } from '../identity.js';
 import { getRetentionPolicy, scheduledAssetReference } from '../modules/ops/retention.js';
 import { tenantScope, type OpsContext } from '../modules/ops/support.js';
@@ -58,7 +59,9 @@ export function mediaFor(ctx: Context): Media {
 
 export function createMediaHost(config: Config) {
   const media = createMediaFiles({
-    storage: mediaStorageFromEnv(),
+    // The media directory follows the data file (§6.7) and the upload ceiling follows the mode (§6.5).
+    storage: mediaStorageFromConfig(config),
+    maxBytes: config.maxUploadBytes,
     signingKey: createHmac('sha256', config.secret).update('smartsell/workspace-media/v1').digest(),
     policies: {
       retention(ctx, dataClass) {
@@ -98,8 +101,19 @@ export function createMediaHost(config: Config) {
   // Agents upload the media they attach to content; deleting files and retention stay with people and operators.
   const agentFileOperations = new Set(['file_begin_upload', 'file_complete_upload', 'file_get']);
   const operations = media.operations.map(op => ({ ...op, module: 'files', ...(!agentFileOperations.has(op.name) && { mcp: false }) }));
-  // Physical deletion runs in a separate transaction after a tombstone commits.
-  const schedule: Schedule = { id: 'files.cleanup', run: ctx => media.cleanup(ctx) };
+  // Physical deletion runs in a separate transaction after a tombstone commits. The same schedule fails agent upload
+  // sessions that passed their 24 h deadline (§6.4 step 4); it gates itself to once an hour per workspace and removes
+  // staging directories only after the transaction (no file IO inside it).
+  const expiredAt = new Map<string, number>();
+  const schedule: Schedule = { id: 'files.cleanup', async run(ctx) {
+    const result = await media.cleanup(ctx);
+    const last = expiredAt.get(ctx.workspaceId) ?? 0;
+    if (Date.parse(ctx.now) - last >= 3_600_000) {
+      expiredAt.set(ctx.workspaceId, Date.parse(ctx.now));
+      expireAgentUploads(ctx, { mediaDirectory: config.mediaDirectory });
+    }
+    return result;
+  } };
   return { media, operations, bind, bindSubscriber, schedule };
 }
 

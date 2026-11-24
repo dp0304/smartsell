@@ -94,6 +94,9 @@ async function fixture(t: TestContext, database?: string) {
     PATH: process.env.PATH, NODE_ENV: 'test', HOST: '127.0.0.1', ROLE: 'all', SETUP_TOKEN: setupToken,
     APP_SECRET: fixtureSecret(), SMARTSELL_DATA_FILE: join(dir, 'state.sqlite'), MEDIA_DIRECTORY: join(dir, 'media'),
     MCP_AUDIT_FIXTURE: '1', ...(database && { DATABASE_URL: database }),
+    // Agent connections are hub_v1 (phase1-design §7.4): the legacy Operation tools this fixture drives stay callable but are
+    // listed only with the debugging switch.
+    SMARTSELL_MCP_LIST_LEGACY: '1',
   };
   let child: ChildProcess | undefined;
   let origin = '';

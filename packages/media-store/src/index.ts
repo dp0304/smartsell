@@ -12,13 +12,22 @@ export * from './storage.js';
 export * from './s3.js';
 export * from './probe.js';
 
+/** Default upload ceiling outside the hub; hosts pass their own via createMediaFiles({ maxBytes }) (§6.5). */
 export const MAX_BYTES = 512 * 1024 * 1024;
+/** Hard ceiling for any configured limit (SMARTSELL_MAX_UPLOAD_BYTES, §6.8). */
+export const MAX_UPLOAD_LIMIT = 4 * 1024 * 1024 * 1024;
 export const INLINE_BYTES = 512 * 1024;
 let snapshots = 0;
 
+/** Copy deadline for a snapshot: max(120 s, 30 s per 100 MB) (§6.5). */
+export const snapshotTimeoutMs = (size: number) => Math.max(120_000, Math.ceil(Math.max(0, size) / 100_000_000 * 30_000));
+
+export interface SnapshotOptions { maxBytes?: number }
+
 /** Check length and digest on the same private snapshot used for probing and publishing. */
-export async function withSnapshot<T>(source: Readable, size: number, digest: string, use: (path: string) => Promise<T>) {
-  if (!Number.isSafeInteger(size) || size < 1 || size > MAX_BYTES || !/^[a-f0-9]{64}$/.test(digest)) {
+export async function withSnapshot<T>(source: Readable, size: number, digest: string, use: (path: string) => Promise<T>, options: SnapshotOptions = {}) {
+  const maxBytes = Math.min(options.maxBytes ?? MAX_BYTES, MAX_UPLOAD_LIMIT);
+  if (!Number.isSafeInteger(size) || size < 1 || size > maxBytes || !/^[a-f0-9]{64}$/.test(digest)) {
     source.destroy();
     throw new InvalidMedia('Invalid object size or checksum');
   }
@@ -39,7 +48,7 @@ export async function withSnapshot<T>(source: Readable, size: number, digest: st
       hash.update(chunk);
       callback(null, chunk);
     } });
-    await pipeline(source, check, createWriteStream(path, { flags: 'wx', mode: 0o600 }), { signal: AbortSignal.timeout(120_000) });
+    await pipeline(source, check, createWriteStream(path, { flags: 'wx', mode: 0o600 }), { signal: AbortSignal.timeout(snapshotTimeoutMs(size)) });
     if (count !== size || hash.digest('hex') !== digest) throw new InvalidMedia('File size or SHA-256 does not match');
     return await use(path);
   } finally {

@@ -2,8 +2,11 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto
 import { Readable } from 'node:stream';
 import { ADMIN, Problem, READ, WRITE, type Context, type Data, type Operation, type Row } from '@smartsell/contracts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { canPreview, INLINE_BYTES, InvalidMedia, localStorage, MAX_BYTES, mediaTypes, MediaUnavailable, ObjectMissing,
-  probeMedia, s3Storage, withSnapshot, type ByteRange, type Probe, type Storage } from '../../../../packages/media-store/src/index.js';
+import { open as openFile } from 'node:fs/promises';
+import { canPreview, INLINE_BYTES, InvalidMedia, localStorage, MAX_BYTES, MAX_UPLOAD_LIMIT, mediaTypes, MediaToolBusy, MediaToolMissing,
+  MediaUnavailable, ObjectMissing, probeMedia, probeTimeoutMs, s3Storage, sniffMime, withSnapshot,
+  type ByteRange, type MediaMetadata, type Probe, type Storage } from '../../../../packages/media-store/src/index.js';
+import type { Config } from '../config.js';
 
 const FILE = 'file_object';
 const reportExportPurpose = 'report_export';
@@ -94,10 +97,13 @@ export function attachMediaEvidence(ctx: Context, id: string, parent: { kind: st
 
 const retentionClass = (row: Row) => ({ asset: 'asset_file', evidence: 'evidence', export: 'export_file', report_export: 'export_file' })[String(row.purpose)] ?? String(row.purpose);
 
-export function createMediaFiles({ storage, signingKey, probe = probeMedia, scan, policies = {}, workspacePath = '/api/v1/workspaces' }:
+export function createMediaFiles({ storage, signingKey, probe = probeMedia, scan, policies = {}, workspacePath = '/api/v1/workspaces', maxBytes = MAX_BYTES }:
 { storage: Storage; signingKey: string | Buffer; probe?: Probe; scan?: (path: string) => Promise<'clean' | 'infected'>;
-  policies?: MediaPolicies; workspacePath?: string }) {
+  policies?: MediaPolicies; workspacePath?: string;
+  /** Upload ceiling for this host (config.maxUploadBytes, §6.5); at most MAX_UPLOAD_LIMIT. */
+  maxBytes?: number }) {
   if (Buffer.byteLength(signingKey) < 32) throw new Error('Media signing key must be at least 32 bytes');
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_UPLOAD_LIMIT) throw new Error('Invalid media upload limit');
   const workspaceUrl = (ctx: Context) => `${workspacePath}/${encodeURIComponent(ctx.workspaceId)}/files`;
   const policyFor = (ctx: Context, row: Row) => policies.retention?.(ctx, retentionClass(row)) ??
     ctx.list('retention_policy').find(item => item.data_class === retentionClass(row));
@@ -131,7 +137,7 @@ export function createMediaFiles({ storage, signingKey, probe = probeMedia, scan
     if (!WRITE.includes(ctx.role)) throw denied();
     const { purpose = 'asset', mime_type, size_bytes, sha256, original_filename, retention_until } = input;
     if (!(purposes as readonly unknown[]).includes(purpose) || typeof mime_type !== 'string' || !mediaTypes.includes(mime_type)) throw invalid('Unsupported purpose or MIME type');
-    if (typeof size_bytes !== 'number' || !Number.isSafeInteger(size_bytes) || size_bytes < 1 || size_bytes > MAX_BYTES) throw invalid(`size_bytes must be between 1 and ${MAX_BYTES}`);
+    if (typeof size_bytes !== 'number' || !Number.isSafeInteger(size_bytes) || size_bytes < 1 || size_bytes > maxBytes) throw invalid(`size_bytes must be between 1 and ${maxBytes}`);
     if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(sha256)) throw invalid('A hex SHA-256 is required');
     if (original_filename !== undefined && (typeof original_filename !== 'string' || !original_filename.trim() ||
       Buffer.byteLength(original_filename) > 255 || /[\p{Cc}\p{Cf}\\/]/u.test(original_filename) || Buffer.from(original_filename).toString() !== original_filename)) throw invalid('Invalid filename');
@@ -167,7 +173,7 @@ export function createMediaFiles({ storage, signingKey, probe = probeMedia, scan
     }
   }
   function snapshot<T>(source: Readable, row: Row, use: (path: string) => Promise<T>) {
-    return storageCall(() => withSnapshot(source, Number(row.size_bytes), String(row.sha256), use));
+    return storageCall(() => withSnapshot(source, Number(row.size_bytes), String(row.sha256), use, { maxBytes }));
   }
   async function stage(ctx: Context, id: string, source: Readable, length?: number) {
     const row = upload(ctx, id);
@@ -312,9 +318,9 @@ export function createMediaFiles({ storage, signingKey, probe = probeMedia, scan
       let stored;
       try { stored = await storage.read(objectKey); }
       catch (error) { if (!(error instanceof ObjectMissing)) throw error; }
-      if (stored) await withSnapshot(stored.stream, bytes.length, row.sha256, async () => undefined);
+      if (stored) await withSnapshot(stored.stream, bytes.length, row.sha256, async () => undefined, { maxBytes });
       else await withSnapshot(Readable.from([bytes]), bytes.length, row.sha256,
-        path => storage.write(objectKey, { path, size: bytes.length, sha256: row.sha256, mime }));
+        path => storage.write(objectKey, { path, size: bytes.length, sha256: row.sha256, mime }), { maxBytes });
     });
     const file = ctx.create(FILE, row);
     usage(ctx, file, 1);
@@ -372,8 +378,12 @@ export function createMediaFiles({ storage, signingKey, probe = probeMedia, scan
     operation('POST', '/files/retention/purge', 'file_retention_purge', ADMIN, 'Tombstone reviewed files after rechecking retention and references', (ctx, { body }) => purge(ctx, body.files)),
     operation('POST', '/files/cleanup', 'file_cleanup', ADMIN, 'Retry expired staging and tombstone cleanup', ctx => cleanup(ctx)),
   ];
-  return { operations, begin, stage, complete, retentionCandidates, purge, purgeReviewed, cleanup, download, read, withMediaSource, workspacePath, storeReportExport, discardReportExport, readReportExport };
+  return { operations, begin, stage, complete, retentionCandidates, purge, purgeReviewed, cleanup, download, read, withMediaSource, workspacePath,
+    storeReportExport, discardReportExport, readReportExport, storage, maxBytes };
 }
+
+/** Parse a single `Range: bytes=…` header against an object size; throws 416 when unsatisfiable. */
+export function parseByteRange(header: string | undefined, size: number): ByteRange | undefined { return parseRange(header, size); }
 
 function parseRange(header: string | undefined, size: number): ByteRange | undefined {
   if (header === undefined) return;
@@ -386,7 +396,7 @@ function parseRange(header: string | undefined, size: number): ByteRange | undef
   return { start, end };
 }
 
-type MediaFiles = ReturnType<typeof createMediaFiles>;
+export type MediaFiles = ReturnType<typeof createMediaFiles>;
 export interface MediaHttpServices {
   /** Authenticate and resolve workspace membership on every request. For write=true enforce CSRF and serialize writes. */
   workspace<T>(request: FastifyRequest, workspaceId: string, write: boolean, run: (ctx: Context) => Promise<T>): Promise<T>;
@@ -428,7 +438,7 @@ export function registerMediaFiles(app: FastifyInstance, media: MediaFiles, serv
     router.put<{ Params: Params; Body: Readable }>(`${media.workspacePath}/:ws/files/uploads/:id/bytes`, async request => {
       const length = request.headers['content-length'];
       if (typeof length !== 'string' || !/^\d{1,10}$/.test(length)) throw new Problem(411, 'LENGTH_REQUIRED', 'Content-Length is required');
-      if (Number(length) > MAX_BYTES) throw new Problem(413, 'FILE_TOO_LARGE', 'File exceeds upload limit');
+      if (Number(length) > media.maxBytes) throw new Problem(413, 'FILE_TOO_LARGE', 'File exceeds upload limit');
       const contentType = request.headers['content-type']?.split(';')[0].trim().toLowerCase();
       if (contentType !== 'application/octet-stream' || !(request.body instanceof Readable) || request.headers['content-encoding']) {
         throw new Problem(415, 'BINARY_REQUIRED', 'Expected unencoded application/octet-stream');
@@ -452,9 +462,148 @@ export function registerMediaFiles(app: FastifyInstance, media: MediaFiles, serv
   });
 }
 
+/**
+ * @deprecated Hosts call mediaStorageFromConfig(config) (§6.7): the directory follows the data file in every mode.
+ * Kept only for the unmounted modules/files entry; it no longer branches on the Node environment (hub audit, §2.2).
+ */
 export function mediaStorageFromEnv(env: NodeJS.ProcessEnv = process.env) {
+  return mediaStorageFromConfig({ mediaDirectory: env.MEDIA_DIRECTORY ?? '.local/media' }, env);
+}
+
+/** Local directory or S3 bucket for media objects; the directory follows the data file (§6.7), never process.cwd(). */
+export function mediaStorageFromConfig(config: Pick<Config, 'mediaDirectory'>, env: NodeJS.ProcessEnv = process.env): Storage {
   if (env.MEDIA_S3_ENDPOINT) return s3Storage({ endpoint: env.MEDIA_S3_ENDPOINT, publicEndpoint: env.MEDIA_S3_PUBLIC_ENDPOINT,
     bucket: env.MEDIA_S3_BUCKET ?? '', region: env.MEDIA_S3_REGION, accessKey: env.MEDIA_S3_ACCESS_KEY ?? '', secretKey: env.MEDIA_S3_SECRET_KEY ?? '' });
-  if (!env.MEDIA_DIRECTORY && env.NODE_ENV === 'production') throw new Error('Media storage must be configured');
-  return localStorage(env.MEDIA_DIRECTORY ?? '.local/media');
+  if (!config.mediaDirectory) throw new Error('Media storage must be configured');
+  return localStorage(config.mediaDirectory);
+}
+
+// ---------- Assembled agent uploads (§6.4 step 3, C5): IO outside the transaction, a short write inside ----------
+
+/** Normalized video/image metadata stored on asset_version.meta and file_object.meta (§3.8). */
+export interface MediaMeta { duration_ms: number | null; width: number | null; height: number | null; codec: string | null; has_audio: boolean | null }
+/** What prepareAssembledObject wrote to storage; recordAssembledObject links it in one short transaction. */
+export interface PreparedObject {
+  tenant_id: string; workspace_id: string; bucket: string; storage_key: string; object_nonce: string;
+  byte_size: number; sha256: string; filename: string;
+  /** MIME detected from the stored bytes; replaces the declared value on asset_version (§3.8). */
+  mime: string; declared_mime: string;
+  meta: MediaMeta | null;
+  /** ok: ffprobe read the streams; unavailable: no ffprobe on the hub (§6.5); invalid: ffprobe could not read the container. */
+  probe: 'ok' | 'unavailable' | 'invalid';
+}
+export interface PrepareOptions {
+  probe?: Probe;
+  /** How long to wait for a free media process slot before recording the object without metadata. */
+  busyRetryMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+function mediaMeta(source: MediaMetadata): MediaMeta {
+  const duration = typeof source.duration_seconds === 'number' ? Math.round(source.duration_seconds * 1000) : null;
+  return { duration_ms: duration, width: source.width ?? null, height: source.height ?? null,
+    codec: source.video_codec ?? source.audio_codec ?? null,
+    has_audio: source.video_codec || source.audio_codec ? typeof source.audio_codec === 'string' : null };
+}
+
+/**
+ * Probe an assembled, hash-verified upload and hand it to storage. Needs no Context and must run outside every store
+ * transaction: a 1 GB copy or a 60 s ffprobe inside one would stall all Worker heartbeats (§0 rule 8, §12.1 risk 6).
+ */
+export async function prepareAssembledObject(storage: Storage, input: { path: string; sha256: string; size: number; mime: string; filename: string;
+  workspaceId: string; tenantId: string }, options: PrepareOptions = {}): Promise<PreparedObject> {
+  const { path, sha256, size, mime: declared, filename, workspaceId, tenantId } = input;
+  if (!scopeId.test(tenantId) || !scopeId.test(workspaceId)) throw denied();
+  if (!/^[a-f0-9]{64}$/.test(sha256) || !Number.isSafeInteger(size) || size < 1) throw invalid('Invalid assembled object');
+  const file = await openFile(path, 'r');
+  const prefix = Buffer.alloc(64);
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size !== size) throw new Problem(422, 'UPLOAD_HASH_MISMATCH', 'Assembled size does not match the upload');
+    const { bytesRead } = await file.read(prefix, 0, prefix.length, 0);
+    prefix.fill(0, bytesRead);
+  } finally { await file.close(); }
+  const mime = sniffMime(prefix);
+  if (!mime) throw new Problem(422, 'UPLOAD_TYPE_UNSUPPORTED', 'The uploaded bytes are not an accepted video or image');
+  const probe = options.probe ?? probeMedia;
+  const sleep = options.sleep ?? delay;
+  let meta: MediaMeta | null = null;
+  let status: PreparedObject['probe'] = 'unavailable';
+  for (let waited = 0; ; waited += 1000) {
+    try {
+      meta = mediaMeta(await probe(path, mime, { timeoutMs: probeTimeoutMs(size) }));
+      status = 'ok';
+    } catch (error) {
+      if (error instanceof MediaToolBusy && waited < (options.busyRetryMs ?? 30_000)) { await sleep(1000); continue; }
+      if (error instanceof InvalidMedia) status = 'invalid';
+      else if (!(error instanceof MediaToolMissing || error instanceof MediaUnavailable)) throw error;
+    }
+    break;
+  }
+  const object_nonce = randomUUID();
+  const storage_key = `t/${tenantId}/w/${workspaceId}/objects/${object_nonce}`;
+  const object = { path, size, sha256, mime };
+  if (storage.move) await storage.move(storage_key, object);
+  else await storage.write(storage_key, object);
+  return { tenant_id: tenantId, workspace_id: workspaceId, bucket: storage.bucket, storage_key, object_nonce, byte_size: size, sha256,
+    filename, mime, declared_mime: declared, meta, probe: status };
+}
+
+/** Remove an object prepared for a link that did not commit. */
+export async function discardPreparedObject(storage: Storage, prepared: Pick<PreparedObject, 'storage_key'>) {
+  await removeObject(storage, prepared.storage_key);
+}
+
+/**
+ * Short write: create the file_object, attach it to the asset_version, mark the asset ready and emit
+ * asset.version.created so prechecks re-evaluate jobs waiting on media (§6.4 step 3.4). Does no IO.
+ */
+export function recordAssembledObject(ctx: Context, prepared: PreparedObject, link: { asset_id: string; asset_version_id: string; createdBy: string }):
+{ file_object_id: string; meta: MediaMeta | null; reused?: true } {
+  if (prepared.tenant_id !== ctx.tenantId || prepared.workspace_id !== ctx.workspaceId) throw denied();
+  if (prepared.storage_key !== `${prefix(ctx)}/objects/${prepared.object_nonce}` || !fileId.test(prepared.object_nonce)) throw denied();
+  const asset = ctx.get('asset', link.asset_id);
+  const version = ctx.get('asset_version', link.asset_version_id);
+  if (version.asset_id !== asset.id) throw missing();
+  if (version.sha256 !== prepared.sha256) throw new Problem(409, 'UPLOAD_HASH_MISMATCH', 'The stored object does not match this asset version');
+  if (typeof version.file_object_id === 'string') {
+    const existing = find(ctx, FILE, version.file_object_id);
+    if (existing && existing.sha256 === prepared.sha256 && !existing.deleted_at) return { file_object_id: existing.id, meta: (version.meta ?? null) as MediaMeta | null, reused: true };
+  }
+  const row = ctx.create(FILE, { tenant_id: ctx.tenantId, workspace_id: ctx.workspaceId, created_by_id: link.createdBy,
+    storage_key: prepared.storage_key, object_nonce: prepared.object_nonce, bucket: prepared.bucket, mime_type: prepared.mime,
+    size_bytes: prepared.byte_size, sha256: prepared.sha256, original_filename: prepared.filename, scan_status: 'skipped', purpose: 'asset',
+    retention_until: null, deleted_at: null, meta: prepared.meta, probe_status: prepared.probe });
+  usage(ctx, row, 1);
+  ctx.update('asset_version', version.id, { file_object_id: row.id, mime_type: prepared.mime, meta: prepared.meta });
+  ctx.update('asset', asset.id, { status: 'ready', current_version_id: version.id,
+    kind: prepared.mime.startsWith('video/') ? 'video' : 'image' });
+  ctx.emit('core.file_object.created', { file_object_id: row.id, purpose: 'asset' });
+  ctx.emit('asset.version.created', { asset_id: asset.id, asset_version_id: version.id, version_no: Number(version.version_no ?? 1), source: 'agent_upload' });
+  ctx.emit('asset.asset.ready', { asset_id: asset.id, asset_version_id: version.id });
+  return { file_object_id: row.id, meta: prepared.meta };
+}
+
+/**
+ * Open a stored object for streaming, optionally one inclusive byte range. Needs no Context, so the signed device
+ * download route (§6.6, S3) authorizes in a short transaction and streams after it ends.
+ */
+export async function openMediaRange(storage: Storage, object: { storage_key: string; byte_size: number }, range?: { start: number; end: number }):
+Promise<{ stream: Readable; size: number; start: number; end: number }> {
+  const size = object.byte_size;
+  if (!Number.isSafeInteger(size) || size < 1) throw unavailable();
+  if (range && (!Number.isSafeInteger(range.start) || !Number.isSafeInteger(range.end) || range.start < 0 || range.end < range.start || range.start >= size)) {
+    throw new Problem(416, 'RANGE_NOT_SATISFIABLE', 'A single satisfiable byte range is required', { size });
+  }
+  const window = range ? { start: range.start, end: Math.min(range.end, size - 1) } : { start: 0, end: size - 1 };
+  let stored;
+  try { stored = await storage.read(object.storage_key, range ? window : undefined); }
+  catch (error) {
+    if (error instanceof ObjectMissing) throw missing();
+    throw unavailable();
+  }
+  if (stored.size !== size) { stored.stream.destroy(); throw unavailable(); }
+  return { stream: stored.stream, size, ...window };
 }

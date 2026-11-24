@@ -27,6 +27,7 @@ import { compatibilityPath, sharedWorkspacePath } from './workspace-entry-paths'
 import { setDeveloperMode, useDeveloperMode, usePreference } from './preferences';
 import { PrimarySearch } from './primary-search';
 import { parseWorkerConnect, WorkerConnectCard, WorkerConnectPage } from './worker-connect';
+import { AgentConnectCard, AgentConnectPage, parseAgentConnect } from './agent-connect';
 import './styles.css';
 
 const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 15000 } } });
@@ -250,19 +251,21 @@ function App({ compatibility }: { compatibility: boolean }) {
   const location = useLocation();
   const returnable = (path?: string | null) => Boolean(path && (path.startsWith('/w/') || path.startsWith('/app/')));
   const workerIntent = location.pathname === '/worker-connect' && !location.hash ? parseWorkerConnect(location.search) : undefined;
+  const agentIntent = location.pathname === '/agent-connect' && !location.hash ? parseAgentConnect(location.search) : undefined;
   const returnHash = location.hash.startsWith('#worker-pair=') ? '' : location.hash;
-  const next = returnable(location.pathname) || workerIntent
+  const next = returnable(location.pathname) || workerIntent || agentIntent
     ? `?next=${encodeURIComponent(location.pathname + location.search + returnHash)}` : '';
   const returnTo = new URLSearchParams(location.search).get('next');
   const workerReturn = returnTo?.startsWith('/worker-connect?') && !returnTo.includes('#') && parseWorkerConnect(returnTo.slice('/worker-connect'.length));
-  const signedInDestination = returnable(returnTo) || workerReturn ? returnTo! : '/';
+  const agentReturn = returnTo?.startsWith('/agent-connect?') && !returnTo.includes('#') && parseAgentConnect(returnTo.slice('/agent-connect'.length));
+  const signedInDestination = returnable(returnTo) || workerReturn || agentReturn ? returnTo! : '/';
   const session = useQuery({ queryKey: sessionKey, queryFn: ({ signal }) => getSession(signal) });
   const data = session.data?.data;
   const ws = data?.workspaces?.[0]?.id;
   const auth = (setupPath: boolean) => data?.user ? <Navigate to={signedInDestination} replace /> :
     session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand />
       <ProblemNotice error={session.error} retry={() => void session.refetch()} /><Language /></main> :
-        <Authentication setupPath={setupPath} registerToMain={compatibility && signedInDestination === '/'} workerConnection={Boolean(workerReturn)} />;
+        <Authentication setupPath={setupPath} registerToMain={compatibility && signedInDestination === '/'} workerConnection={Boolean(workerReturn || agentReturn)} />;
   return <><div className="narrow-notice">{t('narrow')}</div><Routes>
     <Route path="/setup" element={auth(true)} />
     <Route path="/login" element={auth(false)} />
@@ -271,6 +274,12 @@ function App({ compatibility }: { compatibility: boolean }) {
     </WorkerConnectCard> : session.isPending ? <div className="worker-connect"><Busy label={t('loading')} /></div> : session.isError ? <WorkerConnectCard language={<Language />}>
       <ProblemNotice error={session.error} retry={() => void session.refetch()} />
     </WorkerConnectCard> : data?.user ? <WorkerConnectPage key={location.key} session={data} intent={workerIntent} language={<Language />} />
+      : <Navigate to={`/login${next}`} replace />} />
+    <Route path="/agent-connect" element={!agentIntent ? <AgentConnectCard language={<Language />}>
+      <p role="alert">{label(['連接請求無效，請回到 SmartSell App 重新開始。', 'Invalid connection request. Start again from the SmartSell App.'])}</p>
+    </AgentConnectCard> : session.isPending ? <div className="worker-connect"><Busy label={t('loading')} /></div> : session.isError ? <AgentConnectCard language={<Language />}>
+      <ProblemNotice error={session.error} retry={() => void session.refetch()} />
+    </AgentConnectCard> : data?.user ? <AgentConnectPage key={location.key} session={data} intent={agentIntent} language={<Language />} />
       : <Navigate to={`/login${next}`} replace />} />
     <Route path="/invite" element={<MemberInvitation />} />
     {ws && data && <Route path="/app/:ws/*" element={<Suspense fallback={<Busy label={t('loading')} />}><ViewApp session={data} compatibility={compatibility} /></Suspense>} />}

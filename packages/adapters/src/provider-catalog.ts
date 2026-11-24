@@ -22,7 +22,14 @@ const pageRead = ['pages_read_engagement'];
 const pageWrite = [...pageRead, 'pages_manage_posts'];
 
 type ProviderDecl = { authStrategy: AuthStrategy; api_version: string | null; authVariant?: string; capabilities: readonly CapabilityDecl[]; note?: string };
-const catalog: Record<ProviderKey, ProviderDecl> = {
+/** Providers reached only through the paired Worker's browser (phase1-design §3.3). They have no official API adapter. */
+export const browserOnlyProviders = ['x'] as const;
+export type BrowserOnlyProvider = typeof browserOnlyProviders[number];
+export type CatalogProvider = ProviderKey | BrowserOnlyProvider;
+const catalog: Record<CatalogProvider, ProviderDecl> = {
+  x: { authStrategy: 'connector_session', api_version: null, note: 'Phase 1 posts through the paired Worker\'s Chrome profile (host x.com); no official API path.', capabilities: [
+    manual('publish'), connector('browser'), manual('post_read'), manual('edit_post'), manual('delete_post'), unsupported('publish_schedule'),
+  ] },
   meta_instagram: { authStrategy: 'oauth2', api_version: 'v24.0', authVariant: 'instagram_login', note: 'Unified Login requires access validation.', capabilities: [
     ...['image', 'reel', 'story', 'carousel'].map(format => api('publish', 'P0a', format, igPublish)),
     api('post_read', 'P0a', '*', igBasic), planned('insights_read', 'P0a'), api('comment_read', 'P0a', '*', [...igBasic, 'instagram_business_manage_comments']), planned('comment_reply', 'P0a'), planned('comment_hide', 'P1'), planned('dm_read', 'P1'), planned('dm_send', 'P1'),
@@ -78,4 +85,5 @@ for (const provider of Object.values(catalog)) {
   Object.freeze(provider);
 }
 export const providerCatalog = Object.freeze(catalog);
-export const providers = Object.freeze(Object.keys(catalog) as ProviderKey[]);
+/** Providers with an official API adapter. Browser-only providers are listed in the catalog but have no adapter. */
+export const providers = Object.freeze((Object.keys(catalog) as CatalogProvider[]).filter((key): key is ProviderKey => !(browserOnlyProviders as readonly string[]).includes(key)));

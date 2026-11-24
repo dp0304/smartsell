@@ -28,3 +28,12 @@
 ## 验证
 
 运行 `pnpm test tests/media`。媒体样本测试需要 `ffprobe` 和 `ffmpeg`。MinIO 用例通过 `MEDIA_TEST_S3_ENDPOINT`、`MEDIA_TEST_S3_BUCKET`、`MEDIA_TEST_S3_ACCESS_KEY`、`MEDIA_TEST_S3_SECRET_KEY` 启用，使用隔离测试桶。
+
+## Phase 1 additions (S5, phase1-design §6.4–§6.7)
+
+- `createMediaFiles({ maxBytes })` replaces the fixed 512 MiB ceiling (`MAX_BYTES` stays the default; `MAX_UPLOAD_LIMIT` = 4 GiB). `withSnapshot(..., { maxBytes })` copies with a size-scaled deadline `snapshotTimeoutMs(size)` = max(120 s, 30 s per 100 MB).
+- `video/quicktime` (`ftyp` + `qt  `, demuxer `mov`) is accepted; `sniffMime(prefix)` detects the seven agent-upload types from content.
+- `probeMedia(path, mime, { timeoutMs, ffprobe })`: agent uploads pass `probeTimeoutMs(size)` = 60 s + 30 s per GB. A missing binary throws `MediaToolMissing`, a full process pool `MediaToolBusy` (both `MediaUnavailable`).
+- `Storage.move?(key, object)`: local storage renames an assembled file into place instead of copying it (falls back to copy across volumes).
+- Server side (`apps/server/src/extensions/media-files.ts`): `prepareAssembledObject` (IO, no Context), `recordAssembledObject` (one short write), `openMediaRange` (streaming with an inclusive range, no Context), `mediaStorageFromConfig(config)` (directory follows the data file).
+- Tests: `node scripts/test.mjs packages/media-store/test` (ffmpeg cases skip when ffmpeg/ffprobe are not installed).

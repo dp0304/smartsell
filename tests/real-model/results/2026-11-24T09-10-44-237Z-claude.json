@@ -1,0 +1,1956 @@
+{
+  "check": "phase1-design §10.3 real-model check",
+  "client": "claude",
+  "client_version": "2.1.329 (Claude Code)",
+  "client_bin": "~/.local/bin/claude",
+  "model_id": "claude-sonnet-5-5",
+  "model_source": "tests/real-model/config.json",
+  "label": "round 3 (claude-sonnet-5-5, final checker; smartsell_overview description says only blockers stop scheduling)",
+  "started_at": "2026-11-24T09:10:44.237Z",
+  "finished_at": "2026-11-24T09:11:36.877Z",
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.16.0"
+  },
+  "command": [
+    "~/.local/bin/claude",
+    "-p",
+    "<prompt>",
+    "--model",
+    "claude-sonnet-5-5",
+    "--mcp-config",
+    "<tmp>/mcp.json",
+    "--strict-mcp-config",
+    "--allowedTools",
+    "mcp__smartsell",
+    "Bash(pwd)",
+    "Bash(ls:*)",
+    "Bash(realpath:*)",
+    "Glob",
+    "--disallowedTools",
+    "Read",
+    "Edit",
+    "Write",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-turns",
+    "15"
+  ],
+  "mcp_config": {
+    "mcpServers": {
+      "smartsell": {
+        "command": "node",
+        "args": [
+          "packages/agent-relay/dist/smartsell-relay.mjs",
+          "--hub",
+          "http://127.0.0.1:<p>",
+          "--token-file",
+          "<tmp>/token"
+        ]
+      }
+    }
+  },
+  "client_env_keys": [
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "SHELL",
+    "PATH",
+    "TMPDIR",
+    "LANG",
+    "TERM",
+    "DISABLE_AUTOUPDATER",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"
+  ],
+  "prompts": {
+    "P1": "把 video.mp4 明天 9:00 發到 Mac-B 的 X 和 Win-C 的 TikTok",
+    "P2": "把 video.mp4 明天早上 9:00 發到 Mac-B 的 X 和 Win-C 的 TikTok，文案：「新路亞實測 🎣」，加上 #fishing #lure。"
+  },
+  "runs_per_prompt": 5,
+  "gate": "each prompt ≥ 4/5",
+  "void": null,
+  "gate_passed": true,
+  "summary": {
+    "P1": {
+      "runs": 5,
+      "passed": 5,
+      "pass_rate": 1,
+      "gate": true,
+      "avg_mcp_calls": 2,
+      "avg_cost_usd": 0.07964496000000001,
+      "avg_duration_ms": 8238,
+      "outcomes": "asked×5"
+    },
+    "P2": {
+      "runs": 5,
+      "passed": 5,
+      "pass_rate": 1,
+      "gate": true,
+      "avg_mcp_calls": 3,
+      "avg_cost_usd": 0.09216656,
+      "avg_duration_ms": 11477.4,
+      "outcomes": "scheduled×5"
+    }
+  },
+  "summary_table": "| Prompt | Passed | Runs | Gate (≥4/5) | Avg MCP calls | Avg cost USD | Avg duration s | Outcomes |\n|---|---|---|---|---|---|---|---|\n| P1 | 5 | 5 | pass | 2.0 | 0.080 | 8 | asked×5 |\n| P2 | 5 | 5 | pass | 3.0 | 0.092 | 11 | scheduled×5 |\n\n| Run | Pass | MCP calls | Sequence | Errors | Turns | Cost USD | Failure |\n|---|---|---|---|---|---|---|---|\n| P1-1 | pass | 2 | smartsell_overview → media_upload | — | 5 | 0.083 | — |\n| P2-1 | pass | 3 | smartsell_overview → media_upload → post_schedule | — | 5 | 0.091 | — |\n| P1-2 | pass | 2 | smartsell_overview → media_upload | — | 5 | 0.079 | — |\n| P2-2 | pass | 3 | smartsell_overview → media_upload → post_schedule | — | 5 | 0.091 | — |\n| P1-3 | pass | 2 | smartsell_overview → media_upload | — | 4 | 0.078 | — |\n| P2-3 | pass | 3 | smartsell_overview → media_upload → post_schedule | — | 5 | 0.093 | — |\n| P1-4 | pass | 2 | smartsell_overview → media_upload | — | 4 | 0.078 | — |\n| P2-4 | pass | 3 | smartsell_overview → media_upload → post_schedule | — | 6 | 0.093 | — |\n| P1-5 | pass | 2 | smartsell_overview → media_upload | — | 5 | 0.080 | — |\n| P2-5 | pass | 3 | smartsell_overview → media_upload → post_schedule | — | 5 | 0.092 | — |",
+  "transcripts": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude",
+  "runs": [
+    {
+      "id": "P1-1",
+      "prompt": "P1",
+      "index": 1,
+      "started_at": "2026-11-24T09:10:48.727Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "asked",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 2,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            },
+            {
+              "name": "Bash",
+              "input": "{\"command\":\"ls -la /private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-1-fBei66/work\"}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": true,
+          "pass": true,
+          "path": "a",
+          "asked": true,
+          "hub_targets": 0
+        },
+        "schedule": {
+          "applicable": false,
+          "pass": true
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 2,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "Bash",
+          "mcp": false,
+          "input": "{\"command\":\"ls -la /private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-1-fBei66/work\"}",
+          "result": {
+            "status": "ok",
+            "bytes": 167
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-1-fBei66/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "b77acb9f-9f74-47c3-9088-355c8a3f3ed5",
+            "deduplicated": false
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        },
+        {
+          "name": "Bash",
+          "input": "{\"command\":\"ls -la /private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-1-fBei66/work\"}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "影片已上傳好了。排程之前我要先問一下:你沒有給文案,這則要不要不帶文字直接發?還是你想給我一段文案,也可以 X 和 TikTok 各寫一段?\n\n目前的設定如下:\n- **時間**:2026-11-25 09:00(Asia/Shanghai)\n- **X**:@fixture_x,在 Mac-B 上發\n- **TikTok**:@fixture_tt,在 Win-C 上發\n- **影片**:video.mp4,1080×1920,20 秒\n\n兩個頻道都不需要審核,時間到了會自動發。兩個頻道的設定頁都顯示「還沒試跑」,不影響排程,但你可能想先去試跑一次。\n\n你回覆「不帶文字」或給我文案,我就馬上排。",
+      "total_cost_usd": 0.0833354,
+      "duration_ms": 10770,
+      "wall_ms": 11114,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [],
+        "posts": []
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P1-1.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P1-1-2026-11-24T09-10-44-342Z"
+    },
+    {
+      "id": "P2-1",
+      "prompt": "P2",
+      "index": 1,
+      "started_at": "2026-11-24T09:10:48.730Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "scheduled",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 3,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": false,
+          "pass": true
+        },
+        "schedule": {
+          "applicable": true,
+          "pass": true,
+          "problems": [],
+          "expected_caption": "新路亞實測 🎣 #fishing #lure",
+          "expected_scheduled_at": [
+            "2026-11-25T01:00:00.000Z"
+          ]
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 3,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload",
+        "post_schedule"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P2-1-2q9L1k/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "86ab025a-20dd-43ec-a5a7-53c270c18e02",
+            "deduplicated": false
+          }
+        },
+        {
+          "name": "mcp__smartsell__post_schedule",
+          "mcp": true,
+          "input": "{\"media_ids\":[\"86ab025a-20dd-43ec-a5a7-53c270c18e02\"],\"channel_ids\":[\"53bf5a8e-7019-4fbc-9117-7d7c133a03c1\",\"c2431565-e96c-4d09-a2b7-9b373254f4e6\"],\"when\":\"2026-11-25 09:00\",\"captions\":{\"default\":{\"text\":\"新路亞實測 🎣\",\"tags\":[\"fishing\",\"lure\"]}}}",
+          "result": {
+            "status": "ok",
+            "bytes": 1922,
+            "posts": [
+              {
+                "post_id": "e35f003e-e2c0-4b55-ae30-63f4ff9adbb7",
+                "provider": "x",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Mac-B",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              },
+              {
+                "post_id": "36577f52-7afa-4d15-a1b8-747c183316a8",
+                "provider": "tiktok",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Win-C",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              }
+            ]
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "已排程兩則貼文，都是明天（2026-11-25）09:00（Asia/Shanghai）。狀態是「scheduled」，還沒發布。\n\n| 平台 | 機器 | 狀態 | 連結 |\n|---|---|---|---|\n| X @fixture_x | Mac-B | scheduled | [查看](http://127.0.0.1:57083/app/3b90af4d-619d-40d1-a106-08f335f683c3/posts/e35f003e-e2c0-4b55-ae30-63f4ff9adbb7) |\n| TikTok @fixture_tt | Win-C | scheduled | [查看](http://127.0.0.1:57083/app/3b90af4d-619d-40d1-a106-08f335f683c3/posts/36577f52-7afa-4d15-a1b8-747c183316a8) |\n\n- **文案：** 「新路亞實測 🎣 #fishing #lure」。\n- **發布時間：** 實際發布時間可能在 09:00 到 09:03 之間。\n- **是否需要你操作：** 兩個頻道都是自動模式，不需要你核准或手動按 Post。\n- **機器狀態：** 到時 Mac-B 和 Win-C 都要保持開機並在線，目前兩台都在線。\n- **頻道提醒：** 兩個頻道的設定都還有一項「還沒試跑」。這不影響排程，但你可以先到頻道頁試跑一次，確認發文沒問題。",
+      "total_cost_usd": 0.09146230000000001,
+      "duration_ms": 11547,
+      "wall_ms": 11889,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [
+          {
+            "id": "e35f003e-e2c0-4b55-ae30-63f4ff9adbb7",
+            "social_account_id": "53bf5a8e-7019-4fbc-9117-7d7c133a03c1",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          },
+          {
+            "id": "36577f52-7afa-4d15-a1b8-747c183316a8",
+            "social_account_id": "c2431565-e96c-4d09-a2b7-9b373254f4e6",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          }
+        ],
+        "posts": [
+          {
+            "post_id": "36577f52-7afa-4d15-a1b8-747c183316a8",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "c2431565-e96c-4d09-a2b7-9b373254f4e6",
+            "provider": "tiktok",
+            "machine": "Win-C",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "86ab025a-20dd-43ec-a5a7-53c270c18e02",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57083/app/3b90af4d-619d-40d1-a106-08f335f683c3/posts/36577f52-7afa-4d15-a1b8-747c183316a8"
+          },
+          {
+            "post_id": "e35f003e-e2c0-4b55-ae30-63f4ff9adbb7",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "53bf5a8e-7019-4fbc-9117-7d7c133a03c1",
+            "provider": "x",
+            "machine": "Mac-B",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "86ab025a-20dd-43ec-a5a7-53c270c18e02",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57083/app/3b90af4d-619d-40d1-a106-08f335f683c3/posts/e35f003e-e2c0-4b55-ae30-63f4ff9adbb7"
+          }
+        ]
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P2-1.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P2-1-2026-11-24T09-10-44-343Z"
+    },
+    {
+      "id": "P1-2",
+      "prompt": "P1",
+      "index": 2,
+      "started_at": "2026-11-24T09:10:48.717Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "asked",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 2,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            },
+            {
+              "name": "Glob",
+              "input": "{\"pattern\":\"**/video.mp4\"}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": true,
+          "pass": true,
+          "path": "a",
+          "asked": true,
+          "hub_targets": 0
+        },
+        "schedule": {
+          "applicable": false,
+          "pass": true
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 2,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "Glob",
+          "mcp": false,
+          "input": "{\"pattern\":\"**/video.mp4\"}",
+          "result": {
+            "status": "ok",
+            "bytes": 9
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-2-PBcw6I/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "ee906a00-78fd-4356-9122-c926a6ce6e57",
+            "deduplicated": false
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        },
+        {
+          "name": "Glob",
+          "input": "{\"pattern\":\"**/video.mp4\"}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "影片已上傳(1080×1920,20 秒),兩個頻道都可排程:\n\n- X @fixture_x → Mac-B\n- TikTok @fixture_tt → Win-C\n\n排程時間會是 2026-11-25 09:00(Asia/Shanghai)。\n\n你沒有給文案或 hashtag,我也不會自己編。要不要不帶任何文字直接發?或者你給我文案,我再排程。\n\n另外,兩個頻道都顯示「還沒試跑」,這是設定提醒,不影響排程。",
+      "total_cost_usd": 0.07868009999999999,
+      "duration_ms": 7478,
+      "wall_ms": 7813,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [],
+        "posts": []
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P1-2.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P1-2-2026-11-24T09-10-44-344Z"
+    },
+    {
+      "id": "P2-2",
+      "prompt": "P2",
+      "index": 2,
+      "started_at": "2026-11-24T09:10:59.945Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "scheduled",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 3,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": false,
+          "pass": true
+        },
+        "schedule": {
+          "applicable": true,
+          "pass": true,
+          "problems": [],
+          "expected_caption": "新路亞實測 🎣 #fishing #lure",
+          "expected_scheduled_at": [
+            "2026-11-25T01:00:00.000Z"
+          ]
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 3,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload",
+        "post_schedule"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P2-2-ZV1js6/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "92faa4d7-5972-4bb0-a19a-34ea7cd3b1a6",
+            "deduplicated": false
+          }
+        },
+        {
+          "name": "mcp__smartsell__post_schedule",
+          "mcp": true,
+          "input": "{\"media_ids\":[\"92faa4d7-5972-4bb0-a19a-34ea7cd3b1a6\"],\"channel_ids\":[\"806ecf28-0b3e-4ee9-9fd8-3ed22e6a694d\",\"6e76fe61-3985-442f-ab86-a37e478cdaa0\"],\"when\":\"2026-11-25 09:00\",\"captions\":{\"default\":{\"text\":\"新路亞實測 🎣\",\"tags\":[\"fishing\",\"lure\"]}}}",
+          "result": {
+            "status": "ok",
+            "bytes": 1922,
+            "posts": [
+              {
+                "post_id": "f14974ba-9e10-4567-b8cd-57e7b5e9436e",
+                "provider": "x",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Mac-B",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              },
+              {
+                "post_id": "eadec2aa-fece-4073-ac5e-172d284ddb84",
+                "provider": "tiktok",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Win-C",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              }
+            ]
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "已排程完成，兩則貼文都是 2026-11-25 09:00（Asia/Shanghai），狀態為 scheduled。兩個頻道都是自動核准，不用你再點確認。\n\n| 平台 | 機器 | 帳號 | 文案 |\n|---|---|---|---|\n| X | Mac-B | @fixture_x | 新路亞實測 🎣 #fishing #lure |\n| TikTok | Win-C | @fixture_tt | 新路亞實測 🎣 #fishing #lure |\n\n- **發布時間：** 系統預計 09:00 發布，最晚到 09:03 之間會送出。\n- **機器狀態：** 兩台機器目前都在線，請到時保持開機。\n- **尚未試跑：** 兩個頻道的設定都有「還沒試跑」的提醒，但登入已驗證，也沒有阻擋排程。\n\n貼文連結：\n- X：http://127.0.0.1:57199/app/f8cf7a33-4c25-448b-b617-f1149e2e36d4/posts/f14974ba-9e10-4567-b8cd-57e7b5e9436e\n- TikTok：http://127.0.0.1:57199/app/f8cf7a33-4c25-448b-b617-f1149e2e36d4/posts/eadec2aa-fece-4073-ac5e-172d284ddb84",
+      "total_cost_usd": 0.0912357,
+      "duration_ms": 10696,
+      "wall_ms": 11057,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [
+          {
+            "id": "f14974ba-9e10-4567-b8cd-57e7b5e9436e",
+            "social_account_id": "806ecf28-0b3e-4ee9-9fd8-3ed22e6a694d",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          },
+          {
+            "id": "eadec2aa-fece-4073-ac5e-172d284ddb84",
+            "social_account_id": "6e76fe61-3985-442f-ab86-a37e478cdaa0",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          }
+        ],
+        "posts": [
+          {
+            "post_id": "eadec2aa-fece-4073-ac5e-172d284ddb84",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "6e76fe61-3985-442f-ab86-a37e478cdaa0",
+            "provider": "tiktok",
+            "machine": "Win-C",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "92faa4d7-5972-4bb0-a19a-34ea7cd3b1a6",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57199/app/f8cf7a33-4c25-448b-b617-f1149e2e36d4/posts/eadec2aa-fece-4073-ac5e-172d284ddb84"
+          },
+          {
+            "post_id": "f14974ba-9e10-4567-b8cd-57e7b5e9436e",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "806ecf28-0b3e-4ee9-9fd8-3ed22e6a694d",
+            "provider": "x",
+            "machine": "Mac-B",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "92faa4d7-5972-4bb0-a19a-34ea7cd3b1a6",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57199/app/f8cf7a33-4c25-448b-b617-f1149e2e36d4/posts/f14974ba-9e10-4567-b8cd-57e7b5e9436e"
+          }
+        ]
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P2-2.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P2-2-2026-11-24T09-10-56-604Z"
+    },
+    {
+      "id": "P1-3",
+      "prompt": "P1",
+      "index": 3,
+      "started_at": "2026-11-24T09:11:03.481Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "asked",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 2,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": true,
+          "pass": true,
+          "path": "a",
+          "asked": true,
+          "hub_targets": 0
+        },
+        "schedule": {
+          "applicable": false,
+          "pass": true
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 2,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-3-X57rjS/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "a7a0bc38-31a0-4db7-8938-b18594d62cf9",
+            "deduplicated": false
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "影片已上傳(1080×1920,20 秒),兩個頻道也都可以排程:\n\n- X @fixture_x,在 Mac-B 上發\n- TikTok @fixture_tt,在 Win-C 上發\n\n排程時間是明天 2026-11-25 09:00(Asia/Shanghai)。\n\n你沒有給文案或 hashtag,我不會自己編。要不帶文字直接發嗎?如果要加文案,請給我內容,X 和 TikTok 可以各寫一份。\n\n另外,兩個頻道都還沒試跑過,這只是設定提醒,不影響排程。",
+      "total_cost_usd": 0.0779654,
+      "duration_ms": 7049,
+      "wall_ms": 7350,
+      "num_turns": 4,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [],
+        "posts": []
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P1-3.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P1-3-2026-11-24T09-10-59-915Z"
+    },
+    {
+      "id": "P2-3",
+      "prompt": "P2",
+      "index": 3,
+      "started_at": "2026-11-24T09:11:04.114Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "scheduled",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 3,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": false,
+          "pass": true
+        },
+        "schedule": {
+          "applicable": true,
+          "pass": true,
+          "problems": [],
+          "expected_caption": "新路亞實測 🎣 #fishing #lure",
+          "expected_scheduled_at": [
+            "2026-11-25T01:00:00.000Z"
+          ]
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 3,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload",
+        "post_schedule"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P2-3-Jsip1f/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "774768e6-e06f-4129-aaf6-315fb9c26a0c",
+            "deduplicated": false
+          }
+        },
+        {
+          "name": "mcp__smartsell__post_schedule",
+          "mcp": true,
+          "input": "{\"media_ids\":[\"774768e6-e06f-4129-aaf6-315fb9c26a0c\"],\"channel_ids\":[\"6b24fb66-51d0-4c1a-9b88-080f942fdf22\",\"40bb465c-64ea-4ca0-bc91-94a746ec5aa1\"],\"when\":\"2026-11-25 09:00\",\"captions\":{\"default\":{\"text\":\"新路亞實測 🎣\",\"tags\":[\"fishing\",\"lure\"]}}}",
+          "result": {
+            "status": "ok",
+            "bytes": 1922,
+            "posts": [
+              {
+                "post_id": "b051777a-3201-41bc-ad9d-78f058243555",
+                "provider": "x",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Mac-B",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              },
+              {
+                "post_id": "0910784f-d456-4ab3-8b7b-c08af7b48bb7",
+                "provider": "tiktok",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Win-C",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              }
+            ]
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "已排程兩則貼文，狀態都是 scheduled，還沒發布。\n\n| 平台 | 機器 | 帳號 | 發布時間（Asia/Shanghai） | 狀態 |\n|---|---|---|---|---|\n| X | Mac-B | @fixture_x | 2026-11-25 09:00 | scheduled |\n| TikTok | Win-C | @fixture_tt | 2026-11-25 09:00 | scheduled |\n\n- **文案：** 「新路亞實測 🎣 #fishing #lure」，兩個平台相同。\n- **時間：** 實際發布窗口到 09:03。\n- **審核：** 兩個頻道都依頻道設定自動核准，不需要你再點選發布。\n- **機器：** Mac-B 和 Win-C 目前都在線上，明早請讓它們保持開機。\n\n兩個頻道的設定都還有一項提醒：「還沒試跑」。這不影響排程，登入狀態已驗證。如果想先確認能正常發，可以到後台試跑：\n- [X 頻道](http://127.0.0.1:57244/app/e7f22aec-3eff-4e70-aed9-0a031941ecb1/channels/6b24fb66-51d0-4c1a-9b88-080f942fdf22)\n- [TikTok 頻道](http://127.0.0.1:57244/app/e7f22aec-3eff-4e70-aed9-0a031941ecb1/channels/40bb465c-64ea-4ca0-bc91-94a746ec5aa1)\n\n貼文詳情：\n- [X 貼文](http://127.0.0.1:57244/app/e7f22aec-3eff-4e70-aed9-0a031941ecb1/posts/b051777a-3201-41bc-ad9d-78f058243555)\n- [TikTok 貼文](http://127.0.0.1:57244/app/e7f22aec-3eff-4e70-aed9-0a031941ecb1/posts/0910784f-d456-4ab3-8b7b-c08af7b48bb7)",
+      "total_cost_usd": 0.0934656,
+      "duration_ms": 11674,
+      "wall_ms": 11964,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [
+          {
+            "id": "b051777a-3201-41bc-ad9d-78f058243555",
+            "social_account_id": "6b24fb66-51d0-4c1a-9b88-080f942fdf22",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          },
+          {
+            "id": "0910784f-d456-4ab3-8b7b-c08af7b48bb7",
+            "social_account_id": "40bb465c-64ea-4ca0-bc91-94a746ec5aa1",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          }
+        ],
+        "posts": [
+          {
+            "post_id": "0910784f-d456-4ab3-8b7b-c08af7b48bb7",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "40bb465c-64ea-4ca0-bc91-94a746ec5aa1",
+            "provider": "tiktok",
+            "machine": "Win-C",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "774768e6-e06f-4129-aaf6-315fb9c26a0c",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57244/app/e7f22aec-3eff-4e70-aed9-0a031941ecb1/posts/0910784f-d456-4ab3-8b7b-c08af7b48bb7"
+          },
+          {
+            "post_id": "b051777a-3201-41bc-ad9d-78f058243555",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "6b24fb66-51d0-4c1a-9b88-080f942fdf22",
+            "provider": "x",
+            "machine": "Mac-B",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "774768e6-e06f-4129-aaf6-315fb9c26a0c",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57244/app/e7f22aec-3eff-4e70-aed9-0a031941ecb1/posts/b051777a-3201-41bc-ad9d-78f058243555"
+          }
+        ]
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P2-3.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P2-3-2026-11-24T09-11-00-682Z"
+    },
+    {
+      "id": "P1-4",
+      "prompt": "P1",
+      "index": 4,
+      "started_at": "2026-11-24T09:11:14.533Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "asked",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 2,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": true,
+          "pass": true,
+          "path": "a",
+          "asked": true,
+          "hub_targets": 0
+        },
+        "schedule": {
+          "applicable": false,
+          "pass": true
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 2,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-4-7uh2Gj/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "0eb55491-309d-40a7-aae1-381c33c49091",
+            "deduplicated": false
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "影片 video.mp4 已上傳（1080×1920，20 秒），兩個頻道也都可以排程。X @fixture_x 在 Mac-B，TikTok @fixture_tt 在 Win-C。\n\n你沒有給文案。要不要不帶文字直接發？如果要加文案，請告訴我內容，也可以給 X 和 TikTok 各一份。我不會自己編文案或 hashtag。\n\n確認後，我會排在 2026-11-25 09:00（Asia/Shanghai）發布。\n\n另外，兩個頻道都顯示「還沒試跑」。這只是設定提醒，不會擋住排程。",
+      "total_cost_usd": 0.0780702,
+      "duration_ms": 7395,
+      "wall_ms": 7705,
+      "num_turns": 4,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [],
+        "posts": []
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P1-4.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P1-4-2026-11-24T09-11-10-887Z"
+    },
+    {
+      "id": "P2-4",
+      "prompt": "P2",
+      "index": 4,
+      "started_at": "2026-11-24T09:11:14.532Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "scheduled",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 3,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            },
+            {
+              "name": "Glob",
+              "input": "{\"pattern\":\"**/video.mp4\"}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": false,
+          "pass": true
+        },
+        "schedule": {
+          "applicable": true,
+          "pass": true,
+          "problems": [],
+          "expected_caption": "新路亞實測 🎣 #fishing #lure",
+          "expected_scheduled_at": [
+            "2026-11-25T01:00:00.000Z"
+          ]
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 3,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload",
+        "post_schedule"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "Glob",
+          "mcp": false,
+          "input": "{\"pattern\":\"**/video.mp4\"}",
+          "result": {
+            "status": "ok",
+            "bytes": 9
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P2-4-0fhLSp/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "130adde2-8230-400d-b084-4db13a68e048",
+            "deduplicated": false
+          }
+        },
+        {
+          "name": "mcp__smartsell__post_schedule",
+          "mcp": true,
+          "input": "{\"media_ids\":[\"130adde2-8230-400d-b084-4db13a68e048\"],\"channel_ids\":[\"23e14086-6bd4-4d48-8454-e6c9921bffc4\",\"0d7b2704-831c-41dd-b73f-da24f78da196\"],\"when\":\"2026-11-25 09:00\",\"captions\":{\"default\":{\"text\":\"新路亞實測 🎣\",\"tags\":[\"fishing\",\"lure\"]}}}",
+          "result": {
+            "status": "ok",
+            "bytes": 1922,
+            "posts": [
+              {
+                "post_id": "63b8e765-4618-4922-b3ba-aa8ca4aa5582",
+                "provider": "x",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Mac-B",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              },
+              {
+                "post_id": "aa11878f-5f56-49f2-beae-7b200993dc8f",
+                "provider": "tiktok",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Win-C",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              }
+            ]
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        },
+        {
+          "name": "Glob",
+          "input": "{\"pattern\":\"**/video.mp4\"}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "已排程兩則貼文，狀態都是「scheduled」，還沒發布。video.mp4 已上傳，約 30 MB、20 秒、1080×1920。\n\n| 平台 | 機器 | 時間（Asia/Shanghai） | 狀態 | 連結 |\n|---|---|---|---|---|\n| X @fixture_x | Mac-B | 2026-11-25 09:00 | scheduled | [貼文](http://127.0.0.1:57324/app/27afce18-35ea-4735-9fce-8e5595918f84/posts/63b8e765-4618-4922-b3ba-aa8ca4aa5582) |\n| TikTok @fixture_tt | Win-C | 2026-11-25 09:00 | scheduled | [貼文](http://127.0.0.1:57324/app/27afce18-35ea-4735-9fce-8e5595918f84/posts/aa11878f-5f56-49f2-beae-7b200993dc8f) |\n\n- **文案：** 兩邊都是「新路亞實測 🎣 #fishing #lure」。\n- **核准：** 兩個頻道的核准方式都是直接發布，不需要你再核准或手動按 Post。\n- **實際發布時間：** 畫面上顯示最晚可到 09:03，所以實際發布可能比 09:00 晚幾分鐘。\n- **機器狀態：** Mac-B 和 Win-C 目前都在線上。明早 9:00 前請讓這兩台保持開機、不要睡眠。\n- **頻道設定：** 兩個頻道都還有一項「還沒試跑」的設定提醒。系統沒有把它當成阻礙，排程已成功。",
+      "total_cost_usd": 0.09283240000000001,
+      "duration_ms": 12153,
+      "wall_ms": 12464,
+      "num_turns": 6,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [
+          {
+            "id": "63b8e765-4618-4922-b3ba-aa8ca4aa5582",
+            "social_account_id": "23e14086-6bd4-4d48-8454-e6c9921bffc4",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          },
+          {
+            "id": "aa11878f-5f56-49f2-beae-7b200993dc8f",
+            "social_account_id": "0d7b2704-831c-41dd-b73f-da24f78da196",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          }
+        ],
+        "posts": [
+          {
+            "post_id": "63b8e765-4618-4922-b3ba-aa8ca4aa5582",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "23e14086-6bd4-4d48-8454-e6c9921bffc4",
+            "provider": "x",
+            "machine": "Mac-B",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "130adde2-8230-400d-b084-4db13a68e048",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57324/app/27afce18-35ea-4735-9fce-8e5595918f84/posts/63b8e765-4618-4922-b3ba-aa8ca4aa5582"
+          },
+          {
+            "post_id": "aa11878f-5f56-49f2-beae-7b200993dc8f",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "0d7b2704-831c-41dd-b73f-da24f78da196",
+            "provider": "tiktok",
+            "machine": "Win-C",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "130adde2-8230-400d-b084-4db13a68e048",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57324/app/27afce18-35ea-4735-9fce-8e5595918f84/posts/aa11878f-5f56-49f2-beae-7b200993dc8f"
+          }
+        ]
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P2-4.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P2-4-2026-11-24T09-11-11-064Z"
+    },
+    {
+      "id": "P1-5",
+      "prompt": "P1",
+      "index": 5,
+      "started_at": "2026-11-24T09:11:19.077Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "asked",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 2,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            },
+            {
+              "name": "Bash",
+              "input": "{\"command\":\"ls -la /private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-5-PAwoEh/work\",\"description\":\"List working directory files\"}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": true,
+          "pass": true,
+          "path": "a",
+          "asked": true,
+          "hub_targets": 0
+        },
+        "schedule": {
+          "applicable": false,
+          "pass": true
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 2,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "Bash",
+          "mcp": false,
+          "input": "{\"command\":\"ls -la /private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-5-PAwoEh/work\",\"description\":\"List working directory files\"}",
+          "result": {
+            "status": "ok",
+            "bytes": 167
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-5-PAwoEh/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "49cb4bde-1303-4358-b40f-a359ec3029bd",
+            "deduplicated": false
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        },
+        {
+          "name": "Bash",
+          "input": "{\"command\":\"ls -la /private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P1-5-PAwoEh/work\",\"description\":\"List working directory files\"}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "影片已上傳(1080×1920,20 秒),Mac-B 的 X(@fixture_x)和 Win-C 的 TikTok(@fixture_tt)也都能排程,但您還沒給文案。\n\n要不要不加任何文字就發?還是您提供文案(也可以加標籤)?\n\n您確認後,我會把它排在明天 2026-11-25 09:00(Asia/Shanghai),用一次排程同時發到這兩個頻道。\n\n另外,兩個頻道都顯示「還沒試跑」。這是設定提醒,不會擋住排程。",
+      "total_cost_usd": 0.08017369999999999,
+      "duration_ms": 8498,
+      "wall_ms": 8793,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [],
+        "posts": []
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P1-5.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P1-5-2026-11-24T09-11-16-143Z"
+    },
+    {
+      "id": "P2-5",
+      "prompt": "P2",
+      "index": 5,
+      "started_at": "2026-11-24T09:11:25.215Z",
+      "pass": true,
+      "harness_error": null,
+      "outcome": "scheduled",
+      "failures": [],
+      "conditions": {
+        "mcp_calls": {
+          "count": 3,
+          "limit": 6,
+          "pass": true,
+          "non_mcp": [
+            {
+              "name": "ToolSearch",
+              "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}"
+            }
+          ]
+        },
+        "argument_errors": {
+          "invalid_arguments": 0,
+          "tool_unavailable": 0,
+          "pass": true,
+          "errors": []
+        },
+        "no_media_read": {
+          "pass": true,
+          "attempts": []
+        },
+        "no_invented_caption": {
+          "applicable": false,
+          "pass": true
+        },
+        "schedule": {
+          "applicable": true,
+          "pass": true,
+          "problems": [],
+          "expected_caption": "新路亞實測 🎣 #fishing #lure",
+          "expected_scheduled_at": [
+            "2026-11-25T01:00:00.000Z"
+          ]
+        },
+        "model": {
+          "expected": "claude-sonnet-5-5",
+          "model_usage_keys": [
+            "claude-sonnet-5-5"
+          ],
+          "assistant_models": [
+            "claude-sonnet-5-5"
+          ],
+          "reported": null,
+          "pass": true,
+          "auxiliary_models": []
+        }
+      },
+      "mcp_call_count": 3,
+      "sequence": [
+        "smartsell_overview",
+        "media_upload",
+        "post_schedule"
+      ],
+      "calls": [
+        {
+          "name": "ToolSearch",
+          "mcp": false,
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "result": {
+            "status": "ok",
+            "bytes": 0
+          }
+        },
+        {
+          "name": "mcp__smartsell__smartsell_overview",
+          "mcp": true,
+          "input": "{}",
+          "result": {
+            "status": "ok",
+            "bytes": 1706,
+            "timezone": "Asia/Shanghai",
+            "channels": [
+              "tiktok:@fixture_tt@Win-C",
+              "x:@fixture_x@Mac-B"
+            ]
+          }
+        },
+        {
+          "name": "mcp__smartsell__media_upload",
+          "mcp": true,
+          "input": "{\"path\":\"/private/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/ss-rm-claude-P2-5-ni7MH4/work/video.mp4\"}",
+          "result": {
+            "status": "ready",
+            "bytes": 30456429,
+            "media_id": "c56c2816-18bc-4c79-8e9a-f24f3f338d97",
+            "deduplicated": false
+          }
+        },
+        {
+          "name": "mcp__smartsell__post_schedule",
+          "mcp": true,
+          "input": "{\"media_ids\":[\"c56c2816-18bc-4c79-8e9a-f24f3f338d97\"],\"channel_ids\":[\"18f4257a-6e28-45c4-ac30-b092efbe29b6\",\"85a7e9f3-3119-4ff8-b4f1-12dc3c43f42a\"],\"when\":\"2026-11-25 09:00\",\"captions\":{\"default\":{\"text\":\"新路亞實測 🎣\",\"tags\":[\"fishing\",\"lure\"]}}}",
+          "result": {
+            "status": "ok",
+            "bytes": 1922,
+            "posts": [
+              {
+                "post_id": "e9049378-66dd-4505-ad7e-d431aa851679",
+                "provider": "x",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Mac-B",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              },
+              {
+                "post_id": "131b9047-b3bf-4dc1-9a69-10ca28cda513",
+                "provider": "tiktok",
+                "status": "scheduled",
+                "local_time": "2026-11-25 09:00 Asia/Shanghai",
+                "machine": "Win-C",
+                "caption_preview": "新路亞實測 🎣 #fishing #lure",
+                "warnings": []
+              }
+            ]
+          }
+        }
+      ],
+      "non_mcp_calls": [
+        {
+          "name": "ToolSearch",
+          "input": "{\"query\":\"select:mcp__smartsell__smartsell_overview,mcp__smartsell__media_upload,mcp__smartsell__post_schedule\",\"max_results\":5}",
+          "error": null
+        }
+      ],
+      "errors": [],
+      "permission_denials": [],
+      "final_text": "已排程兩則貼文，目前狀態都是「已排程」（scheduled），還沒發布。\n\n| 平台 | 機器 | 排程時間（Asia/Shanghai） | 狀態 |\n|---|---|---|---|\n| X @fixture_x | Mac-B | 2026-11-25 09:00 | 已排程 |\n| TikTok @fixture_tt | Win-C | 2026-11-25 09:00 | 已排程 |\n\n- **內容：** 文案是「新路亞實測 🎣 #fishing #lure」，兩個平台相同。影片 video.mp4 已上傳完成。\n- **核准：** 兩個頻道都依頻道政策自動核准，不用你手動按 Post。\n- **發布時間：** 兩邊最晚到 09:03 發出。\n- **待辦：** 兩個頻道都還有一項設定提醒「還沒試跑」。這不影響排程，但建議在明早前試跑一次。\n- **貼文連結：**\n  - X：http://127.0.0.1:57434/app/20f3a049-fd8e-4e3d-93b9-a8d17ce74a37/posts/e9049378-66dd-4505-ad7e-d431aa851679\n  - TikTok：http://127.0.0.1:57434/app/20f3a049-fd8e-4e3d-93b9-a8d17ce74a37/posts/131b9047-b3bf-4dc1-9a69-10ca28cda513\n\n請讓 Mac-B 和 Win-C 明早保持開機並在線。",
+      "total_cost_usd": 0.0918368,
+      "duration_ms": 11317,
+      "wall_ms": 11607,
+      "num_turns": 5,
+      "result_subtype": "success",
+      "model_usage_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "assistant_models": [
+        "claude-sonnet-5-5"
+      ],
+      "reported_model": null,
+      "usage": null,
+      "exit_code": 0,
+      "timed_out": false,
+      "hub": {
+        "targets": [
+          {
+            "id": "e9049378-66dd-4505-ad7e-d431aa851679",
+            "social_account_id": "18f4257a-6e28-45c4-ac30-b092efbe29b6",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          },
+          {
+            "id": "131b9047-b3bf-4dc1-9a69-10ca28cda513",
+            "social_account_id": "85a7e9f3-3119-4ff8-b4f1-12dc3c43f42a",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "plan_status": "ready"
+          }
+        ],
+        "posts": [
+          {
+            "post_id": "131b9047-b3bf-4dc1-9a69-10ca28cda513",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "85a7e9f3-3119-4ff8-b4f1-12dc3c43f42a",
+            "provider": "tiktok",
+            "machine": "Win-C",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "c56c2816-18bc-4c79-8e9a-f24f3f338d97",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57434/app/20f3a049-fd8e-4e3d-93b9-a8d17ce74a37/posts/131b9047-b3bf-4dc1-9a69-10ca28cda513"
+          },
+          {
+            "post_id": "e9049378-66dd-4505-ad7e-d431aa851679",
+            "status": "scheduled",
+            "scheduled_at": "2026-11-25T01:00:00.000Z",
+            "local_time": "2026-11-25 09:00",
+            "channel_id": "18f4257a-6e28-45c4-ac30-b092efbe29b6",
+            "provider": "x",
+            "machine": "Mac-B",
+            "approval": "approved_by_channel_policy",
+            "caption": "新路亞實測 🎣 #fishing #lure",
+            "media": [
+              {
+                "media_id": "c56c2816-18bc-4c79-8e9a-f24f3f338d97",
+                "sha256": "5cefe4a3b8571ec7",
+                "status": "ready",
+                "filename": "video.mp4"
+              }
+            ],
+            "web_url": "http://127.0.0.1:57434/app/20f3a049-fd8e-4e3d-93b9-a8d17ce74a37/posts/e9049378-66dd-4505-ad7e-d431aa851679"
+          }
+        ]
+      },
+      "expected_scheduled_at": [
+        "2026-11-25T01:00:00.000Z"
+      ],
+      "video": {
+        "bytes": 30456429,
+        "sha256": "5cefe4a3b8571ec7a5e3771362dcaff0fd67b639ca7d3531beb510c8017da5dd"
+      },
+      "transcript": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-real-model/2026-11-24T09-10-44-237Z-claude/P2-5.jsonl",
+      "stack_logs": "/var/folders/b8/7lrgphx56sj0q7t_l76gdx080000gn/T/smartsell-e2e-phase1-logs/real-model-claude-P2-5-2026-11-24T09-11-22-295Z"
+    }
+  ]
+}

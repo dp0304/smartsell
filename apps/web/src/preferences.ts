@@ -47,3 +47,12 @@ export function usePreference(key: string, fallback: string) {
   const value = useSyncExternalStore(subscribe, () => read(`smartsell.ui.${key}`) ?? fallback, () => fallback);
   return [value, (next: string) => write(`smartsell.ui.${key}`, next)] as const;
 }
+
+// Phase 1 shows only the core dashboard modules (today, calendar, machines, channels, Agent, settings). The others keep their
+// routes and code; Settings → 介面 → 顯示其他模組 brings them back into the navigation for this browser (§9.1).
+const moreModulesKey = 'smartsell.ui.more-modules';
+export const showsMoreModules = () => read(moreModulesKey) === '1';
+export function setShowMoreModules(enabled: boolean) { write(moreModulesKey, enabled ? '1' : null); }
+export function useShowMoreModules() {
+  return useSyncExternalStore(subscribe, showsMoreModules, () => false);
+}

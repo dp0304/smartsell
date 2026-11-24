@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { expect, test as base } from '@playwright/test';
 import { localDev, localRegistration, localTokenRegistration } from './local-dev.mjs';
+import { expectStepStatus, expectToday, expectWizardStep, finishLater, openAdvancedWorkbench, wizardSteps } from './phase1-shell.mjs';
 
 const test = base.extend({ dev: localDev });
 const registration = test.extend({ dev: localRegistration });
@@ -60,7 +61,7 @@ async function setupWorkspace(page, dev) {
   const setup = responseFor(page, 'POST', '/api/v1/setup');
   await page.getByRole('button', { name: '首次設定', exact: true }).click();
   expect((await setup).status(), 'POST /api/v1/setup').toBe(201);
-  // An empty workspace starts in the guided setup rather than the advanced workbench.
+  // An empty workspace starts in the phase-1 first-run wizard rather than the advanced workbench.
   await expectSetupAndSkip(page);
   return password;
 }
@@ -96,17 +97,17 @@ async function expectNoHorizontalOverflow(page) {
   expect(width.content, 'document scroll width').toBeLessThanOrEqual(width.viewport);
 }
 
+/**
+ * An empty workspace opens the five-step first-run wizard (phase1-design §2.9) on its first step with nothing done;
+ * 「稍後再設定」 leaves it for the dashboard index, which is Today in phase 1 (§9.1).
+ */
 async function expectSetupAndSkip(page, locale = 'zh-Hant') {
-  const english = locale === 'en';
-  const main = page.getByRole('main');
-  await expect(main.getByRole('heading', { name: english ? 'Get started' : '開始設定', exact: true })).toBeVisible();
-  await expect(page).toHaveURL(/\/app\/[^/]+\/get-started(?:\?step=agent)?$/);
-  const dashboard = page.url().replace(/\/get-started(?:\?step=agent)?$/, '');
-  await expect(main.getByRole('navigation', { name: english ? 'Setup steps' : '設定步驟', exact: true }).getByRole('listitem')).toHaveCount(2);
+  await expect(page).toHaveURL(/\/app\/[^/]+\/get-started$/);
+  const dashboard = page.url().replace(/\/get-started$/, '');
+  await expectWizardStep(page, 'workspace', { locale });
+  for (const step of wizardSteps) await expectStepStatus(page, step, step === 'notifications' ? 'optional' : 'todo', locale);
   await expectNoHorizontalOverflow(page);
-  await main.getByRole('link', { name: english ? 'Finish later and go to overview' : '稍後設定，前往總覽', exact: true }).click();
-  await expect(page).toHaveURL(dashboard);
-  await expect(main.getByRole('heading', { name: english ? 'Overview' : '總覽', exact: true })).toBeVisible();
+  expect(await finishLater(page, locale)).toBe(dashboard);
   return dashboard;
 }
 
@@ -130,17 +131,18 @@ test('primary root supports first-time setup and fresh-session sign-in in both l
     expect((await login).status(), 'POST /api/v1/session').toBe(200);
     // The first sign-in to an empty workspace shows setup in the chosen language.
     await expectSetupAndSkip(loginPage, 'en');
-    await reloadFor(loginPage, `${workspaceApi(loginPage)}/views/home`);
-    await expect(loginPage.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+    // Today reads its own view (§9.7 views_today).
+    await reloadFor(loginPage, `${workspaceApi(loginPage)}/views/today`);
+    await expectToday(loginPage, 'en');
     const dashboardNav = loginPage.getByRole('navigation', { name: 'Dashboard navigation' });
     await expect(dashboardNav).toBeVisible();
     await expectNoHorizontalOverflow(loginPage);
     await dashboardLanguage(loginPage).selectOption('zh-Hant');
-    await expect(loginPage.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+    await expectToday(loginPage);
     await expect(loginPage.getByRole('navigation', { name: '看板導覽' })).toBeVisible();
     await expectNoHorizontalOverflow(loginPage);
-    // The previous workbench stays reachable as the advanced workbench.
-    await loginPage.getByRole('link', { name: '進階工作台', exact: true }).click();
+    // The previous workbench stays reachable as the advanced workbench, from Settings (§9.1).
+    await openAdvancedWorkbench(loginPage, workspaceApi(loginPage).split('/').at(-1));
     await expect(loginPage).toHaveURL(/\/w\/[^/]+\/home$/);
     await expect(loginPage.getByRole('heading', { name: '今日營運' })).toBeVisible();
     await expect(loginPage.getByRole('navigation', { name: '模組目錄' })).toBeVisible();
@@ -211,7 +213,7 @@ for (const [entry, path, fixture, minimum] of [
     expect(data.user).toMatchObject({ username, name: username });
     expect(data.workspaces[0].name).toBe('SmartSell');
     const setupPath = `/app/${data.workspaces[0].id}/get-started`;
-    await expect(page).toHaveURL(url => url.pathname === setupPath && ['', '?step=agent'].includes(url.search));
+    await expect(page).toHaveURL(url => url.pathname === setupPath && url.search === '');
     const dashboard = await expectSetupAndSkip(page);
     await page.getByRole('button', { name: '登出', exact: true }).click();
     await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
@@ -224,8 +226,9 @@ for (const [entry, path, fixture, minimum] of [
     await page.getByRole('button', { name: '登入', exact: true }).click();
     expect((await login).status()).toBe(200);
     if (path === '/') {
+      // The wizard was left with 「稍後再設定」, so sign-in opens Today directly.
       await expect(page).toHaveURL(dashboard);
-      await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+      await expectToday(page);
     } else {
       await expect(page).toHaveURL(`${dev.origin}${path}/w/${data.workspaces[0].id}/home`);
     }
@@ -276,7 +279,7 @@ registration('first visit registers with two fields and the new user can sign ou
   await page.getByRole('button', { name: '登入', exact: true }).click();
   expect((await login).status()).toBe(200);
   await expect(page).toHaveURL(dashboard);
-  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  await expectToday(page);
   await page.getByRole('button', { name: '登出', exact: true }).click();
   await expect(page.getByRole('heading', { name: '登入', exact: true })).toBeVisible();
   const workspaceId = new URL(dashboard).pathname.split('/').at(-1);

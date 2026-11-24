@@ -13,7 +13,9 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # pnpm verify → pnpm test --built-web also runs tests/e2e-phase1 (E28): about 12 minutes of wall time on its own, sharing
+    # at most 4 node:test slots with every other node test file, after the build.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +30,24 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # Playwright's Chromium serves the Playwright specs (scripts/playwright-browser.mjs picks it).
       - run: pnpm exec playwright install --with-deps chromium
+      # tests/e2e-phase1 generates the §10.2 clip with ffmpeg (tests/e2e-phase1/video.ts) and the hub probes uploads with ffprobe.
+      - run: sudo apt-get install -y ffmpeg
+      # The headless Workers (E2E stacks, worker/loop.test.ts, tests/connector-desktop) launch Google Chrome themselves, without
+      # --no-sandbox. On ubuntu-24.04 only the image's Google Chrome (/opt/google/chrome, covered by the image's AppArmor
+      # profile) has a usable sandbox; Playwright's Chromium under ~/.cache would stop with "No usable sandbox!". Pin the
+      # Workers to the runner's Chrome and fail here, instead of letting every Chrome test skip, if the image ever drops it.
+      - name: Point the headless Workers at the runner's Google Chrome
+        shell: bash
+        run: |
+          chrome="$(command -v google-chrome-stable || command -v google-chrome || true)"
+          if [ -z "$chrome" ]; then
+            echo "::error::Google Chrome is not installed on this runner; the headless Worker tests and tests/e2e-phase1 cannot run."
+            exit 1
+          fi
+          "$chrome" --version
+          echo "SMARTSELL_CHROME_PATH=$chrome" >> "$GITHUB_ENV"
       - run: pnpm verify
 
   services:
@@ -96,4 +115,4 @@ jobs:
       - name: Verify the macOS development signature
         if: matrix.target == 'mac'
         shell: bash
-        run: codesign --verify --deep --strict apps/connector-desktop/release-local/mac*/'SmartSell Connector.app'
+        run: codesign --verify --deep --strict apps/connector-desktop/release-local/mac*/'SmartSell Worker.app'

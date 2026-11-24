@@ -29,7 +29,7 @@ export function CalendarSummaryStrip({ summary, from, to, today, timeZone, base,
         <ul className="cal-needs-list">{needsHumanKinds.filter(kind => summary.needs[kind] > 0).map(kind => <li key={kind}>
           <span className="cal-needs"><Glyph name="warning" size={12} />{l(needsText[kind])}</span><span className="vs-count">{summary.needs[kind]}</span>
         </li>)}</ul>
-        <RouterLink to={`${base}/decisions`} className="vs-btn primary-soft">{l(t.goDecisions)}</RouterLink>
+        <RouterLink to={base} className="vs-btn primary-soft">{l(['到今日處理', 'Handle on Today'])}</RouterLink>
       </> : <p className="cal-tile-empty"><Glyph name="check" size={14} />{l(t.needsNone)}</p>}
     </section>
     <section className="cal-tile range" aria-labelledby="cal-range-title">

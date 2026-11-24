@@ -81,7 +81,11 @@ function orderCount(ctx: Context, period: ViewPeriod, brand: string | undefined)
   return kpi('orders', comparedDays(period.days.map(cell), previousPeriod(period).days.map(before)), dailyPoints(period.days, cell));
 }
 
-function publications(ctx: Context, period: ViewPeriod, brand: string | undefined) {
+/**
+ * 「本週」 publications. WV-12: a phase-1 post's event carries its PostStatus, so 'unknown' counts with outcome_unknown and
+ * 'missed' (沒有發出) with failed, the same posts Today counts as 結果不明 and 沒有發出.
+ */
+export function publications(ctx: Context, period: ViewPeriod, brand: string | undefined) {
   const events = calendarEvents(ctx, { period, kinds: ['publish', 'post'], brand_id: brand });
   const publish = events.filter(event => event.kind === 'publish' && event.status !== 'cancel_requested');
   const status = (name: string) => publish.filter(event => event.status === name || event.status?.startsWith(`${name}_`)).length;
@@ -91,7 +95,7 @@ function publications(ctx: Context, period: ViewPeriod, brand: string | undefine
     .filter(event => timestamp(event.starts_at) >= timestamp(ctx.now) && !CLOSED_PUBLICATION.includes(String(event.status))).slice(0, 8);
   return {
     scheduled: publish.length, published: status('published') + events.filter(event => event.kind === 'post').length,
-    failed: status('failed'), outcome_unknown: status('outcome_unknown'), upcoming,
+    failed: status('failed') + status('missed'), outcome_unknown: status('outcome_unknown') + status('unknown'), upcoming,
   };
 }
 

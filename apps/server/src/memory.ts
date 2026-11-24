@@ -356,6 +356,9 @@ function unitOfWork(state: Snapshot, scope: Scope, allowInvites = false): Unit {
     }),
     context: {
       ...scope, now,
+      // The workspace name given at setup (S8 ledger item 4): Operation reads fall back to it (workspace(ctx).name, so
+      // smartsell_overview and the get-started form) until the owner saves a name in the workspace settings.
+      ...(state.workspaceInfo?.id === scope.workspaceId && { workspaceName: state.workspaceInfo.name }),
       async get(module, kind, id) {
         const row = state.records.get(key(module, kind, id));
         return row && copyRow(row);
