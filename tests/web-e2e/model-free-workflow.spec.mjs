@@ -317,7 +317,8 @@ test('AI01 | after removing model settings, humans complete the launch', async (
     const thread = `/conversations/${conversation.id}`;
     await nav(page, 'Inbox');
     await button(page.getByRole('row'), conversation.id).click();
-    await expect(page.getByText(question, exact)).toBeVisible();
+    // The inbox row can still show the same text as a preview: check the message in the opened conversation.
+    await expect(page.getByRole('article').getByText(question, exact)).toBeVisible();
     await form(page, 'Acquire reply lease', 'POST', `${thread}/occupancy`);
     const reply = await form(page, 'Draft reply', 'POST', `${thread}/reply-drafts`, drawer => fill(drawer, 'body_text', replyText), { follow: true });
     expect(reply).toMatchObject({ reply_mode: 'public_reply', body_text: replyText });
