@@ -64,6 +64,10 @@ const test = base.extend({
       await use({ apiOrigin, staffOrigin: backend.staffOrigin, portalOrigin, setupToken, assertionKey, customOrigins, store: backend.store });
     } finally {
       try {
+        // An open page can keep a streaming or keep-alive connection to either server; close() would wait for it until the
+        // fixture timeout. Teardown ends the test, so drop every connection first.
+        portal?.closeAllConnections?.();
+        api?.server.closeAllConnections?.();
         if (portal?.listening) await new Promise(resolve => portal.close(resolve));
         await api?.close();
       } finally {
