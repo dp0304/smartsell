@@ -13,6 +13,8 @@ import { DriverAbort, type DriverBlocker, type DriverContext, type LoginState, t
 export const TIKTOK_DRIVER_VERSION = 'tiktok@2026.11.2';
 const READY_TIMEOUT_MS = 30_000;
 const POST_WAIT_MS = 60_000;
+// How long an error on the page waits for the response watcher to read TikTok's own answer (§8.9).
+const PAGE_REFUSAL_WAIT_MS = 2_000;
 const OWNER_POLL_MS = 2_000;
 const CONTENT_SNAPSHOT_MS = 10_000;
 const TIKTOK_ORIGIN = 'https://www.tiktok.com';
@@ -281,12 +283,23 @@ export class TikTokDriver implements PublishDriver {
     if (!blockers) return null;
     if (patternOf(ctx.selectors, 'tiktok', 'restricted_text').test(text)) return { kind: 'blocked', blocker: await toBlocker(ctx, 'risk_prompt', 'after_submit') };
     if (patternOf(ctx.selectors, 'tiktok', 'error_text').test(text) || patternOf(ctx.selectors, 'tiktok', 'risk_text').test(text)) {
-      return { kind: 'blocked', blocker: await this.#postFailed(ctx, 'platform_error', null) };
+      return { kind: 'blocked', blocker: await this.#pageRefusal(ctx, posts, since) };
     }
     // A captcha, verification or sign-in after the click: stop and hand it to the owner (no navigation, no retry).
     const blocked = await detectTikTok(ctx);
+    // detectTikTok reads the page again: an error that appeared after `text` was read is the same post failure.
+    if (blocked?.code === 'platform_error') return { kind: 'blocked', blocker: await this.#pageRefusal(ctx, posts, since) };
     if (blocked) return { kind: 'blocked', blocker: await toBlocker(ctx, blocked.code, 'after_submit', { url: blocked.url }) };
     return null;
+  }
+
+  /**
+   * The page shows TikTok's error as soon as its own request resolves; the response watcher reads that answer's body a
+   * moment later (under load, after the page). Wait briefly for it so the owner sees TikTok's own message.
+   */
+  async #pageRefusal(ctx: DriverContext, posts: ResponseWatcher, since: number) {
+    const refused = await pollUntil(ctx, async () => this.#refusedPost(ctx, posts, since), PAGE_REFUSAL_WAIT_MS);
+    return this.#postFailed(ctx, refused?.restricted ? 'risk_prompt' : 'platform_error', refused?.message ?? null);
   }
 
   /**
