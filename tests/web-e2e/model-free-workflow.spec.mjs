@@ -45,7 +45,8 @@ async function currentUser(page, user, role, wid) {
 
 async function mutation(page, method, path, submit) {
   const [response] = await Promise.all([
-    page.waitForResponse(response => response.request().method() === method && new URL(response.url()).pathname.endsWith(path), { timeout: 10_000 }),
+    // 30 s: on the services runner (PostgreSQL in Docker) a precheck-heavy write such as Create schedule can take over 10 s.
+    page.waitForResponse(response => response.request().method() === method && new URL(response.url()).pathname.endsWith(path), { timeout: 30_000 }),
     submit(),
   ]);
   return data(response);

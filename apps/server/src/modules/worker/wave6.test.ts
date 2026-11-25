@@ -178,6 +178,18 @@ test('WE-3: a go answered too_late ends the job as missed on the hub (the Worker
   assert.equal(f.job(job.id).status, 'missed', 'never unreported');
 });
 
+test('E2E-2c: a go after not_after for a job held by a pause records missed{paused}, not late', async () => {
+  const f = hubFixture();
+  const post = await f.schedule(HOUR);
+  const job = f.jobOf(post.id);
+  f.prepare(job.id);
+  f.run('publishing_pause', { scope_type: 'social_account', scope_id: f.account.id, reason: 'hold' });
+  f.at(iso(Date.parse(String(job.not_after)) + 1000));
+  assert.deepEqual(f.go(job.id), { go: false, reason: 'too_late', release: false });
+  assert.equal(f.job(job.id).status, 'missed');
+  assert.equal(missedReason(f.ctx, target(f, post.id), f.job(job.id), 'missed'), 'paused');
+});
+
 test('WE-10: a resent go for a running job is refused once the hub knows of a cancel, a pause or a lost approval', async () => {
   const f = hubFixture();
   const post = await f.schedule(HOUR);

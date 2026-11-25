@@ -256,7 +256,9 @@ export function goJob(ctx: Context, device: Row, body: Data) {
     // The Worker never runs a job after this answer (§5.6), so the hub ends it now instead of waiting for a report.
     deny('too_late', false);
     if (!job.submitting_at) {
-      addEvent(ctx, job, 'missed', { reason: 'late', via: 'go' });
+      // A job held by a pause missed its window because of the pause, whichever arrives first: this go or the Worker's own
+      // missed{paused} report (E2E-2c). The owner then reads 「暫停中沒有發出」, not 「超過遲到上限」.
+      addEvent(ctx, job, 'missed', { reason: paused(ctx, job) ? 'paused' : 'late', via: 'go' });
       setJob(ctx, job, { status: 'missed', finished_at: ctx.now });
     }
     return { go: false as const, reason: 'too_late' as const, release: false };
