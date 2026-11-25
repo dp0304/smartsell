@@ -159,7 +159,8 @@ for (const surface of ['commands', 'operations']) {
     const standalone = surface === 'operations';
     const start = standalone ? (await import('../../apps/server/src/integration/kernel-runtime.ts')).startKernel
       : (await import('../../apps/server/src/bootstrap.ts')).start;
-    const config = configuration({ DATABASE_URL: database, HOST: '127.0.0.1', ROLE: 'api,mcp',
+    // Media follows the config (§6.7), not process.env, so the fixture's MEDIA_DIRECTORY must reach the servers.
+    const config = configuration({ DATABASE_URL: database, HOST: '127.0.0.1', ROLE: 'api,mcp', MEDIA_DIRECTORY: process.env.MEDIA_DIRECTORY,
       SETUP_TOKEN: randomBytes(32).toString('hex'), IDENTITY_ENCRYPTION_KEY: randomBytes(32).toString('hex') });
     let app, base;
     const clients = new Set();

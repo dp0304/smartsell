@@ -73,7 +73,10 @@ describe('E2E the hub decides from what it knows; late facts after a forced rele
     assert.ok(Math.abs(Date.parse(fixturePosts(stack, 'x', caption)[0].created_at) - at) < 30_000, 'on time');
     await sleep(5_000);
     stack.partition('Mac-B', false);
-    const old = await waitJobStatus(stack, oldJob, ['succeeded', 'outcome_unknown'], 90_000);
+    // The first late fact (submitting) makes the job outcome_unknown until the result fact arrives; on a loaded runner the
+    // gap between the two outbox deliveries is long enough to observe, so wait for the settled status only.
+    const old = await waitJobStatus(stack, oldJob, ['succeeded'], 90_000)
+      .catch(async error => { const view = await jobView(stack, oldJob); throw new Error(`${error.message}: ${view.status}, ${view.timeline.map(row => row.event).join(',')}`); });
     assert.equal(old.status, 'succeeded');
     assert.ok(old.timeline.some(row => row.event === 'late_fact_after_release'), old.timeline.map(row => row.event).join(','));
     assert.equal(old.timeline.find(row => row.event === 'started')?.detail.go, 'offline');

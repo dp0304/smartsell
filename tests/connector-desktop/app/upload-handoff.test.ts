@@ -214,11 +214,14 @@ test('MCP-3: the App gives up while the hub is reachable; the hub marks the medi
   await giving.start();
   const handed = await relay.handle({ path, wait_seconds: 1 }, call);
   assert.equal(handed.structuredContent.continues_in_background, true);
-  for (let attempt = 0; attempt < 100 && (await session()).status === 'receiving'; attempt++) await new Promise(resolve => setTimeout(resolve, 20));
+  // Deadlines, not attempt counts: on a loaded CI runner the App's give-up path can take seconds.
+  for (const deadline = Date.now() + 10_000; Date.now() < deadline && (await session()).status === 'receiving';) await new Promise(resolve => setTimeout(resolve, 20));
   const failed = await session();
   assert.deepEqual([failed.status, (failed.error as { code: string }).code], ['failed', 'MEDIA_FAILED']);
   const [asset] = (await hub.rows('asset')).filter(row => row.id === handed.structuredContent.media_id);
   assert.equal(asset.status, 'failed');
   assert.equal((await hub.alerts()).at(-1)?.kind, 'upload_failed');
+  // The hub can record the failure before the App's own run settles: wait for the App's view as well.
+  for (const deadline = Date.now() + 10_000; Date.now() < deadline && giving.uploads()[0]?.status === 'uploading';) await new Promise(resolve => setTimeout(resolve, 20));
   assert.deepEqual(giving.uploads().map(view => view.status), ['failed']);
 });

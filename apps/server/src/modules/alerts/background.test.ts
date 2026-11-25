@@ -44,7 +44,9 @@ test('hub background: a captcha status event becomes an owner alert through the 
     const job = ctx.create('worker_job', { kind: 'publish_post', status: 'needs_owner', device_id: device.id, social_account_id: account.id,
       publish_target_id: target.id, dry_run: false, mode: 'auto', not_before: target.scheduled_at, not_after: new Date(Date.now() + 5_400_000).toISOString(),
       prepare_lead_min: 30, resume_token: 0, blocker: { code: 'captcha', phase: 'prepare' } });
-    updateChannels(ctx, { body: { channels: [{ kind: 'ntfy', url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/hub-alerts` }] }, params: {}, query: {} });
+    // The daily summary goes out after 21:00 workspace time; switched off so the run does not depend on the time of day.
+    updateChannels(ctx, { body: { channels: [{ kind: 'ntfy', url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/hub-alerts` }],
+      preferences: { daily_summary: false } }, params: {}, query: {} });
     ctx.emit('worker.job.status_changed', { job_id: job.id, from: 'claimed', to: 'needs_owner', publish_target_id: target.id,
       social_account_id: account.id, device_id: device.id, blocker_code: 'captcha' });
     return job.id;

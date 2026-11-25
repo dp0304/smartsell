@@ -271,7 +271,17 @@ test('AC02 default product revocation fences queued uploads and retains an accep
     const target = await put('/publish-targets', { social_account_id: account.id, content_variant_id: variant.id, variant_revision_id: revision.revision.id,
       schedule_kind: 'asap', visibility: 'private' });
     const submitted = await put(`/publish-targets/${target.id}/submit`, {});
-    const approved = await s.call('POST', `/publish-targets/${target.id}/approve`, {}, { version: submitted.version });
+    // Background prechecks may bump the target after submit (on a loaded CI runner, between submit and approve): approve
+    // the version that is current, the way a person re-reads the post after a 409 VERSION_CONFLICT.
+    let version = submitted.version;
+    let approved;
+    for (let attempt = 0; !approved; attempt++) {
+      try { approved = await s.call('POST', `/publish-targets/${target.id}/approve`, {}, { version }); }
+      catch (error) {
+        if (attempt >= 4 || !String(error?.message).includes('VERSION_CONFLICT')) throw error;
+        version = (await read(`/publish-targets/${target.id}`)).version;
+      }
+    }
     assert.equal(approved.plan_status, 'ready', JSON.stringify(approved.precheck));
     assert.ok(approved.execution_task_id);
     return `/execution-tasks/${approved.execution_task_id}`;
