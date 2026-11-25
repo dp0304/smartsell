@@ -186,7 +186,9 @@ export class Supervisor {
     const now = this.#o.clock.now();
     this.#failures += 1;
     this.#firstFailureAt ??= now;
-    const dueSoon = this.#jobsDueWithin(10 * 60_000) > 0;
+    // Facts still in the outbox (e.g. a post made offline while the hub was down) reconnect as fast as a job due soon,
+    // so the hub hears the result within a minute of coming back (§5.7, E2E-2).
+    const dueSoon = this.#jobsDueWithin(10 * 60_000) > 0 || this.#o.store.outboxDepth() > 0;
     const delay = failure.kind === 'busy' && failure.retryAfterMs !== null ? failure.retryAfterMs : backoffDelay(this.#failures, dueSoon, this.#o.random);
     this.#state = 'reconnecting';
     this.#message = null;

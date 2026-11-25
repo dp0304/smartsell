@@ -88,6 +88,19 @@ test('5xx and connection errors back off and reconnect; success resets the count
   } finally { await s.close(); }
 });
 
+test('facts waiting in the outbox cap the reconnect delay at 15 s (a post made offline reaches the restarted hub within a minute)', async () => {
+  const s = await setup();
+  try {
+    s.hub.setDown(true);
+    for (const expected of [2000, 4000, 8000, 16000, 32000]) assert.equal(await s.supervisor.tick(), expected);
+    // A job that is not due soon (the 10-minute rule alone would not cap the delay) with a fact still to report.
+    const claimed = heldJob(s.hub, s.store, { not_before: new Date(s.clock.now() + 3 * 3600_000).toISOString() });
+    s.store.enqueue(claimed.job_id, 'started', { event: 'started', go: 'offline', mode: 'auto' }, new Date().toISOString());
+    // Without the outbox rule the sixth failure waits 60 s.
+    assert.equal(await s.supervisor.tick(), 15_000);
+  } finally { await s.close(); }
+});
+
 test('503 DEVICE_BUSY waits for Retry-After', async () => {
   const s = await setup();
   try {
