@@ -132,6 +132,9 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
   const { key, seal, open } = codec;
   const publicOrigin = (origin ?? operationApi?.config.origin ?? 'http://127.0.0.1:3401').replace(/\/+$/, '');
   configurePosting({ publicOrigin });
+  // Set once the agent upload routes are mounted below (after /mcp); media_upload's direct form (E47) uses them per request.
+  let agentUploads: ReturnType<typeof registerAgentUploads> | undefined;
+  let uploadCredentials: ReturnType<typeof createAgentCredentials> | undefined;
   const intel = intelMcpCommands(MCP_TOOLS, operationApi);
   const lookup = (module: string, action: string) => module === 'intel' ? intel[action] : registry.get(module)?.get(action);
   const operations = new Map(operationApi?.operations.filter(op => op.method === 'GET' && !op.external &&
@@ -367,6 +370,13 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
       }
       const hub = createHubTools({
         origin: publicOrigin,
+        async directUpload(_principal, input) {
+          if (!agentUploads || !uploadCredentials) throw new Problem(503, 'UNAVAILABLE', 'Media uploads are not available on this server');
+          // The same Bearer token that authorized this MCP request, as the upload routes see it.
+          const uploader = await uploadCredentials.authenticate(req);
+          if (!uploader) throw new Problem(401, 'UNAUTHENTICATED', 'A valid SmartSell agent connection token is required.');
+          return agentUploads.direct(uploader, input, publicOrigin);
+        },
         read(principal, fn) {
           const selected = selectedFor(principal);
           return withCredential(selected, async unit => {
@@ -515,6 +525,8 @@ export function registerCommandMcp(app: FastifyInstance, store: Store, registry:
     const credentials = createAgentCredentials({ store, codec, operations: operationApi.operations });
     const media = (operationApi as { media?: ReturnType<typeof createMediaHost> }).media ?? createMediaHost(operationApi.config);
     const uploads = registerAgentUploads(app, { credentials, media: media.media, config: operationApi.config });
+    agentUploads = uploads;
+    uploadCredentials = credentials;
     app.addHook('preClose', async () => { await uploads?.idle?.(); });
     registerAgentAlertStream(app, { credentials });
   }

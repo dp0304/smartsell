@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
@@ -25,6 +25,9 @@ const SESSION_TTL_MS = 24 * 3_600_000;
 const BACKGROUND_AFTER_MS = 50_000;
 const ACTIVE_SESSION_LIMIT = 32;
 const SESSION = 'media_upload_session';
+/** A direct upload link (no relay, E47) is good for one PUT within an hour; the hub keeps it in memory only. */
+const DIRECT_LINK_TTL_MS = 3_600_000;
+const DIRECT_PATH = '/api/v1/agent/uploads/direct/';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const hex64 = /^[a-f0-9]{64}$/;
 
@@ -173,6 +176,17 @@ function strictObject(value: unknown, allowed: readonly string[], label: string)
       unknown.map(path => ({ path, code: 'unrecognized_keys', allowed: [...allowed] })));
   }
   return value as Data;
+}
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm',
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',
+};
+
+/** The MIME type for a file name's extension, when the caller did not send one (direct uploads, E47). */
+export function mimeFromFilename(filename: unknown) {
+  const extension = typeof filename === 'string' ? /\.([A-Za-z0-9]{2,5})$/.exec(filename)?.[1]?.toLowerCase() : undefined;
+  return extension ? MIME_BY_EXTENSION[extension] : undefined;
 }
 
 function parseCreate(body: unknown, maxBytes: number) {
@@ -335,6 +349,9 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
   const jobs = new Map<string, Promise<void>>();
   let queue: Promise<void> = Promise.resolve();
   let bundle: { mtimeMs: number; bytes: Buffer; etag: string } | undefined;
+  /** sha256(link token) → the upload it may fill. In memory: a hub restart voids the links, and media_upload hands out new ones. */
+  const directLinks = new Map<string, { uploadId: string; principal: UploadPrincipal; expiresAt: number }>();
+  const tokenKey = (token: string) => createHash('sha256').update(token).digest('hex');
 
   async function principalFor(request: FastifyRequest) {
     let principal: UploadPrincipal | undefined;
@@ -406,6 +423,32 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
       if (removeStaging) await rm(directory, { recursive: true, force: true }).catch(() => undefined);
     }
   }
+  /** One link per upload: a new media_upload call replaces the previous link, and expired links are dropped. */
+  function issueLink(principal: UploadPrincipal, uploadId: string, origin: string) {
+    const now = Date.now();
+    for (const [key, link] of directLinks) if (link.expiresAt <= now || link.uploadId === uploadId) directLinks.delete(key);
+    const token = randomBytes(32).toString('base64url');
+    const expiresAt = now + DIRECT_LINK_TTL_MS;
+    directLinks.set(tokenKey(token), { uploadId, principal, expiresAt });
+    const url = `${origin.replace(/\/+$/, '')}${DIRECT_PATH}${token}`;
+    return {
+      method: 'PUT' as const, url, expires_at: new Date(expiresAt).toISOString(), headers: { 'content-type': 'application/octet-stream' },
+      command: `curl --fail --silent --show-error -T "<path>" -H "Content-Type: application/octet-stream" "${url}"`,
+    };
+  }
+
+  /**
+   * media_upload without the relay (E47): create or resume the session for {filename, bytes, sha256} and hand back a one-use
+   * PUT link for the whole file. The same call again reads the status (and replaces the link while bytes are still missing).
+   */
+  async function direct(principal: UploadPrincipal, body: Data, origin: string) {
+    const input = parseCreate({ ...body, ...(body.mime === undefined && { mime: mimeFromFilename(body.filename) }) }, config.maxUploadBytes);
+    const result = await inWorkspace(principal, true, ctx => createOrResume(ctx, principal, input));
+    const view = result.view;
+    if (view.status === 'assembling' || view.status === 'processing') startFinish(principal, String(view.upload_id));
+    return { ...view, upload: view.status === 'receiving' && view.upload_id ? issueLink(principal, view.upload_id, origin) : null };
+  }
+
   function startFinish(principal: UploadPrincipal, id: string) {
     if (jobs.has(id)) return;
     activeJobs.add(id);
@@ -475,6 +518,53 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
         }
       } finally {
         // Drain an unread body so the client receives the error instead of a reset connection.
+        if (!consumed && body instanceof Readable && !body.destroyed) body.resume();
+      }
+    });
+
+    // E47: the whole file in one PUT, authorized by the one-use link from media_upload (no agent token on this route).
+    router.put<{ Params: { token: string } }>(`${DIRECT_PATH}:token`, { bodyLimit: config.maxUploadBytes + 64 * 1024 }, async (request, reply) => {
+      const body = request.body as Readable | undefined;
+      let consumed = false;
+      try {
+        const key = tokenKey(request.params.token);
+        const link = directLinks.get(key);
+        if (!link || link.expiresAt <= Date.now()) {
+          if (link) directLinks.delete(key);
+          throw problem(410, 'UPLOAD_LINK_EXPIRED', 'This upload link expired or was already used. Call media_upload again with the same filename, bytes and sha256 for a new link.');
+        }
+        const contentType = request.headers['content-type']?.split(';')[0].trim().toLowerCase();
+        if (contentType !== 'application/octet-stream' || !(body instanceof Readable) || request.headers['content-encoding']) {
+          throw problem(415, 'UNSUPPORTED_MEDIA_TYPE', 'Send the file as unencoded application/octet-stream (curl -T "<path>" -H "Content-Type: application/octet-stream").');
+        }
+        const length = request.headers['content-length'];
+        if (typeof length !== 'string' || !/^\d{1,13}$/.test(length)) throw problem(411, 'LENGTH_REQUIRED', 'Content-Length is required (curl -T sends it).');
+        const { uploadId, principal } = link;
+        const plan = await inWorkspace(principal, false, ctx => {
+          const session = receivingSession(ctx, uploadId);
+          if (Number(length) !== session.bytes) {
+            throw invalidArguments(`The body is ${length} bytes; media_upload declared ${session.bytes}. Upload the same file you described.`, [{ path: 'content-length', code: 'invalid_length' }]);
+          }
+          return { n: 0, k: session.chunks, length: session.bytes, sha256: session.sha256, mediaId: session.media_id };
+        });
+        // One use: a second PUT with this link is refused even while the first is still streaming.
+        directLinks.delete(key);
+        consumed = true;
+        try { await writePart(directoryFor(uploadId), plan, body, plan.sha256); }
+        catch (error) {
+          if (error instanceof Problem && error.code === 'UPLOAD_PART_HASH_MISMATCH') {
+            throw problem(422, 'UPLOAD_HASH_MISMATCH', 'The file does not match the sha256 given to media_upload. Recompute it (shasum -a 256 / certutil -hashfile … SHA256) and call media_upload again.');
+          }
+          throw error;
+        }
+        await inWorkspace(principal, true, ctx => {
+          const session = receivingSession(ctx, uploadId);
+          ctx.update(SESSION, uploadId, { parts: [{ n: 0, k: session.chunks }], received: Array.from({ length: session.chunks }, (_, index) => index), status: 'assembling' });
+          ctx.update('asset', session.media_id, { status: 'processing' });
+        });
+        startFinish(principal, uploadId);
+        return reply.code(202).send({ status: 'processing', media_id: plan.mediaId, upload_id: uploadId });
+      } finally {
         if (!consumed && body instanceof Readable && !body.destroyed) body.resume();
       }
     });
@@ -550,6 +640,7 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
   });
 
   return {
+    direct,
     /** Resolves when every queued assembly has finished. */
     async idle() { while (jobs.size) await Promise.allSettled([...jobs.values()]); },
   };

@@ -33,7 +33,8 @@
     "hub:export-legacy": "node --import tsx scripts/hub-export-legacy.mjs",
     "worker:release": "node --import tsx scripts/worker-release.mjs",
     "test:e2e-phase1": "node --import tsx --test tests/e2e-phase1/*.test.ts",
-    "real-model-check": "node --import tsx scripts/real-model-check.mjs"
+    "real-model-check": "node --import tsx scripts/real-model-check.mjs",
+    "manual-client-check": "node --import tsx scripts/manual-client-check.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

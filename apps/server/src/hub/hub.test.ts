@@ -64,7 +64,7 @@ test('hub configuration: a ts.net PUBLIC_ORIGIN yields production semantics with
   assert.deepEqual([...config.origins], [ORIGIN], 'no development origins and no DEV_ORIGINS in hub mode');
   assert.equal(configuration(hubEnv({ DEV_ORIGINS: 'http://127.0.0.1:9999' })).origins.size, 1);
   assert.equal(config.trustProxy, '127.0.0.1');
-  assert.equal(config.requestTimeoutMs, 120_000);
+  assert.equal(config.requestTimeoutMs, 900_000);
   assert.equal(config.maxUploadBytes, 2 * 1024 ** 3);
   assert.equal(config.hubDirectory, '/tmp/smartsell-hub-config-fixture');
   assert.equal(config.statePath, '/tmp/smartsell-hub-config-fixture/smartsell.sqlite');

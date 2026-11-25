@@ -43,8 +43,14 @@ export const toolSchemas = {
   machines_list: z.object({ include_offline: z.boolean().default(true) }).strict(),
   channels_list: z.object({ provider: provider().optional(), machine_id: uuid().optional() }).strict(),
   channel_check: z.object({ channel_id: uuid(), wait_seconds: z.number().int().min(0).max(40).default(30) }).strict(),
+  // Two forms (E47): {path} when the SmartSell relay runs this client (the relay uploads), or {filename, bytes, sha256} for a
+  // client that reaches the hub directly: the result's upload.command is one curl PUT that the agent runs on its computer.
   media_upload: z.object({
-    path: z.string().min(2).max(4096).describe('Absolute path (or ~/…) of a video or image on THIS computer. Build it from your working directory. The SmartSell relay reads it locally; do not read, encode or curl the file.'),
+    path: z.string().min(2).max(4096).describe('Relay form: absolute path (or ~/…) of the file on THIS computer. The relay reads and uploads it; never read or base64 the file yourself.').optional(),
+    filename: z.string().min(1).max(255).describe('Direct form: the file name, e.g. video.mp4.').optional(),
+    bytes: z.number().int().min(1).describe('Direct form: file size in bytes.').optional(),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/, { error: 'must be 64 lowercase hex characters' }).describe('Direct form: SHA-256 of the file (shasum -a 256, or certutil -hashfile <file> SHA256).').optional(),
+    mime: z.enum(['video/mp4', 'video/quicktime', 'video/webm', 'image/jpeg', 'image/png', 'image/webp', 'image/gif']).describe('Direct form: optional; from the extension by default.').optional(),
     title: z.string().min(1).max(200).optional(),
     wait_seconds: z.number().int().min(0).max(50).default(45),
   }).strict(),
@@ -232,6 +238,16 @@ function crossFieldIssues(tool: HubToolName, value: Data): ArgumentIssue[] {
     if (action === 'cancel') { forbid('when', 'for action cancel'); forbid('caption', 'for action cancel'); forbid('timezone', 'for action cancel'); forbid('dst_choice', 'for action cancel'); }
     if (action === 'edit_caption') { need('caption', 'for action edit_caption'); forbid('when', 'for action edit_caption'); forbid('timezone', 'for action edit_caption'); forbid('dst_choice', 'for action edit_caption'); }
     if (value.caption !== undefined) issues.push(...tagIssues('caption', value.caption));
+  }
+  if (tool === 'media_upload') {
+    const direct = ['filename', 'bytes', 'sha256', 'mime'].filter(field => value[field] !== undefined);
+    if (value.path !== undefined) {
+      for (const field of direct) forbid(field, 'with path (the relay form); send either path or filename, bytes and sha256');
+    } else {
+      need('filename', 'for the direct form (or send path through the SmartSell relay)');
+      need('bytes', 'for the direct form');
+      need('sha256', 'for the direct form');
+    }
   }
   if (tool === 'publishing_pause') {
     if (value.scope === 'all') forbid('id', "when scope is 'all'");

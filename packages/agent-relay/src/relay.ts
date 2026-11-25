@@ -24,6 +24,13 @@ export interface RunRelayOptions {
 
 const FORWARD_CONCURRENCY = 4;
 
+/** media_upload's direct form: no path, but a filename/bytes/sha256 the hub turns into a one-use upload link (E47). */
+function directForm(args: unknown) {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return false;
+  const value = args as Record<string, unknown>;
+  return value.path === undefined && (value.filename !== undefined || value.sha256 !== undefined || value.bytes !== undefined);
+}
+
 /**
  * C5: the stdio MCP relay. Every message is forwarded to `<hub>/mcp`, except `tools/call` for `media_upload`,
  * which reads the file on this computer and uploads it in resumable, hashed parts (§6.3).
@@ -83,7 +90,9 @@ export async function runRelay(options: RunRelayOptions): Promise<void> {
       if (line === null) break;
       continue;
     }
-    if (message.method === 'tools/call' && (message.params as { name?: unknown } | undefined)?.name === 'media_upload' && message.id !== undefined) {
+    // The relay uploads only the {path} form; the direct form {filename, bytes, sha256} (E47) goes to the hub like any other call.
+    if (message.method === 'tools/call' && (message.params as { name?: unknown } | undefined)?.name === 'media_upload' && message.id !== undefined
+      && !directForm((message.params as { arguments?: unknown }).arguments)) {
       track(mediaUpload(message));
       continue;
     }

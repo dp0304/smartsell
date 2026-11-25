@@ -22,7 +22,7 @@ SmartSell 第 1 階段給一人經營的跨境賣家用：家裡一台電腦當*
 5. **確認連上**：完整重開 Codex 或 Claude Code，請它呼叫一次 SmartSell 的工具（例如 `smartsell_overview`）。任何一次成功的呼叫都算驗證；回到網頁，「開始設定」的 Codex 步驟會顯示「已有 Agent 透過 MCP 呼叫過 SmartSell。」。
 6. **直接交代工作**：例如「把 ~/Movies/video.mp4 明天 9:00 發到 Mac-B 的 X 和 Win-C 的 TikTok」。Agent 會依伺服器說明呼叫工具，回報每則貼文的當地時間、機器、狀態與網址；核准、代按發布的風險、恢復暫停與確認結果都留給你在網頁上做。
 
-Agent 看得到的工具只有 11 個：`smartsell_overview`、`machines_list`、`channels_list`、`channel_check`、`media_upload`、`post_schedule`、`post_update`、`posts_list`、`post_get`、`task_get`、`publishing_pause`。媒體檔由本機的 relay 分段上傳（SHA-256 校驗、可續傳），不經過模型。不需要修改 `AGENTS.md`；想把規則放進專案時，用 [Agent 工作指南](docs/agent-guide.md) 的第 1 階段一節。
+Agent 看得到的工具只有 11 個：`smartsell_overview`、`machines_list`、`channels_list`、`channel_check`、`media_upload`、`post_schedule`、`post_update`、`posts_list`、`post_get`、`task_get`、`publishing_pause`。媒體檔一律走 API、不經過模型：經 relay 時由本機的 relay 分段上傳（SHA-256 校驗、可續傳）；用戶端直接以 HTTP 連中樞時，`media_upload` 以檔名、大小與 SHA-256 換一個單次有效的上傳網址，由 Agent 在本機執行一行 `curl -T` 上傳。不需要修改 `AGENTS.md`；想把規則放進專案時，用 [Agent 工作指南](docs/agent-guide.md) 的第 1 階段一節。
 
 ### 選用：在專案安裝 Agent Skills
 

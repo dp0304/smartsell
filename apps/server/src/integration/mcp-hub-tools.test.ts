@@ -301,11 +301,49 @@ test('strict validation answers INVALID_ARGUMENTS with issue paths; media_upload
   assert.equal(relay.code, 'RELAY_REQUIRED');
   assert.match(relay.details.owner_message, /relay/);
   assert.match(relay.details.install.download, /\/agent\/relay\.mjs/);
-  assert.ok(!JSON.stringify(relay).includes('upload_url'), 'no one-time upload URL in phase 1 (E4)');
+  // E47: the path form cannot work without the relay, so the hub points at the direct form instead of a URL for a path.
+  assert.match(relay.message, /\{filename, bytes, sha256\}/);
+  assert.ok(!JSON.stringify(relay).includes('/uploads/direct/'), 'no upload link for a path the hub cannot read');
   // Business errors carry code, message, details and web_url.
   const missing = failure(await h.call('post_schedule', { media_ids: ['0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11'], channel_ids: [h.seeded.x.account], when: 'now' }));
   assert.deepEqual([missing.code, missing.details.media_ids], ['MEDIA_NOT_FOUND', ['0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11']]);
   assert.equal(failure(await h.call('post_update', { post_id: '0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11', action: 'cancel' })).code, 'POST_NOT_FOUND');
+});
+
+test('E47 direct form over plain MCP: {filename, bytes, sha256} returns a one-use curl PUT link; the uploaded media can be scheduled', async t => {
+  const h = await hub(t);
+  const bytes = fakeMp4(2 * 1024 * 1024 + 9);
+  const sha = createHash('sha256').update(bytes).digest('hex');
+  const described = { filename: 'video.mp4', bytes: bytes.length, sha256: sha };
+  // Mixing the forms, or a partial direct form, is refused with the missing or extra fields named.
+  assert.deepEqual(failure(await h.call('media_upload', { path: '/tmp/video.mp4', sha256: sha })).issues.map((issue: Json) => issue.path), ['sha256']);
+  assert.deepEqual(failure(await h.call('media_upload', { filename: 'video.mp4' })).issues.map((issue: Json) => issue.path), ['bytes', 'sha256']);
+  const first = ok(await h.call('media_upload', described));
+  assert.equal(first.status, 'receiving');
+  assert.ok(first.upload.command.includes('-T "<path>"') && first.upload.command.endsWith(`"${first.upload.url}"`), first.upload.command);
+  assert.ok(first.upload.url.startsWith(`${h.config.origin}/api/v1/agent/uploads/direct/`));
+  assert.ok(!JSON.stringify(first).includes(h.connection.token), 'the agent token never reaches the model');
+  // What the agent runs: one PUT of the whole file (the command's curl -T, done here with fetch).
+  const put = await fetch(first.upload.url.replace(h.config.origin, h.base), { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(bytes) });
+  assert.equal(put.status, 202, await put.text());
+  let status = first;
+  for (let attempt = 0; attempt < 200 && status.status !== 'ready'; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 25));
+    status = ok(await h.call('media_upload', described));
+  }
+  assert.deepEqual([status.status, status.media_id, status.upload], ['ready', first.media_id, null]);
+  const scheduled = ok(await h.call('post_schedule', { media_ids: [first.media_id], channel_ids: [h.seeded.x.account], when: 'now', captions: { default: { text: 'direct upload' } } }));
+  assert.equal(scheduled.posts.length, 1);
+});
+
+test('E47 through the relay: the path form uploads locally and the direct form is passed to the hub unchanged', async t => {
+  const h = await hub(t);
+  const client = relayClient(t, h.base, h.connection.token);
+  await client.send('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
+  const bytes = fakeMp4(1024 * 1024 + 5);
+  const direct = await client.call('media_upload', { filename: 'clip.mp4', bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+  assert.equal(direct.isError, undefined, JSON.stringify(direct));
+  assert.ok(String(direct.structuredContent.upload.url).includes('/api/v1/agent/uploads/direct/'), 'answered by the hub, not the relay');
 });
 
 /** A ready owned video already in the hub (the "pre-uploaded owned asset" path of the done criterion). */

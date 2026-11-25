@@ -111,7 +111,7 @@
   - 目前讀 `config.production` 的檔案有：`bootstrap.ts`、`config.ts`、`server.ts`、`runtime.ts`、`operation-server.ts`、`operations.ts`、`oauth.ts`、`modules/planning/{index,queries}.ts`、`integration/{commerce-providers,enterprise-host,kernel-runtime,portal-host}.ts`。S1 再稽核所有直接讀 `process.env.NODE_ENV` 的地方，把清單與「中樞模式下不會走到開發分支」的斷言寫進 `hub.test.ts`；若找到繞過 `config.production` 的分支，由該檔案的擁有者改成讀 `config.production`。
 - **網路：**API 只綁 `127.0.0.1:3401`，對外由 `tailscale serve` 終止 TLS。依 Tailscale 文件，`serve` 會保留原本的 `Host`，並加上 `X-Forwarded-For` 與 `X-Forwarded-Proto: https`，因此 `originGuard` 與 Secure cookie 都照常運作。
   - 中樞模式把 Fastify 的 `trustProxy` 設為 `'127.0.0.1'`，`request.ip` 才會是 tailnet 上的真實來源；否則所有請求的來源都是 127.0.0.1，登入節流會變成全域共用。
-  - 中樞模式把 `requestTimeout` 從 30 秒改為 120 秒，配合上傳分段（§6.3）。
+  - 中樞模式把 `requestTimeout` 從 30 秒改為 900 秒（E47；原為 120 秒，配合上傳分段，§6.3），讓直傳的單一 PUT 能傳完大檔。
 - **入口：**`node --import tsx apps/server/hub.ts`。根目錄新增 `pnpm hub`、`pnpm hub:init`、`pnpm hub:service`、`pnpm hub:update`、`pnpm hub:doctor`、`pnpm hub:export-legacy`。
 
 ### 2.3 `apps/server/src/config.ts` 的變更（S1）
@@ -1458,7 +1458,7 @@ Python relay 凍結：新連線不再提供，既有連線可繼續使用；第 
 **其他：**
 
 - `tools/list` 的回應原樣轉送。`media_upload` 的定義由中樞提供，說明中寫明「由本機 SmartSell relay 處理」。
-- 若中樞直接收到 `media_upload` 呼叫（用戶端沒有經過 relay），回錯 `RELAY_REQUIRED`，`details` 提供 `upload_url_flow`：一次性的 `PUT` 網址與 `curl -T` 範例，作為最後的備援。
+- 若中樞直接收到帶 `path` 的 `media_upload`（用戶端沒有經過 relay），回錯 `RELAY_REQUIRED`，訊息指向直傳形式 `{filename, bytes, sha256}`（E47）。直傳形式由中樞回傳單次有效的 `PUT` 網址與 `curl -T` 指令；relay 收到直傳形式時原樣轉給中樞。
 
 ### 6.4 中樞上傳端點與授權（S5，`apps/server/src/integration/agent-uploads.ts`）
 
@@ -1478,6 +1478,7 @@ Python relay 凍結：新連線不再提供，既有連線可繼續使用；第 
 | `GET /api/v1/agent/uploads/:id` | — | `{"status":"receiving"\|"assembling"\|"processing"\|"ready"\|"failed","received":[…],"bytes_received","media_id","error":null}` |
 | `POST /api/v1/agent/uploads/:id/complete` | `{}` | `{"status":"assembling"}`，HTTP 202 |
 | `POST /api/v1/agent/uploads/:id/abort` | `{"reason":"file_changed"\|"cancelled"\|"error"}` | `{"status":"failed"}`；asset 標為 `failed`，通知主人 |
+| `PUT /api/v1/agent/uploads/direct/:token`（E47） | 整個檔案，`application/octet-stream` | HTTP 202 `{"status":"processing","media_id","upload_id"}`；長度不符 422（網址保留）、SHA-256 不符 422 `UPLOAD_HASH_MISMATCH`（網址用掉）、網址失效 410 `UPLOAD_LINK_EXPIRED` |
 | `GET /agent/relay.mjs` | 不需授權 | 回傳 relay 的 bundle（`packages/agent-relay/dist/smartsell-relay.mjs`）與 `ETag` |
 
 **`media_upload_session` 紀錄：**
@@ -1554,7 +1555,7 @@ Python relay 凍結：新連線不再提供，既有連線可繼續使用；第 
 | `machines_list` | 讀 | `views_machines_list`（S7） | readOnly |
 | `channels_list` | 讀 | `views_channels_list`（S7） | readOnly |
 | `channel_check` | 寫（建立 job） | `hub_channels_check`（`POST /hub/channels/:id/check`，S4）；等候結果在工具層（§5.12） | 不是 destructive，具冪等性 |
-| `media_upload` | 寫 | 由 relay 在本機處理，經 §6.4 的 REST 上傳；中樞直接收到時回 `RELAY_REQUIRED` | 不是 destructive |
+| `media_upload` | 寫 | `{path}`：由 relay 在本機處理，經 §6.4 的 REST 上傳；中樞直接收到時回 `RELAY_REQUIRED`。`{filename, bytes, sha256}`：中樞回傳單次有效的 PUT 網址（E47） | 不是 destructive |
 | `post_schedule` | 寫 | `hub_posts_schedule`（`POST /hub/posts/schedule`，S4） | 不是 destructive |
 | `post_update` | 寫 | `hub_posts_update`（`POST /hub/posts/:id/update`，S4） | 不是 destructive |
 | `posts_list` | 讀 | `views_posts_list`（S7） | readOnly |
@@ -3395,6 +3396,7 @@ export interface MediaRecentItem { media_id: string; filename: string; kind: 'vi
 | GET | `/api/v1/agent/uploads/:id` | S5 | 查詢狀態 |
 | POST | `/api/v1/agent/uploads/:id/complete` | S5 | 完成上傳 |
 | POST | `/api/v1/agent/uploads/:id/abort` | S5 | 放棄上傳（通知主人） |
+| PUT | `/api/v1/agent/uploads/direct/:token` | E47 | 直傳整個檔案。不用 Bearer，由 `media_upload` 回傳的單次有效網址授權；`Content-Type: application/octet-stream`，長度與 SHA-256 必須符合宣告 |
 | GET | `/api/v1/agent/alerts/stream` | S10 | 主人通知的 SSE 串流（只讀，支援 `Last-Event-ID`），筆電 App 使用 |
 | GET | `/agent/relay.mjs` | S5 | relay 的 bundle，不需要授權 |
 
@@ -3479,7 +3481,8 @@ export interface MediaRecentItem { media_id: string; filename: string; kind: 'vi
 | `HANDLE_UNKNOWN` | 409 | 風險確認時還不知道帳號的 handle | — |
 | `EXECUTION_MODE_UNAVAILABLE` | 422 | 第 1 階段設定 `execution_mode=api` | — |
 | `HUMAN_REQUIRED` | 403 | 既有，限人工的操作 | 附上 `web_url` |
-| `RELAY_REQUIRED` | 422 | 中樞直接收到 `media_upload` | 附上 relay 的安裝說明與 `upload_url_flow` |
+| `RELAY_REQUIRED` | 422 | 中樞直接收到帶 `path` 的 `media_upload` | 附上 relay 的安裝說明，並指向直傳形式 `{filename, bytes, sha256}`（E47） |
+| `UPLOAD_LINK_EXPIRED` | 410 | 直傳網址已用過、已被新網址取代、超過 1 小時或中樞重啟過 | 以同樣的 filename、bytes、sha256 再呼叫一次 `media_upload` 取得新網址（E47） |
 | `PATH_NOT_ABSOLUTE`、`PATH_NOT_ALLOWED`、`FILE_CHANGED`、`UPLOAD_TYPE_UNSUPPORTED`、`UPLOAD_TOO_LARGE` | relay 本機回錯 | — | `PATH_NOT_ABSOLUTE`："Pass an absolute path. Build it from your working directory." |
 | `UPLOAD_PART_HASH_MISMATCH`、`UPLOAD_HASH_MISMATCH`、`UPLOAD_EXPIRED` | 422／410 | 中樞的上傳端點 | — |
 | `JOB_FENCE_LOST`、`JOB_NOT_FOUND`、`JOB_INVALID_STATE`、`SEQ_GAP`、`SEQ_CONFLICT` | 409／404 | 裝置協定 | — |
@@ -3692,7 +3695,7 @@ export interface MediaRecentItem { media_id: string; filename: string; kind: 'vi
 | E1 | `OwnerAlertKind` 新增 `offline_run_stale_settings`（urgent）。S3 寫入 `offline_run_used_stale_settings` 事件時呼叫 `alertOfflineStaleSettings()`。 | S10 請求 |
 | E2 | 接受 S5 新增的錯誤碼：`UPLOAD_INCOMPLETE`、`UPLOAD_NOT_RECEIVING`、`UPLOAD_ALREADY_READY`、`UPLOAD_LIMIT`、`RELAY_BUNDLE_MISSING`、`UNAUTHENTICATED`、`PERMISSION_DENIED`、`LENGTH_REQUIRED`、`UNSUPPORTED_MEDIA_TYPE`、`HUB_UNREACHABLE`、`UPLOAD_SESSION_MISMATCH`。附錄 C 由整合波補上文案。 | S5 |
 | E3 | ffprobe 讀不了容器時，素材仍為 `ready`，`meta=null`、`probe_status='invalid'`；預檢顯示「未取得影片長度與尺寸」的風險，不擋排程。 | S5 |
-| E4 | 第 1 階段不提供一次性 PUT 網址。沒有 relay 時，`media_upload` 回 `RELAY_REQUIRED` 並說明如何安裝 relay，不回假網址。 | S5 |
+| E4 | ~~第 1 階段不提供一次性 PUT 網址。~~ 已由 E47 取代（2026-11-25）。 | S5 |
 | E5 | 原始位元組的端點一律用 `PUT`（可通過根層守衛）；非 JSON 的 `POST` 才用 `RAW_BODY_ROUTE`。 | S1 |
 | E6 | C11 接受 S6 新增的 `connection`、`jobs_changed` 事件，由 S9 審查。 | S6 |
 | E7 | X Premium 沿用既有的 `caption_limit` 欄位（280 或 25,000），不另設 `x_premium`。 | S2 |
@@ -3757,3 +3760,10 @@ export interface MediaRecentItem { media_id: string; filename: string; kind: 'vi
 | E44 | 排程時檢查平台確定的影片限制（例如 X 非 Premium 帳號的長度上限、檔案大小），超過即為 blocker；資料不足時照 E3 標風險。限制值以平台官方說明為準。 | F12 |
 | E45 | 中樞每日備份 SQLite（`VACUUM INTO`，保留 7 份，0600），`hub:update` 前也備份一次；macOS 開 `fullfsync`。`hub:update` 失敗時回到更新前的版本與相依套件，並說明。Windows 服務由小型監督程序重啟崩潰的中樞；macOS 服務檔使用穩定的 Node 路徑（Homebrew `opt`）。 | AO-1、AO-2、AO-3、AO-8 |
 | E46 | Agent 讀推播通道時，網址中的秘密部分（Bark 裝置金鑰、ntfy 主題）遮蔽；人工的設定頁仍看到完整網址。Tailscale Funnel 把中樞公開到網際網路時，健康檢查、`hub:doctor` 與設定精靈都要警告。 | SEC-1、SEC-3 |
+
+### E（續）：主人 2026-11-25 的決定
+
+| # | 決定 | 來源 |
+|---|---|---|
+| E47 | 影片可以用 API 直傳，MCP 寫清楚（取代 E4）。`media_upload` 有兩種形式：`{path}` 由 relay 在本機分段上傳（建議，可續傳）；`{filename, bytes, sha256, mime?}` 給直接連中樞、沒有 relay 的用戶端，中樞建立或接續同一個上傳，回傳單次有效、1 小時過期、綁定大小與 SHA-256 的 `PUT /api/v1/agent/uploads/direct/:token` 與一行 `curl -T` 指令；同一組參數再呼叫一次就是查狀態。網址只存在中樞記憶體（重啟即失效），不含 agent token。中樞 `requestTimeout` 改為 900 秒。伺服器說明第 2 條改寫。 | 主人 |
+

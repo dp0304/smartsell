@@ -382,3 +382,62 @@ test('part bodies stream to staging files; an aborted part leaves nothing record
   const leftovers = existsSync(stagingDirectory(hub.mediaDirectory, created.upload_id)) ? await readdir(stagingDirectory(hub.mediaDirectory, created.upload_id)) : [];
   assert.deepEqual(leftovers, []);
 });
+
+// ---------- E47: media_upload's direct form (no relay) ----------
+async function putDirect(url: string, body: BodyInit, headers: Record<string, string> = { 'content-type': 'application/octet-stream' }) {
+  const response = await fetch(url, { method: 'PUT', headers, body });
+  const text = await response.text();
+  return { status: response.status, body: text ? JSON.parse(text) : undefined };
+}
+
+test('direct form: one-use PUT link for the whole file, checked against the declared size and SHA-256, then the same call reads ready', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(3 * MiB + 77);
+  const described = { filename: 'clip.mov', bytes: bytes.length, sha256: sha256(bytes) };
+  const first = await hub.uploads.direct(hub.principal, described, `${hub.origin}/`);
+  assert.equal(first.status, 'receiving');
+  assert.equal(first.mime, 'video/quicktime', 'MIME from the extension when none is sent');
+  const link = first.upload!;
+  assert.equal(link.method, 'PUT');
+  assert.ok(link.url.startsWith(`${hub.origin}/api/v1/agent/uploads/direct/`), link.url);
+  assert.ok(!link.url.includes(hub.token), 'the agent token never appears in the link');
+  assert.equal(link.command, `curl --fail --silent --show-error -T "<path>" -H "Content-Type: application/octet-stream" "${link.url}"`);
+
+  // Asking again replaces the link: the first one stops working.
+  const again = await hub.uploads.direct(hub.principal, described, hub.origin);
+  assert.equal(again.upload_id, first.upload_id);
+  assert.equal((await putDirect(link.url, new Uint8Array(bytes))).body.error.code, 'UPLOAD_LINK_EXPIRED');
+  const url = again.upload!.url;
+
+  // Wrong type, wrong size and wrong content are refused; the wrong size keeps the link, the wrong content uses it up.
+  assert.equal((await putDirect(url, new Uint8Array(bytes), { 'content-type': 'video/quicktime' })).body.error.code, 'UNSUPPORTED_MEDIA_TYPE');
+  assert.equal((await putDirect(url, new Uint8Array(bytes.subarray(1)))).body.error.code, 'INVALID_ARGUMENTS');
+  const tampered = Buffer.from(bytes); tampered[10] ^= 0xff;
+  const mismatch = await putDirect(url, new Uint8Array(tampered));
+  assert.deepEqual([mismatch.status, mismatch.body.error.code], [422, 'UPLOAD_HASH_MISMATCH']);
+  assert.equal((await putDirect(url, new Uint8Array(bytes))).body.error.code, 'UPLOAD_LINK_EXPIRED', 'one use, even when it failed');
+
+  const fresh = await hub.uploads.direct(hub.principal, described, hub.origin);
+  const accepted = await putDirect(fresh.upload!.url, new Uint8Array(bytes));
+  assert.deepEqual([accepted.status, accepted.body.status, accepted.body.media_id], [202, 'processing', first.media_id]);
+  const settled = await waitFor(hub, String(first.upload_id));
+  assert.equal(settled.status, 'ready');
+  const asset = find(await hub.rows('asset'), first.media_id);
+  assert.equal(asset.status, 'ready');
+  const [file] = await hub.rows('file_object');
+  assert.deepEqual([file.sha256, file.size_bytes], [sha256(bytes), bytes.length]);
+  assert.ok(!existsSync(stagingDirectory(hub.mediaDirectory, String(first.upload_id))), 'staging removed');
+
+  // The same description now answers ready with no link (deduplicated against the stored asset).
+  const done = await hub.uploads.direct(hub.principal, described, hub.origin);
+  assert.deepEqual([done.status, done.media_id, done.upload], ['ready', first.media_id, null]);
+});
+
+test('direct form validates the description like the relay API and refuses unknown MIME types', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  await assert.rejects(hub.uploads.direct(hub.principal, { filename: 'notes.txt', bytes: 10, sha256: 'a'.repeat(64) }, hub.origin), { code: 'UPLOAD_TYPE_UNSUPPORTED' });
+  await assert.rejects(hub.uploads.direct(hub.principal, { filename: 'a.mp4', bytes: 513 * MiB, sha256: 'a'.repeat(64) }, hub.origin), { code: 'UPLOAD_TOO_LARGE' });
+  await assert.rejects(hub.uploads.direct(hub.principal, { filename: 'a/b.mp4', bytes: 10, sha256: 'a'.repeat(64) }, hub.origin), { code: 'INVALID_ARGUMENTS' });
+  const unknown = await fetch(`${hub.origin}/api/v1/agent/uploads/direct/${'x'.repeat(43)}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(4) });
+  assert.equal(unknown.status, 410);
+});

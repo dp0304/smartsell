@@ -21,7 +21,9 @@ const descriptions: Record<HubToolName, string> = {
   machines_list: "List the owner's machines (Workers): online, paused, warnings, the channels on each machine, queue counts and the next job.",
   channels_list: 'List channels (social accounts) with channel_id, machine, login state, mode (auto/assist/owner), approval (direct/needs_approval), limits and the blockers that stop scheduling.',
   channel_check: "Check a channel's login on its machine. Creates or reuses one login check and waits up to wait_seconds. status: done, pending (read it later with task_get) or machine_offline (runs when the machine is back).",
-  media_upload: 'Upload a local video or image by its absolute path and get a media_id for post_schedule. Handled by the SmartSell relay on this computer, which streams the file with SHA-256 checks; the hub never receives the file through this call. "uploading" and "processing" can be scheduled.',
+  media_upload: 'Upload a video or image and get a media_id for post_schedule; the file never passes through you. Relay form {path}: the SmartSell relay on this computer streams it (resumable, SHA-256 checked). '
+    + 'Direct form {filename, bytes, sha256} when your client reaches the hub without the relay: run the returned upload.command (one curl PUT, <path> replaced by the absolute path) on this computer, then call media_upload again with the same values to read the status. '
+    + '"uploading" and "processing" can be scheduled.',
   post_schedule: "Schedule one post to one or more channels in ONE call. Times are local wall-clock in `timezone` (default: the workspace time zone). Each channel gets its own post_id. Captions are optional; never invent one. The owner's channel settings decide approval and which machine posts.",
   post_update: 'Change one post: action "reschedule" (when, timezone), "cancel" (reason) or "edit_caption" (caption). Published or cancelled posts are final; a post whose result is unknown must be confirmed by the owner first. A post the owner rejected is submitted again only when you reschedule or edit it.',
   posts_list: 'List posts by local date (default: today to 7 days ahead, workspace time zone), status, channel or machine.',
@@ -57,16 +59,18 @@ export interface HubToolDeps {
   operation(principal: McpPrincipal, name: string, input: Input): Promise<{ body: { data: unknown } }>;
   /** Runs fn in one short read-only workspace transaction as this principal. */
   read<T>(principal: McpPrincipal, fn: (ctx: Context) => T): Promise<T>;
-  /** The hub origin shown in the RELAY_REQUIRED install steps. */
+  /** The hub origin shown in the RELAY_REQUIRED install steps and in direct upload links. */
   origin: string;
+  /** media_upload's direct form (E47): create or resume the upload and return a one-use PUT link. Absent on hosts without agent uploads. */
+  directUpload?(principal: McpPrincipal, input: Data): Promise<Data>;
   pollMs?: number;
 }
 
 export function relayRequired(origin: string) {
   const hub = origin.replace(/\/+$/, '');
   return new Problem(422, 'RELAY_REQUIRED',
-    'media_upload runs in the SmartSell relay on the computer that has the file; this client reached the hub directly. Ask the owner to connect this client through the relay (details.install), restart the client, then call media_upload again. Do not read, encode or upload the file yourself.', {
-      owner_message: 'media_upload 要經由你電腦上的 SmartSell relay 執行（relay 在本機讀檔並分段上傳）。請在筆電的 SmartSell App 按「連接 Codex／Claude Code」，或依 install 的步驟安裝 relay，重新啟動用戶端後再試一次。',
+    'This client reached the hub directly, so the hub cannot read path. Use the direct form instead: compute the file size and SHA-256 on this computer (shasum -a 256 <file>, or certutil -hashfile <file> SHA256 on Windows), call media_upload with {filename, bytes, sha256}, and run the returned upload.command. Or ask the owner to connect this client through the relay (details.install). Never read or base64 the file into the conversation.', {
+      owner_message: '這個用戶端直接連到中樞，中樞讀不到你電腦上的檔案。Agent 會改用直傳：在本機算好檔案大小與 SHA-256，再用一行 curl 把檔案傳到中樞。若想要可續傳的大檔上傳，請在筆電的 SmartSell App 按「連接 Codex／Claude Code」，或依 install 的步驟安裝 relay。',
       install: {
         download: `curl -fsSL ${hub}/agent/relay.mjs -o ~/.smartsell/relay.mjs`,
         codex: `codex mcp add smartsell -- node ~/.smartsell/relay.mjs --hub ${hub} --token-file ~/.smartsell/token`,
@@ -116,7 +120,11 @@ export function createHubTools(deps: HubToolDeps) {
           return postDetail(ctx, target);
         });
         case 'task_get': return deps.read(principal, ctx => taskDetail(ctx, String(args.task_id)));
-        case 'media_upload': throw relayRequired(deps.origin);
+        case 'media_upload': {
+          if (args.path !== undefined || !deps.directUpload) throw relayRequired(deps.origin);
+          const { wait_seconds: _wait, ...input } = args;
+          return deps.directUpload(principal, input);
+        }
         case 'post_schedule': return data(await deps.operation(principal, 'hub_posts_schedule', { body: args, params: {}, query: {} }));
         case 'post_update': {
           const { post_id, ...body } = args;

@@ -202,7 +202,9 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     // X-Forwarded-For; a tailnet peer cannot spoof it. A process on the hub machine connecting to 127.0.0.1 directly can
     // claim any address, so per-address limits are a courtesy there; auth.ts also limits failures per sign-in name (SEC-2).
     trustProxy: (hub ? '127.0.0.1' : false) as string | false,
-    requestTimeoutMs: hub ? 120_000 : 30_000,
+    // Hub: 15 minutes, so media_upload's one-PUT direct upload (E47) of a large video can finish; headers still time out at
+    // Node's 60 s default, and the hub is reachable only on the tailnet.
+    requestTimeoutMs: hub ? 900_000 : 30_000,
     testTiming: testTiming(env),
     secureCookie: publicUrl.protocol === 'https:',
     roles: new Set(enabled as readonly ProcessRole[]),
