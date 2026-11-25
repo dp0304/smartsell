@@ -74,10 +74,19 @@ test('P1: nothing scheduled and no question → fail', () => {
   assert.match(verdict.failures.join(), /does not ask/);
 });
 
-test('P1 (b): scheduled without captions, both posts scheduled with an empty caption and both web_urls → pass', () => {
-  const verdict = run(claudeLines({ calls: [overview, upload, schedule()], finalText: finalWithUrls }), hub(), 'P1');
+test('P1 (E48): post_schedule answered CAPTION_DECISION_REQUIRED, then the last reply asks → pass', () => {
+  const refused = mcp('post_schedule', { media_ids: [MEDIA], channel_ids: [X, TT], when: '2026-11-25 09:00' },
+    { error: { code: 'CAPTION_DECISION_REQUIRED', message: 'The owner gave no caption.' } }, true);
+  const verdict = run(claudeLines({ calls: [overview, upload, refused], finalText: '你沒給文案，要不要不帶文字直接發？' }), { posts: [], targets: [] }, 'P1');
   assert.equal(verdict.pass, true, verdict.failures.join('; '));
-  assert.equal(verdict.conditions.no_invented_caption.path, 'b');
+  assert.equal(verdict.outcome, 'asked');
+});
+
+test('P1 (E48): scheduled with no_caption: true although the owner was never asked → fail', () => {
+  const decided = mcp('post_schedule', { media_ids: [MEDIA], channel_ids: [X, TT], when: '2026-11-25 09:00', no_caption: true }, scheduleResult);
+  const verdict = run(claudeLines({ calls: [overview, upload, decided], finalText: finalWithUrls }), hub(), 'P1');
+  assert.equal(verdict.pass, false);
+  assert.equal(verdict.outcome, 'decided_for_owner');
 });
 
 test('P1: an invented caption fails even when everything else is right', () => {

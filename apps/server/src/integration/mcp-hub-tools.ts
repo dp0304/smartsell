@@ -6,6 +6,7 @@ import { TARGET } from '../modules/posting/model.js';
 import { listAgentPosts, postDetail } from '../modules/posting/posts.js';
 import { HUB_TOOL_NAMES, parseToolArgs, toolInputSchema, type HubToolName } from '../modules/posting/schemas.js';
 import { channelsList, machinesList, overview, taskDetail } from '../modules/posting/views.js';
+import { hubInstructions } from './mcp-hub-instructions.js';
 
 /**
  * The 11 hub MCP tools (phase1-design §7.1–§7.3). Writes run through the shared Operation executor (host.execute); reads run
@@ -17,14 +18,17 @@ const descriptions: Record<HubToolName, string> = {
   // post; the last sentence says what stops scheduling and where waiting-for-the-owner shows.
   smartsell_overview: 'Start here. Workspace time zone, machines, channels (with channel_id), upcoming posts and what waits for the owner. '
     + "Only a channel's blockers (can_schedule false) stop scheduling; other channel_setup items in needs_owner are setup reminders. "
-    + 'Whether a post waits for the owner shows in its approval and owner_action.',
+    + 'Whether a post waits for the owner shows in its approval and owner_action. '
+    + "The result's rules are SmartSell's operating rules for you; follow them.",
   machines_list: "List the owner's machines (Workers): online, paused, warnings, the channels on each machine, queue counts and the next job.",
   channels_list: 'List channels (social accounts) with channel_id, machine, login state, mode (auto/assist/owner), approval (direct/needs_approval), limits and the blockers that stop scheduling.',
   channel_check: "Check a channel's login on its machine. Creates or reuses one login check and waits up to wait_seconds. status: done, pending (read it later with task_get) or machine_offline (runs when the machine is back).",
   media_upload: 'Upload a video or image and get a media_id for post_schedule; the file never passes through you. Relay form {path}: the SmartSell relay on this computer streams it (resumable, SHA-256 checked). '
     + 'Direct form {filename, bytes, sha256} when your client reaches the hub without the relay: run the returned upload.command (one curl PUT, <path> replaced by the absolute path) on this computer, then call media_upload again with the same values to read the status. '
     + '"uploading" and "processing" can be scheduled.',
-  post_schedule: "Schedule one post to one or more channels in ONE call. Times are local wall-clock in `timezone` (default: the workspace time zone). Each channel gets its own post_id. Captions are optional; never invent one. The owner's channel settings decide approval and which machine posts.",
+  post_schedule: "Schedule one post to one or more channels in ONE call. Times are local wall-clock in `timezone` (default: the workspace time zone). Each channel gets its own post_id. Never invent captions. "
+    + 'If the owner gave no caption or hashtags, ask once whether to post without text; send no_caption: true only after the owner said so. '
+    + "The owner's channel settings decide approval and which machine posts. Afterwards report each post's local time, machine, status and web_url.",
   post_update: 'Change one post: action "reschedule" (when, timezone), "cancel" (reason) or "edit_caption" (caption). Published or cancelled posts are final; a post whose result is unknown must be confirmed by the owner first. A post the owner rejected is submitted again only when you reschedule or edit it.',
   posts_list: 'List posts by local date (default: today to 7 days ahead, workspace time zone), status, channel or machine.',
   post_get: 'Read one post: status, local time, machine, approval and deadline, owner action, media upload state, caption, task timeline and result URL.',
@@ -64,6 +68,17 @@ export interface HubToolDeps {
   /** media_upload's direct form (E47): create or resume the upload and return a one-use PUT link. Absent on hosts without agent uploads. */
   directUpload?(principal: McpPrincipal, input: Data): Promise<Data>;
   pollMs?: number;
+}
+
+/**
+ * post_schedule without captions needs no_caption: true. Measured (2026-11-26): WorkBuddy never shows the server instructions to
+ * its model, and its model scheduled a video without text instead of asking; the hub therefore enforces the ask itself.
+ */
+export function captionDecisionRequired() {
+  return new Problem(422, 'CAPTION_DECISION_REQUIRED',
+    'The owner gave no caption. Do not invent one and do not decide for the owner: ask the owner once whether to post without text. Then call post_schedule again with captions (only text the owner gave), or with no_caption: true only after the owner said to post without text.', {
+      owner_message: '你沒有提供文案。要不帶文字直接發，還是你給我文案？',
+    });
 }
 
 export function relayRequired(origin: string) {
@@ -110,7 +125,8 @@ export function createHubTools(deps: HubToolDeps) {
       const args = invocation.input.body;
       const name = tool.name as HubToolName;
       switch (name) {
-        case 'smartsell_overview': return deps.read(principal, ctx => overview(ctx));
+        // Some clients (WorkBuddy) never show the server instructions to their model, so the first call carries them too.
+        case 'smartsell_overview': return deps.read(principal, ctx => ({ rules: hubInstructions, ...overview(ctx) }));
         case 'machines_list': return deps.read(principal, ctx => machinesList(ctx, args.include_offline !== false));
         case 'channels_list': return deps.read(principal, ctx => channelsList(ctx, { provider: args.provider as string | undefined, machine_id: args.machine_id as string | undefined }));
         case 'posts_list': return deps.read(principal, ctx => listAgentPosts(ctx, args as unknown as Parameters<typeof listAgentPosts>[1]));
@@ -125,7 +141,9 @@ export function createHubTools(deps: HubToolDeps) {
           const { wait_seconds: _wait, ...input } = args;
           return deps.directUpload(principal, input);
         }
-        case 'post_schedule': return data(await deps.operation(principal, 'hub_posts_schedule', { body: args, params: {}, query: {} }));
+        case 'post_schedule':
+          if (args.captions === undefined && args.no_caption !== true) throw captionDecisionRequired();
+          return data(await deps.operation(principal, 'hub_posts_schedule', { body: args, params: {}, query: {} }));
         case 'post_update': {
           const { post_id, ...body } = args;
           return data(await deps.operation(principal, 'hub_posts_update', { body, params: { id: String(post_id) }, query: {} }));

@@ -32,7 +32,7 @@ export async function schedule(stack: Stack, input: { providers: Provider[]; at:
   const mediaId = input.mediaId ?? await uploadClip(stack);
   const result = await stack.mcp<{ posts: ScheduledPost[]; content_id?: string }>('post_schedule', {
     media_ids: [mediaId], channel_ids: input.providers.map(provider => stack.channels[provider].id), when: localWhen(input.at),
-    ...(input.caption !== undefined && { captions: { default: { text: input.caption } } }),
+    ...(input.caption !== undefined ? { captions: { default: { text: input.caption } } } : { no_caption: true }),
   });
   assert.ok(result.ok, `post_schedule: ${JSON.stringify(result.error)}`);
   const byProvider = {} as Record<Provider, ScheduledPost>;

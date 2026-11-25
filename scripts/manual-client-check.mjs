@@ -7,10 +7,12 @@
 //   pnpm manual-client-check                      # relay form: the client launches the SmartSell relay over stdio
 //   pnpm manual-client-check -- --mode direct     # HTTP form: the client reaches the hub directly (media_upload direct form, E47)
 //   pnpm manual-client-check -- --prompt P2       # which sentence to score (P1 asks before posting without text; P2 posts)
+//   pnpm manual-client-check -- --client claude   # no GUI: run a headless agent CLI (claude, or any CLI with the same
+//                                                 # -p/--mcp-config/--strict-mcp-config/--allowedTools flags) instead of waiting for Enter
 //
 // Nothing leaves this computer: every origin is loopback and the client only sees the fixture stack. The script never edits
 // the client's own settings; it prints the MCP entry (and copies it to the clipboard on macOS) for the owner to paste.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, request as httpRequest } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
@@ -29,13 +31,14 @@ const PROMPTS = {
 
 function options(argv) {
   const args = argv.filter(arg => arg !== '--');
-  const result = { mode: 'relay', prompt: 'P2', workDir: join(homedir(), 'SmartSell-MCP-Test') };
+  const result = { mode: 'relay', prompt: 'P2', workDir: join(homedir(), 'SmartSell-MCP-Test'), client: null };
   for (let index = 0; index < args.length; index++) {
     const value = () => args[++index];
     if (args[index] === '--mode') result.mode = value();
     else if (args[index] === '--prompt') result.prompt = value().toUpperCase();
     else if (args[index] === '--work-dir') result.workDir = resolve(value());
-    else throw new Error(`Unknown option ${args[index]}. Use --mode relay|direct, --prompt P1|P2, --work-dir <folder>.`);
+    else if (args[index] === '--client') result.client = value();
+    else throw new Error(`Unknown option ${args[index]}. Use --mode relay|direct, --prompt P1|P2, --work-dir <folder>, --client <cli>.`);
   }
   if (!['relay', 'direct'].includes(result.mode)) throw new Error('--mode must be relay or direct');
   if (!PROMPTS[result.prompt]) throw new Error('--prompt must be P1 or P2');
@@ -93,6 +96,51 @@ function countingProxy(hubOrigin) {
   return new Promise(resolveServer => server.listen(0, '127.0.0.1', () => resolveServer({ server, calls, origin: `http://127.0.0.1:${server.address().port}` })));
 }
 
+/**
+ * Runs a headless agent CLI on the sentence, with only this MCP server and the few shell commands the direct form needs
+ * (hash, size, curl). Resolves with the agent's final reply.
+ */
+function runClient(command, { configFile, workDir, prompt }) {
+  const tools = [`mcp__${SERVER}`, 'Bash(shasum:*)', 'Bash(sha256sum:*)', 'Bash(openssl:*)', 'Bash(stat:*)', 'Bash(wc:*)', 'Bash(ls:*)', 'Bash(curl:*)', 'Read'];
+  const args = ['-p', prompt, '--mcp-config', configFile, '--strict-mcp-config', '--output-format', 'json', '--allowedTools', ...tools];
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn(command, args, { cwd: workDir, stdio: ['ignore', 'pipe', 'inherit'] });
+    let out = '';
+    child.stdout.on('data', chunk => { out += chunk; });
+    const timer = setTimeout(() => child.kill('SIGTERM'), 15 * 60_000);
+    child.on('error', rejectRun);
+    child.on('close', code => {
+      clearTimeout(timer);
+      try { resolveRun(JSON.parse(out).result ?? out); } catch { resolveRun(out || `(client exited ${code} without output)`); }
+    });
+  });
+}
+
+/** GUI clients: print the entry and the steps, then wait for the owner to press Enter. */
+async function ownerRun({ config, opts, video, prompt }) {
+  if (process.platform === 'darwin') spawnSync('pbcopy', { input: config });
+  console.log(`
+=== Manual MCP client check (${opts.mode} form, ${opts.prompt}) ===
+1. In WorkBuddy: Connectors → Custom connectors → Configure MCP. Merge this entry into mcpServers and save
+   (it is already on the clipboard on macOS):
+
+${config}
+
+2. Back in the MCP list, click Trust for "${SERVER}" and make sure it is green and enabled.
+3. Open a new task with this folder as the workspace: ${opts.workDir}
+   (it contains video.mp4, ${video.bytes} bytes)
+4. Type exactly:
+
+   ${prompt.text}
+
+5. When the agent has finished its reply, come back here and press Enter.
+   Afterwards remove "${SERVER}" from WorkBuddy's MCP list; the token stops working when this script ends.
+`);
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  await rl.question('Press Enter when WorkBuddy has finished… ');
+  rl.close();
+}
+
 function zoneDate(ms, zone) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
 }
@@ -114,29 +162,17 @@ async function main() {
     writeFileSync(tokenFile, stack.agentToken, { mode: 0o600 });
     const entry = opts.mode === 'relay'
       ? { command: process.execPath, args: [relayBundle, '--hub', proxy.origin, '--token-file', tokenFile] }
-      : { url: `${proxy.origin}/mcp`, headers: { Authorization: `Bearer ${stack.agentToken}` } };
+      : { type: 'http', url: `${proxy.origin}/mcp`, headers: { Authorization: `Bearer ${stack.agentToken}` } };
     const config = JSON.stringify({ mcpServers: { [SERVER]: entry } }, null, 2);
-    if (process.platform === 'darwin') spawnSync('pbcopy', { input: config });
-    console.log(`
-=== Manual MCP client check (${opts.mode} form, ${opts.prompt}) ===
-1. In WorkBuddy: Connectors → Custom connectors → Configure MCP. Merge this entry into mcpServers and save
-   (it is already on the clipboard on macOS):
-
-${config}
-
-2. Back in the MCP list, click Trust for "${SERVER}" and make sure it is green and enabled.
-3. Open a new task with this folder as the workspace: ${opts.workDir}
-   (it contains video.mp4, ${video.bytes} bytes)
-4. Type exactly:
-
-   ${prompt.text}
-
-5. When the agent has finished its reply, come back here and press Enter.
-   Afterwards remove "${SERVER}" from WorkBuddy's MCP list; the token stops working when this script ends.
-`);
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    await rl.question('Press Enter when WorkBuddy has finished… ');
-    rl.close();
+    let reply = null;
+    if (opts.client) {
+      const configFile = join(base, 'mcp.json');
+      writeFileSync(configFile, config, { mode: 0o600 });
+      console.log(`Running ${opts.client} (${opts.mode} form, ${opts.prompt}) in ${opts.workDir}:\n  ${prompt.text}`);
+      reply = await runClient(opts.client, { configFile, workDir: opts.workDir, prompt: prompt.text });
+    } else {
+      await ownerRun({ config, opts, video, prompt });
+    }
 
     const list = await stack.view('/views/posts?from=2000-01-01&to=2100-12-31&limit=200');
     const posts = [];
@@ -149,7 +185,8 @@ ${config}
     const calls = proxy.calls;
     const failures = [];
     if (calls.length > CALL_LIMIT) failures.push(`${calls.length} tool calls (limit ${CALL_LIMIT})`);
-    const errors = calls.filter(call => call.error);
+    // RELAY_REQUIRED is the hub's designed answer when a direct-HTTP client first sends a path (it then sends the direct form).
+    const errors = calls.filter(call => call.error && call.error.code !== 'RELAY_REQUIRED');
     if (opts.prompt === 'P1') {
       if (posts.length) failures.push(`P1 should ask before posting without text, but ${posts.length} post(s) were scheduled`);
     } else {
@@ -165,12 +202,14 @@ ${config}
       if (posts.length !== 2) failures.push(`${posts.length} posts (want exactly 2)`);
     }
     console.log('\nTool calls seen by the hub:');
-    for (const call of calls) console.log(`  ${call.at.slice(11, 19)} ${call.tool}${call.error ? `  → ${call.error.code} ${call.error.message.slice(0, 120)}` : ''}`);
+    for (const call of calls) console.log(`  ${call.at.slice(11, 19)} ${call.tool}${call.error ? `  → ${call.error.code}${call.error.code === 'RELAY_REQUIRED' ? ' (expected for a direct client)' : ` ${call.error.message.slice(0, 120)}`}` : ''}`);
     console.log(`\nPosts on the hub: ${posts.length}`);
     for (const post of posts) console.log(`  ${post.provider} on ${post.machine}: ${post.status} ${post.local_time} caption=${JSON.stringify(post.caption)}`);
-    console.log(`Errors: ${errors.length}`);
+    console.log(`Unexpected errors: ${errors.length}`);
+    if (errors.length) failures.push(`${errors.length} unexpected tool error(s)`);
+    if (reply !== null) console.log(`\nAgent's reply:\n${String(reply).trim()}`);
     console.log(failures.length ? `\nFAIL\n- ${failures.join('\n- ')}` : '\nPASS');
-    console.log('Also check WorkBuddy\'s last reply: for P2 it must name both posts with local time, machine, status and web_url.');
+    console.log('Also check the agent\'s last reply: for P2 it must name both posts with local time, machine, status and web_url.');
     exitCode = failures.length ? 1 : 0;
   } finally {
     proxy.server.close();

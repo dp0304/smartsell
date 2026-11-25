@@ -201,9 +201,9 @@ test('§7.6 done criterion over real MCP: overview → media_upload through the 
   assert.equal(media.bytes, 3 * 1024 * 1024 + 123);
   assert.equal(media.kind, 'video');
 
-  // 3. post_schedule: one call, tomorrow 09:00, workspace time zone, no caption (never invented).
+  // 3. post_schedule: one call, tomorrow 09:00, workspace time zone, no caption (never invented; the owner said so).
   const day = tomorrow();
-  const scheduled = ok(await client.call('post_schedule', { media_ids: [media.media_id], channel_ids: [xChannel.channel_id, tiktokChannel.channel_id], when: `${day} 09:00` }));
+  const scheduled = ok(await client.call('post_schedule', { media_ids: [media.media_id], channel_ids: [xChannel.channel_id, tiktokChannel.channel_id], when: `${day} 09:00`, no_caption: true }));
   assert.equal(client.toolCalls.length, 3);
   assert.ok(client.toolCalls.length <= 6, 'the done criterion allows at most 6 MCP tool calls');
   assert.equal(scheduled.replayed, false);
@@ -305,9 +305,25 @@ test('strict validation answers INVALID_ARGUMENTS with issue paths; media_upload
   assert.match(relay.message, /\{filename, bytes, sha256\}/);
   assert.ok(!JSON.stringify(relay).includes('/uploads/direct/'), 'no upload link for a path the hub cannot read');
   // Business errors carry code, message, details and web_url.
-  const missing = failure(await h.call('post_schedule', { media_ids: ['0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11'], channel_ids: [h.seeded.x.account], when: 'now' }));
+  const missing = failure(await h.call('post_schedule', { media_ids: ['0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11'], channel_ids: [h.seeded.x.account], when: 'now', no_caption: true }));
   assert.deepEqual([missing.code, missing.details.media_ids], ['MEDIA_NOT_FOUND', ['0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11']]);
   assert.equal(failure(await h.call('post_update', { post_id: '0b8e6c2a-1f7d-4c39-9a51-6f0c2d7e8a11', action: 'cancel' })).code, 'POST_NOT_FOUND');
+});
+
+test('post_schedule without captions needs the owner\'s no_caption: true (clients that drop the server instructions still ask)', async t => {
+  const h = await hub(t);
+  const media = await readyVideo(h);
+  const base = { media_ids: [media], channel_ids: [h.seeded.x.account], when: `${tomorrow()} 09:00` };
+  const refused = failure(await h.call('post_schedule', base));
+  assert.equal(refused.code, 'CAPTION_DECISION_REQUIRED');
+  assert.match(refused.message, /ask the owner once/);
+  assert.match(refused.message, /no_caption: true only after the owner/);
+  assert.equal(await h.read(ctx => ctx.list('publish_target').length), 0, 'nothing is scheduled before the owner decides');
+  const both = failure(await h.call('post_schedule', { ...base, no_caption: true, captions: { default: { text: 'hi' } } }));
+  assert.deepEqual([both.code, both.issues[0].path, both.issues[0].code], ['INVALID_ARGUMENTS', 'no_caption', 'not_allowed']);
+  assert.equal(failure(await h.call('post_schedule', { ...base, no_caption: false })).issues[0].path, 'no_caption');
+  const scheduled = ok(await h.call('post_schedule', { ...base, no_caption: true }));
+  assert.equal((scheduled.posts as Json[]).length, 1);
 });
 
 test('E47 direct form over plain MCP: {filename, bytes, sha256} returns a one-use curl PUT link; the uploaded media can be scheduled', async t => {
@@ -361,7 +377,7 @@ async function readyVideo(h: Awaited<ReturnType<typeof hub>>) {
 test('a whole post_schedule failure rolls back every write; request_id replays the stored result', async t => {
   const h = await hub(t);
   const media = await readyVideo(h);
-  const args = { media_ids: [media], channel_ids: [h.seeded.x.account, h.seeded.tiktok.account], when: `${tomorrow()} 10:00` };
+  const args = { media_ids: [media], channel_ids: [h.seeded.x.account, h.seeded.tiktok.account], when: `${tomorrow()} 10:00`, no_caption: true };
   // X is written first; the TikTok login check then fails, so the X post and the content item must roll back too.
   const restore = setWorkerEngineHooks({ createCheckLoginJob() { throw new Problem(409, 'CHECK_REFUSED', 'login check refused for the test'); } });
   const refused = failure(await h.call('post_schedule', args));

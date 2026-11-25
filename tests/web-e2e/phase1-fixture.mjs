@@ -201,7 +201,7 @@ export async function schedulePost(fixture, { at = '09:00', caption, channels = 
   const day = tomorrow();
   const scheduled = await fixture.agent.call('post_schedule', {
     media_ids: [fixture.media.media_id], channel_ids: channels, when: `${day} ${at}`,
-    ...(caption && { captions: { default: { text: caption } } }),
+    ...(caption ? { captions: { default: { text: caption } } } : { no_caption: true }),
   });
   expect(scheduled.posts).toHaveLength(channels.length);
   return { day, scheduled, post: scheduled.posts[0] };

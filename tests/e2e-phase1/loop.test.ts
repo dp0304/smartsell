@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import type { MachineDetail, ChannelDetail, PostDetailView, TodayView } from '../../packages/contracts/src/index.ts';
 import { fixturePosts, jobIdOf, jobView, schedule, waitJobStatus, waitPostStatus } from './cases.ts';
-import { marker, slotAfter, stackUnavailable, startStack, until, type Data, type Stack } from './stack.ts';
+import { localWhen, marker, slotAfter, stackUnavailable, startStack, until, type Data, type Stack } from './stack.ts';
 
 describe('E2E loop: MCP → hub → each machine → fixture platform → URL back', { skip: stackUnavailable, concurrency: false, timeout: 15 * 60_000 }, () => {
   let stack: Stack;
@@ -106,7 +106,8 @@ describe('E2E loop: MCP → hub → each machine → fixture platform → URL ba
       assert.equal(jobDetail.machine.id, machine.deviceId);
       assert.equal(jobDetail.channel.id, channel.id);
     }
-    const day = new Date(at).toISOString().slice(0, 10);
+    // The calendar takes workspace-zone dates; a UTC date misses the post between 00:00 and 08:00 in Asia/Shanghai.
+    const day = localWhen(at).slice(0, 10);
     const calendar = await stack.view<{ events: (Data & { post_id?: string; post_status?: string; machine?: { id: string }; channel?: { id: string } })[] }>(
       `/views/calendar?from=${day}&to=${day}&kinds=publish`);
     for (const [index, id] of ids.entries()) {

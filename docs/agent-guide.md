@@ -9,7 +9,7 @@
 1. 先呼叫 `smartsell_overview`：取得機器、帳號（`channel_id`）、工作區時區與待主人處理的事。ID 一律從讀到的結果取，不要猜 ID 或欄位。
 2. 影片與圖片一律走 API，不經過模型。先用 `media_upload` 傳**絕對路徑**（由你的工作目錄組出），由筆電上的 SmartSell relay 在本機讀檔並分段上傳（可續傳）。如果回 `RELAY_REQUIRED`（用戶端直接連到中樞），改傳 `{filename, bytes, sha256}`：大小與 SHA-256 在本機算（`shasum -a 256 <檔案>`，Windows 用 `certutil -hashfile <檔案> SHA256`），再執行回傳的 `upload.command`（一行 `curl -T`，把 `<path>` 換成絕對路徑，Windows PowerShell 用 `curl.exe`），然後以同樣的參數再呼叫一次查狀態。不要把檔案讀進對話、不要 base64。狀態 `uploading`／`processing` 也可以排程；`continues_in_background` 為 true 時，請主人讓電腦保持開機約 `eta_seconds` 秒。
 3. 一則內容發到多個帳號是**一次** `post_schedule`：`media_ids`、`channel_ids`、`when`（`"YYYY-MM-DD HH:mm"` 或 `"now"`）、`timezone`（省略時用工作區時區）、選填 `captions {default, x, tiktok, …}`。
-4. **不要編造文案或標籤。**主人沒給文案時，只問一次要不要不帶文字發出。
+4. **不要編造文案或標籤。**主人沒給文案時，只問一次要不要不帶文字發出；主人同意後才帶 `no_caption: true`（沒有文案又沒帶它，中樞回 `CAPTION_DECISION_REQUIRED`）。
 5. 追蹤用 `post_get`、`posts_list`、`task_get`；修改用 `post_update`（改期、改文案、取消）；`publishing_pause` 只能暫停，恢復由主人在網頁操作。
 6. 不認得的欄位會被拒絕並列出允許的欄位（`INVALID_ARGUMENTS`）；照著修正，重試一次。
 7. 只有主人能核准貼文、接受平台風險、綁定機器、恢復或確認結果。遇到 blocker，轉述它的訊息與 `web_url`。

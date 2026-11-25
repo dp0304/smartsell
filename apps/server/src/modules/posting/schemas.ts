@@ -61,7 +61,8 @@ export const toolSchemas = {
     timezone: timezone().optional(),
     dst_choice: dstChoice().optional(),
     captions: z.object({ default: caption(true), x: caption(), tiktok: caption(), youtube: caption(), instagram: caption(), facebook: caption() })
-      .partial().strict().meta({ minProperties: 1 }).describe('Optional. Only text the owner gave. Omit to post without text.').optional(),
+      .partial().strict().meta({ minProperties: 1 }).describe('Only text the owner gave. Without captions, no_caption must be true.').optional(),
+    no_caption: z.literal(true).describe('Post without text. Only after the owner said so; not with captions.').optional(),
     plan_tag: z.string().min(1).max(60).optional(),
     request_id: z.string().regex(/^[A-Za-z0-9._:-]{8,100}$/, { error: 'must be 8-100 characters of A-Z a-z 0-9 . _ : -' })
       .describe('Optional. Reuse to retry the same request safely.').optional(),
@@ -227,9 +228,10 @@ function crossFieldIssues(tool: HubToolName, value: Data): ArgumentIssue[] {
     });
     const captions = value.captions as Record<string, unknown> | undefined;
     if (captions !== undefined && !Object.keys(captions).length) {
-      issues.push({ path: 'captions', code: 'too_small', message: 'captions needs at least one of default, x, tiktok, youtube, instagram, facebook; omit it to post without text' });
+      issues.push({ path: 'captions', code: 'too_small', message: 'captions needs at least one of default, x, tiktok, youtube, instagram, facebook; to post without text omit it and send no_caption: true' });
     }
     for (const [key, entry] of Object.entries(captions ?? {})) issues.push(...tagIssues(`captions.${key}`, entry));
+    if (captions !== undefined) forbid('no_caption', 'together with captions');
     if (value.dst_choice !== undefined && value.when === 'now') forbid('dst_choice', "when 'when' is 'now'");
   }
   if (tool === 'post_update') {
