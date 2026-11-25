@@ -229,7 +229,7 @@ test('S3 transport can be substituted and rejects a malformed range response', a
   await assert.rejects(storage.read('t/t/w/w/objects/11111111-1111-1111-1111-111111111111', { start: 1, end: 2 }), { message: 'Invalid S3 response' });
 });
 
-test('isolated MinIO presigned staging verifies exact length and cannot overwrite a published object', { skip: !process.env.MEDIA_TEST_S3_ENDPOINT }, async t => {
+test('isolated S3 presigned staging verifies exact length and cannot overwrite a published object', { skip: !process.env.MEDIA_TEST_S3_ENDPOINT }, async t => {
   const { call, json, advance } = await fixture(t, () => s3Storage({ endpoint: process.env.MEDIA_TEST_S3_ENDPOINT,
     bucket: process.env.MEDIA_TEST_S3_BUCKET, accessKey: process.env.MEDIA_TEST_S3_ACCESS_KEY, secretKey: process.env.MEDIA_TEST_S3_SECRET_KEY }));
   const bytes = Buffer.alloc(2 * 1024 * 1024, 0x61);

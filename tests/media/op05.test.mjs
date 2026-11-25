@@ -13,9 +13,9 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=', 'base64');
 
 for (const [surface, launch] of [['Commands', start], ['Operations', startKernel]]) {
-  test(`OP05 ${surface} rechecks a real MinIO upload linked to a scheduled revision`, { skip: !endpoint }, async t => {
-    const minio = new URL(endpoint);
-    assert.equal(minio.hostname, '127.0.0.1');
+  test(`OP05 ${surface} rechecks a real S3 upload linked to a scheduled revision`, { skip: !endpoint }, async t => {
+    const s3 = new URL(endpoint);
+    assert.equal(s3.hostname, '127.0.0.1');
     const commands = surface === 'Commands';
     const directory = await mkdtemp(join(tmpdir(), 'smartsell-op05-'));
     const setupToken = randomUUID();
@@ -72,7 +72,7 @@ for (const [surface, launch] of [['Commands', start], ['Operations', startKernel
       const ticket = await op('POST', '/files/uploads', { original_filename: filename, purpose: 'asset', mime_type: 'image/png',
         size_bytes: png.length, sha256: sha256(png) });
       const put = await op('GET', `/files/uploads/${ticket.id}/direct`);
-      assert.equal(new URL(put.url).origin, minio.origin);
+      assert.equal(new URL(put.url).origin, s3.origin);
       const response = await fetch(put.url, { method: put.method, headers: put.headers, body: png, redirect: 'error', signal: AbortSignal.timeout(5000) });
       assert.equal(response.status, 200);
       const file = await op('POST', `/files/uploads/${ticket.id}/complete`, {});

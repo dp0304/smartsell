@@ -6198,11 +6198,11 @@
           ]
         },
         {
-          "file": "tests/media/with-minio.sh",
+          "file": "tests/media/with-s3.sh",
           "shellAssertion": "node --import tsx --test tests/media/files.test.mjs tests/media/op05.test.mjs",
           "surface": "API",
           "result": "pass",
-          "assertion": "Commands 與 Operations 兩個獨立用例以正式入口上傳 MinIO PNG 並關聯 ready 排程，30→0 天預覽列 scheduled_target，法定保留亦阻擋清除；最終只清除無引用檔，下載的原始 PNG 逐位元組相同。",
+          "assertion": "Commands 與 Operations 兩個獨立用例以正式入口上傳 S3 相容儲存（RustFS）的 PNG 並關聯 ready 排程，30→0 天預覽列 scheduled_target，法定保留亦阻擋清除；最終只清除無引用檔，下載的原始 PNG 逐位元組相同。",
           "report": "docs/acceptance/operations-authorization-results.md",
           "conditions": [
             "被排程引用的素材無法被清除，預覽列出阻擋原因",

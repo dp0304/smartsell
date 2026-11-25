@@ -63,8 +63,8 @@ run_tests() {
 }
 
 if [[ $mode != recovery ]]; then
-  minio_image=minio/minio:RELEASE.2025-02-28T09-55-16Z
-  ensure_image "$minio_image"
+  s3_image=rustfs/rustfs:1.0.6
+  ensure_image "$s3_image"
   ffmpeg -version > /dev/null
   ffprobe -version > /dev/null
   if ! ffmpeg -hide_banner -protocols > "$work/ffmpeg-protocols" || ! grep -qx '  fd' "$work/ffmpeg-protocols"; then
@@ -90,7 +90,7 @@ if [[ $mode != recovery ]]; then
   run_tests bash tests/acceptance/agent-lifecycle-postgres.sh ai08
   run_tests SMARTSELL_AI07_CHROMIUM="$chromium" SMARTSELL_AI07_DOCKER_SOCKET="${docker_host#unix://}" \
     bash tests/acceptance/ai07-postgres.sh
-  run_tests SMARTSELL_TEST_MINIO_IMAGE="$minio_image" bash tests/media/with-minio.sh
+  run_tests SMARTSELL_TEST_S3_IMAGE="$s3_image" bash tests/media/with-s3.sh
   run tests/acceptance/client-delivery.sh --output "$work/client-delivery"
   run_tests bash tests/acceptance/reviewer-sessions.sh
   run_tests bash tests/acceptance/reviewer-sessions.sh membership
