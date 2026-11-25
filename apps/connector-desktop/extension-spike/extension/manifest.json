@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "SmartSell 量測（原型）",
+  "version": "0.0.1",
+  "description": "SmartSell 技術方案 §3.5 的量測原型：只在本機測試程式要求時，於新分頁讀取登入狀態、量 navigator.webdriver、在 X 撰寫框輸入後讀回「發布」按鈕狀態。不會發出任何貼文。",
+  "permissions": ["debugger", "tabs", "scripting"],
+  "host_permissions": ["https://x.com/*", "https://www.tiktok.com/*"],
+  "background": { "service_worker": "background.js" }
+}
