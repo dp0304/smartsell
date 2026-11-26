@@ -69,10 +69,18 @@ function agentGuide() {
   catch { return agentInstructions; }
 }
 
+/**
+ * How a connection was made (O4): 'prompt' by the advanced prompt enrollment (setup-agent), 'app' by the SmartSell App's
+ * /agent-connect, 'token' by POST /agent-connections (the Node relay's token file). Absent on connections made before it.
+ */
+export type ConnectionSetup = 'prompt' | 'app' | 'token';
+const setupVia = (value: unknown): ConnectionSetup | undefined => value === 'prompt' || value === 'app' || value === 'token' ? value : undefined;
+
 function connectionView(row: Entity, mcpUrl: string) {
   const { data } = row;
+  const via = setupVia(data.setup_via);
   return { id: row.id, label: data.label ?? null, client: data.client ?? 'other', created_at: data.created_at ?? row.created_at,
-    expires_at: iso(data.expires), last_used_at: data.last_used_at ?? null,
+    expires_at: iso(data.expires), last_used_at: data.last_used_at ?? null, ...(via && { setup_via: via }),
     ...(data.client === 'codex' && { mcp_url: mcpUrl }),
     ...(data.mcp_client_verified_at && { mcp_client_verified_at: data.mcp_client_verified_at, mcp_verified_at: data.mcp_client_verified_at }),
     revoked: data.revoked === true || data.workspace_removed === true };
@@ -142,12 +150,12 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
   }
 
   async function insertConnection(unit: Unit, reqId: string, id: string, agentHash: string, expires: number,
-    { label, client }: ReturnType<typeof connectionInput>) {
+    { label, client }: ReturnType<typeof connectionInput>, via: ConnectionSetup) {
     const { context } = unit;
     const now = context.now;
     // §7.4: connections created from phase 1 on list only the hub tools (legacy tools stay callable).
     await context.insert('mcp_runtime', 'credential', { kind: 'agent_connection', actor_id: context.actorId, access: 'write', label, client,
-      created_at: now, expires, last_used_at: null, session_ref: sealRef(agentHash), tool_profile: 'hub_v1' }, id);
+      created_at: now, expires, last_used_at: null, session_ref: sealRef(agentHash), tool_profile: 'hub_v1', setup_via: via }, id);
     await mirror(unit, id, () => ({ id, version: 1, created_at: now, updated_at: now, label, client, user_id: context.actorId,
       expires_at: iso(expires), last_used_at: null, revoked: false, revoked_at: null, created_via: 'human' }), records => {
       const activity = activityEvent({ name: 'agent_connection_create' }, { actorId: context.actorId }, 'rest', reqId, now, { id, title: label });
@@ -160,6 +168,8 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
     const { wid } = req.params;
     const { client, label, days } = connectionInput(req.body, true);
     if (client === 'other') throw invalid('Unsupported Agent client');
+    // The advanced prompt enrollment says so; the SmartSell App's /agent-connect does not (O4).
+    const via: ConnectionSetup = requestObject(req.body).setup_via === 'prompt' ? 'prompt' : 'app';
     const endpoint = new URL(mcpUrl);
     if (endpoint.protocol !== 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname)) {
       throw invalid('Agent setup requires HTTPS or a loopback URL');
@@ -173,7 +183,7 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
       const { context } = unit;
       await unit.command({ module: 'agent', action: 'issue_agent_enrollment', key: `agent-enroll/${id}`, fingerprint: '' }, async () => {
         const current = await context.get('mcp_runtime', kind, context.actorId);
-        const data = { code_hash: digest(code), expires, label, days };
+        const data = { code_hash: digest(code), expires, label, days, setup_via: via };
         if (current) await context.update('mcp_runtime', kind, current.id, data, current.version);
         else await context.insert('mcp_runtime', kind, data, context.actorId);
       });
@@ -206,7 +216,7 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
           const now = Date.now();
           if (row.data.expires <= now) throw invalidCode();
           const { label, days } = row.data;
-          await insertConnection(unit, req.id, id, agentHash, now + days * 86_400_000, { label, days, client });
+          await insertConnection(unit, req.id, id, agentHash, now + days * 86_400_000, { label, days, client }, setupVia(row.data.setup_via) ?? 'prompt');
           await issue(agentHash, days * 86_400);
         });
       });
@@ -232,7 +242,7 @@ export function registerAgentConnections(app: FastifyInstance, { store, secret, 
         const { context } = unit;
         if (context.actorId !== user.id) throw unauthenticated();
         await unit.command({ module: 'agent', action: 'create_agent_connection', key: `agent-connection/${id}`, fingerprint: '' }, async () => {
-          await insertConnection(unit, req.id, id, agentHash, expires, { label, client, days });
+          await insertConnection(unit, req.id, id, agentHash, expires, { label, client, days }, 'token');
         });
       });
     } catch (error) {

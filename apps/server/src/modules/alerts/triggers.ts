@@ -55,13 +55,29 @@ function context(ctx: Context, payload: JobStatusChanged) {
   };
 }
 
+/** Whether `text` is already `template` filled in: it contains the fixed words just before {platform_message}. */
+function isOwnerSentence(template: string, text: string | undefined) {
+  const before = template.split('{platform_message}')[0]!.split('}').pop()!.trim();
+  return !!text && template.includes('{platform_message}') && before.length > 0 && text.includes(before);
+}
+
 function blockerText(code: string | undefined, values: { machine?: string; channel?: string; deadline?: string }, job?: Row, failure?: Data) {
-  const blocker = (job?.blocker ?? {}) as { step?: string; message?: string };
+  const blocker = (job?.blocker ?? {}) as { code?: string; step?: string; message?: string; platform_message?: string };
   const template = code && Object.hasOwn(BLOCKER_COPY, code) ? BLOCKER_COPY[code as BlockerCode] : undefined;
-  // {platform_message} is the platform's own error text (upload_rejected), clipped; it is never the caption.
-  const platformMessage = (str(blocker.message) ?? str(failure?.message))?.slice(0, 200);
+  // {platform_message} is the platform's own error text (upload_rejected), clipped; it is never the caption. A stored blocker's
+  // `message` is already the owner sentence made from that template (fullBlocker), so it is never filled in again (U7).
+  const stored = str(blocker.message);
+  const raw = str(blocker.platform_message) ?? str(failure?.message) ?? (template && blocker.code === code && isOwnerSentence(template, stored) ? undefined : stored);
+  const platformMessage = raw?.slice(0, 200);
   if (template) return fill(template, { ...values, step: blocker.step, platform_message: platformMessage });
   return `${subject(values.machine, values.channel)} 需要你處理，已停止（截止 ${values.deadline || '期限'}）。`;
+}
+
+/** U1: the values of a blocker sentence (Appendix C.2), so the web can write it in the owner's language. */
+function blockerParams(code: string | undefined, values: { machine?: string; channel?: string; deadline?: string }, job?: Row, failure?: Data) {
+  const blocker = (job?.blocker ?? {}) as { step?: string; platform_message?: string };
+  return { blocker_code: code ?? null, machine: values.machine ?? null, channel: values.channel ?? null, deadline: values.deadline || null,
+    step: str(blocker.step) ?? null, platform_message: str(blocker.platform_message) ?? str(failure?.message) ?? null };
 }
 
 /** Reports after which a new needs_owner is a new episode: an auto blocker cleared by `prepared`, or the run going on. */
@@ -125,6 +141,7 @@ export function alertJobStatus(ctx: Context, payload: JobStatusChanged): Row | u
     const state = LOGIN_STATE[str(detail(loginEvent).state) ?? code ?? ''] ?? '沒有通過';
     return createOwnerAlert(ctx, {
       kind: 'login_check_failed', severity: 'urgent', dedupe_key: payload.job_id,
+      code: 'login_check_failed', params: { machine: c.machine ?? null, channel: c.channel ?? null, state: str(detail(loginEvent).state) ?? code ?? null },
       title: `${who} 登入檢查失敗：${state}。`,
       body: `${who} 的登入檢查沒有通過（${state}）。排好的貼文到時可能發不出去；請在 ${c.machine ?? '那台機器'} 的 SmartSell Chrome 視窗重新登入，或在帳號頁按「檢查登入」再試一次。`,
       ...c.refs, post_id: undefined,
@@ -142,6 +159,7 @@ export function alertJobStatus(ctx: Context, payload: JobStatusChanged): Row | u
       const key = `${payload.job_id}:${code ?? 'unknown'}:${Number(job?.resume_token) || 0}`;
       return createOwnerAlert(ctx, {
         kind: 'worker_blocker', severity: 'urgent', dedupe_key: episode ? `${key}:e${episode}` : key,
+        code: 'worker_blocker', params: { ...blockerParams(code, values, job), dry_run: dryRun },
         title: `${who}：${shortClause(code)}${dryRun ? '（試跑）' : ''}。`, body: blockerText(code, values, job), ...c.refs,
       });
     }
@@ -156,12 +174,14 @@ export function alertJobStatus(ctx: Context, payload: JobStatusChanged): Row | u
         const reason = reported && reported !== 'default' && Object.hasOwn(FAILED_REASON, reported) ? FAILED_REASON[reported]! : FAILED_REASON.default!;
         return createOwnerAlert(ctx, {
           kind: 'worker_blocker', severity: 'urgent', dedupe_key: `${payload.job_id}:failed`,
+          code: 'failed_late_report', params: { machine: c.machine ?? null, channel: c.channel ?? null, reason_code: reported ?? 'default', dry_run: dryRun },
           title: `${lead(post)}的貼文沒有發出（${c.machine ?? '機器'} 後來回報）${dryRun ? '（試跑）' : ''}。`,
           body: fill(STATUS_COPY.failed_late_report, { machine: c.machine, channel: c.channel, reason }), ...c.refs,
         });
       }
       return createOwnerAlert(ctx, {
         kind: 'worker_blocker', severity: 'urgent', dedupe_key: `${payload.job_id}:failed`,
+        code: 'failed', params: { ...blockerParams(failure, values, job, event), dry_run: dryRun },
         title: `${who}：${shortClause(failure)}，這則沒有發出${dryRun ? '（試跑）' : ''}。`,
         body: blockerText(failure, values, job, event), ...c.refs,
       });
@@ -175,6 +195,10 @@ export function alertJobStatus(ctx: Context, payload: JobStatusChanged): Row | u
         : `${c.channel ?? '這個帳號'}：${fill(STATUS_COPY.missed, { machine: c.machine, deadline: c.deadline, reason: label })}`;
       return createOwnerAlert(ctx, {
         kind: 'missed', severity: 'urgent', dedupe_key: payload.job_id, title: `${lead(post)}的貼文沒有發出（${label}）。`, body, ...c.refs,
+        code: 'missed', params: { machine: c.machine ?? null, channel: c.channel ?? null, deadline: c.deadline || null, reason_code: reason,
+          ...(reason === 'paused' && (() => { const pause = pauseDetails(ctx, c.accountId, c.machineId, c.zone);
+            return { pause_scope: Object.entries(PAUSE_SCOPE).find(([, word]) => word === pause.scope)?.[0] ?? null, paused_at: pause.paused_at ?? null,
+              paused_by: pause.paused_by.includes('Agent') ? 'agent' : 'person' }; })()) },
       });
     }
     case 'outcome_unknown': case 'unreported': {
@@ -185,6 +209,8 @@ export function alertJobStatus(ctx: Context, payload: JobStatusChanged): Row | u
           : fill(STATUS_COPY.unknown, { machine: c.machine, channel: c.channel });
       return createOwnerAlert(ctx, {
         kind: 'unknown', severity: 'urgent', dedupe_key: `${payload.job_id}:${payload.to}`,
+        code: unreported ? 'unreported' : code === 'result_conflict' || code === 'platform_error' ? 'unknown_blocker' : 'unknown',
+        params: { ...blockerParams(code, values, job), local_time: c.scheduled || null },
         title: unreported ? `${c.machine ?? '機器'} 未回報 ${c.scheduled || '預定時間'} 的 ${c.channel ?? '帳號'} 貼文。`
           : `${lead(post)}的貼文結果不明，請確認有沒有發出。`,
         body: text, ...c.refs,
@@ -195,6 +221,7 @@ export function alertJobStatus(ctx: Context, payload: JobStatusChanged): Row | u
       const at = localLabel((job?.result as Data | null)?.published_at ?? ctx.now, c.zone, ctx.now);
       return createOwnerAlert(ctx, {
         kind: 'published', severity: 'info', dedupe_key: c.postId ?? payload.job_id,
+        code: 'published', params: { machine: c.machine ?? null, channel: c.channel ?? null, at },
         title: `${c.channel ?? '帳號'} 已由 ${c.machine ?? '機器'} 在 ${at} 發出。`,
         body: `${c.channel ?? '帳號'} 已由 ${c.machine ?? '機器'} 在 ${at} 發出，網址已回到 SmartSell。`, ...c.refs,
       });
@@ -215,6 +242,7 @@ export function alertLateFact(ctx: Context, payload: { job_id: string; publish_t
   const cancelled = payload.successor_cancelled === true;
   return createOwnerAlert(ctx, {
     kind: 'late_fact_after_release', severity: 'urgent', dedupe_key: payload.job_id,
+    code: 'late_fact_after_release', params: { machine: c.machine ?? null, channel: c.channel ?? null, cancelled },
     title: `${who} 在撤回後仍發出了舊版本${cancelled ? '，新版本已取消' : ''}。`,
     body: cancelled ? fill(STATUS_COPY.late_fact_after_release, { machine: c.machine, channel: c.channel })
       : `${c.machine ?? '機器'} 在撤回或強制釋放後，仍回報已發出（或可能已發出）${c.channel ?? '這個帳號'} 的貼文；系統不會自動重發。請到貼文頁確認。`,
@@ -227,6 +255,7 @@ export function alertOfflineStaleSettings(ctx: Context, payload: { job_id: strin
   const c = context(ctx, { job_id: payload.job_id, to: 'running', publish_target_id: payload.publish_target_id });
   return createOwnerAlert(ctx, {
     kind: 'offline_run_stale_settings', severity: 'urgent', dedupe_key: payload.job_id,
+    code: 'offline_run_stale_settings', params: { machine: c.machine ?? null, channel: c.channel ?? null },
     title: `${subject(c.machine, c.channel)} 以舊設定離線發出。`,
     body: fill(STATUS_COPY.offline_run_stale_settings, { machine: c.machine, channel: c.channel }),
     ...c.refs,
@@ -247,6 +276,7 @@ export function alertHandleChanged(ctx: Context, input: { social_account_id: str
   const provider = providerLabel(account) ?? '平台';
   return createOwnerAlert(ctx, {
     kind: 'handle_changed', severity: 'normal', dedupe_key: `${input.social_account_id}:${from}:${to}`,
+    code: 'handle_changed', params: { machine: machineLabel(ctx, machineId) ?? null, provider, from, to },
     title: `${provider} 帳號 @${from} 的名稱改成了 @${to}。`,
     body: fill(STATUS_COPY.handle_changed, { machine: machineLabel(ctx, machineId), provider, from, to }),
     social_account_id: input.social_account_id, ...(machineId && { machine_id: machineId }), ...(input.job_id && { job_id: input.job_id }),
@@ -269,7 +299,7 @@ export function alertUploadDone(ctx: Context, input: { media_id: string; filenam
   const asset = find(ctx, 'asset', input.media_id);
   const name = input.filename ?? str(asset?.title) ?? '影片';
   return createOwnerAlert(ctx, {
-    kind: 'upload_done', severity: 'normal', dedupe_key: input.media_id,
+    kind: 'upload_done', severity: 'normal', dedupe_key: input.media_id, code: 'upload_done', params: { filename: input.filename ?? str(asset?.title) ?? null },
     title: `${name} 已上傳完成。`, body: `${name} 已上傳到中樞並完成檢查，排好的貼文可以照常發出。`,
   });
 }
@@ -281,6 +311,7 @@ export function alertUploadFailed(ctx: Context, input: { media_id: string; filen
   const reason = (input.reason && UPLOAD_REASON[input.reason]) ?? '上傳沒有完成';
   return createOwnerAlert(ctx, {
     kind: 'upload_failed', severity: 'urgent', dedupe_key: input.media_id,
+    code: 'upload_failed', params: { filename: input.filename ?? str(asset?.title) ?? null, reason_code: input.reason ?? null },
     title: `${name} 上傳失敗（${reason}）。`,
     body: `${name} 上傳失敗（${reason}），用到它的貼文在重新上傳前發不出去。請在 Codex 對這個檔案再執行一次上傳。`,
   });

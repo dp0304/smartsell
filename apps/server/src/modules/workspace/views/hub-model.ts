@@ -3,7 +3,7 @@ import {
   type Blocker, type Context, type Data, type DriverHealth, type EffectiveMode, type HubProvider, type PostStatus, type Presence,
   type RouteKind, type Row, type WorkerJobRecord, type WorkerJobStatus,
 } from '@smartsell/contracts';
-import { channelEffectiveMode, deviceOnline, localMinute, locate, object, time } from '../../../../../../packages/domain/src/publishing/index.js';
+import { channelEffectiveMode, deviceConnected, deviceOnline, localMinute, locate, object, time } from '../../../../../../packages/domain/src/publishing/index.js';
 import { approvalDeadline, channelSettingsOrDefault } from '../../account/channel-settings.js';
 import { bindingFor } from '../../account/device-control.js';
 import { workspace } from '../brands.js';
@@ -65,6 +65,8 @@ export function presenceOf(ctx: Context, deviceId: string): Presence | undefined
 }
 export const machineName = (device: Row | undefined) => str(device?.display_name) ?? str(device?.name) ?? '機器';
 export const machineOnline = (ctx: Context, device: Row | undefined) => deviceOnline(ctx, device);
+/** Heartbeating, paused or not (U3: a paused machine is not offline). */
+export const machineConnected = (ctx: Context, device: Row | undefined) => deviceConnected(ctx, device);
 export function lastSeen(ctx: Context, device: Row): string | null {
   return str(presenceOf(ctx, device.id)?.last_seen_at) ?? str(device.last_seen_at) ?? null;
 }

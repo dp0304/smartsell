@@ -87,6 +87,8 @@ export interface Blocker {
   resumable_by: 'auto' | 'owner' | 'none';
   machine_id: string; machine_name: string; social_account_id: string; channel_label: string;
   step?: string; url?: string; evidence_sha256?: string[]; at: string;
+  /** 附加（U7）：平台自己的錯誤文字（例如 upload_rejected 的原因），未經套版；message 已是套好版的主人文案。 */
+  platform_message?: string;
 }
 export interface JobChannel { social_account_id: string; handle: string | null; display_name: string; profile_key: string; expected_identity: string }
 export interface JobMedia {
@@ -216,6 +218,8 @@ export type OwnerAlertKind = 'worker_blocker' | 'missed' | 'unknown' | 'late_fac
 export interface OwnerAlert {
   id: string; kind: OwnerAlertKind; severity: 'urgent' | 'normal' | 'info'; title: string; body: string; at: string;
   machine: Ref | null; channel: Ref | null; post: Ref | null; web_url: string; read_at: string | null;
+  /** 附加（U1）：title／body 是哪一句話與其中的值，網頁依介面語言重寫；title／body 仍是繁中，給 Agent 與舊版用戶端。 */
+  code?: string; params?: Record<string, unknown>;
 }
 export type AlertChannelConfig =
   | { kind: 'ntfy'; url: string; token_set: boolean }
@@ -420,7 +424,8 @@ export interface PostSummary {
   post_id: string; status: PostStatus; scheduled_at: string | null; local_time: string | null; latest_local_time: string | null;
   content_item_id: string; created_at: string; created_by_agent: boolean;
   channel: { id: string; provider: HubProvider; handle: string | null; label: string; web_url: string };
-  machine: { id: string; name: string; online: boolean; web_url: string } | null;
+  // paused（附加，U3）：機器已暫停但仍在連線時 online 為 false、paused 為 true，畫面寫「已暫停」而不是「離線」
+  machine: { id: string; name: string; online: boolean; paused?: boolean; web_url: string } | null;
   route_kind: RouteKind; mode: EffectiveMode; caption_excerpt: string; media_thumb_url: string | null;
   url: string | null; blocker: { code: BlockerCode | string; message: string; resumable_by: Blocker['resumable_by'] } | null; task_id: string | null;
   approval: 'approved_by_channel_policy' | 'approved' | 'awaiting_owner' | 'not_submitted' | 'rejected';
@@ -450,7 +455,7 @@ export interface MachineDetail extends MachineSummary {
 export interface ChannelPause { scope: 'workspace' | 'brand' | 'social_account'; reason: string; by: string | null; at: string; resume_web_url: string }
 export interface ChannelSummary {
   channel_id: string; provider: HubProvider; handle: string | null; display_name: string;
-  machine: { id: string; name: string; online: boolean; web_url: string } | null;
+  machine: { id: string; name: string; online: boolean; paused?: boolean; web_url: string } | null;
   login: { state: LoginState; checked_at: string | null; evidence_url: string | null };
   execution_mode: ExecutionMode; effective_mode: EffectiveMode; approval_mode: ApprovalMode;
   risk_ack: RiskAck | null; risk_ack_required: boolean; risk_ack_current: boolean;

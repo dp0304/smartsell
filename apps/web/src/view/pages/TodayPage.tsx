@@ -3,12 +3,22 @@ import { ExternalLink, Monitor } from 'lucide-react';
 import { pauseOf, type MachineSummary, type PostSummary, type TodayData, type TodayGroup, type TodayItem } from '../data/hub-types';
 import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
+import { fill } from '../copy';
 import { RELOGIN, attentionKindText, hub } from '../hub-copy';
+import { actionLabel, attentionText } from '../attention-text';
 import { Badge, ChannelName, Empty, ModeBadge, OnlineBadge, PostStatusBadge, WriteError, ZoneNote, localLabel, providerName, tr, useHubWrite } from '../hub-parts';
 import { reloginMessage, requestRelogin } from './ChannelPage';
 import { PostDetail } from './post-detail';
 
 const local = (path: string) => path.replace(/^https?:\/\/[^/]+/, '');
+/**
+ * U4: a setup reminder (E30: a channel_setup item that does not stop scheduling) is not something that needs the owner now.
+ * 要你處理 everywhere on Today (the count at the top and the section badge) is the other cards; the reminders fold into one.
+ */
+export const isSetupReminder = (item: Pick<TodayItem, 'kind' | 'blocks_scheduling'>) => item.kind === 'channel_setup' && item.blocks_scheduling !== true;
+export function splitAttention(items: TodayItem[]) {
+  return { needs: items.filter(item => !isSetupReminder(item)), reminders: items.filter(isSetupReminder) };
+}
 const POST_ACTIONS = new Set(['approve', 'reject', 'cancel', 'reschedule', 'retry', 'confirm_result', 'mark_not_published', 'force_release']);
 
 /** What the card currently says; a notice about an earlier press belongs to the card as it was then (WV-9). */
@@ -30,6 +40,9 @@ function AttentionCard({ item, today, posts }: { item: TodayItem; today: string;
   // 「重新登入」 (§9.2 login card, E21): on every login card, and wherever the hub offers open_login. It opens the sign-in window on the
   // channel's machine; the owner signs in there.
   const reloginChannel = item.channel && (item.kind === 'login' || item.actions.some(action => action.kind === 'open_login')) ? item.channel : null;
+  // U1: the card in the page's language (the hub's zh-Hant text, or English from its code and params).
+  const text = attentionText(item, lang);
+  const label = (action: TodayItem['actions'][number]) => actionLabel(action, item, lang);
   async function call(path: string, body?: Record<string, unknown>) {
     setPending(true); setError(undefined); setNotice(undefined); setSent(null);
     try { await write('POST', path, body ?? {}); setSent(cardSignature(item)); } catch (failure) { setError(failure); } finally { setPending(false); }
@@ -42,9 +55,9 @@ function AttentionCard({ item, today, posts }: { item: TodayItem; today: string;
   return <article className={`hub-attn sev-${item.severity}`} aria-labelledby={`attn-${item.id}`}>
     <header>
       <Badge tone={item.severity === 'urgent' ? 'critical' : 'warning'}>{tr(l, attentionKindText, item.kind)}</Badge>
-      <h3 id={`attn-${item.id}`}>{item.post ? <RouterLink to={local(item.post.web_url)}>{item.title}</RouterLink> : item.title}</h3>
+      <h3 id={`attn-${item.id}`}>{item.post ? <RouterLink to={local(item.post.web_url)}>{text.title}</RouterLink> : text.title}</h3>
     </header>
-    {item.detail && <p>{item.detail}</p>}
+    {text.detail && <p>{text.detail}</p>}
     {post && (post.caption_excerpt || item.kind === 'approval') && <p className="hub-quote">{post.caption_excerpt || l(hub.common.noCaption)}</p>}
     <p className="hub-links">
       {item.machine && <RouterLink to={local(item.machine.web_url)}>{item.machine.label}</RouterLink>}
@@ -55,12 +68,12 @@ function AttentionCard({ item, today, posts }: { item: TodayItem; today: string;
     <div className="vs-actions">
       {reloginChannel && <button type="button" className="vs-btn primary-soft" disabled={pending} onClick={() => void relogin(reloginChannel)}>{l(RELOGIN.button)}</button>}
       {item.actions.filter(action => !POST_ACTIONS.has(action.kind) && action.kind !== 'open' && action.kind !== 'open_login').map(action => action.kind === 'open_remote'
-        ? <a key={action.kind} className="vs-btn" href={action.path}>{action.label}</a>
+        ? <a key={action.kind} className="vs-btn" href={action.path}>{label(action)}</a>
         : action.path && action.method ? <button key={action.kind} type="button" className="vs-btn primary-soft" disabled={pending}
-          onClick={() => void call(action.path!, action.body)}>{action.label}</button> : null)}
+          onClick={() => void call(action.path!, action.body)}>{label(action)}</button> : null)}
       {postActions.length > 0 && item.post && <button type="button" className="vs-btn primary-soft" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {postActions.map(action => action.label).join(' / ')}</button>}
-      {!item.post && item.actions.some(action => action.kind === 'open') && <RouterLink to={local(item.web_url)} className="vs-btn">{item.actions.find(action => action.kind === 'open')!.label}</RouterLink>}
+        {postActions.map(label).join(' / ')}</button>}
+      {!item.post && item.actions.some(action => action.kind === 'open') && <RouterLink to={local(item.web_url)} className="vs-btn">{label(item.actions.find(action => action.kind === 'open')!)}</RouterLink>}
     </div>
     {notice && <p className="vs-notice good" role="status">{notice}</p>}
     {done && <p className="vs-notice good" role="status">{l(hub.action.done)}</p>}
@@ -111,14 +124,21 @@ export function TodayPage() {
     <PageHeader title={l(hub.today.title)} subtitle={l(hub.today.subtitle)} asOf={read.asOf} timeZone={read.value?.timezone} />
     <Loaded read={read}>{today => {
       const posts = new Map([...today.upcoming.flatMap(group => group.posts), ...today.recent_published].map(post => [post.post_id, post]));
+      const { needs, reminders } = splitAttention(today.attention);
+      const counts = { ...today.counts, needs_owner: needs.length };
       return <div className="hub-today">
         <dl className="hub-counts" aria-label={l(hub.today.counts)}>
           {([['scheduled', hub.today.scheduled], ['published', hub.today.published], ['needs_owner', hub.today.needsOwner], ['missed', hub.today.missed], ['unknown', hub.today.unknown]] as const)
-            .map(([key, label]) => <div key={key} className={today.counts[key] && ['needs_owner', 'missed', 'unknown'].includes(key) ? 'alert' : undefined}><dt>{l(label)}</dt><dd>{today.counts[key]}</dd></div>)}
+            .map(([key, label]) => <div key={key} className={counts[key] && ['needs_owner', 'missed', 'unknown'].includes(key) ? 'alert' : undefined}
+              title={key === 'needs_owner' ? l(hub.today.needsOwnerHint) : undefined}><dt>{l(label)}</dt><dd>{counts[key]}</dd></div>)}
         </dl>
-        <Section title={<>{l(hub.today.attention)}{today.attention.length > 0 && <span className="vs-badge">{today.attention.length}</span>}</>} className="hub-attention">
-          {today.attention.length ? <div className="hub-attn-list">{today.attention.map(item => <AttentionCard key={item.id} item={item} today={today.date} posts={posts} />)}</div>
+        <Section title={<>{l(hub.today.attention)}{needs.length > 0 && <span className="vs-badge">{needs.length}</span>}</>} className="hub-attention">
+          {needs.length ? <div className="hub-attn-list">{needs.map(item => <AttentionCard key={item.id} item={item} today={today.date} posts={posts} />)}</div>
             : <Empty>{l(hub.today.nothing)}</Empty>}
+          {reminders.length > 0 && <details className="hub-reminders">
+            <summary>{fill(l(hub.today.reminders), { n: reminders.length })}</summary>
+            <div className="hub-attn-list">{reminders.map(item => <AttentionCard key={item.id} item={item} today={today.date} posts={posts} />)}</div>
+          </details>}
         </Section>
         {/* WV-6: every time on this page is in the zone the hub computed Today in (the workspace zone, or ?tz=). */}
         <Section title={l(hub.today.upcoming)}

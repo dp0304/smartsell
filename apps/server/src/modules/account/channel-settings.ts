@@ -5,7 +5,7 @@ import {
   type LoginState, type PlatformDefaults, type RevokeReason, type Row, type WorkerJobRecord, type WorkerJobStatus,
 } from '@smartsell/contracts';
 import {
-  TIKTOK_REQUIRED_OPTIONS, assessTarget, channelEffectiveMode, channelSettingsFor, deviceOnline, hasExecutionRisk, locate, time,
+  TIKTOK_REQUIRED_OPTIONS, assessTarget, channelEffectiveMode, channelSettingsFor, deviceConnected, hasExecutionRisk, locate, time,
 } from '../../../../../packages/domain/src/publishing/index.js';
 import { workspace } from '../workspace/brands.js';
 import { bindingFor, sessionFor } from './device-control.js';
@@ -179,14 +179,17 @@ export function channelReadiness(ctx: Context, socialAccountId: string): Channel
   };
 }
 
-/** §3.3 LoginState: offline machine → unknown; an open check_login job → checking; otherwise the browser session status. */
+/**
+ * §3.3 LoginState: offline machine → unknown; an open check_login job → checking; otherwise the browser session status. A
+ * paused machine that still heartbeats is not offline: its last observed login stands (U3).
+ */
 export function channelLoginState(ctx: Context, socialAccountId: string): { state: LoginState; checked_at: string | null; session_id: string | null } {
   const binding = bindingFor(ctx, socialAccountId);
   const session = binding && binding.connector_channel === 'browser' ? sessionFor(ctx, binding) : undefined;
   const checked_at = typeof session?.checked_at === 'string' ? session.checked_at : typeof session?.verified_at === 'string' ? session.verified_at : null;
   const result = (state: LoginState) => ({ state, checked_at, session_id: session?.id ?? null });
   const device = binding && typeof binding.device_id === 'string' ? locate(ctx, 'connector_device', binding.device_id) : undefined;
-  if (!deviceOnline(ctx, device)) return result('unknown');
+  if (!deviceConnected(ctx, device)) return result('unknown');
   if (liveJobs(ctx, job => job.kind === 'check_login' && job.social_account_id === socialAccountId).length) return result('checking');
   const status = String(session?.status ?? '');
   return result(['verified', 'login_required', 'identity_mismatch', 'challenge'].includes(status) ? status as LoginState : 'unknown');

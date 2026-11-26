@@ -48,7 +48,9 @@ export function SetupAgent({ connections, issued, onIssued }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const promptHeading = useRef<HTMLHeadingElement>(null);
-  const usable = connections.filter(item => connectionState(item) === 'active');
+  // O4: only connections this prompt enrollment made (or older ones from before setup_via): a relay token or the App's own
+  // connection is never offered a check prompt or a 修復 Codex 連線 command here.
+  const usable = connections.filter(item => connectionState(item) === 'active' && (item.setup_via ?? 'prompt') === 'prompt');
   const verified = usable.some(mcpUsed);
   const redeemed = issued && usable.find(item => item.id === issued.id);
   const expired = issued && (expiredCode === issued.id || Date.parse(issued.expires_at) <= Date.now());
@@ -68,7 +70,7 @@ export function SetupAgent({ connections, issued, onIssued }: {
     setBusy(true); setError(undefined);
     try {
       const { data } = await create<AgentEnrollment>('POST', '/agent-connections/enroll', {
-        client, label: String(form.get('label') ?? '').trim() || clients[client], expires_days: Number(form.get('expires_days') ?? 90),
+        client, label: String(form.get('label') ?? '').trim() || clients[client], expires_days: Number(form.get('expires_days') ?? 90), setup_via: 'prompt',
       });
       onIssued(data);
       setAdding(false);

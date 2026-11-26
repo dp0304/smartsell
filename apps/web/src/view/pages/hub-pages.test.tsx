@@ -133,6 +133,85 @@ test('Today shows what needs the owner, the next 48 hours grouped by content, ma
   assert.match(en, /Tomorrow 09:00/);
 });
 
+test('U4: 要你處理 is one number on Today (count and badge), setup reminders fold into one entry below the cards', async () => {
+  const reminder = (id: string, title: string) => ({ id: `channel:${id}:reminder`, kind: 'channel_setup' as const, blocks_scheduling: false, severity: 'normal' as const,
+    title, detail: '還沒試跑：建議試跑一次（不影響排程與發布）。', due_at: null, machine: null, channel: { id, label: 'X @a', web_url: url(`/channels/${id}`) }, post: null,
+    actions: [{ kind: 'open' as const, label: '開啟帳號設定' }], web_url: url(`/channels/${id}`) });
+  const paused = { id: 'machine_paused:m-3', kind: 'publishing_paused' as const, blocks_scheduling: false, severity: 'urgent' as const,
+    title: 'Mac-C 已暫停（換網路）：1 則貼文恢復前不會發出', detail: '你在 11-24 12:00 暫停。', due_at: null, machine: { id: 'm-3', label: 'Mac-C', web_url: url('/machines/m-3') },
+    channel: null, post: null, web_url: url('/machines/m-3'),
+    actions: [{ kind: 'resume' as const, label: '恢復機器', method: 'POST' as const, path: '/hub/machines/m-3/resume', body: {} }, { kind: 'open' as const, label: '開啟機器' }] };
+  const data = { ...today, attention: [paused, ...today.attention, reminder('c-7', '建議：X @a 試跑一次'), reminder('c-8', 'X @b 的設定提醒（2 項，不影響排程）')] };
+  const out = await render('', { '/views/today': data });
+  // counts.needs_owner from the hub is 1 (posts stopped on the machine); the page counts the three cards it shows.
+  assert.match(out, /<dt>要你處理<\/dt><dd>3<\/dd>/);
+  assert.match(out, /<h2[^>]*>要你處理<span class="vs-badge">3<\/span><\/h2>/);
+  const [cards, folded] = out.split('<details class="hub-reminders">');
+  assert.equal(cards.match(/<article class="hub-attn/g)?.length, 3);
+  assert.ok(cards.indexOf('Mac-C 已暫停') < cards.indexOf('出現驗證碼'), 'the urgent pause card is on top');
+  assert.match(folded, /^<summary>設定提醒（2 項，不影響排程）<\/summary>/);
+  assert.equal(folded.match(/<article class="hub-attn/g)?.length, 2);
+  // U3: the paused machine's card offers 恢復機器 as a button, and opens the machine.
+  assert.match(cards, /<button type="button" class="vs-btn primary-soft">恢復機器<\/button>/);
+  assert.match(cards, /<a class="vs-btn" href="\/app\/w1\/machines\/m-3"[^>]*>開啟機器</);
+  // Calendar's number is narrower (this period's posts) and says so.
+  const { t } = await import('./calendar-text');
+  assert.deepEqual(t.needsTitle, ['要你處理的貼文', 'Posts that need you']);
+});
+
+test('U1: in English, Today\'s cards, their buttons, machine warnings and notifications are written from code + params', async () => {
+  const cjk = /[㐀-鿿]/;
+  const ref = (id: string, label: string, path: string) => ({ id, label, web_url: url(path) });
+  const card = (over: Record<string, unknown>) => ({ severity: 'urgent', due_at: null, machine: null, channel: null, post: null, web_url: url('/'), actions: [], detail: '中文說明', ...over });
+  const attention = [
+    card({ id: 'post:p-2', kind: 'job_blocker', title: 'X @makemylure 11-24 21:00：出現驗證碼', code: 'job_blocker', post: ref('p-2', 'X @makemylure', '/posts/p-2'),
+      params: { channel: 'X @makemylure', when: '11-24 21:00', blocker: { code: 'captcha', machine: 'Mac-B', channel: 'X @makemylure', deadline: '21:30', resumable_by: 'auto' } },
+      actions: [{ kind: 'open', label: '開啟貼文' }] }),
+    card({ id: 'machine_paused:m-3', kind: 'publishing_paused', title: 'Mac-C 已暫停（換網路）：1 則貼文恢復前不會發出', code: 'machine_paused', machine: ref('m-3', 'Mac-C', '/machines/m-3'),
+      params: { machine: 'Mac-C', reason: 'new router', n: 1, by: 'person', at: '11-24 12:00', first: '11-25 11:00', offline: false },
+      actions: [{ kind: 'resume', label: '恢復機器', method: 'POST', path: '/hub/machines/m-3/resume', body: {} }, { kind: 'open', label: '開啟機器' }] }),
+    card({ id: 'post:p-3', kind: 'approval', title: 'TikTok @lurelab 11-25 09:00 的貼文等你核准', code: 'approval_waiting', post: ref('p-3', 'TikTok @lurelab', '/posts/p-3'),
+      params: { channel: 'TikTok @lurelab', when: '11-25 09:00', deadline: '11-25 09:30' },
+      actions: [{ kind: 'approve', label: '核准' }, { kind: 'reject', label: '駁回' }, { kind: 'open', label: '開啟貼文' }] }),
+    card({ id: 'setup:m-1', kind: 'machine_setup', severity: 'normal', title: 'Mac-B 的設定需要注意（1 項）', code: 'machine_setup', machine: ref('m-1', 'Mac-B', '/machines/m-1'),
+      params: { machine: 'Mac-B', warnings: [{ code: 'sleep_enabled', name: 'Mac-B', minutes: 10 }] }, actions: [{ kind: 'open', label: '開啟機器' }] }),
+    card({ id: 'offline:m-9', kind: 'machine_offline', title: 'Win-A 離線，1 則貼文等待中，最早 11-25 08:00', code: 'machine_offline', machine: ref('m-9', 'Win-A', '/machines/m-9'),
+      params: { machine: 'Win-A', n: 1, first: '11-25 08:00' }, actions: [{ kind: 'open', label: '開啟機器' }] }),
+  ];
+  const en = await render('', { '/views/today': { ...today, attention, recent_published: [] } }, 'en');
+  const section = visible(en.slice(en.indexOf('hub-attention'), en.indexOf('hub-groups')));
+  assert.doesNotMatch(section, cjk, 'no zh-Hant left in the English cards');
+  assert.match(section, /X @makemylure 11-24 21:00: Captcha/);
+  assert.match(section, /X @makemylure on Mac-B hit a CAPTCHA and stopped\..*Deadline 21:30\./);
+  assert.match(section, /Mac-C paused \(new router\): 1 post will not go out until resumed/);
+  assert.match(section, /Resume machine/);
+  assert.match(section, /Approve \/ Reject/);
+  assert.match(section, /Approve by 11-25 09:30; after that this post will not go out\./);
+  assert.match(section, /Mac-B sleeps after 10 min idle/);
+  assert.match(section, /Win-A is offline: 1 post waiting, the first at 11-25 08:00/);
+  // zh-Hant shows the hub's text unchanged.
+  const zh = await render('', { '/views/today': { ...today, attention, recent_published: [] } });
+  assert.match(zh, /Mac-C 已暫停（換網路）：1 則貼文恢復前不會發出/);
+  assert.match(zh, />恢復機器</);
+
+  const coded: OwnerAlert[] = [
+    { ...alerts[0], code: 'worker_blocker', params: { blocker_code: 'captcha', machine: 'Mac-B', channel: 'X @makemylure', deadline: '明天 09:30', dry_run: false } },
+    { ...alerts[0], id: 'al-2', kind: 'worker_blocker', title: 'X 拒絕了這支影片', body: '…', code: 'failed',
+      params: { blocker_code: 'upload_rejected', machine: 'Mac-B', channel: 'X @makemylure', platform_message: 'Video format not supported', dry_run: false } },
+    { ...alerts[0], id: 'al-3', kind: 'missed', title: '沒有發出', body: '…', code: 'missed', params: { machine: 'Win-A', channel: 'X @win_shop', deadline: '08:30', reason_code: 'machine_was_off' } },
+    { ...alerts[0], id: 'al-4', kind: 'published', severity: 'info', title: '已發出', body: '…', code: 'published', params: { machine: 'Mac-B', channel: 'X @makemylure', at: '18:00' } },
+  ];
+  const list = visible(await render('/notifications', { '/views/alerts': coded }, 'en'));
+  assert.doesNotMatch(list, cjk);
+  assert.match(list, /X @makemylure on Mac-B: captcha\./);
+  assert.match(list, /Deadline tomorrow 09:30\./);
+  assert.match(list, /X @makemylure rejected the video: &quot;Video format not supported&quot;\. This post did not go out\./);
+  assert.match(list, /Win-A did not start by 08:30 \(the machine was off\)/);
+  assert.match(list, /X @makemylure was posted by Mac-B at 18:00\./);
+  // An alert without a code (written before U1) keeps the hub's text.
+  assert.match(visible(await render('/notifications', { '/views/alerts': alerts }, 'en')), /Mac-B 的 X @makemylure 出現驗證碼/);
+});
+
 test('machine detail: warnings with how to fix, channels, queue linked to posts, remote screen, drivers and selectors', async () => {
   const out = await render('/machines/m-1', { '/views/machines/m-1': machine });
   assert.match(out, /Mac-B 閒置 10 分鐘會睡眠/);
@@ -146,6 +225,23 @@ test('machine detail: warnings with how to fix, channels, queue linked to posts,
   const list = await render('/machines', { '/views/machines': [machine] });
   assert.match(list, /有新版 0\.2\.1/);
   assert.match(list, /配對新機器/);
+});
+
+test('U9: a Windows machine gets Windows instructions for its warnings, never macOS Energy or FileVault', async () => {
+  const windows: MachineDetail = { ...machine, machine_id: 'm-9', name: 'Win-A', os: 'win32',
+    posture: { os: 'win32', os_version: '10.0.22631', sleep_idle_min: 15, on_battery: true, auto_login: 'off', filevault: 'n/a', power_plan_sleep_min: 15 },
+    warnings: [{ code: 'sleep_enabled', message: 'Win-A 閒置 15 分鐘會睡眠。' }, { code: 'no_auto_login', message: 'Win-A 重開機後要有人登入，Worker 才會啟動。' },
+      { code: 'clock_skew', message: 'Win-A 的時鐘差了 45 秒。' }] };
+  const out = visible(await render('/machines/m-9', { '/views/machines/m-9': windows }));
+  assert.match(out, /設定 → 系統 → 電源/);
+  assert.match(out, /Sysinternals Autologon/);
+  assert.match(out, /設定 → 時間與語言 → 日期和時間/);
+  assert.doesNotMatch(out, /能源|FileVault|系統設定/);
+  const en = visible(await render('/machines/m-9', { '/views/machines/m-9': windows }, 'en'));
+  assert.match(en, /Settings → System → Power/);
+  assert.doesNotMatch(en, /Energy|FileVault/);
+  const mac = visible(await render('/machines/m-1', { '/views/machines/m-1': machine }));
+  assert.match(mac, /系統設定 → 能源/);
 });
 
 test('channel detail: readiness checklist, notice, risk acknowledgement that types the handle, settings and dry run', async () => {
@@ -307,6 +403,36 @@ test('WV-11: refused actions read in zh-Hant owner copy (details.owner_message f
   const now = Date.parse('2026-11-24T02:12:00Z');   // 10:12 in Asia/Taipei
   assert.equal(defaultRescheduleTime({ scheduled_at: '2026-11-24T01:00:00Z', local_time: '2026-11-24 09:00' }, 'Asia/Taipei', now), '2026-11-24T11:00');
   assert.equal(defaultRescheduleTime({ scheduled_at: '2026-11-25T01:00:00Z', local_time: '2026-11-25 09:00' }, 'Asia/Taipei', now), '2026-11-25T09:00');
+});
+
+test('U8: errors read in plain words; status, code and the server text are only under 詳細資料', async () => {
+  const { ApiError } = await import('@smartsell/sdk');
+  const { ProblemNotice, problemMessage } = await import('../../api');
+  const { ownerProblemText } = await import('../hub-parts');
+  const zh = (label: readonly [string, string]) => label[0];
+  const en = (label: readonly [string, string]) => label[1];
+  const t = (key: string) => key;
+  assert.equal(problemMessage(new ApiError(500, { code: 'INTERNAL', detail: 'boom' }), zh, t),
+    '中樞處理這個要求時出了問題，請稍後再試。一直發生的話，請在中樞那台電腦執行 pnpm hub:doctor。');
+  assert.equal(problemMessage(new TypeError('Failed to fetch'), zh, t), '中樞沒有回應。請確認中樞那台電腦開著、SmartSell 正在執行，再按「重新載入」。');
+  assert.equal(problemMessage(new ApiError(502, {}), en, t), 'The hub is not responding. Check that the hub computer is on and SmartSell is running, then reload.');
+  assert.equal(problemMessage(new ApiError(422, { code: 'INVALID_ARGUMENTS', detail: 'bad', details: { issues: [{ path: 'when', message: 'when must be …' }, { path: 'body.url', message: 'x' }] } }), zh, t),
+    '有欄位不正確：時間、網址。請修改後再送出。');
+  assert.equal(problemMessage(new ApiError(409, { code: 'FRESH_IDENTITY_CHECK_REQUIRED', detail: 'Check the identity again first.' }), en, t), 'Check the identity again first.',
+    'a specific refusal keeps the server sentence');
+  const out = renderToStaticMarkup(<ProblemNotice error={new ApiError(500, { code: 'INTERNAL', detail: 'boom', request_id: 'req-1' })} retry={() => undefined} />);
+  const [shown, folded] = out.split('<details class="problem-details">');
+  assert.doesNotMatch(shown, /500|INTERNAL|boom/, 'nothing for developers above the fold');
+  assert.match(folded, /^<summary>詳細資料<\/summary><small>500 · INTERNAL<\/small><small>boom<\/small><small>request_id req-1<\/small><\/details>/);
+  // 貼上網址 refused: say which link is wanted, for this channel's handle.
+  const pasted = new ApiError(422, { code: 'INVALID_ARGUMENTS', detail: '這不是 X 的網址', details: { issues: [{ path: 'url', message: '這不是 X 的網址' }] } });
+  const subject = { provider: 'x', handle: 'fixture_x' };
+  assert.equal(ownerProblemText(zh, 'zh', pasted, 'confirm_result', subject),
+    '中樞不接受這個網址（這不是 X 的網址）。請貼上 @fixture_x 在 X 上這則貼文的網址，例如 https://x.com/fixture_x/status/1860000000000000000');
+  assert.equal(ownerProblemText(en, 'en', pasted, 'confirm_result', { provider: 'tiktok', handle: 'minglures' }),
+    'That link was not accepted. Paste the link to this post by @minglures on TikTok, e.g. https://www.tiktok.com/@minglures/video/7300000000000000000');
+  assert.equal(ownerProblemText(zh, 'zh', new ApiError(422, { code: 'INVALID_ARGUMENTS', details: { issues: [{ path: 'reason', message: 'Unknown field' }] } })),
+    '有欄位不正確：原因。請修改後再送出。');
 });
 
 test('E41 machine page offers 撤銷這台機器 with a typed name; WV-6 machine times are in the browser zone it names', async () => {

@@ -9,7 +9,8 @@ export interface RaiseAlertInput {
   title: string; body: string; machine_id?: string; social_account_id?: string; post_id?: string;
 }
 /** Extra fields S10's own triggers attach. */
-export interface RaiseAlertExtra { job_id?: string; web_url?: string }
+/** `code` and `params` (U1): which sentence title and body are, with their values, for the web's other languages. */
+export interface RaiseAlertExtra { job_id?: string; web_url?: string; code?: string; params?: Record<string, unknown> }
 
 export interface PushDelivery {
   channel_id: string; kind: 'ntfy' | 'bark' | 'telegram'; status: 'pending' | 'sending' | 'sent' | 'failed';
@@ -69,6 +70,7 @@ export function createOwnerAlert(ctx: Context, input: RaiseAlertInput & RaiseAle
     post_id: input.post_id ?? null, post_label: input.post_id ? postLabel ?? '貼文' : null,
     job_id: input.job_id ?? null, web_url: target, ...links,
     read_at: null, deliveries, push_status: deliveries.length ? 'pending' : 'none',
+    ...(input.code && { code: input.code, params: input.params ?? {} }),
   });
   for (const recipient of ownerRecipients(ctx)) {
     notify(ctx, recipient, ownerAlertNotificationType, title, {
@@ -96,6 +98,7 @@ export function toOwnerAlert(row: Row): OwnerAlert {
     machine: ref(row.machine_id, row.machine_label, row.machine_web_url), channel: ref(row.social_account_id, row.channel_label, row.channel_web_url),
     post: ref(row.post_id, row.post_label, row.post_web_url), web_url: String(row.web_url ?? ''),
     read_at: typeof row.read_at === 'string' ? row.read_at : null,
+    ...(typeof row.code === 'string' && { code: row.code, params: row.params && typeof row.params === 'object' ? row.params as Record<string, unknown> : {} }),
   };
 }
 

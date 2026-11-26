@@ -17,7 +17,8 @@ export interface HomeView {
 }
 export interface DecisionSummary { counts?: Record<string, number>; total?: number; as_of?: string }
 
-export interface AgentConnection { id: string; label: string; client: string; created_at: string; expires_at: string | null; last_used_at: string | null; mcp_url?: string; mcp_client_verified_at?: string; revoked: boolean }
+/** `setup_via` (O4): 'prompt' (advanced prompt enrollment), 'app' (SmartSell App), 'token' (Node relay token file); absent on older connections. */
+export interface AgentConnection { id: string; label: string; client: string; created_at: string; expires_at: string | null; last_used_at: string | null; mcp_url?: string; mcp_client_verified_at?: string; revoked: boolean; setup_via?: 'prompt' | 'app' | 'token' }
 export interface AgentEnrollment { id: string; client: 'claude_code' | 'codex'; code: string; mcp_url: string; redeem_url: string; expires_at: string; expires_days: number }
 export interface AgentSetup { agents_md?: string }
 export interface CreatedConnection { id: string; label: string; client: string; token: string; mcp_url: string; expires_at: string | null; setup?: AgentSetup }

@@ -523,7 +523,9 @@ onboarding('First-run wizard: workspace, a machine, its channel, notifications a
   const tokenFile = await download;
   // The file name is checked in its own test below; here, the file holds exactly the token.
   expect(await (await import('node:fs/promises')).readFile(await tokenFile.path(), 'utf8')).toBe(`${connection.token}\n`);
-  await expect(panel.getByRole('status')).toHaveText('已建立「Lure laptop · Codex」。權杖檔已下載為 token；把它移到 ~/.smartsell/token 並設成只有你能讀（chmod 600）。');
+  await expect(panel.getByRole('status')).toHaveText('已建立「Lure laptop · Codex」。權杖檔已下載為 token（在「下載」資料夾）；下面第 1 步會把它移到 .smartsell 資料夾。');
+  await panel.getByRole('button', { name: 'macOS／Linux（終端機）', exact: true }).click();
+  await expect(panel).toContainText('mv ~/Downloads/token ~/.smartsell/token && chmod 600 ~/.smartsell/token');
   await expect(panel).toContainText(`codex mcp add smartsell -- node ~/.smartsell/relay.mjs --hub ${dev.origin} --token-file ~/.smartsell/token`);
   // A connection that has not called a tool yet is not done.
   const agent = mcpClient(connection.mcp_url, connection.token);
@@ -561,7 +563,8 @@ test('Agent page: the relay token file is saved under the name the page tells th
   const download = page.waitForEvent('download');
   await relay.getByRole('button', { name: '建立連線並下載權杖檔', exact: true }).click();
   const file = await download;
-  await expect(relay.getByRole('status')).toContainText('權杖檔已下載為 token；把它移到 ~/.smartsell/token');
+  await expect(relay.getByRole('status')).toContainText('權杖檔已下載為 token（在「下載」資料夾）');
+  await expect(page.getByRole('main').getByText(/mv ~\/Downloads\/token ~\/\.smartsell\/token/)).toBeVisible();
   expect(file.suggestedFilename()).toBe('token');
 });
 

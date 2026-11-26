@@ -19,7 +19,7 @@ export const t = {
   nextPast: ['這段期間已經過去', 'This period is over'],
   nextPrompt: ['幫我排好接下來兩週的社群發布，排好後送審', 'Schedule social posts for the next two weeks and submit them for approval'],
   moreUpcoming: ['之後還有 {n} 則待發布', '{n} more to publish after this'],
-  needsTitle: ['需要你處理', 'Needs you'], needsNone: ['這段期間沒有需要你處理的項目', 'Nothing in this period needs you'],
+  needsTitle: ['要你處理的貼文', 'Posts that need you'], needsNone: ['這段期間沒有要你處理的貼文', 'No post in this period needs you'],
   goDecisions: ['前往待你決定', 'Open decisions'],
   rangeTitle: ['這段期間', 'In this period'], todayCount: ['今天有 {n} 件事', '{n} on today'], todayNone: ['今天沒有安排', 'Nothing on today'],
   scheduledCount: ['發布排期', 'Scheduled'], publishedCount: ['已發布', 'Published'], periodsCount: ['檔期與計劃', 'Periods'],

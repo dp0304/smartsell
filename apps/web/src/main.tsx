@@ -249,6 +249,8 @@ function RecordsRoute({ ws, workspace, userId, path, module }: {
 function App({ compatibility }: { compatibility: boolean }) {
   const { t, label } = useCopy();
   const location = useLocation();
+  // The compatibility workbench is not served in hub mode (404); its link is a developer-mode tool (U6).
+  const developer = useDeveloperMode();
   const returnable = (path?: string | null) => Boolean(path && (path.startsWith('/w/') || path.startsWith('/app/')));
   const workerIntent = location.pathname === '/worker-connect' && !location.hash ? parseWorkerConnect(location.search) : undefined;
   const agentIntent = location.pathname === '/agent-connect' && !location.hash ? parseAgentConnect(location.search) : undefined;
@@ -285,7 +287,7 @@ function App({ compatibility }: { compatibility: boolean }) {
     {ws && data && <Route path="/app/:ws/*" element={<Suspense fallback={<Busy label={t('loading')} />}><ViewApp session={data} compatibility={compatibility} /></Suspense>} />}
     {ws && data && <Route path="/w/:ws/*" element={<Workspace session={data} compatibility={compatibility} />} />}
     {ws && data && <Route path="/admin/*" element={<Workspace session={data} compatibility={compatibility} administrative />} />}
-    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link><a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a><Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} state={location.pathname === '/' ? undefined : { skipSetupCheck: true }} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
+    <Route path="*" element={session.isPending ? <Busy label={t('loading')} /> : session.isError ? <main className="entry-error"><Brand /><ProblemNotice error={session.error} retry={() => void session.refetch()} /><div className="toolbar"><Link className="button" to="/login">{t('login')}</Link><Link className="button" to="/setup">{t('setup')}</Link>{developer && <a className="button" href="/compat/workbench/login">{t('compatibilityWorkbench')}</a>}<Language /></div></main> : ws ? <Navigate to={compatibility ? `${base(ws)}/home` : viewBase(ws)} state={location.pathname === '/' ? undefined : { skipSetupCheck: true }} replace /> : data?.user ? <main className="entry-error"><EmptyState title={t('noWorkspaces')} /><SignOut session={data} /></main> : <Navigate to={`/login${next}`} replace />} />
   </Routes></>;
 }
 

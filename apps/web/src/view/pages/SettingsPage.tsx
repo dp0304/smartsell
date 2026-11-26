@@ -26,8 +26,10 @@ function region(code: unknown, lang: Lang) {
   try { return new Intl.DisplayNames([intlLocale(lang)], { type: 'region' }).of(code.toUpperCase()) ?? code; } catch { return code; }
 }
 
-function Summary({ context, accounts, pauses, connections }: {
+function Summary({ context, accounts, pauses, connections, more }: {
   context: ViewResult<ContextView>; accounts: ViewResult<Row[]>; pauses: ViewResult<PauseSwitch[]>; connections: ViewResult<AgentConnection[]>;
+  /** 顯示其他模組: brands, markets and the registered social accounts belong to the hidden modules in phase 1 (U6). */
+  more: boolean;
 }) {
   const { l } = useText();
   const known = <T,>(read: ViewResult<T>) => read.value !== undefined;
@@ -41,8 +43,10 @@ function Summary({ context, accounts, pauses, connections }: {
   const unknown = l(text.unknown);
   const items: [string, string, CheckTone, string][] = [
     ['st-pause', l(text.pauseTitle), tones.publishing, active === undefined ? unknown : active ? fill(l(text.publishingPaused), { n: active }) : l(text.publishingOk)],
-    ['st-brands', l(copy.pages.brands), tones.brands, brands === undefined ? unknown : brands === 0 ? l(copy.pages.noBrands) : markets === 0 ? `${fill(l(text.brandsOnly), { b: brands })} · ${l(text.noMarkets)}` : fill(l(text.brandsCount), { b: brands, m: markets ?? '—' })],
-    ['st-accounts', l(text.accountsTitle), tones.accounts, !accountList ? unknown : !accountList.length ? l(text.accountsNone) : activeAccounts === 0 ? fill(l(text.accountsNoneActive), { n: accountList.length }) : fill(l(text.accountsCount), { n: accountList.length })],
+    ...more ? [
+      ['st-brands', l(copy.pages.brands), tones.brands, brands === undefined ? unknown : brands === 0 ? l(copy.pages.noBrands) : markets === 0 ? `${fill(l(text.brandsOnly), { b: brands })} · ${l(text.noMarkets)}` : fill(l(text.brandsCount), { b: brands, m: markets ?? '—' })],
+      ['st-accounts', l(text.accountsTitle), tones.accounts, !accountList ? unknown : !accountList.length ? l(text.accountsNone) : activeAccounts === 0 ? fill(l(text.accountsNoneActive), { n: accountList.length }) : fill(l(text.accountsCount), { n: accountList.length })],
+    ] satisfies [string, string, CheckTone, string][] : [],
     ['st-agent', l(copy.nav.agent), tones.agent, agent === undefined || agent === 'unknown' ? unknown : agent === 'none' ? l(text.agentNone) : l(text.agentConnected)],
   ];
   return <section className="vs-span-2 st-summary" aria-label={l(text.summary)}>
@@ -211,18 +215,21 @@ export function SettingsPage() {
   const accountRows = rows((brandId ? everyAccount : accounts).value);
   const brandNames = new Map(brandRows.map(row => [String(row.id), String(row.name ?? row.id)]));
   const paused = new Set(splitPauses(pauses.value).active.filter(row => row.scope_type === 'social_account').map(row => String(row.scope_id)));
+  // Phase 1 (§9.1, U6): posting channels live on 帳號 and machines; brands, markets and the advanced workbench's social-account
+  // register come back with 顯示其他模組.
+  const more = useShowMoreModules();
   return <>
     <PageHeader title={l(copy.pages.settingsTitle)} subtitle={l(text.subtitle)}>
       {canSetUp(workspace.role) && <Link className="vs-btn" to={`${base}/get-started`}>{l(setupText.title)}</Link>}
       {role && <span className="vs-tag st-role">{l(text.role)}：{roleText[role] ? l(roleText[role]) : role}</span>}
     </PageHeader>
     <div className="vs-columns st-page">
-      <Summary context={context} accounts={accounts} pauses={pauses} connections={connections} />
+      <Summary context={context} accounts={accounts} pauses={pauses} connections={connections} more={more} />
       <PauseSection pauses={pauses} brands={brandRows} accounts={accountRows} role={role} timeZone={timeZone} />
-      <BrandsSection brandId={brandId} />
-      {canSetUp(workspace.role) && <div className="vs-actions"><Link className="vs-btn" to={`${base}/channels`}>{l(['發文帳號與機器', 'Posting channels and machines'])}</Link></div>}
-      <AccountsSection accounts={accounts} brands={brandRows} brandsLoaded={Array.isArray(brands.value)} markets={rows(context.value?.markets)} role={role} brandId={brandId}
-        workspaceZone={context.value?.timezone} pausedAccounts={paused} />
+      {more && <BrandsSection brandId={brandId} />}
+      {more && canSetUp(workspace.role) && <div className="vs-actions"><Link className="vs-btn" to={`${base}/channels`}>{l(['發文帳號與機器', 'Posting channels and machines'])}</Link></div>}
+      {more && <AccountsSection accounts={accounts} brands={brandRows} brandsLoaded={Array.isArray(brands.value)} markets={rows(context.value?.markets)} role={role} brandId={brandId}
+        workspaceZone={context.value?.timezone} pausedAccounts={paused} />}
       <MembersSection brandNames={brandNames} role={role} />
       <AgentSection connections={connections} />
       <NotificationsSection />

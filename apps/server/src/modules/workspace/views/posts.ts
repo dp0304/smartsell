@@ -90,7 +90,7 @@ export function routeOf(ctx: Context, target: Row, job?: Row) {
 }
 
 const machineRef = (ctx: Context, device: Row | undefined) => device
-  ? { id: device.id, name: machineName(device), online: machineOnline(ctx, device), web_url: webUrl(ctx, 'machine', device.id) } : null;
+  ? { id: device.id, name: machineName(device), online: machineOnline(ctx, device), ...(device.paused === true && { paused: true }), web_url: webUrl(ctx, 'machine', device.id) } : null;
 
 const FINAL_FOR_OWNER_ACTION: PostStatus[] = ['published', 'cancelled', 'cancelling', 'failed', 'missed', 'unknown', 'rejected'];
 

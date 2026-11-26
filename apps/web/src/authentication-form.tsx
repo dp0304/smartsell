@@ -111,6 +111,7 @@ export function AuthenticationForm<T>({ setupPath, compatibility = false, showCo
   if (status.isPending) return <p role="status">{t('auth.checkingSetup')}</p>;
   return <><Heading>{title}</Heading>
     <p>{t(mode === 'register' ? 'auth.registerHelp' : mode === 'setup' ? 'authSetup' : 'authLogin')}</p>
+    {needsToken && mode !== 'login' && !fragmentToken && <p className="notice" role="note">{t('auth.firstRunHint')}</p>}
     {status.isError && <div className="problem auth-notice" role="alert"><p>{t('auth.setupStatusError')}</p>
       <button type="button" disabled={status.isFetching} onClick={() => void status.refetch()}>{t('retry')}</button></div>}
     {setupClosed && <p className="notice" role="status">{t('auth.setupCompleted')}</p>}
@@ -138,16 +139,17 @@ export function AuthenticationForm<T>({ setupPath, compatibility = false, showCo
             <label className="field">{t('workspace_name')}<input name="workspaceName" required maxLength={120} pattern=".*\S.*" autoComplete="organization" /></label>
             <label className="field">{t(compatibility ? 'auth.compatName' : 'displayName')}<input name="name" maxLength={120} autoComplete="name" /></label>
           </>}
-          {needsToken && mode !== 'login' && !fragmentToken && <label className="field">{t('auth.deploymentToken')}
-            <input name="setupToken" type="password" required autoComplete="off" aria-invalid={authorizationFailed || undefined} />
-          </label>}
+          {needsToken && mode !== 'login' && !fragmentToken && <div className="auth-password"><label className="field">{t('auth.deploymentToken')}
+            <input name="setupToken" type="password" required autoComplete="off" aria-invalid={authorizationFailed || undefined} aria-describedby="auth-token-hint" />
+          </label><small id="auth-token-hint">{t('auth.tokenHint')}</small></div>}
         </>}
         <button className={compatibility ? 'wb-primary' : 'primary'} type="submit">{pending ? t('saving') : challenge ? t('security.verify') : title}</button>
         {challenge && <button type="button" onClick={() => { setChallenge(undefined); setError(undefined); }}>{t('security.restart')}</button>}
       </fieldset>
     </form>
-    {(mode !== 'login' || showCompatibility || compatibility) && <div className="auth-links">
-      {mode !== 'login' && <Link to={{ pathname: mode === 'setup' ? '/login' : '/setup', search }}>
+    {((mode !== 'login' && !fragmentToken) || showCompatibility || compatibility) && <div className="auth-links">
+      {/* Opened from the hub:init link (token in the fragment): that is the first-run path; no second form to switch to (O7). */}
+      {mode !== 'login' && !fragmentToken && <Link to={{ pathname: mode === 'setup' ? '/login' : '/setup', search }}>
         {t(mode === 'setup' ? 'auth.backToRegistration' : 'auth.advancedSetup')}
       </Link>}
       {showCompatibility && <a href={`/compat/workbench/${mode === 'setup' ? 'setup' : 'login'}`}>{t('compatibilityWorkbench')}</a>}

@@ -31,10 +31,16 @@ export const setupHubText = {
   wayAppSteps: ['在筆電安裝 SmartSell App，選「這台是我的筆電（只連 Codex，不發文）」，再按「連接 Codex」或「連接 Claude Code」。瀏覽器會開啟這個中樞的連線頁，登入後按「授權」，App 會自己寫好 Codex／Claude Code 的設定，不用複製任何東西。',
     'Install the SmartSell App on the laptop, choose "This is my laptop (Codex only, no posting)", then click "Connect Codex" or "Connect Claude Code". The browser opens this hub\'s connect page; sign in, click Authorize, and the App writes the Codex / Claude Code settings itself. Nothing to copy.'],
   wayRelay: ['方式二：Node relay（Windows 筆電或沒有 App 時）', 'Way 2: the Node relay (Windows laptop, or without the App)'],
-  wayRelayHint: ['先建立一個連線，把權杖存成檔案，再在筆電的終端機執行下面兩行。權杖只顯示這一次。', 'Create a connection, save its token as a file, then run the two lines below in a terminal on the laptop. The token is shown only once.'],
+  wayRelayHint: ['先建立一個連線並下載權杖檔，再在筆電的終端機照下面的步驟執行。權杖只顯示這一次。', 'Create a connection and download its token file, then follow the steps below in a terminal on the laptop. The token is shown only once.'],
+  relayNode: ['筆電要先裝 Node.js 24 以上：在終端機執行 node --version 確認，沒有的話到 nodejs.org 下載。', 'The laptop needs Node.js 24 or later: run node --version in a terminal to check, or get it from nodejs.org.'],
   relayLabel: ['連線名稱', 'Connection name'], relayCreate: ['建立連線並下載權杖檔', 'Create a connection and download the token file'],
-  relayCreated: ['已建立「{label}」。權杖檔已下載為 token；把它移到 ~/.smartsell/token 並設成只有你能讀（chmod 600）。', 'Created "{label}". The token file was downloaded as token; move it to ~/.smartsell/token and make it private (chmod 600).'],
+  relayCreated: ['已建立「{label}」。權杖檔已下載為 token（在「下載」資料夾）；下面第 1 步會把它移到 .smartsell 資料夾。', 'Created "{label}". The token file was downloaded as token (in your Downloads folder); step 1 below moves it into the .smartsell folder.'],
   relayCommands: ['在筆電執行', 'Run on the laptop'], relayToken: ['權杖（只顯示這一次）', 'Token (shown once)'],
+  relayOs: ['筆電的系統', 'Laptop system'], relayUnix: ['macOS／Linux（終端機）', 'macOS / Linux (Terminal)'], relayWindows: ['Windows（PowerShell）', 'Windows (PowerShell)'],
+  relayStep1: ['1. 下載 relay，並把權杖檔移到 .smartsell 資料夾', '1. Download the relay and move the token file into the .smartsell folder'],
+  relayStep2: ['2. 把 SmartSell 加進你用的 Agent（Codex 或 Claude Code，執行其中一行）', '2. Add SmartSell to your Agent (Codex or Claude Code: run the matching line)'],
+  relayStep3: ['用 WorkBuddy 的話：在它的 MCP 設定新增一個 stdio 伺服器，指令是 node，參數如下（{home} 換成你的家目錄）', 'With WorkBuddy: add a stdio MCP server in its settings with command node and these arguments (replace {home} with your home folder)'],
+  relayHomeUnix: ['/Users/你的使用者名稱', '/Users/your-name'], relayHomeWindows: ['C:\\Users\\你的使用者名稱', 'C:\\Users\\your-name'],
 } as const satisfies Record<string, Label>;
 
 /** GET /api/v1/hub/info; in development (pnpm dev) the route does not exist and answers 404. */
@@ -90,7 +96,50 @@ export function WorkerDownloads() {
   </div>;
 }
 
-/** §6.2: the App button (no copying) or the Node relay one-liner with a token file. */
+export type RelayOs = 'unix' | 'windows';
+/**
+ * O5: the relay setup for one laptop system: download the relay and put the token file in place, then one line per Agent
+ * (Codex, Claude Code) and the stdio entry for WorkBuddy. Windows gets real PowerShell (no curl, chmod or ~).
+ */
+export function relayCommands(origin: string, os: RelayOs, home: string) {
+  if (os === 'windows') {
+    const dir = '"$HOME\\.smartsell';
+    const args = `node ${dir}\\relay.mjs" --hub ${origin} --token-file ${dir}\\token"`;
+    return {
+      install: [
+        `New-Item -ItemType Directory -Force ${dir}" | Out-Null`,
+        `Invoke-WebRequest -UseBasicParsing "${origin}/agent/relay.mjs" -OutFile ${dir}\\relay.mjs"`,
+        `Move-Item -Force "$HOME\\Downloads\\token" ${dir}\\token"`,
+      ].join('\n'),
+      // PowerShell would take a bare -- as its own end-of-parameters marker; quoted, it reaches the CLI.
+      codex: `codex mcp add smartsell '--' ${args}`,
+      claude: `claude mcp add --scope user smartsell '--' ${args}`,
+      workbuddy: workbuddyEntry(origin, `${home}\\.smartsell\\relay.mjs`, `${home}\\.smartsell\\token`),
+    };
+  }
+  const args = `node ~/.smartsell/relay.mjs --hub ${origin} --token-file ~/.smartsell/token`;
+  return {
+    install: [
+      `mkdir -p ~/.smartsell && curl -fsSL ${origin}/agent/relay.mjs -o ~/.smartsell/relay.mjs`,
+      'mv ~/Downloads/token ~/.smartsell/token && chmod 600 ~/.smartsell/token',
+    ].join('\n'),
+    codex: `codex mcp add smartsell -- ${args}`,
+    claude: `claude mcp add --scope user smartsell -- ${args}`,
+    workbuddy: workbuddyEntry(origin, `${home}/.smartsell/relay.mjs`, `${home}/.smartsell/token`),
+  };
+}
+function workbuddyEntry(origin: string, relay: string, token: string) {
+  return JSON.stringify({ smartsell: { command: 'node', args: [relay, '--hub', origin, '--token-file', token] } }, null, 2);
+}
+const browserOs = (): RelayOs => {
+  try { return /Windows/i.test(navigator.userAgent) ? 'windows' : 'unix'; } catch { return 'unix'; }
+};
+
+function CommandBlock({ text }: { text: string }) {
+  return <div className="hub-command"><pre className="hub-code">{text}</pre><CopyButton text={text} /></div>;
+}
+
+/** §6.2: the App button (no copying) or the Node relay with a token file. */
 export function AgentConnectWays() {
   const { l } = useText();
   const { workspace } = useViewContext();
@@ -100,11 +149,10 @@ export function AgentConnectWays() {
   const [created, setCreated] = useState<CreatedConnection>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>();
+  const [os, setOs] = useState<RelayOs>(browserOs);
   const origin = info.data?.info.public_origin ?? window.location.origin;
-  const commands = [
-    `mkdir -p ~/.smartsell && curl -fsSL ${origin}/agent/relay.mjs -o ~/.smartsell/relay.mjs`,
-    `codex mcp add smartsell -- node ~/.smartsell/relay.mjs --hub ${origin} --token-file ~/.smartsell/token`,
-  ].join('\n');
+  const home = l(os === 'windows' ? setupHubText.relayHomeWindows : setupHubText.relayHomeUnix);
+  const commands = relayCommands(origin, os, home);
   async function create() {
     setPending(true); setError(undefined);
     try {
@@ -122,6 +170,7 @@ export function AgentConnectWays() {
   return <div className="hub-agent-ways">
     <section className="hub-way"><h3>{l(setupHubText.wayApp)}</h3><p>{l(setupHubText.wayAppSteps)}</p></section>
     <section className="hub-way"><h3>{l(setupHubText.wayRelay)}</h3><p>{l(setupHubText.wayRelayHint)}</p>
+      <p className="muted hub-small">{l(setupHubText.relayNode)}</p>
       {!created ? <div className="hub-form-grid">
         <label className="hub-field">{l(setupHubText.relayLabel)}<input value={label} maxLength={80} placeholder={`${workspace.name} · Codex`} onChange={event => setLabel(event.target.value)} /></label>
         <div><button type="button" className="vs-btn primary-soft" disabled={pending} onClick={() => void create()}>{l(setupHubText.relayCreate)}</button></div>
@@ -129,9 +178,17 @@ export function AgentConnectWays() {
         <p className="vs-notice good" role="status">{fill(l(setupHubText.relayCreated), { label: created.label })}</p>
         <details><summary>{l(setupHubText.relayToken)}</summary><code className="hub-code">{created.token}</code></details>
       </>}
-      <p className="muted hub-small">{l(setupHubText.relayCommands)}</p>
-      <pre className="hub-code">{commands}</pre>
-      <CopyButton text={commands} />
+      <div className="vs-filter-row hub-tabs" role="group" aria-label={l(setupHubText.relayOs)}>
+        {([['unix', setupHubText.relayUnix], ['windows', setupHubText.relayWindows]] as const).map(([value, label]) =>
+          <button key={value} type="button" aria-pressed={os === value} onClick={() => setOs(value)}>{l(label)}</button>)}
+      </div>
+      <p className="muted hub-small">{l(setupHubText.relayStep1)}</p>
+      <CommandBlock text={commands.install} />
+      <p className="muted hub-small">{l(setupHubText.relayStep2)}</p>
+      <CommandBlock text={commands.codex} />
+      <CommandBlock text={commands.claude} />
+      <p className="muted hub-small">{fill(l(setupHubText.relayStep3), { home })}</p>
+      <CommandBlock text={commands.workbuddy} />
       {error !== undefined && <ProblemNotice error={error} />}
     </section>
   </div>;

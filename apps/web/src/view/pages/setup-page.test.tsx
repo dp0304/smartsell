@@ -134,6 +134,43 @@ test('the Codex step offers the App button and the Node relay; the old prompt is
   assert.match(verified, /已有 Agent 透過 MCP 呼叫過 SmartSell/);
 });
 
+test('O4: the old prompt setup under Advanced ignores connections made by the relay token or the App', async () => {
+  const relay = { ...connection, id: 'mcp-relay', label: 'North · Codex', mcp_url: 'https://hub.example.ts.net/mcp', setup_via: 'token' };
+  const app = { ...connection, id: 'mcp-app', label: 'dp-mbp · Codex', mcp_url: 'https://hub.example.ts.net/mcp', setup_via: 'app' };
+  for (const made of [relay, app]) {
+    const out = await render('agent', { ...hubReads, '/agent-connections': [made] });
+    const advanced = out.slice(out.indexOf('進階：舊的接入方式'));
+    assert.doesNotMatch(advanced, /修復 Codex 連線|核對提示詞|完整退出並重開原客戶端|mcp-relay|mcp-app/, made.setup_via);
+  }
+  // A connection the prompt enrollment made (or one from before setup_via) still gets its check and repair prompts.
+  const prompt = await render('agent', { ...hubReads, '/agent-connections': [{ ...relay, id: 'mcp-prompt', setup_via: 'prompt' }] });
+  assert.match(prompt.slice(prompt.indexOf('進階：舊的接入方式')), /修復 Codex 連線或補上社媒路由「North · Codex」/);
+});
+
+test('O5: the relay steps cover Codex, Claude Code and WorkBuddy, Node.js 24, the token file, and real PowerShell on Windows', async () => {
+  const { relayCommands } = await import('./setup-hub');
+  const hub = 'https://hub.example.ts.net';
+  const unix = relayCommands(hub, 'unix', '/Users/me');
+  assert.equal(unix.install, `mkdir -p ~/.smartsell && curl -fsSL ${hub}/agent/relay.mjs -o ~/.smartsell/relay.mjs\nmv ~/Downloads/token ~/.smartsell/token && chmod 600 ~/.smartsell/token`);
+  assert.equal(unix.codex, `codex mcp add smartsell -- node ~/.smartsell/relay.mjs --hub ${hub} --token-file ~/.smartsell/token`);
+  assert.equal(unix.claude, `claude mcp add --scope user smartsell -- node ~/.smartsell/relay.mjs --hub ${hub} --token-file ~/.smartsell/token`);
+  assert.deepEqual(JSON.parse(unix.workbuddy), { smartsell: { command: 'node', args: ['/Users/me/.smartsell/relay.mjs', '--hub', hub, '--token-file', '/Users/me/.smartsell/token'] } });
+  const win = relayCommands(hub, 'windows', 'C:\\Users\\me');
+  assert.equal(win.install, [
+    'New-Item -ItemType Directory -Force "$HOME\\.smartsell" | Out-Null',
+    `Invoke-WebRequest -UseBasicParsing "${hub}/agent/relay.mjs" -OutFile "$HOME\\.smartsell\\relay.mjs"`,
+    'Move-Item -Force "$HOME\\Downloads\\token" "$HOME\\.smartsell\\token"',
+  ].join('\n'));
+  assert.doesNotMatch(Object.values(win).join('\n'), /chmod|curl|~\//);
+  assert.equal(win.claude, `claude mcp add --scope user smartsell '--' node "$HOME\\.smartsell\\relay.mjs" --hub ${hub} --token-file "$HOME\\.smartsell\\token"`);
+  assert.deepEqual(JSON.parse(win.workbuddy).smartsell.args, ['C:\\Users\\me\\.smartsell\\relay.mjs', '--hub', hub, '--token-file', 'C:\\Users\\me\\.smartsell\\token']);
+  const out = await render('agent', hubReads);
+  assert.match(out, /Node\.js 24 以上/);
+  assert.match(out, /claude mcp add --scope user smartsell -- node ~\/\.smartsell\/relay\.mjs/);
+  assert.match(out, /WorkBuddy/);
+  assert.match(out, /Windows（PowerShell）/);
+});
+
 test('setup navigation storage still records start and dismissal per user and workspace', async () => {
   const { dismissSetup, setupDismissed, setupStarted, saveSetupNavigation } = await import('./setup-data');
   try {

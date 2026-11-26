@@ -3,6 +3,7 @@ import type { ChannelReadiness, ChannelSummary, MachineSummary } from '../data/h
 import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, useText } from '../parts';
 import { approvalModeText, hub } from '../hub-copy';
+import { channelBlockerText } from '../attention-text';
 import { Badge, ChannelName, Empty, LoginBadge, ModeBadge, OnlineBadge, ZoneNote, browserZone, isoLocal, localLabel, providerName, todayIn, tr } from '../hub-parts';
 
 export const READINESS_KEYS: (keyof ChannelReadiness)[] = ['logged_in', 'automation_notice', 'defaults_ready', 'approval_mode_chosen', 'risk_ack_or_assist', 'dry_run_passed'];
@@ -41,7 +42,7 @@ export function ChannelsPage() {
           <div><dt>{l(hub.channels.next)}</dt><dd>{channel.next_post ? <RouterLink to={`${base}/posts/${encodeURIComponent(channel.next_post.post_id)}`}>{localLabel(isoLocal(channel.next_post.scheduled_at) ?? channel.next_post.local_time, today, lang)}</RouterLink> : '—'}</dd></div>
         </dl>
         {channel.pause && <p className="hub-alert-text">{l(hub.channels.pause)} · {channel.pause.reason}</p>}
-        {channel.blockers.length > 0 && <ul className="hub-warnings">{channel.blockers.map(blocker => <li key={blocker.code}>{blocker.message}</li>)}</ul>}
+        {channel.blockers.length > 0 && <ul className="hub-warnings">{channel.blockers.map(blocker => <li key={blocker.code}>{channelBlockerText(blocker, channel.machine?.name, lang)}</li>)}</ul>}
       </article>;
     })}</div> : <section className="vs-card"><Empty>{l(hub.channels.empty)}</Empty></section>}</Loaded>
   </>;

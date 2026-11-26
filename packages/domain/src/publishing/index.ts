@@ -175,13 +175,21 @@ export function channelEffectiveMode(provider: unknown, settings: Pick<ChannelSe
 }
 
 type PresenceContext = Context & { presence?: (deviceId: string) => Presence | undefined };
-/** §3.2 online rule. Reads the in-memory presence injected by the hub (C14) and falls back to the stored row. */
-export function deviceOnline(ctx: Context, device: Row | undefined): boolean {
-  if (!device || device.paused === true || device.status !== 'active') return false;
+/**
+ * Whether the machine is heartbeating (an active machine seen within 90 s), paused or not. A paused machine is still
+ * connected: what it reports (login state, posture) is current, it just runs nothing (U3). Scheduling and dispatch use
+ * deviceOnline, which is also false while paused.
+ */
+export function deviceConnected(ctx: Context, device: Row | undefined): boolean {
+  if (!device || device.status !== 'active') return false;
   let presence: Presence | undefined;
   try { presence = (ctx as PresenceContext).presence?.(device.id); } catch { presence = undefined; }
   const seen = time(presence?.last_seen_at ?? device.last_seen_at);
   return Number.isFinite(seen) && time(ctx.now) - seen < 90_000;
+}
+/** §3.2 online rule: `!paused && status === 'active' && now - last_seen_at < 90 s`. Memory (C14) first, then the stored row. */
+export function deviceOnline(ctx: Context, device: Row | undefined): boolean {
+  return !!device && device.paused !== true && deviceConnected(ctx, device);
 }
 
 /** PublishWindow is evaluated in the channel time zone; an end before the start crosses midnight. */
@@ -321,7 +329,8 @@ function channelChecks(ctx: Context, add: AddCheck, input: {
     add('machine_binding', 'blocker', '這個帳號沒有綁定可用的機器', { device_id: binding?.device_id ?? null, device_status: device?.status ?? null }, page);
   } else {
     if (device.paused === true) add('machine_paused', 'blocker', `${machine} 已暫停，這則不會發出，直到你恢復機器。`, { device_id: device.id }, `/machines/${device.id}`);
-    if ((stage === 'schedule' || stage === 'approval') && !deviceOnline(ctx, device)) add('machine_online', 'risk', `${machine} 目前離線`, { device_id: device.id }, `/machines/${device.id}`);
+    // A paused machine that heartbeats is not offline; machine_paused above already says why nothing runs (U3).
+    if ((stage === 'schedule' || stage === 'approval') && !deviceConnected(ctx, device)) add('machine_online', 'risk', `${machine} 目前離線`, { device_id: device.id }, `/machines/${device.id}`);
     const session = ctx.list('browser_session').find(row => row.binding_id === binding.id && row.status !== 'revoked');
     if (session && ['login_required', 'identity_mismatch', 'challenge'].includes(String(session.status))) {
       add('login_state', 'risk', `${machine} 上的帳號需要重新登入或驗證`, { status: session.status, session_id: session.id }, page);

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import type { CalendarEvent } from '@smartsell/ui';
 import {
   agendaDays, decisionHref, eventSpan, isOverdue, layoutWeek, modeParams, navigateParams, periodProgress, periodsIn, readCalendarParams, safePermalink,
-  shiftMonth, summarize, toggleKindParams,
+  offeredKinds, shiftMonth, summarize, toggleKindParams,
 } from './calendar-logic';
 
 const event = (id: string, kind: string, starts_at: string, extra: Partial<CalendarEvent> = {}): CalendarEvent =>
@@ -117,7 +117,7 @@ test('summary: next publication skips settled ones, needs-human counted by type'
   const summary = summarize(events, now, '2026-11-20', 'UTC');
   assert.equal(summary.next?.id, 'publish:next');
   assert.equal(summary.upcoming, 2);
-  assert.deepEqual(summary.needs, { approval: 1, late_decision: 0, outcome_unknown: 1, total: 2 });
+  assert.deepEqual(summary.needs, { approval: 1, needs_owner: 0, missed: 0, late_decision: 0, outcome_unknown: 1, total: 2 });
   assert.equal(summary.counts.publish, 5);
   assert.deepEqual([summary.scheduled, summary.published, summary.periods], [4, 1, 1]);
   assert.equal(summary.today, 4, 'Today counts the plan running through it');
@@ -142,4 +142,10 @@ test('E37: a post the owner rejected reads 已駁回 in the calendar and is neve
   assert.deepEqual(eventStatus('publish', 'rejected', 'en'), { tone: 'neutral', label: 'Rejected' });
   const now = new Date('2026-11-20T12:00:00.000Z');
   assert.equal(isOverdue(event('rejected', 'publish', '2026-11-20T08:00:00.000Z', { status: 'rejected' }), now, '2026-11-20', 'UTC'), false);
+});
+
+test('U6: phase 1 offers only post kinds, plus a hidden kind the period really has; 顯示其他模組 offers every kind', () => {
+  assert.deepEqual(offeredKinds(false), ['publish', 'post']);
+  assert.deepEqual(offeredKinds(false, { publish: 3, plan: 1, live: 0 }), ['publish', 'post', 'plan']);
+  assert.deepEqual(offeredKinds(true), ['publish', 'post', 'plan', 'milestone', 'production_due', 'deliverable_due', 'live', 'ad_flight', 'promotion']);
 });
