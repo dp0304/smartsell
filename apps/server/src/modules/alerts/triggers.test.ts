@@ -530,3 +530,21 @@ test('AO-7: a Worker that settles an unreported post as failed tells the owner; 
   setJob(f.ctx as unknown as Context, f.ctx.get('worker_job', owned.id), { status: 'failed', owner_marked_not_published: true });
   assert.equal(f.alerts().length, before);
 });
+
+test('U7: a platform rejection is worded once; the blocker keeps the platform text and the alert fills its own sentence with it', () => {
+  const f = alertFixture('2026-11-25T01:00:00.000Z');
+  const { macB, x } = seedHub(f);
+  const sentence = 'X @fixture_x 拒絕了這支影片：「Video format not supported」。這則沒有發出。';
+  const row = job(f, { device: macB, account: x, target: post(f, x, T), notBefore: T, status: 'running', started_at: '2026-11-25T01:00:05.000Z',
+    fencing_token: 1, seq_by_fence: { '1': 3 } });
+  reporter(f, macB, row.id, 1, 4)('failed', { code: 'upload_rejected', message: 'Video format not supported' });
+  const stored = f.ctx.get('worker_job', row.id).blocker as Record<string, unknown>;
+  assert.deepEqual([stored.message, stored.platform_message], [sentence, 'Video format not supported']);
+  const alert = f.alerts().at(-1)!;
+  assert.equal(alert.body, sentence, 'not 「X 拒絕了這支影片：「X 拒絕了這支影片：「…」。…」。…」');
+  assert.equal(alert.title, 'Mac-B 的 X @fixture_x：平台拒絕了這支影片，這則沒有發出。');
+  // A stored owner sentence without platform_message (written before U7) is not wrapped again either.
+  const old = job(f, { device: macB, account: x, target: post(f, x, T), notBefore: T, status: 'claimed' });
+  status(f, old, 'needs_owner', { blocker: { ...blocker('upload_rejected', f), message: sentence } });
+  assert.equal(f.alerts().at(-1)!.body, 'X @fixture_x 拒絕了這支影片：「平台沒有提供說明」。這則沒有發出。');
+});

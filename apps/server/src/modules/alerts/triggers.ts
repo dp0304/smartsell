@@ -55,11 +55,20 @@ function context(ctx: Context, payload: JobStatusChanged) {
   };
 }
 
+/** Whether `text` is already `template` filled in: it contains the fixed words just before {platform_message}. */
+function isOwnerSentence(template: string, text: string | undefined) {
+  const before = template.split('{platform_message}')[0]!.split('}').pop()!.trim();
+  return !!text && template.includes('{platform_message}') && before.length > 0 && text.includes(before);
+}
+
 function blockerText(code: string | undefined, values: { machine?: string; channel?: string; deadline?: string }, job?: Row, failure?: Data) {
-  const blocker = (job?.blocker ?? {}) as { step?: string; message?: string };
+  const blocker = (job?.blocker ?? {}) as { code?: string; step?: string; message?: string; platform_message?: string };
   const template = code && Object.hasOwn(BLOCKER_COPY, code) ? BLOCKER_COPY[code as BlockerCode] : undefined;
-  // {platform_message} is the platform's own error text (upload_rejected), clipped; it is never the caption.
-  const platformMessage = (str(blocker.message) ?? str(failure?.message))?.slice(0, 200);
+  // {platform_message} is the platform's own error text (upload_rejected), clipped; it is never the caption. A stored blocker's
+  // `message` is already the owner sentence made from that template (fullBlocker), so it is never filled in again (U7).
+  const stored = str(blocker.message);
+  const raw = str(blocker.platform_message) ?? str(failure?.message) ?? (template && blocker.code === code && isOwnerSentence(template, stored) ? undefined : stored);
+  const platformMessage = raw?.slice(0, 200);
   if (template) return fill(template, { ...values, step: blocker.step, platform_message: platformMessage });
   return `${subject(values.machine, values.channel)} 需要你處理，已停止（截止 ${values.deadline || '期限'}）。`;
 }

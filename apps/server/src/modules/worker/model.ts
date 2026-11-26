@@ -111,10 +111,14 @@ export function fullBlocker(ctx: Context, job: Row, input: Partial<DeviceBlocker
   const template = Object.hasOwn(BLOCKER_COPY, input.code) ? BLOCKER_COPY[input.code] : undefined;
   const owner = OWNER_RESUME_BLOCKERS.includes(input.code);
   const resumable: Blocker['resumable_by'] = input.code === 'result_conflict' || input.phase === 'after_submit' ? 'none' : owner ? 'owner' : 'auto';
-  const message = template ? fill(template, { machine, channel, deadline, step: input.step, platform_message: str(input.message)?.slice(0, 200) })
+  // The Worker's `message` is the platform's own text; the owner sentence is the template filled with it once (U7). The raw
+  // text is kept as platform_message so an alert can fill its own template without wrapping the owner sentence again.
+  const platformMessage = str(input.message)?.slice(0, 200);
+  const message = template ? fill(template, { machine, channel, deadline, step: input.step, platform_message: platformMessage })
     : str(input.message) ?? `${machine} 的 ${channel} 需要你處理（截止 ${deadline}）。`;
   return {
-    code: input.code, phase: input.phase, message, resumable_by: resumable, machine_id: String(job.device_id), machine_name: machine,
+    code: input.code, phase: input.phase, message, ...(template && platformMessage && { platform_message: platformMessage }),
+    resumable_by: resumable, machine_id: String(job.device_id), machine_name: machine,
     social_account_id: String(job.social_account_id), channel_label: channel,
     ...(input.step && { step: String(input.step).slice(0, 120) }), ...(input.url && { url: String(input.url).slice(0, 2048) }),
     ...(Array.isArray(input.evidence_sha256) && { evidence_sha256: input.evidence_sha256.filter(item => /^[a-f0-9]{64}$/.test(String(item))).slice(0, 20) }),

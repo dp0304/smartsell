@@ -87,6 +87,8 @@ export interface Blocker {
   resumable_by: 'auto' | 'owner' | 'none';
   machine_id: string; machine_name: string; social_account_id: string; channel_label: string;
   step?: string; url?: string; evidence_sha256?: string[]; at: string;
+  /** 附加（U7）：平台自己的錯誤文字（例如 upload_rejected 的原因），未經套版；message 已是套好版的主人文案。 */
+  platform_message?: string;
 }
 export interface JobChannel { social_account_id: string; handle: string | null; display_name: string; profile_key: string; expected_identity: string }
 export interface JobMedia {
