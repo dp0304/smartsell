@@ -37,6 +37,8 @@ export interface Store {
   publicWork?<T>(locator: PublicLocator, id: string, run: (unit: Unit) => Promise<T>): Promise<T | undefined>;
   operationWorkspaces?(): Promise<import('./identity.js').Workspace[]>;
   operationWork?<T>(workspaceId: string, run: (unit: Unit, members: { userId: string; role: Role }[]) => Promise<T>): Promise<T>;
+  /** Like operationWork but read-only and without the write lock (S5: device signature checks). `run` must not write. */
+  operationRead?<T>(workspaceId: string, run: (unit: Unit, members: { userId: string; role: Role }[]) => Promise<T>): Promise<T>;
   ready(): Promise<void>;
   close(): Promise<void>;
 }

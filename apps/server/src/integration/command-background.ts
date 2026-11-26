@@ -4,13 +4,19 @@ import type { BackgroundStore } from '../runtime.js';
 import { DomainError, writers, type Context } from '../modules/types.js';
 import type { Store } from '../store.js';
 import { getRetentionPolicy as getCommandRetentionPolicy } from '../modules/ops/retention-policy.js';
-import { operationRecords } from './operation-records.js';
+import { operationRecords, operationRow } from './operation-records.js';
+import type { Row } from '@smartsell/contracts';
 
 export function commandBackgroundStore(store: Store): BackgroundStore {
   const { operationWorkspaces, operationWork } = store;
   if (!operationWorkspaces || !operationWork) throw new Error('Operation background storage is unavailable');
+  // The memory and local stores read without the write lock; Postgres takes its workspace lock for the one-row read only.
+  const read = store.operationRead ?? operationWork;
   return {
     workspaces: () => operationWorkspaces.call(store),
+    // S5: one Operation row by key, without loading the snapshot.
+    peek: <T>(ws: { id: string }, run: (get: (kind: string, id: string) => Promise<Row | undefined>) => T | Promise<T>) =>
+      read.call(store, ws.id, async ({ context }) => run((kind, id) => operationRow<Row>(context, kind, id))) as Promise<T>,
     transact: (ws, readOnly, run) => store.operationWork!(ws.id, async ({ context, command, listActivePatHolders }, members) => {
       const { records, flush } = await operationRecords(context, readOnly);
       const identity = new Records(new Map(), false);

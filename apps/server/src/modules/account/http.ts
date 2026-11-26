@@ -6,6 +6,14 @@ import type { DeviceAction } from './connector-service.ts';
 import { createAccountGateway, type AccountGatewayDependencies } from './gateway.ts';
 import { workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
 import { mountWorkerDeviceFiles, provideSignedWorkerDownloads, type WorkerDeviceFiles } from '../worker/device-http.ts';
+import { createThrottle } from '../../auth.ts';
+
+/**
+ * S5: failed device requests (401, or 404 for an unknown machine) per client address per minute. Past it that address gets
+ * 429 DEVICE_RATE_LIMITED before any lookup, so a stream of unsigned or forged requests cannot keep the hub busy. A paired
+ * Worker sends a few requests a minute and fails only when it was revoked.
+ */
+export const DEVICE_FAILURES_PER_MINUTE = 60;
 
 const deviceRoutes = [
   ['/api/v1/device/heartbeat', 'heartbeat'],
@@ -37,16 +45,20 @@ export function mountAccountIngress(app: FastifyInstance, dependencies: AccountG
   const gateway = createAccountGateway(dependencies);
   // §8.18: Workers download their own updates with a device signature; the download route lives on the root app (S1).
   provideSignedWorkerDownloads(app, gateway);
+  const failures = createThrottle({ limit: DEVICE_FAILURES_PER_MINUTE, windowMs: 60_000 });
   app.register(async ingress => {
     ingress.removeAllContentTypeParsers();
     ingress.addContentTypeParser('*', { parseAs: 'buffer', bodyLimit: 128_000 }, (_request, body, done) => done(null, body));
-    ingress.addHook('onRequest', async (_request, reply) => {
+    ingress.addHook('onRequest', async (request, reply) => {
       reply.header('cache-control', 'no-store').header('referrer-policy', 'no-referrer');
+      if (failures.exhausted(request.ip)) throw new Problem(429, 'DEVICE_RATE_LIMITED', 'Too many failed device requests from this address', { retry_after: 60 });
     });
-    ingress.setErrorHandler((error, _request, reply) => {
+    ingress.setErrorHandler((error, request, reply) => {
       if (error instanceof Problem) {
+        if (error.status === 401 || (error.status === 404 && error.code === 'NOT_FOUND')) failures.record(request.ip);
         // SEQ_GAP carries `expected` (S6 ledger 1); DEVICE_BUSY tells the Worker when to retry (§2.10).
         if (error.code === 'DEVICE_BUSY') reply.header('retry-after', '1');
+        if (error.code === 'DEVICE_RATE_LIMITED') reply.header('retry-after', '60');
         const details = error.details && typeof error.details === 'object' ? error.details : undefined;
         return reply.code(error.status).send({ error: { code: error.code, ...(details && { ...details, details }) } });
       }

@@ -29,6 +29,7 @@ import { createDryRunJob } from './dispatch.js';
 import { DRIVER_CONFIG_FILE, refreshHostCaches } from './host-cache.js';
 import { JOB, configureWorkerHost } from './model.js';
 import { MemoryNonceStore, configureDeviceNonces } from './nonces.js';
+import { DEVICE_FAILURES_PER_MINUTE } from '../account/http.js';
 import { setJob } from './model.js';
 
 describe('signed device routes over HTTP', { concurrency: false }, () => {
@@ -49,6 +50,8 @@ describe('signed device routes over HTTP', { concurrency: false }, () => {
   const clipSha = createHash('sha256').update(clip).digest('hex');
   let fileId = '';
   let accountId = '';
+  // S5: how often the device ingress locks the workspace (transact) and how often it reads one row first (peek).
+  const calls = { transact: 0, peek: 0 };
 
   function signed(device: { id: string; key: KeyObject }, method: 'GET' | 'POST' | 'PUT', url: string, action: string, body?: Buffer | Data,
     extra: Record<string, string> = {}, timestamp = Date.now()): InjectOptions {
@@ -84,7 +87,9 @@ describe('signed device routes over HTTP', { concurrency: false }, () => {
     configureWorkerHost({ storage: slow, driverConfigDirectory: join(dir, 'driver-config') });
     app = buildApp({ ...config, registry: new Map(), store, operationApi: { config, operations: operations.map(op => publishing.bindOperation(providers.bindOperation(op))), register: registerOperationRoutes } }).app;
     background = commandBackgroundStore(store);
-    publishing.mount(app, background);
+    publishing.mount(app, { ...background,
+      transact: (target, readOnly, run) => { calls.transact++; return background.transact(target, readOnly, run); },
+      peek: (target, run) => { calls.peek++; return background.peek!(target, run); } });
     const setup = await app.inject({ method: 'POST', url: '/api/v1/setup', headers: { 'x-setup-token': config.setupToken! }, payload: {
       username: 'device-http-owner', name: 'Owner', password: 'synthetic-fixture-user-password', workspaceName: 'Device HTTP' } });
     assert.equal(setup.statusCode, 201, setup.body);
@@ -162,6 +167,68 @@ describe('signed device routes over HTTP', { concurrency: false }, () => {
       outbox_depth: 0, worker_time: new Date().toISOString(), applied_sync_generation: 0 }, {}, Date.now() - 5_000));
     assert.equal(old.statusCode, 401);
     assert.equal(old.json().error.code, 'DEVICE_PROOF_EXPIRED');
+  });
+
+  test('S5: unsigned, forged and unknown-machine requests are refused from a one-row read, before the workspace is locked and loaded', async () => {
+    const body = { client_version: '0.2.0', protocol: 2, drivers: [], jobs: [], outbox_depth: 0, worker_time: new Date().toISOString(), applied_sync_generation: 0 };
+    const from = (options: InjectOptions) => ({ ...options, remoteAddress: '198.51.100.20' });
+    const forged = signed(devices[0], 'POST', '/api/v1/device/heartbeat', 'heartbeat', body);
+    forged.headers = { ...forged.headers, 'x-smartsell-signature': 'A'.repeat(86) };
+    const stranger = { id: devices[0].id, key: generateKeyPairSync('ed25519').privateKey };
+    const unknown = { id: randomUUID(), key: devices[0].key };
+    const cases: [string, InjectOptions, number, string][] = [
+      ['forged signature', forged, 401, 'INVALID_DEVICE_PROOF'],
+      ['another key', signed(stranger, 'POST', '/api/v1/device/heartbeat', 'heartbeat', body), 401, 'INVALID_DEVICE_PROOF'],
+      ['unknown machine', signed(unknown, 'POST', '/api/v1/device/jobs/report', 'jobs.report', { reports: [] }), 404, 'NOT_FOUND'],
+      ['signed GET with another key', signed(stranger, 'GET', '/api/v1/device/driver-config', 'driver_config.read'), 401, 'INVALID_DEVICE_PROOF'],
+    ];
+    for (const [label, request, status, code] of cases) {
+      const before = { ...calls };
+      const response = await app.inject(from(request));
+      assert.deepEqual([response.statusCode, response.json().error.code], [status, code], label);
+      assert.equal(calls.transact, before.transact, `${label}: the workspace was not locked`);
+      assert.equal(calls.peek, before.peek + 1, `${label}: one read-only lookup`);
+    }
+    const before = calls.transact;
+    assert.equal((await app.inject(from(signed(devices[0], 'POST', '/api/v1/device/heartbeat', 'heartbeat', body)))).statusCode, 200);
+    assert.equal(calls.transact, before + 1, 'a valid request still runs in one transaction');
+  });
+
+  test('S5: an address that keeps failing device requests gets 429 before any lookup; other addresses are not affected', async () => {
+    const body = { client_version: '0.2.0', protocol: 2, drivers: [], jobs: [], outbox_depth: 0, worker_time: new Date().toISOString(), applied_sync_generation: 0 };
+    const forged = () => {
+      const request = signed(devices[0], 'POST', '/api/v1/device/heartbeat', 'heartbeat', body);
+      return { ...request, headers: { ...request.headers, 'x-smartsell-signature': 'B'.repeat(86) }, remoteAddress: '203.0.113.50' };
+    };
+    for (let attempt = 0; attempt < DEVICE_FAILURES_PER_MINUTE; attempt++) assert.equal((await app.inject(forged())).statusCode, 401);
+    const peeks = calls.peek;
+    const limited = await app.inject(forged());
+    assert.deepEqual([limited.statusCode, limited.json().error.code, limited.headers['retry-after']], [429, 'DEVICE_RATE_LIMITED', '60']);
+    assert.equal(calls.peek, peeks, 'refused before any lookup');
+    const elsewhere = signed(devices[0], 'POST', '/api/v1/device/heartbeat', 'heartbeat', body);
+    assert.equal((await app.inject({ ...elsewhere, remoteAddress: '203.0.113.51' })).statusCode, 200);
+  });
+
+  test('S10: one machine filling its share of the nonce store gets 503; the other machine keeps working', async t => {
+    t.after(() => configureDeviceNonces(new MemoryNonceStore(50_000, Date.now())));
+    configureDeviceNonces(new MemoryNonceStore(50, Date.now(), 3));
+    for (let index = 0; index < 3; index++) assert.equal((await heartbeat(devices[0])).statusCode, 200);
+    const busy = await heartbeat(devices[0]);
+    assert.deepEqual([busy.statusCode, busy.json().error.code, busy.headers['retry-after']], [503, 'DEVICE_BUSY', '1']);
+    assert.equal((await heartbeat(devices[1])).statusCode, 200, 'the other machine is not affected');
+    // Expired nonces free the share again; the total capacity still applies to everyone together.
+    const unit = new MemoryNonceStore(3, 0, 2);
+    unit.use('a', 'n1', 1_000, 1_000);
+    unit.use('a', 'n2', 1_000, 1_000);
+    assert.throws(() => unit.use('a', 'n3', 1_000, 1_000), { code: 'DEVICE_BUSY' });
+    unit.use('b', 'n1', 1_000, 1_000);
+    assert.throws(() => unit.use('c', 'n1', 1_000, 1_000), { code: 'DEVICE_BUSY' });
+    assert.throws(() => unit.use('a', 'n1', 2_000, 2_000), { code: 'DEVICE_PROOF_REPLAYED' });
+    unit.use('a', 'n3', 70_000, 70_000);
+    assert.equal(unit.size, 2, "a's expired nonces were dropped; b's go when the store is full");
+    unit.use('c', 'n1', 70_000, 70_000);
+    assert.equal(unit.size, 3);
+    configureDeviceNonces(new MemoryNonceStore(50_000, Date.now()));
   });
 
   test('media.read: only the assigned machine with the current fence of a live job that lists the file; Range; streamed outside the transaction (§6.6)', async () => {

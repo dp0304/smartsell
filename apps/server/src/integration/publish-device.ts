@@ -21,6 +21,12 @@ export function mountPublishDevice(app: FastifyInstance, store: BackgroundStore,
     connector: { ...services, authorizeTask: authorizeConnectorAttempt },
     pairingWorkspace: route,
     deviceWorkspace: route,
+    // S5: a read-only one-row lookup for the signature check that runs before the locked transaction.
+    async deviceKey(id: string, deviceId: string) {
+      const ws = await workspace(id);
+      if (!ws || !store.peek || !uuid.test(deviceId)) return ws && store.peek ? { device: undefined } : undefined;
+      return store.peek(ws, async get => ({ device: await get('connector_device', deviceId) }));
+    },
     oauthWorkspace: async () => undefined,
     webhookWorkspace: async () => undefined,
     async transaction<T>(id: string, run: (ctx: Context) => T | Promise<T>) {

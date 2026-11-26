@@ -307,6 +307,16 @@ export class MemoryStore implements Store {
     });
   }
 
+  operationRead<T>(workspaceId: string, run: (unit: Unit, members: { userId: string; role: Scope['role'] }[]) => Promise<T>) {
+    // A read transaction: no copy of the state, nothing saved. Callers only read.
+    return this.transact(false, state => {
+      const scope = state.scope;
+      if (!scope || scope.workspaceId !== workspaceId) throw missingWorkspace();
+      return run(unitOfWork(state, { ...scope, actorId: '00000000-0000-0000-0000-000000000001' }),
+        workspaceMembers(state).map(({ user_id, role }) => ({ userId: user_id, role })));
+    });
+  }
+
   workspace<T>(tokenHash: string | undefined, workspaceId: string, run: (unit: Unit) => Promise<T>, credentialId?: string) {
     return this.transact(true, async state => {
       const session = tokenHash && userSession(state, tokenHash, credentialId);

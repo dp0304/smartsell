@@ -56,16 +56,33 @@ export function pairDevice(ctx: Context, body: Data) {
   return { device_id: device.id };
 }
 
-export function authenticateDevice(ctx: Context, action: string, rawBody: Uint8Array, signed: SignedDeviceRequest, bodyLimit = 128_000) {
+/** Every check of a signed device request except the nonce, in the order the Worker sees the errors. */
+function verifySignedRequest(workspaceId: string, now: number, lookup: (deviceId: string) => Row, action: string, rawBody: Uint8Array,
+  signed: SignedDeviceRequest, bodyLimit: number) {
   if (rawBody.byteLength > bodyLimit) fail('DEVICE_BODY_TOO_LARGE', 413);
   const nonce = matches(signed.nonce, /^[A-Za-z0-9_-]{22,64}$/, 64);
   const timestamp = text(signed.timestamp);
   const issuedAt = Date.parse(timestamp);
-  if (!Number.isFinite(issuedAt) || Math.abs(time(ctx) - issuedAt) > 60_000) fail('DEVICE_PROOF_EXPIRED', 401);
-  const device = ctx.get('connector_device', text(signed.device_id));
+  if (!Number.isFinite(issuedAt) || Math.abs(now - issuedAt) > 60_000) fail('DEVICE_PROOF_EXPIRED', 401);
+  const device = lookup(text(signed.device_id));
   if (device.status !== 'active') fail('DEVICE_INACTIVE', 401);
   const signature = matches(signed.signature, /^[A-Za-z0-9_-]{86}$/, 86);
-  if (!verify(null, deviceRequestBytes(ctx.workspaceId, device.id, action, timestamp, nonce, rawBody), publicKey(String(device.public_key)), Buffer.from(signature, 'base64url'))) fail('INVALID_DEVICE_PROOF', 401);
+  if (!verify(null, deviceRequestBytes(workspaceId, device.id, action, timestamp, nonce, rawBody), publicKey(String(device.public_key)), Buffer.from(signature, 'base64url'))) fail('INVALID_DEVICE_PROOF', 401);
+  return { device, nonce, issuedAt };
+}
+
+/**
+ * S5: the same checks as authenticateDevice against a device row read without the workspace write lock, and without using
+ * the nonce. Ingress runs it first, so an unsigned or forged request is refused before the workspace is locked and loaded;
+ * authenticateDevice then checks again inside the transaction and records the nonce.
+ */
+export function precheckDevice(workspaceId: string, device: Row | undefined, action: string, rawBody: Uint8Array, signed: SignedDeviceRequest,
+  bodyLimit = 128_000, now = Date.now()) {
+  verifySignedRequest(workspaceId, now, () => device ?? fail('NOT_FOUND', 404), action, rawBody, signed, bodyLimit);
+}
+
+export function authenticateDevice(ctx: Context, action: string, rawBody: Uint8Array, signed: SignedDeviceRequest, bodyLimit = 128_000) {
+  const { device, nonce, issuedAt } = verifySignedRequest(ctx.workspaceId, time(ctx), id => ctx.get('connector_device', id), action, rawBody, signed, bodyLimit);
   // §2.10: the hub keeps nonces in memory (no snapshot write per heartbeat); Postgres keeps device_nonce records.
   const nonces = deviceNonceStore();
   if (nonces !== 'records') {
