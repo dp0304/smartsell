@@ -13,9 +13,10 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    # pnpm verify → pnpm test --built-web also runs tests/e2e-phase1 (E28): about 12 minutes of wall time on its own, sharing
+    # pnpm verify → pnpm test --built-web also runs tests/e2e-phase1 (E28) and the own-Chrome suites (E49/E50); the job took
+    # about 50 minutes on 2026-11-26. tests/e2e-phase1 alone is about 12 minutes of wall time, sharing
     # at most 4 node:test slots with every other node test file, after the build.
-    timeout-minutes: 60
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v4
         with:
