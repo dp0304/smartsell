@@ -29,7 +29,7 @@
    ▼
 每台機器的 Worker
    ├─ 瀏覽器：主人的 Chrome ← SmartSell 擴充功能 ← Native Messaging ← Worker
-   └─ 手機：USB / Wi-Fi 的 Android（及 iPhone）← 裝置橋接（mobile-mcp / mobilecli）← Worker
+   └─ 手機：USB / Wi-Fi 的 Android（及 iPhone）← 裝置橋接（adb＋scrcpy server；iPhone 另評估）← Worker
 ```
 
 給 Agent 的能力分兩種，兩種都經中樞，路由規則不變（**帳號綁哪台機器，就派給哪台**）：
@@ -106,7 +106,7 @@
 
 | 專案 | 角色 | 結論 |
 |---|---|---|
-| **mobile-mcp + mobilecli**（mobile-next） | 裝置橋接 | Apache-2.0，非常活躍（2026-11-24）。原生 MCP，**唯一支援實體 iPhone**，Android 走 ADB，macOS 與 Windows 都能跑。**採用** |
+| **mobile-mcp + mobilecli**（mobile-next） | 裝置橋接 | 非常活躍（2026-11-24）。原生 MCP，**唯一支援實體 iPhone**，Android 走 ADB，macOS 與 Windows 都能跑。**更正（2026-11-26）：mobilecli 的授權是 FSL-1.1-Apache-2.0（Functional Source License），兩年內禁止「競爭用途」，不是 Apache-2.0**；SaaS 版有風險。改為：Android 直接用 adb（截圖、點擊、滑動、按鍵、`uiautomator dump`），中文輸入用 scrcpy server（Apache-2.0）的剪貼簿貼上；iPhone 另外評估（WebDriverAgent，BSD-3） |
 | **ya-webadb + scrcpy server** | Android 快速通道 | MIT／Apache-2.0，可在 Node 內取得畫面與真實觸控。**採用為加速選項** |
 | **Midscene.js**（字節） | 視覺定位與動作 | MIT，活躍。支援 Android、iOS 與任意視覺模型，內建中文輸入（yadb）。它的 MCP 套件已停用，改用 SDK。**Worker 自主執行時採用** |
 | **Open-AutoGLM**（智譜） | 模型＋框架 | Apache-2.0。AutoGLM-Phone-9B 針對抖音、小紅書、淘寶等中文 App 調校。**借用它的「交還主人」設計**；模型可作為本地選項 |
@@ -117,7 +117,7 @@
 
 ### 4.2 建議做法
 
-- **裝置橋接**：Worker 內建 mobilecli。主人在那台電腦以 USB 連上手機，在手機上按「允許 USB 偵錯」，到 Worker 綁成一個「手機帳號」。帳號照樣綁機器，路由規則不變。
+- **裝置橋接**：Worker 直接呼叫 adb（Android；授權見 §4.1 的更正）。主人在那台電腦以 USB 連上手機，在手機上按「允許 USB 偵錯」，到 Worker 綁成一個「手機帳號」。帳號照樣綁機器，路由規則不變。
 - **看與做**：以截圖為主，無障礙樹只當提示。抖音、小紅書這類 App 大量用畫布繪製，無障礙樹常常不完整。
 - **兩種驅動方式**：
   - 互動式：主人打開 Agent 時，用遙控工具 `phone_snapshot`、`phone_act`，由 Agent 自己的視覺模型決定點哪裡；
@@ -166,7 +166,7 @@
 | 2 | 瀏覽器原型：擴充功能＋Native Messaging，在主人的 Chrome 量測 §3.5 三項 | 有量測紀錄，決定採用擴充功能、或需要 §3.4 的系統輸入退路 |
 | 3 | `CdpPage` 改走擴充功能；登入檢查與「請登入」通知改在主人的 Chrome 裡進行；舊的獨立資料夾模式保留為備案 | X、TikTok 試跑在主人的 Chrome 通過；E2E 改用擴充功能傳輸 |
 | 4 | 遙控工具 `screen_snapshot`、`screen_act`（瀏覽器） | 在 WorkBuddy 或 Codex 裡完成一次電商後台的唯讀查詢與一次經核准的修改，寫入後讀回 |
-| 5 | 手機：mobilecli 橋接＋`phone_snapshot`、`phone_act`；Android 先做 | 一台 Android 手機在小紅書完成一次試跑，停在發布前；遇到登入畫面正確交還主人 |
+| 5 | 手機：adb 橋接＋`phone_snapshot`、`phone_act`；Android 先做 | 一台 Android 手機在小紅書完成一次試跑，停在發布前；遇到登入畫面正確交還主人 |
 | 6 | 手機無人值守：Midscene＋視覺模型，排程發布 | 同一則內容排程在 Android 手機準時發出並讀回 |
 | 7 | iPhone（Mac 輔助） | 一台 iPhone 完成同樣的試跑 |
 
