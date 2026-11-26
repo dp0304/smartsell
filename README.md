@@ -18,6 +18,8 @@
 
 > **請先了解平台規則。** X 的自動化規則禁止以腳本操作網站，TikTok 條款也限制自動化；帳號可能因此受限或停權。SmartSell 不偽造指紋、不規避偵測、不解驗證碼，代按發布前每個帳號都要你在網頁單獨確認風險；沒確認的帳號，Worker 會準備好貼文，停在「發布」前請你自己按。是否使用、用在哪些帳號，由你自行判斷並承擔。
 
+**授權：**非商業用途免費（[PolyForm Noncommercial 1.0.0](LICENSE.md)）。用來經營會賺錢的帳號或店鋪、替客戶代操，屬於商業用途，要另外取得商用授權，見文末〈[授權](#授權)〉。
+
 設計與介面以 [`docs/restructure/phase1-design.md`](docs/restructure/phase1-design.md) 為準（附錄 E 的決定優先）；下一步的「主人自己的 Chrome」與手機遙控見 [`docs/restructure/core-automation-proposal.md`](docs/restructure/core-automation-proposal.md)。
 
 ## 取得原始碼
@@ -111,3 +113,11 @@ Worker 安裝包以 `pnpm worker:release` 建置（macOS 上產生 mac-arm64 與
 | [核心技術方案](docs/restructure/core-automation-proposal.md) | 主人自己的 Chrome、遠端遙控、手機 |
 | [舊版部署與工作台](docs/legacy.md) | 第 2 階段之前保留的舊功能 |
 | [參與開發](CONTRIBUTING.md)、[回報安全問題](SECURITY.md) | |
+
+## 授權
+
+SmartSell 的原始碼公開，以 [PolyForm Noncommercial License 1.0.0](LICENSE.md) 授權；這不是 OSI 定義的開源授權。以下是白話說明，以[條款原文](LICENSE.md)為準。
+
+- **免費使用：**任何非商業用途，例如個人學習、研究與測試、沒有營利打算的興趣專案，以及慈善團體、學校、公共研究機構、政府機關使用。可以修改、轉發，但要附上條款（或它的網址）和 `Required Notice:` 那一行。
+- **要商用授權：**用來經營會賺錢的帳號、店鋪或品牌，替客戶代操，或拿它（或改過的版本）提供付費服務。請在 GitHub 或 Gitee 開一個標題寫「商用授權」的 issue，不必寫細節，我們會聯絡你。
+- 第三方套件各自依它們的授權條款。

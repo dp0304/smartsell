@@ -2,6 +2,7 @@
   "name": "smartsell",
   "private": true,
   "version": "0.1.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "packageManager": "pnpm@10.11.0",
   "engines": {
     "node": "^24.0.0",

@@ -18,6 +18,8 @@ Laptop: Codex / Claude Code / WorkBuddy ──MCP──▶ Hub (an always-on com
 
 > **Know the platform rules.** X's automation rules forbid scripting the website and TikTok's terms restrict automation; accounts can be limited or suspended. SmartSell never spoofs fingerprints, evades detection or solves captchas, and before the Worker may click "Post" for an account you confirm that risk for that account in the web app; otherwise the Worker prepares the post and waits for you to click. Whether and where to use it is your decision.
 
+**License:** free for noncommercial use ([PolyForm Noncommercial 1.0.0](LICENSE.md)). Running accounts or a shop that make money, or operating accounts for clients, is commercial use and needs a separate commercial license; see [License](#license) below.
+
 ## Get the code
 
 ```sh
@@ -49,3 +51,11 @@ pnpm verify     # the same checks as CI
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and, for security reports, [SECURITY.md](SECURITY.md). The design of record is [docs/restructure/phase1-design.md](docs/restructure/phase1-design.md) (Traditional Chinese).
+
+## License
+
+SmartSell's source is public under the [PolyForm Noncommercial License 1.0.0](LICENSE.md); it is not an OSI open-source license. This summary is not the license; [the terms](LICENSE.md) govern.
+
+- **Free:** any noncommercial purpose — personal study, research and testing, hobby projects with no commercial application, and use by charities, schools, public research organizations and government institutions. You may change and share it if you pass on the terms (or their URL) and the `Required Notice:` line.
+- **Commercial license needed:** running accounts, a shop or a brand that make money, operating accounts for clients, or offering it (or a changed version) as a paid service. Open an issue on GitHub or Gitee titled "Commercial license" (no details needed) and we will contact you.
+- Third-party packages keep their own licenses.
