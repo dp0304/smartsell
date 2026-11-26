@@ -69,7 +69,9 @@ export function workerPlatform(platform: NodeJS.Platform, arch: string): 'mac-ar
 export function resourcePaths(appDir: string, packaged: boolean, resourcesPath?: string) {
   const resources = packaged && resourcesPath ? join(resourcesPath, 'resources') : join(appDir, '..', 'resources');
   const relay = packaged && resourcesPath ? join(resourcesPath, 'agent-relay', 'smartsell-relay.mjs') : join(appDir, 'agent-relay', 'smartsell-relay.mjs');
-  return { clip: join(resources, 'test-clip.mp4'), clipManifest: join(resources, 'test-clip.json'), relay };
+  // The SmartSell Chrome extension (own-Chrome mode, core-automation-proposal §3.2).
+  const extension = packaged && resourcesPath ? join(resourcesPath, 'extension') : join(appDir, '..', 'extension');
+  return { clip: join(resources, 'test-clip.mp4'), clipManifest: join(resources, 'test-clip.json'), relay, extension };
 }
 
 /** Finds `codex` / `claude` the way a login shell would (GUI apps get a short PATH on macOS). */
@@ -154,6 +156,7 @@ export async function runSmoke(electron: typeof Electron, options: BootstrapOpti
     check('test_clip', sha256 === manifest.sha256 && bytes.length === manifest.bytes, `${bytes.length} bytes, sha256 ${sha256.slice(0, 12)}…`);
   } catch (error) { check('test_clip', false, String(error)); }
   check('relay_bundle', existsSync(paths.relay), paths.relay);
+  check('chrome_extension', existsSync(join(paths.extension, 'manifest.json')) && existsSync(join(paths.extension, 'background.js')), paths.extension);
   check('relay_module', typeof defaultRelayMain === 'function', 'relayMain linked');
   check('contracts', AUTOMATION_NOTICE_VERSION.length > 0 && RISK_TERMS_VERSION.length > 0, `${AUTOMATION_NOTICE_VERSION}, ${RISK_TERMS_VERSION}`);
   try { check('driver_selectors', true, `bundled selectors.json ${defaultSelectors().version}`); }
@@ -224,6 +227,8 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
   const paths = resourcePaths(options.appDir, app.isPackaged, process.resourcesPath);
   const bundledClip = existsSync(paths.clip) ? paths.clip : null;
   const createWindow = windowFactory(electron, options.appDir);
+  // A plain folder in Documents: Chrome's 「載入未封裝項目」 dialog cannot open a folder inside the .app bundle.
+  const extensionInstallDir = join(app.getPath('documents'), 'SmartSell Worker', 'chrome-extension');
   const host = sanitizeMachineName(hostname(), 'SmartSell Worker');
   let quitting = false;
   let worker: WorkerShell | undefined;
@@ -267,6 +272,7 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
     worker = new WorkerShell({
       userData, platform, version, hostname: host, vault, notifier, power, posture, autostart, settings, bundledClip,
       openExternal: url => shell.openExternal(url), onChange, log: log.write,
+      extension: { source: paths.extension, installDir: extensionInstallDir },
       updates: (pairing, runtime) => new UpdateManager({
         currentVersion: version, platform, hubOrigin: pairing.origin, dir: join(userData, 'updates'), notifier, onChange, log: log.write,
         platformKey: workerPlatform(platform, process.arch),
@@ -362,6 +368,13 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
       if (response === 1) await worker?.forget();
     },
     'retry-vault': () => worker?.retryVault(),
+    'browser-mode': body => startWorker().setBrowserMode(body.mode),
+    'bind-browser': body => startWorker().bindBrowser(body.id, body.install_id),
+    'open-extension-folder': async () => {
+      if (!existsSync(join(extensionInstallDir, 'manifest.json'))) throw new Error('擴充功能資料夾還沒準備好，請先選「用我自己的 Chrome」。');
+      const error = await shell.openPath(extensionInstallDir);
+      if (error) throw new Error('無法打開擴充功能資料夾。');
+    },
     'agent-hub': body => startAgent().setHub(String(body.hub ?? '')),
     'agent-connect': body => startAgent().connect(body.client),
     'agent-cancel': () => agent?.cancelConnect(),

@@ -9,8 +9,10 @@ import { ChromeBrowser, ChromeUnavailable, findChrome, type ChromeLaunchOptions 
 import { ChromeCdpPage } from '../drivers/cdp-page.ts';
 import type { CdpPage } from '../drivers/types.ts';
 
+/** Why the owner's own Chrome could not be used (own-Chrome mode, browser-bridge/launcher.ts); picks the owner message. */
+export type OwnChromeProblem = 'extension_not_connected' | 'extension_ambiguous' | 'extension_cancelled';
 export class ProfileError extends Error {
-  constructor(readonly code: 'chrome_unavailable' | 'profile_in_use', message: string) { super(message); this.name = 'ProfileError'; }
+  constructor(readonly code: 'chrome_unavailable' | 'profile_in_use', message: string, readonly ownChrome?: OwnChromeProblem) { super(message); this.name = 'ProfileError'; }
 }
 
 export interface BrowserHandle {

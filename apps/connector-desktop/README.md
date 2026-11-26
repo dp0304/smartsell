@@ -1,66 +1,62 @@
-# SmartSell 桌面连接器（Windows / macOS）
+# SmartSell Worker（macOS／Windows）
 
-用 Codex 或 Claude Code 通过 SmartSell MCP 发起和查询任务。桌面 Worker 接收工作台派发到本机的签名任务，Web 工作台显示审批、任务和结果。关闭窗口后保留托盘。急停可从窗口或托盘触发，立即取消本机在途设备请求并停止心跳。已打开的系统浏览器由操作者控制。交接后急停会保留一条「结果未知」报告，可在租约内手动回填。程序重启后需要主动连接。任务状态与尚未确认的报告只保存在内存，重启或租约失效后由工作台处理。
+SmartSell Worker 是裝在每台要發文的電腦上的 App。它和中樞配對後，常駐在系統匣，到點替這台電腦綁定的帳號在 Chrome 裡發文（第 1 階段：X 與 TikTok），再把貼文網址讀回中樞。同一個 App 也可以裝在你的筆電，選「這台是我的筆電」，只負責連接 Codex／Claude Code 與顯示通知，不發文。
 
-## 安装与本地验证
+整體流程與中樞安裝見根目錄的 [README](../../README.md) 與 [中樞安裝與維護](../../docs/hub-setup.md)；設計以 [`docs/restructure/phase1-design.md`](../../docs/restructure/phase1-design.md) 為準。
 
-使用 Node 24。在已有根目录依赖的检出中运行以下命令。桌面依赖通过仓库的 pnpm workspace 安装。
+## 在哪個 Chrome 發文
 
-```sh
-npm --prefix apps/connector-desktop run typecheck
-npm --prefix apps/connector-desktop test
-npm --prefix apps/connector-desktop run build
-```
+Worker 有兩種方式，在 App 的「用哪個 Chrome 發文」切換：
 
-Electron 类型检查和 JS 构建仅需 npm 包。启动、GUI 测试或打包需要对应系统和架构的 Electron 运行时。先检查 `apps/connector-desktop/node_modules/electron/dist`，缺少时运行 `node apps/connector-desktop/node_modules/electron/install.js`，该安装器优先使用 Electron 缓存。
+| 方式 | 說明 |
+|---|---|
+| **你自己的 Chrome（建議）** | Worker 透過 SmartSell 擴充功能，在你平常用、已經登入的 Google Chrome 裡操作，不用再登入一次。它只在自己開的「SmartSell」視窗與分頁裡做事，不碰你正在看的分頁。沒登入的帳號會停下來，通知你在那台電腦的 Chrome 登入。 |
+| 每個帳號一個獨立的 Chrome | 第 1 階段原本的方式：Worker 為每個帳號開一個獨立的 Chrome 設定資料夾，你要在那個視窗另外登入一次。 |
 
-```sh
-npm --prefix apps/connector-desktop start
-node tests/connector-desktop/smoke.mjs
-```
+### 安裝 SmartSell 擴充功能（用你自己的 Chrome 時）
 
-GUI smoke 使用未配置服务的构建和隔离用户目录。逻辑测试注入内存传输，验证真实配对证明、签名、随机 nonce 与任务防护。测试使用合成工作区、账号、媒体哈希和证据引用。
+1. 在 App 按「改用我自己的 Chrome（建議）」。App 會把擴充功能放到「文件／SmartSell Worker／chrome-extension」，並在這台電腦的 Chrome 登記 SmartSell（原生訊息主機 `com.smartsell.worker`）。
+2. 在 Chrome 網址列輸入 `chrome://extensions`，打開右上角的「開發人員模式」。
+3. 按「載入未封裝項目」，選上面那個資料夾。
+4. 在 SmartSell Worker 擴充功能按「詳細資料」，開啟「允許存取檔案網址」（上傳影片需要）。
+5. App 顯示「已連上你的 Chrome」就完成了。Chrome 要開著，Worker 才能發文。
 
-安装 Google Chrome 后，可运行 `node tests/connector-desktop/channel-dom.mjs`，在可见 Chrome 中验证合成页面的身份读取及账号菜单点击。设置 `SMARTSELL_CONNECTOR_REAL_CHROME=1` 运行 GUI smoke 时，还会以隔离的未登录 Chrome 配置打开真实 YouTube Studio。
+注意：
 
-## 正式部署与交付
+- Worker 操作時，Chrome 頂端會顯示「SmartSell Worker 已開始對這個瀏覽器進行偵錯」。這是 Chrome 對 `chrome.debugger` 的固定提示；按「取消」會中斷那一則，而且不會自動重發。
+- 同一個平台的第二個帳號，要放在另一個 Chrome 設定檔，並在那個設定檔也安裝一次擴充功能；有好幾個設定檔時，App 會請你為每個帳號選一個。
+- 擴充功能只和這台電腦的 Worker 通訊（透過 Chrome 的原生訊息，不開任何網路連接埠）。它只操作自己開的分頁，只允許驅動用到的 DevTools 指令，不能導向 `file:` 或 `chrome:` 網址，也不修改瀏覽器的任何識別資訊（不偽造指紋、不改 `navigator.webdriver`、不解驗證碼）。
+- 「擬人」指的是讓頁面像被人操作一樣正常反應（真實的點擊與逐字輸入、步驟之間有停頓、每帳號每日上限），不是保證平台偵測不到。X 與 TikTok 的條款都限制自動化，代按發布前每個帳號都要在網頁確認風險。
 
-构建时通过 `SMARTSELL_API_ORIGIN` 和 `SMARTSELL_WORKBENCH_ORIGIN` 注入部署的 HTTPS 源地址。API 地址随配对记录加密保存，部署地址变化时应撤销原配对并重新绑定。目前使用仓库已实现的固定 HTTPS 设备接口。设备私钥由 Electron `safeStorage` 使用 macOS 钥匙串或 Windows DPAPI 保护。
+## 開發與測試
 
-1. 在日后访问社媒或店铺的电脑上打开桌面 Worker，按窗口顶部的「首次设置」操作。点击「检查系统安全存储」，并在系统提示出现时自行决定是否授权。验证通过后，填写可信的工作台网址，核对本机并在系统浏览器中同意授权。也可粘贴工作台发出的 Worker 配对网址。配对在加密保存后通过，签名连接在工作台确认心跳后通过。重新打开 Worker 会读取已有配对，仍需连接才能恢复在线。点击「连接专用 Google Chrome」验证 Worker 自己的 Chrome 会话，然后按需添加平台，在官方页面登录并用相应渠道的「验证」核对身份。平台选择只用于首次设置进度，账号状态随当前会话重新核验。
-2. 点击「检查本机已登录渠道」。Worker 检查专用 Chrome 已打开或恢复的官方页面。需要登录时，从对应渠道点击「在 Chrome 打开」，完成登录并打开账号或店铺身份页。勾选已验证的渠道并确认登记，Worker 复核身份并等待工作台确认。可在工作台查看已登记的账号和店铺。已绑定且等待复核的旧会话只需在本机专用 Chrome 打开官方账号资料。Worker 会在心跳后读取该标签页并签名回报明确匹配的身份。已登记渠道若显示过期，请打开原账号或店铺资料并重新验证。检测到账号切换时，核对身份后再验证。
-3. 在终端通过 MCP 提交或查询任务，按工作台要求完成审批。在线空闲时，Worker 自动领取本机任务，一次处理一项。抖音和小红书的浏览器交接会自动从专用 Chrome 核对账号。页面看不到明确身份时，先打开官方账号资料。发布仍须按冻结版本核对内容、媒体和可见范围，确认交接后在官方页面亲自提交一次。
-4. 证据使用工作台预登记的脱敏截图，填入作品 ID、无查询参数的官方作品链接、证据对象 ID 和 SHA-256。服务端负责证据归属、类型和摘要核验，发布结果由工作台独立核实。无法确定是否提交时回填结果未知。
-5. 断开会保留配对。注销本机会删除本机密钥。设备需要彻底撤销时，在工作台由管理员撤销对应设备。外部平台账号的退出在官方浏览器中完成。
-
-可登记抖音、小红书、TikTok 国际版、YouTube、Facebook、Instagram、Shopify、Amazon Seller Central 和 Shopee。X 和 Reddit 提供本机身份核验。登记需在专用 Chrome 显示官方身份，例如 TikTok 数字用户 ID 或 Amazon Seller ID。关页、结束 Chrome 会话或本机验证满 30 分钟时需复验。网页登录、验证码和二次验证由操作者在 Chrome 完成。
-
-Worker 的桌面任务支持抖音和小红书的浏览器交接、派发到本机的商品文件导入，以及知乎的既有只读登录检查和可见统计。社媒作品证据和可见性需要人工核对。已有平台草稿无法在此交接，会回报当前版本不支持。手机任务由对应移动执行路径处理。旧服务未声明支持浏览器专用领单时，桌面仍可连接，社媒任务等待服务升级。
-
-## 从指定 Worker 导入商品
-
-在 Web 的「商城與商品」登记店铺，核对官方店铺 ID，选择固定 Worker，再发起商品导入。要在看板看到导出文件的价格和库存，可为店铺设置相应市场和价格来源。
-
-绑定的 Worker 在线且空闲时会自动接收任务，并显示本批导入交接。在官方卖家后台用已授权的账号导出商品 CSV、TSV 或 XLSX，再回到桌面确认官方页面显示的店铺 ID 并选择文件。单批文件最大 384 KiB。连接器从第一张 XLSX 工作表提取商品列。Web 收到预览后，在本批导入页面核对行数据、确认合并，最后到「商品」查看结果。
-
-多台机器须使用它们都能访问的同一个 HTTPS 工作台。`localhost` 和 `127.0.0.1` 的开发地址适合同一台电脑上的验证。
-
-## 在终端安装并使用 Skills
-
-构建后，从仓库根目录运行独立安装器，目标为已有的运维项目目录。
+使用 Node 24，在根目錄裝好依賴後：
 
 ```sh
-node apps/connector-desktop/dist/smartsell-install-skills.mjs "/path/to/ops-project"
+pnpm --filter @smartsell/connector-desktop typecheck
+pnpm --filter @smartsell/connector-desktop build
+node --import tsx --test tests/connector-desktop/*.test.ts tests/connector-desktop/app/*.test.ts
 ```
 
-如果收到单独交付的 `smartsell-install-skills.mjs`，可以在运维项目中运行 `node /path/to/smartsell-install-skills.mjs .`。安装器将三份预设写入项目的 `.claude/skills/` 和 `.agents/skills/`，保留同名内容。全局 Skills 和 MCP 配置由各自的工具管理。
+- `tests/connector-desktop/drivers-fixtures.test.ts` 用本機的模擬 X／TikTok 頁面跑真實驅動（需要 Google Chrome）。
+- `tests/connector-desktop/drivers-fixtures-own-chrome.test.ts` 與 `own-chrome.test.ts` 跑同一批驅動，但改用「你自己的 Chrome」：Playwright 的 Chromium 載入真正的擴充功能，原生訊息主機登記在測試用的設定資料夾，不會寫進你自己的 Chrome（需要 `pnpm exec playwright install chromium`）。
+- `tests/e2e-phase1/own-chrome.test.ts` 從 MCP 排程一路跑到兩台機器在各自的「主人 Chrome」發出、網址回到中樞。
+- 無介面的 Worker（CI 與 E2E 用）：用法見 `src/headless/runner.ts` 開頭的說明；設定 `SMARTSELL_BROWSER=own_chrome` 改走擴充功能。
 
-重新打开该项目的 Codex 或 Claude Code 会话，在 Web 工作台的「Agent」页面按说明连接同一工作区的 SmartSell MCP。用自然语言描述要提交或查询的任务。可执行操作取决于当前 MCP 工具、工作区权限和平台授权。预设源文件位于 `skills/`，构建将预设嵌入单文件安装器。
+本機啟動 App：`pnpm --filter @smartsell/connector-desktop start`（缺 Electron 執行檔時先執行 `node apps/connector-desktop/node_modules/electron/install.js`）。
 
-## 打包与签名更新
+## 打包
 
-- macOS 原生主机运行 `npm --prefix apps/connector-desktop run package:mac`，产出 DMG 和 ZIP。配置 `SMARTSELL_MAC_IDENTITY` 为 Developer ID Application 身份及 `APPLE_KEYCHAIN_PROFILE` 为 notarytool 钥匙串配置。`SMARTSELL_UPDATE_FEED` 指向 HTTPS Squirrel.Mac JSON feed，发布端按当前版本返回更新 ZIP 或 HTTP 204。Electron 原生更新器验证更新符合现用应用的代码签名要求。
-- Windows 原生主机运行 `npm --prefix apps/connector-desktop run package:win`，产出 NSIS 安装包。配置 `WIN_CSC_LINK` 和 `WIN_CSC_KEY_PASSWORD` 或等效的 `CSC_LINK` 和 `CSC_KEY_PASSWORD`。设置 `SMARTSELL_WIN_PUBLISHER` 为证书完整主体 DN，`SMARTSELL_UPDATE_FEED` 为提供 `latest.yml` 与安装包的 HTTPS 目录。更新器校验摘要及预配置的 Authenticode 发布者，并复查缓存安装包。禁止降级和 Web 安装器。
-- 发布脚本要求正式服务、更新源及目标系统签名配置。发布物留在本机 `release/`。macOS 本机开发包可在构建后运行 `node apps/connector-desktop/scripts/package.mjs mac --local-dir`，生成具有 ad hoc 签名的 `.app`，更新关闭。Windows 可在原生主机使用 `win --local-dir`。
+在根目錄執行 `pnpm worker:release`（macOS 產生 mac-arm64 與 mac-x64；在 Windows 加 `--win` 產生 win-x64），輸出到 `dist/worker-release/`，放進中樞的 `worker-downloads/` 後即可從「開始設定」下載，步驟見 [中樞安裝與維護](../../docs/hub-setup.md) 第 4 節。第 1 階段的安裝包沒有 Apple Developer ID 與 Windows 程式碼簽章；正式簽章與自動更新的設定見 `scripts/package-config.mjs`。
 
-当前开发机缺少 Developer ID 发布身份。正式 macOS 公证、Windows Authenticode 安装包和双方的真实签名更新链仍需在配置好的发布主机验证。
+## 選用：在專案安裝 Agent Skills
+
+```sh
+node apps/connector-desktop/dist/smartsell-install-skills.mjs /path/to/ops-project
+```
+
+會把 `smartsell-video-publish`、`smartsell-data-collection`、`smartsell-product-listing` 三份 Skills 裝到該專案的 `.claude/skills/` 與 `.agents/skills/`，同名的既有內容會保留。
+
+## 舊工作線
+
+抖音、小紅書的人工交接、知乎與商品匯入等舊功能在 App 的「進階 → 舊工作線」，預設關閉，只為既有資料保留，第 2 階段整理。

@@ -57,6 +57,8 @@ function runtimeFor(vault: FileVault, options: { dryRun?: boolean; events?: Runt
     identity: { origin: pairing.origin, workspaceId: pairing.workspace_id, deviceId: pairing.device_id, privateKey: pairing.private_key_pem, machineName: pairing.machine_name },
     clientVersion: CLIENT_VERSION, headless: true, bundledClip: bundledClip(), localDryRun: options.dryRun, events: options.events,
     log: (message, detail) => emit({ level: 'info', message, ...detail }),
+    // E2E of own-Chrome mode: a test Chromium with the SmartSell extension connects to this data dir's bridge.
+    browserMode: process.env.SMARTSELL_BROWSER === 'own_chrome' ? 'own_chrome' : 'profiles',
   });
 }
 
@@ -80,12 +82,14 @@ export async function addChannel(args: CliArgs) {
   if (provider !== 'x' && provider !== 'tiktok') throw new Error('add-channel needs --provider x|tiktok');
   const runtime = runtimeFor(new FileVault(args.dataDir), {});
   try {
+    await runtime.listenBridge();
     const channel = await enrollChannel(runtime, provider, { pollMs: 1000, timeoutMs: 60_000 });
     const registrations = await registerEnrolledChannel(runtime.hub, channel);
     emit({ event: 'channel_registered', provider, profile_key: channel.profileKey, external_id: channel.identity, handle: channel.handle, registrations });
     return { profileKey: channel.profileKey, identity: channel.identity, handle: channel.handle, registrations };
   } finally {
     runtime.profiles.closeAll();
+    await runtime.bridge?.close();
   }
 }
 

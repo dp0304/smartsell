@@ -14,6 +14,8 @@ const FUSES = {
 export const EXTRA_RESOURCES = [
   { from: 'resources', to: 'resources', filter: ['test-clip.mp4', 'test-clip.json'] },
   { from: 'dist/agent-relay', to: 'agent-relay', filter: ['smartsell-relay.mjs'] },
+  // The SmartSell Chrome extension (own-Chrome mode); the App copies it to Documents for 「載入未封裝項目」.
+  { from: 'extension', to: 'extension', filter: ['manifest.json', 'background.js', 'popup.html', 'popup.js'] },
 ];
 
 export const artifactName = (platform, arch) => `SmartSell-Worker-\${version}-${platform}-${arch}.\${ext}`;

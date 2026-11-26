@@ -4,11 +4,14 @@
 // notifications, the idle-sleep blocker, the update prompt and UI state.
 // Nothing here imports Electron; the shell passes the platform pieces in.
 import { generateKeyPairSync } from 'node:crypto';
-import { existsSync, renameSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { AUTOMATION_NOTICE, AUTOMATION_NOTICE_VERSION, RISK_TERMS_VERSION, type DevicePosture, type RemoteAccess } from '@smartsell/contracts';
 import { pairOverHttp } from '../../../connector/src/device-client.ts';
 import { PermitError } from '../../../connector/src/permit.ts';
+import { bridgeSocketPath } from '../browser-bridge/bridge.ts';
+import { BrowserBindings } from '../browser-bridge/launcher.ts';
+import { EXTENSION_IDS, registerNativeHost, type Registration } from '../browser-bridge/native-host.ts';
 import { enrollChannel, registerEnrolledChannel, type EnrolledChannel } from '../runtime/enroll.ts';
 import { RuntimeEventBus, type ConnectionEvent, type LocalJobView } from '../runtime/events.ts';
 import { createWorkerRuntime, type WorkerRuntime, type WorkerRuntimeOptions } from '../runtime/worker.ts';
@@ -47,6 +50,13 @@ export interface WorkerShellDeps {
   bundledClip: string | null;
   /** Builds the update prompt for this pairing (signed downloads need the device key). */
   updates(pairing: Pairing, runtime: WorkerRuntime): UpdateManager;
+  /**
+   * Own-Chrome mode: the extension shipped with the App (`source`) is copied to `installDir`, a folder the owner can
+   * pick in Chrome's 「載入未封裝項目」 (a folder inside the .app bundle cannot be picked on macOS).
+   */
+  extension?: { source: string; installDir: string };
+  /** Registers the native messaging host for the owner's Chrome; tests replace it. */
+  registerHost?(options: { dataDir: string; socketPath: string }): Promise<Registration>;
   onChange(): void;
   log(message: string, detail?: object): void;
   /** Test seams. */
@@ -77,6 +87,8 @@ export class WorkerShell {
   #enrollment: EnrollmentView | null = null;
   #enrolled?: EnrolledChannel;
   #vaultTimer?: ReturnType<typeof setTimeout>;
+  #hostRegistered: boolean | null = null;
+  #hostError: string | null = null;
 
   constructor(deps: WorkerShellDeps) {
     this.#d = deps;
@@ -137,15 +149,48 @@ export class WorkerShell {
     this.start();
   }
 
+  /** The chosen browser mode; null when the owner has not chosen yet (runs as 'profiles'). */
+  get #browserChoice() { return this.#d.settings?.load?.().browser_mode ?? null; }
+  get browserMode(): 'own_chrome' | 'profiles' { return this.#browserChoice === 'own_chrome' ? 'own_chrome' : 'profiles'; }
+
+  /** Own-Chrome mode: keep the extension folder current and the native host registered (every start; idempotent). */
+  async #prepareOwnChrome() {
+    const extension = this.#d.extension;
+    if (extension && existsSync(extension.source)) {
+      try {
+        const version = (dir: string) => { try { return String(JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')).version); } catch { return null; } };
+        if (version(extension.installDir) !== version(extension.source)) {
+          mkdirSync(extension.installDir, { recursive: true });
+          cpSync(extension.source, extension.installDir, { recursive: true, force: true });
+        }
+      } catch (error) { this.#d.log('extension copy failed', { error: String(error) }); }
+    }
+    try {
+      await (this.#d.registerHost ?? registerNativeHost)({ dataDir: this.#d.userData, socketPath: bridgeSocketPath(this.#d.userData) });
+      this.#hostRegistered = true;
+      this.#hostError = null;
+    } catch (error) {
+      this.#hostRegistered = false;
+      this.#hostError = '無法在這台電腦的 Chrome 登記 SmartSell（原生訊息主機）。請重新開啟 SmartSell Worker 再試。';
+      this.#d.log('native host registration failed', { error: String(error) });
+    }
+    this.#d.onChange();
+  }
+
   #startRuntime(pairing: Pairing) {
     this.#pairing = pairing;
     const create = this.#d.createRuntime ?? createWorkerRuntime;
+    const browserMode = this.browserMode;
     const runtime = create({
       dataDir: this.#d.userData,
       identity: { origin: pairing.origin, workspaceId: pairing.workspace, deviceId: pairing.device, privateKey: pairing.key, machineName: pairing.name },
       clientVersion: this.#d.version, bundledClip: this.#d.bundledClip, events: this.events,
-      posture: () => this.#d.posture.current(), remoteAccess: () => this.#d.posture.remote(), log: this.#d.log,
+      posture: () => this.#d.posture.current(), remoteAccess: () => this.#d.posture.remote(), log: this.#d.log, browserMode,
     });
+    if (browserMode === 'own_chrome') {
+      void this.#prepareOwnChrome();
+      runtime.bridge?.onChange(() => this.#d.onChange());
+    }
     this.#runtime = runtime;
     this.#updates = this.#d.updates(pairing, runtime);
     this.#phase = 'running';
@@ -207,6 +252,38 @@ export class WorkerShell {
     return applied;
   }
 
+  // ---------- 瀏覽器：你自己的 Chrome 或每個帳號一個獨立 Chrome ----------
+
+  /**
+   * Switches where this machine's channels post. Refused while a post is being prepared or published, because the
+   * page that job uses would disappear. The runtime restarts with the new mode; nothing is posted twice (jobs keep
+   * their state in the job store).
+   */
+  async setBrowserMode(mode: unknown) {
+    if (mode !== 'own_chrome' && mode !== 'profiles') throw new Error('請選擇要用哪個 Chrome。');
+    const busy = (this.#runtime?.snapshot().jobs ?? []).some(job => ['preflighting', 'preparing', 'ready', 'waiting_go', 'running', 'submitting', 'result_pending'].includes(job.state));
+    if (busy) throw new Error('有貼文正在準備或發布，完成後再切換。');
+    this.#d.settings.save({ browser_mode: mode });
+    if (this.#phase === 'running' && this.#pairing) {
+      const pairing = this.#pairing;
+      await this.#runtime?.stop().catch(() => {});
+      this.#runtime = undefined;
+      this.#startRuntime(pairing);
+    }
+    this.#message = mode === 'own_chrome'
+      ? '已改用你自己的 Chrome。之後每個帳號都在你的 Chrome 裡操作，請確認你的 Chrome 已登入這些帳號（同一平台的第二個帳號要放在另一個 Chrome 設定檔）。'
+      : '已改回每個帳號一個獨立的 Chrome。';
+    this.#d.onChange();
+  }
+
+  /** Chooses which connected Chrome profile a channel uses (only needed when several profiles have the extension). */
+  bindBrowser(socialAccountId: unknown, installId: unknown) {
+    const { runtime, channel } = this.#channel(socialAccountId);
+    if (typeof installId !== 'string' || !runtime.bridge?.browser(installId)) throw new Error('找不到這個 Chrome 設定檔，請確認它開著並已安裝 SmartSell 擴充功能。');
+    BrowserBindings.in(this.#d.userData).set(channel.profile_key, installId);
+    this.#d.onChange();
+  }
+
   // ---------- 新增帳號 (§8.16) ----------
 
   /** Opens a new Chrome profile on the platform; the owner signs in there (captcha and 2FA are the owner's). */
@@ -248,7 +325,14 @@ export class WorkerShell {
       const result = await (this.#d.register ?? registerEnrolledChannel)(runtime.hub, channel);
       const hubKey = registeredProfileKey(result);
       let note: string | null = null;
-      if (hubKey && hubKey !== channel.profileKey) note = await adoptProfileKey(runtime.profiles, channel.profileKey, hubKey, this.#d.log);
+      if (hubKey && hubKey !== channel.profileKey) {
+        if (runtime.browserMode === 'own_chrome') {
+          // Own Chrome: the folder holds nothing; the channel keeps the Chrome profile it was detected in.
+          const bindings = BrowserBindings.in(this.#d.userData);
+          const bound = bindings.get(channel.profileKey);
+          if (bound) { bindings.set(hubKey, bound); bindings.set(channel.profileKey, null); }
+        } else note = await adoptProfileKey(runtime.profiles, channel.profileKey, hubKey, this.#d.log);
+      }
       this.#enrollment = { ...this.#enrollment, status: 'registered', note: note ?? `已加入。代按發布需要在網頁的帳號頁確認風險（條款版本 ${RISK_TERMS_VERSION}）；在那之前，到點時會請你在這台機器按「發布」。` };
       this.#enrolled = undefined;
       this.#d.onChange();
@@ -361,6 +445,22 @@ export class WorkerShell {
     this.#d.power.release();
   }
 
+  #browserSnapshot() {
+    const runtime = this.#runtime;
+    const mode = this.browserMode;
+    const bindings = mode === 'own_chrome' ? BrowserBindings.in(this.#d.userData).all() : {};
+    return {
+      mode, chosen: this.#browserChoice !== null,
+      extension_dir: this.#d.extension?.installDir ?? null, extension_id: EXTENSION_IDS[0],
+      host_registered: this.#hostRegistered, host_error: this.#hostError,
+      connected: (runtime?.bridge?.browsers() ?? []).map(browser => ({
+        install_id: browser.installId, version: browser.hello.version, chrome: browser.hello.chrome, file_access: browser.hello.file_access,
+        connected_at: new Date(browser.connectedAt).toISOString(),
+      })),
+      bindings,
+    };
+  }
+
   #requireRuntime() {
     if (!this.#runtime || this.#phase !== 'running') throw new Error('這台機器還沒有配對或尚未連線。');
     return this.#runtime;
@@ -392,7 +492,7 @@ export class WorkerShell {
         web_url: pairing ? `${pairing.origin}/app/${encodeURIComponent(pairing.workspace)}/channels/${encodeURIComponent(channel.social_account_id)}` : null,
       })),
       jobs, posture, remote_access: remote, posture_advice: postureAdvice(posture, remote),
-      update: this.#updates?.snapshot() ?? null, enrollment: this.#enrollment,
+      update: this.#updates?.snapshot() ?? null, enrollment: this.#enrollment, browser: this.#browserSnapshot(),
       autostart: this.#d.autostart.enabled(), automation_notice_version: AUTOMATION_NOTICE_VERSION,
     };
   }

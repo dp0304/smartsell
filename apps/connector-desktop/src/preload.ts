@@ -5,6 +5,7 @@ const actions = new Set([
   'state', 'choose-role', 'pair', 'cancel-pairing', 'autostart', 'add-account', 'confirm-account', 'cancel-account', 'open-chrome',
   'check-login', 'relogin', 'open-job-chrome', 'stop', 'resume', 'update-install', 'open-web', 'open-url', 'open-logs', 'legacy-enable',
   'legacy-open', 'legacy-chrome-delete', 'forget', 'retry-vault', 'agent-hub', 'agent-connect', 'agent-cancel',
+  'browser-mode', 'bind-browser', 'open-extension-folder',
 ]);
 
 contextBridge.exposeInMainWorld('smartsell', {

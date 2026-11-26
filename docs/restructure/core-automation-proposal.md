@@ -170,6 +170,18 @@
 | 6 | 手機無人值守：Midscene＋視覺模型，排程發布 | 同一則內容排程在 Android 手機準時發出並讀回 |
 | 7 | iPhone（Mac 輔助） | 一台 iPhone 完成同樣的試跑 |
 
+## 8.1 進度（2026-11-26）
+
+- **第 1 步完成**：直傳 API 與 MCP 說明（E47）、WorkBuddy 以 relay 與直傳各跑 P1／P2（E48）。
+- **第 2 步部分完成**：通道本身已在測試用 Chromium 驗證（擴充功能 → 原生訊息 → Worker，`chrome.debugger` 的隔離世界、無障礙樹查詢、可信輸入、檔案輸入、截圖都可用）。主人 Chrome 上的三項量測（§3.5）仍待主人在自己的 Chrome 跑一次 `extension-spike/`。依 Chromium 原始碼，`navigator.webdriver` 只由自動化啟動旗標（`--enable-automation`、`--remote-debugging-*`）打開，`chrome.debugger` 附加不會；量測會確認這一點。
+- **第 3 步完成（待主人 Chrome 驗收）**：
+  - 擴充功能：`apps/connector-desktop/extension/`，固定 ID `ghfcogpklmadimibmifjhfhlcncpcncp`（manifest 的 `key`）。只操作自己在「SmartSell」視窗開的分頁；只允許 Page、DOM、Runtime、Input、Network、Accessibility 與焦點模擬；不能導向 `file:`／`chrome:`；Worker 斷線時立刻脫離除錯器。
+  - 原生訊息主機：macOS 用系統內建的 `nc -U`、Windows 用 PowerShell 管線，只做位元組轉送到 Worker 資料夾裡的 socket（0600）。打包版 App 的 Electron `runAsNode` 保持關閉。
+  - Worker：`src/browser-bridge/`。`ExtensionCdpPipe` 把 CDP 轉給擴充功能，`ChromeCdpPage` 與 X、TikTok 驅動完全不改；每個帳號記住用哪個 Chrome 設定檔（`browser-bindings.json`），絕不自己換到另一個設定檔。
+  - App：「用哪個 Chrome 發文」卡片，安裝步驟、連線狀態、多個設定檔時為每個帳號選一個；切換時若有貼文正在發布會拒絕。
+  - 驗證：模擬平台上的 X、TikTok 全部驅動測試在兩種傳輸都通過（各 45 項）；E2E 從 MCP 排程到兩台機器在各自的「主人 Chrome」發出、網址回到中樞通過。
+  - 還要主人做的：在自己的 Chrome 安裝擴充功能，對 X 與 TikTok 各跑一次試跑（停在發布前）。
+
 ## 9. 主人的決定（2026-11-25）
 
 主人回覆「能接受，你決定，你認為最好的就去做」。據此：

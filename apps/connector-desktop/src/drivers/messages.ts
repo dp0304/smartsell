@@ -68,6 +68,17 @@ export function blockerMessage(code: BlockerCode, context: MessageContext, phase
     .replaceAll('{code}', code);
 }
 
+/** Own-Chrome mode (core-automation-proposal §3.2): the owner's Chrome is reached through the SmartSell extension. */
+const ownChromeTemplates: Record<'extension_not_connected' | 'extension_ambiguous' | 'extension_cancelled', string> = {
+  extension_not_connected: '{machine} 的 Chrome 沒有連上 SmartSell：請在 {machine} 打開 Chrome，確認 SmartSell Worker 擴充功能已安裝並啟用；連上後會自動繼續（截止 {deadline}）。',
+  extension_ambiguous: '{machine} 有好幾個 Chrome 設定檔都裝了 SmartSell 擴充功能，不知道 {channel} 要用哪一個。請在 {machine} 的 SmartSell Worker 為 {channel} 選擇 Chrome 設定檔。',
+  extension_cancelled: '{machine} 的 Chrome 中斷了 SmartSell 的操作（有人按了頂端偵錯提示的「取消」），{channel} 這則已停止。要繼續請按「恢復」。',
+};
+
+export function ownChromeMessage(problem: keyof typeof ownChromeTemplates, context: MessageContext) {
+  return ownChromeTemplates[problem].replaceAll('{machine}', context.machine).replaceAll('{channel}', context.channel).replaceAll('{deadline}', context.deadline);
+}
+
 export const missedReasonText: Record<string, string> = {
   late: '超過遲到上限', machine_was_off: '機器當時沒有開機或沒有連線', owner_not_clicked: '沒有在時限內按發布', prepare_blocked: '準備時遇到需要處理的問題',
   chrome_unavailable: '無法啟動 Chrome', paused: '已暫停',

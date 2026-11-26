@@ -150,7 +150,10 @@ function enrollment(worker) {
   }
   const name = PROVIDER[e.provider];
   if (e.status === 'waiting_login') {
-    return el('div', { class: 'enroll' }, el('p', { text: `已在新的 Chrome 視窗開啟 ${name}。請在那個視窗自己登入（驗證碼與二次驗證都由你完成）。偵測到帳號後會在這裡詢問你。` }),
+    const where = worker.browser?.mode === 'own_chrome'
+      ? `已在你的 Chrome（SmartSell 視窗）開啟 ${name}。已經登入的話馬上會偵測到；沒登入請在那裡登入（驗證碼與二次驗證都由你完成）。`
+      : `已在新的 Chrome 視窗開啟 ${name}。請在那個視窗自己登入（驗證碼與二次驗證都由你完成）。偵測到帳號後會在這裡詢問你。`;
+    return el('div', { class: 'enroll' }, el('p', { text: where }),
       button('取消', () => call('cancel-account')));
   }
   if (e.status === 'failed') return el('div', { class: 'enroll' }, el('p', { class: 'notice', text: e.error }), button('關閉', () => call('cancel-account')));
@@ -161,6 +164,46 @@ function enrollment(worker) {
     el('p', { class: 'muted', text: '按「加入」表示你已讀過上面的自動化告知。代按發布另外需要在網頁的帳號頁確認風險；在那之前，到點時會請你在這台機器按「發布」。' }),
     e.error ? el('p', { class: 'notice', text: e.error }) : null,
     el('div', { class: 'actions' }, button('加入', () => call('confirm-account'), { class: 'primary', disabled: e.status === 'registering' }), button('取消', () => call('cancel-account'))));
+}
+
+function browserCard(worker) {
+  const b = worker.browser;
+  if (!b) return null;
+  const ownChrome = b.mode === 'own_chrome';
+  if (!ownChrome) {
+    return card('用哪個 Chrome 發文',
+      el('p', { text: b.chosen ? '現在：每個帳號一個獨立的 Chrome（要在那個視窗另外登入）。' : '現在：每個帳號一個獨立的 Chrome。' }),
+      el('p', { class: 'muted', text: '建議改用你自己的 Chrome：Worker 直接在你平常用、已經登入的 Chrome 裡操作，不用再登入一次；沒登入的帳號會提醒你去登入。需要安裝 SmartSell 擴充功能（約 1 分鐘）。' }),
+      el('div', { class: 'actions' },
+        button('改用我自己的 Chrome（建議）', () => call('browser-mode', { mode: 'own_chrome' }), { class: 'primary' }),
+        !b.chosen ? button('維持獨立的 Chrome', () => call('browser-mode', { mode: 'profiles' })) : null));
+  }
+  const connected = b.connected ?? [];
+  const status = connected.length
+    ? el('p', { class: 'ok', text: connected.length === 1 ? `已連上你的 Chrome（${connected[0].chrome ? `Chrome ${connected[0].chrome.split('.')[0]}` : 'Chrome'}）。` : `已連上 ${connected.length} 個 Chrome 設定檔。` })
+    : el('p', { class: 'notice', text: '還沒連上你的 Chrome。請照下面的步驟安裝 SmartSell 擴充功能；Chrome 要開著。' });
+  const steps = el('ol', { class: 'steps' },
+    el('li', {}, '在 Chrome 網址列輸入 ', el('code', { text: 'chrome://extensions' }), '，打開右上角的「開發人員模式」。'),
+    el('li', {}, '按「載入未封裝項目」，選這個資料夾：', el('code', { text: b.extension_dir ?? '—' }), ' ', button('打開資料夾', () => call('open-extension-folder'), { class: 'link' })),
+    el('li', { text: '在 SmartSell Worker 擴充功能按「詳細資料」，開啟「允許存取檔案網址」（上傳影片需要）。' }),
+    el('li', { text: '同一個平台有第二個帳號時，把它放在另一個 Chrome 設定檔，並在那個設定檔也裝一次。' }));
+  const noFiles = connected.filter(item => item.file_access === false);
+  const pick = connected.length > 1 ? el('div', { class: 'stack' }, el('p', { class: 'muted', text: '有好幾個 Chrome 設定檔，請為每個帳號選一個：' }),
+    worker.channels.map(channel => {
+      const select = el('select', { onchange: event => call('bind-browser', { id: channel.social_account_id, install_id: event.target.value }) },
+        el('option', { value: '', text: '（請選擇）' }),
+        connected.map((item, index) => el('option', { value: item.install_id, selected: b.bindings[channel.profile_key] === item.install_id, text: `Chrome 設定檔 ${index + 1}（${item.install_id.slice(0, 8)}）` })));
+      return el('label', {}, `${PROVIDER[channel.provider] ?? channel.provider} ${channel.handle ? `@${channel.handle}` : ''}`, select);
+    })) : null;
+  return card('用哪個 Chrome 發文',
+    el('p', { text: '現在：你自己的 Chrome。SmartSell 只在它自己開的「SmartSell」視窗裡操作，不碰你正在看的分頁。' }),
+    status,
+    b.host_error ? el('p', { class: 'notice', text: b.host_error }) : null,
+    noFiles.length ? el('p', { class: 'notice', text: '擴充功能還沒開啟「允許存取檔案網址」，上傳影片會失敗。請在 chrome://extensions 的 SmartSell Worker「詳細資料」開啟它。' }) : null,
+    connected.length ? el('details', {}, el('summary', { text: '安裝步驟' }), steps) : steps,
+    pick,
+    el('p', { class: 'muted', text: 'Worker 操作時，Chrome 頂端會顯示「SmartSell Worker 已開始對這個瀏覽器進行偵錯」；按「取消」會中斷那一則，不會自動重發。' }),
+    el('div', { class: 'actions' }, button('改回每個帳號一個獨立 Chrome', () => call('browser-mode', { mode: 'profiles' }), { class: 'link' })));
 }
 
 function accountsCard(worker) {
@@ -213,7 +256,7 @@ function workerView(worker) {
       el('p', { text: state.platform === 'darwin' ? '這台機器的鑰匙圈沒有允許 SmartSell 讀取配對金鑰，所以無法連線。請按「重試」，出現鑰匙圈提示時按「永遠允許」。' : 'Windows 認證儲存無法解開配對金鑰，所以無法連線。請按「重試」。' }),
       el('div', { class: 'actions' }, button('重試', () => call('retry-vault'), { class: 'primary' }))), advancedCard('worker')];
   }
-  return [connectionCard(worker), machineCard(worker), accountsCard(worker), jobsCard(worker), advancedCard('worker')];
+  return [connectionCard(worker), machineCard(worker), browserCard(worker), accountsCard(worker), jobsCard(worker), advancedCard('worker')].filter(Boolean);
 }
 
 // ---------- Agent mode ----------

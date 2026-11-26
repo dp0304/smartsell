@@ -73,9 +73,15 @@ export interface AppSettings {
   legacy_lines: boolean;
   /** Laptop mode: hub address typed before the first Codex connection. */
   agent_hub_origin: string | null;
+  /**
+   * Worker: where channels post. 'own_chrome' = the owner's own Chrome through the SmartSell extension
+   * (core-automation-proposal §3.2); 'profiles' = one separate Chrome profile per channel (phase 1). null = not chosen
+   * yet, which runs as 'profiles'.
+   */
+  browser_mode: 'own_chrome' | 'profiles' | null;
 }
 
-const DEFAULT_APP_SETTINGS: AppSettings = { role: null, autostart: null, legacy_lines: false, agent_hub_origin: null };
+const DEFAULT_APP_SETTINGS: AppSettings = { role: null, autostart: null, legacy_lines: false, agent_hub_origin: null, browser_mode: null };
 
 function appSettingsValue(value: unknown): AppSettings {
   const row = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -85,6 +91,7 @@ function appSettingsValue(value: unknown): AppSettings {
     autostart: typeof row.autostart === 'boolean' ? row.autostart : null,
     legacy_lines: row.legacy_lines === true,
     agent_hub_origin: origin && (origin.protocol === 'https:' || ['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname)) ? origin.origin : null,
+    browser_mode: row.browser_mode === 'own_chrome' || row.browser_mode === 'profiles' ? row.browser_mode : null,
   };
 }
 

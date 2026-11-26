@@ -29,6 +29,7 @@ import { startFakeNtfy, type FakeNtfy } from './ntfy.ts';
 import { startTcpProxy, type TcpProxy } from './proxy.ts';
 import { e2eClip, repoRoot, type TestMedia } from './video.ts';
 import { guardSocketTypeOfService } from '../../apps/connector/src/socket-guard.ts';
+import { launchOwnerChrome, type OwnerChrome } from '../connector-desktop/own-chrome-browser.ts';
 
 // The test process also fetches from a hub that gets killed (alert stream, REST): same Node/undici guard as the Worker.
 guardSocketTypeOfService();
@@ -109,6 +110,11 @@ export interface StackOptions {
   runnerEnv?: Record<string, string>;
   /** Skip the 30 MB clip (E2E-11 brings its own file). */
   clip?: boolean;
+  /**
+   * Own-Chrome mode (core-automation-proposal §3.2): each machine posts in a stand-in for the owner's own Chrome
+   * (Playwright Chromium with the real SmartSell extension) instead of a per-channel Chrome profile.
+   */
+  ownChrome?: boolean;
 }
 
 export interface Stack {
@@ -262,8 +268,10 @@ export async function startStack(options: StackOptions): Promise<Stack> {
     ...baseEnv, SMARTSELL_TEST_MODE: '1', SMARTSELL_CHROME_PATH: chromePath, SMARTSELL_TEST_PLATFORM_ORIGINS: JSON.stringify(fixtures.origins),
     SMARTSELL_TEST_PREPARE_LEAD_SEC: String(TIMING.prepareLeadSec), SMARTSELL_TEST_READBACK_SCHEDULE_SEC: TIMING.readbackScheduleSec.join(','),
     SMARTSELL_TEST_OFFLINE_STALENESS_SEC: String(TIMING.offlineStalenessSec),
+    ...(options.ownChrome && { SMARTSELL_BROWSER: 'own_chrome' }),
     ...options.runnerEnv,
   };
+  const ownerChromes: OwnerChrome[] = [];
   const runnerScript = join(repoRoot, 'apps/connector-desktop/src/headless/runner.ts');
   async function runCli(args: string[], label: string): Promise<Data[]> {
     const out = fileLog(`${label}.log`);
@@ -292,6 +300,7 @@ export async function startStack(options: StackOptions): Promise<Stack> {
     const paired = lines.find(line => line.event === 'paired');
     assert.ok(paired, `${name} paired`);
     machines[name] = { name, dataDir, proxy, deviceId: String(paired.device_id), heartbeats: [], failures: [], process: null };
+    if (options.ownChrome) ownerChromes.push(await launchOwnerChrome(dataDir));
   }
   const channels = {} as Record<Provider, Channel>;
   for (const provider of ['x', 'tiktok'] as const) {
@@ -433,6 +442,7 @@ export async function startStack(options: StackOptions): Promise<Stack> {
       await client?.close().catch(() => {});
       await Promise.all((['Mac-B', 'Win-C'] as const).map(name => stopRunner(name).catch(() => {})));
       await killHub('SIGTERM').catch(() => {});
+      for (const chrome of ownerChromes) await chrome.close();
       await fixtures.close().catch(() => {});
       await ntfy.close().catch(() => {});
       for (const machine of Object.values(machines)) await machine.proxy.close().catch(() => {});

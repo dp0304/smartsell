@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "SmartSell Worker",
+  "version": "0.3.0",
+  "description": "讓這台電腦上的 SmartSell Worker 在你自己的 Chrome 裡，代你操作已登入的社群帳號。只操作它自己開的分頁。",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAm/PxPXeHBzEoAlvRITifCns1J8eiNYhz5UciokGxYI51zgqrSxXr/GteLj2dmCw+z42H7HjjlZ1fpjWoqpQD5ZgxtYjQpA6p3lIm/mFBb3znKO+pno6aUeIu0ndVky/V+/WerA/eboX6IodQjAAYyR6f5AsnPcLcI/bkx0bGysf+NEjal/XvUwBwrEjk+FfQLPzhAJhLokBjQP79W5XM6A7ueHEyuo37hoMXpGYP0QgCEZxKKbayokgYCRIAUMyJasRQNvG14kY4gzPPY+FmHAnxnoqVZXEAC8Pj6wwImSzT8P4uPu5XA3L8Jpqh7ybNEqqy9VNqM8IpfD3tvoCygwIDAQAB",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "debugger",
+    "nativeMessaging",
+    "tabs",
+    "storage",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "SmartSell Worker",
+    "default_popup": "popup.html"
+  }
+}

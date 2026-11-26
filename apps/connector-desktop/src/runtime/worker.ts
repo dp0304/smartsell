@@ -14,9 +14,13 @@ import { RuntimeEventBus } from './events.ts';
 import { JobRunner } from './job-runner.ts';
 import { JobStore } from './job-store.ts';
 import { MediaCache } from './media-cache.ts';
+import { bridgeSocketPath, BrowserBridge } from '../browser-bridge/bridge.ts';
+import { BrowserBindings, ownChromeLauncher } from '../browser-bridge/launcher.ts';
 import { chromeLauncher, Profiles, type BrowserLauncher } from './profiles.ts';
 import { HubProtocol, type HubApi } from './protocol.ts';
 import { Supervisor } from './supervisor.ts';
+
+export type BrowserMode = 'own_chrome' | 'profiles';
 
 export interface WorkerIdentity { origin: string; workspaceId: string; deviceId: string; privateKey: string | KeyObject; machineName: string }
 
@@ -94,6 +98,11 @@ export interface WorkerRuntimeOptions {
   remoteAccess?: () => RemoteAccess | null;
   events?: RuntimeEventBus;
   log?(message: string, detail?: object): void;
+  /**
+   * Where channels post (core-automation-proposal §3.2): 'own_chrome' works in the owner's own Chrome through the
+   * SmartSell extension; 'profiles' (default) runs one separate Chrome profile per channel, as in phase 1.
+   */
+  browserMode?: BrowserMode;
   /** Test seams. */
   hub?: HubApi;
   launcher?: BrowserLauncher;
@@ -116,9 +125,16 @@ export function createWorkerRuntime(options: WorkerRuntimeOptions) {
   const drivers = new DriverRegistry();
   const media = new MediaCache({ dir: join(options.dataDir, 'media-cache'), open: (...args) => hub.openMedia(...args), now: () => clock.now(), bundledClip: options.bundledClip ?? null });
   const platformUrl = platformUrlFactory(switches.platformOrigins);
+  const allowUrl = allowUrlFactory(switches.platformOrigins);
+  const browserMode: BrowserMode = options.browserMode ?? 'profiles';
+  const bridge = browserMode === 'own_chrome'
+    ? new BrowserBridge({ socketPath: bridgeSocketPath(options.dataDir), now: () => clock.now(), log: options.log })
+    : undefined;
   const profiles = new Profiles({
     root: join(options.dataDir, 'chrome-profiles'), now: () => clock.now(),
-    launch: options.launcher ?? chromeLauncher({ headless: options.headless, allowUrl: allowUrlFactory(switches.platformOrigins), sleep: ms => clock.sleep(ms) }),
+    launch: options.launcher ?? (bridge
+      ? ownChromeLauncher({ bridge, bindings: BrowserBindings.in(options.dataDir), allowUrl, sleep: ms => clock.sleep(ms) })
+      : chromeLauncher({ headless: options.headless, allowUrl, sleep: ms => clock.sleep(ms) })),
   });
   let supervisor: Supervisor | undefined;
   const runner = new JobRunner({
@@ -139,9 +155,14 @@ export function createWorkerRuntime(options: WorkerRuntimeOptions) {
   });
   const sup = supervisor;
   return {
-    events, clock, store, hub, selectors, drivers, media, profiles, runner, supervisor: sup, platformUrl, switches,
-    start() { runner.start(); void sup.start(); },
-    async stop() { await sup.stop(); await runner.stop(); profiles.closeAll(); },
+    events, clock, store, hub, selectors, drivers, media, profiles, runner, supervisor: sup, platformUrl, switches, browserMode, bridge,
+    /** Own-Chrome mode: open the socket the extension's native host connects to (idempotent). */
+    async listenBridge() { await bridge?.listen(); },
+    start() {
+      void bridge?.listen().catch(error => options.log?.('browser bridge failed to start', { error: String(error) }));
+      runner.start(); void sup.start();
+    },
+    async stop() { await sup.stop(); await runner.stop(); profiles.closeAll(); await bridge?.close(); },
     emergencyStop() { runner.emergencyStop(); },
     resume() { runner.resumeAfterStop(); },
     snapshot() { return sup.snapshot(); },

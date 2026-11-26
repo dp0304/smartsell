@@ -15,13 +15,17 @@ const setupPath = '/api/v1/setup';
 const statusPath = `${setupPath}/status`;
 const sessionPath = '/api/v1/session';
 
-async function freePort() {
-  const server = createServer().listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  const address = server.address();
-  assert(address && typeof address !== 'string');
-  await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-  return address.port;
+/** Distinct free ports: all listeners stay open until every port is known, so the OS cannot hand out the same port twice. */
+async function freePorts(count: number) {
+  const servers = Array.from({ length: count }, () => createServer().listen(0, '127.0.0.1'));
+  await Promise.all(servers.map(server => once(server, 'listening')));
+  const ports = servers.map(server => {
+    const address = server.address();
+    assert(address && typeof address !== 'string');
+    return address.port;
+  });
+  await Promise.all(servers.map(server => new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))));
+  return ports;
 }
 
 async function start(entry: string, port: number, webPort: number, directory: string, env: NodeJS.ProcessEnv, args: string[] = []) {
@@ -66,8 +70,8 @@ for (const mode of ['Commands via Vite', 'Kernel file', 'Kernel PostgreSQL'] as 
   test(`${mode} creates one owner through the local HTTP entry and persists the username`,
     { skip: pg && !kernelDatabase, timeout: 45_000 }, async t => {
     const dir = await mkdtemp(join(tmpdir(), 'smartsell-first-owner-'));
-    const apiPort = await freePort();
-    const webPort = mode === 'Commands via Vite' ? await freePort() : apiPort;
+    const [apiPort, otherPort] = await freePorts(2);
+    const webPort = mode === 'Commands via Vite' ? otherPort : apiPort;
     const identityKey = pg ? randomBytes(32).toString('hex') : undefined;
     const launch = () => mode === 'Commands via Vite'
       ? start('apps/server/dev.ts', apiPort, webPort, dir, {}, ['--port', String(webPort), '--no-watch'])

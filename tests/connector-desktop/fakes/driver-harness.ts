@@ -5,7 +5,10 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { findChrome } from '../../../apps/connector-desktop/src/chrome.ts';
-import { chromeLauncher, Profiles } from '../../../apps/connector-desktop/src/runtime/profiles.ts';
+import { bridgeSocketPath, BrowserBridge } from '../../../apps/connector-desktop/src/browser-bridge/bridge.ts';
+import { BrowserBindings, ownChromeLauncher } from '../../../apps/connector-desktop/src/browser-bridge/launcher.ts';
+import { chromeLauncher, Profiles, type BrowserLauncher } from '../../../apps/connector-desktop/src/runtime/profiles.ts';
+import { launchOwnerChrome, type OwnerChrome } from '../own-chrome-browser.ts';
 import { allowUrlFactory, platformUrlFactory } from '../../../apps/connector-desktop/src/runtime/worker.ts';
 import { defaultSelectors } from '../../../apps/connector-desktop/src/drivers/selectors.ts';
 import type { DriverContext, CdpPage } from '../../../apps/connector-desktop/src/drivers/types.ts';
@@ -53,18 +56,42 @@ export function publishJob(provider: 'x' | 'tiktok', clip: { sha256: string; byt
   };
 }
 
+/** How the harness reaches Chrome: the Worker's own Chrome over the CDP pipe, or the owner's Chrome through the extension. */
+export type Transport = 'pipe' | 'own_chrome';
+
 export class ChromeHarness {
   readonly dir: string;
   readonly profiles: Profiles;
   readonly platformUrl: (provider: 'x' | 'tiktok', path: string) => string;
   evidence: { label: string; bytes: number }[] = [];
-  constructor(readonly fixtures: PlatformFixtures, readonly executable: string) {
-    this.dir = mkdtempSync(join(tmpdir(), 'smartsell-driver-'));
+  bridge?: BrowserBridge;
+  owner?: OwnerChrome;
+  constructor(readonly fixtures: PlatformFixtures, readonly executable: string, launcher?: (allowUrl: (url: URL) => boolean, dir: string) => BrowserLauncher, dir?: string) {
+    this.dir = dir ?? mkdtempSync(join(tmpdir(), 'smartsell-driver-'));
     const origins = fixtures.origins;
     this.platformUrl = platformUrlFactory(origins);
-    this.profiles = new Profiles({ root: join(this.dir, 'chrome-profiles'), launch: chromeLauncher({
-      headless: true, allowUrl: allowUrlFactory(origins), sleep: ms => new Promise(done => setTimeout(done, ms)), executable: async () => executable,
+    const allowUrl = allowUrlFactory(origins);
+    this.profiles = new Profiles({ root: join(this.dir, 'chrome-profiles'), launch: launcher?.(allowUrl, this.dir) ?? chromeLauncher({
+      headless: true, allowUrl, sleep: ms => new Promise(done => setTimeout(done, ms)), executable: async () => executable,
     }) });
+  }
+
+  /** The same harness over the SmartSell extension in a stand-in for the owner's Chrome (Playwright Chromium). */
+  static async ownChrome(fixtures: PlatformFixtures): Promise<ChromeHarness> {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-own-'));
+    const bridge = new BrowserBridge({ socketPath: bridgeSocketPath(dir) });
+    await bridge.listen();
+    const harness = new ChromeHarness(fixtures, '', (allowUrl, root) => ownChromeLauncher({
+      bridge, bindings: BrowserBindings.in(root), allowUrl, sleep: ms => new Promise(done => setTimeout(done, ms)), connectWaitMs: 30_000,
+    }), dir);
+    harness.bridge = bridge;
+    harness.owner = await launchOwnerChrome(dir);
+    if (!await bridge.waitForBrowser(30_000)) throw new Error('The SmartSell extension did not connect to the bridge');
+    return harness;
+  }
+
+  static async create(transport: Transport, fixtures: PlatformFixtures, executable: string | undefined) {
+    return transport === 'own_chrome' ? ChromeHarness.ownChrome(fixtures) : new ChromeHarness(fixtures, executable!);
   }
 
   context(provider: 'x' | 'tiktok', page: CdpPage, expected: string, mediaPaths: string[], extra: Partial<DriverContext> = {}): DriverContext {
@@ -78,6 +105,8 @@ export class ChromeHarness {
 
   async close() {
     this.profiles.closeAll();
+    await this.owner?.close();
+    await this.bridge?.close();
     // Chrome keeps writing to the profile for a moment after Browser.close.
     await new Promise(done => setTimeout(done, 800));
     rmSync(this.dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });

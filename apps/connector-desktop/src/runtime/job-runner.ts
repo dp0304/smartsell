@@ -17,7 +17,7 @@ import { isLocalFinal, isPreRun, type JobStore, type LocalJob, type LocalState }
 import { MediaHashMismatch, MediaUnavailable, type MediaCache } from './media-cache.ts';
 import { ProfileError, type ProfileLease, type Profiles } from './profiles.ts';
 import { HubError } from './protocol.ts';
-import { blockerMessage, channelLabel, localTime, missedMessage } from '../drivers/messages.ts';
+import { blockerMessage, channelLabel, localTime, missedMessage, ownChromeMessage } from '../drivers/messages.ts';
 import type { DriverRegistry } from '../drivers/registry.ts';
 import type { SelectorStore } from '../drivers/selectors.ts';
 import { DriverAbort, type DriverBlocker, type DriverContext, type PublishDriver, type PublishOutcome } from '../drivers/types.ts';
@@ -472,7 +472,7 @@ export class JobRunner {
   #sessionBlocker(error: unknown, job: LocalJob): DriverBlocker | null {
     if (error instanceof DriverAbort || this.#stopped.signal.aborted) return null;
     const messages = this.#messages(job);
-    if (error instanceof ProfileError) return { code: error.code, phase: 'prepare', message: blockerMessage(error.code, messages) };
+    if (error instanceof ProfileError) return { code: error.code, phase: 'prepare', message: error.ownChrome ? ownChromeMessage(error.ownChrome, messages) : blockerMessage(error.code, messages) };
     if (error instanceof DriverMissing) return { code: 'driver_outdated', phase: 'prepare', step: 'driver', message: `SmartSell 第 1 階段沒有 ${error.provider} 的驅動，這則沒有執行。` };
     this.#log('driver error', { job_id: job.claimed.job_id, error: error instanceof Error ? error.stack ?? error.message : String(error) });
     return { code: 'chrome_unavailable', phase: 'prepare', message: blockerMessage('chrome_unavailable', messages) };
