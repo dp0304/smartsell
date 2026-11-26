@@ -179,6 +179,8 @@
 .hub-way h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; }
 .hub-way p { margin: 0; }
 .hub-agent-ways { display: grid; gap: 12px; }
+.hub-command { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.hub-command .hub-code { width: 100%; }
 .hub-code { display: block; margin: 0; padding: 10px 12px; border-radius: 10px; background: #0f172a; color: #e2e8f0; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; }
 .hub-legacy summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .hub-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
