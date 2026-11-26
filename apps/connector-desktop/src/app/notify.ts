@@ -36,6 +36,23 @@ export function safeWebUrl(url: string | null | undefined): string | null {
   return parsed.href;
 }
 
+/**
+ * S11: a hub-provided link (alert web_url, channel and machine pages) is opened in the owner's browser only when it is a page
+ * of the hub this App is paired with (Worker) or connected to (Agent mode): the same origin, over https, or over http only
+ * when that hub itself is a loopback development hub. Anything else (another site, file:, custom app schemes) is refused.
+ */
+export function hubPageUrl(url: unknown, hubOrigins: readonly (string | null | undefined)[]): string | null {
+  if (typeof url !== 'string') return null;
+  const safe = safeWebUrl(url);
+  const parsed = safe ? URL.parse(safe) : null;
+  if (!parsed) return null;
+  const origins = hubOrigins.flatMap(origin => {
+    const hub = typeof origin === 'string' ? URL.parse(origin) : null;
+    return hub && (hub.protocol === 'https:' || hub.protocol === 'http:') ? [hub.origin] : [];
+  });
+  return origins.includes(parsed.origin) ? parsed.href : null;
+}
+
 export class Notifier {
   readonly #deps: NotifierDeps;
   readonly #shownKeys = new Set<string>();

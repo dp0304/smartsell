@@ -24,7 +24,7 @@ import { AgentShell } from './agent-mode.ts';
 import { Autostart } from './autostart.ts';
 import { startLegacy } from './legacy.ts';
 import { createLog } from './log.ts';
-import { Notifier } from './notify.ts';
+import { hubPageUrl, Notifier } from './notify.ts';
 import { nodeRun, PostureMonitor } from './posture.ts';
 import { PowerGuard } from './power.ts';
 import { isRelayMode, relayDataDir, runRelayMode } from './relay-mode.ts';
@@ -218,7 +218,14 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
   const log = createLog(join(userData, 'logs'), { stderr: !app.isPackaged });
   const version = app.getVersion();
   const settings = appSettings(join(userData, 'settings.json'));
-  const notifier = new Notifier({ create: opts => new Notification(opts), supported: () => Notification.isSupported(), open: url => void shell.openExternal(url), log: log.write });
+  // S11: links from the hub open only when they are pages of the paired (or Agent-mode) hub; hubOrigins is read at click time.
+  const hubOrigins = () => [worker?.snapshot().hub_origin, agent?.snapshot().hub_origin];
+  const openHubPage = (url: unknown) => {
+    const page = hubPageUrl(url, hubOrigins());
+    if (page) return shell.openExternal(page);
+    log.write('Refused to open a link outside the hub', { scheme: typeof url === 'string' ? URL.parse(url)?.protocol ?? 'invalid' : typeof url });
+  };
+  const notifier = new Notifier({ create: opts => new Notification(opts), supported: () => Notification.isSupported(), open: url => void openHubPage(url), log: log.write });
   const power = new PowerGuard(powerSaveBlocker, log.write);
   const autostart = new Autostart(app, { platform, osRelease: release(), execPath: process.execPath, env, log: log.write });
   const vault = deviceVault(join(userData, 'pairing.enc'), safeStorage, platform);
@@ -348,11 +355,11 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
       const snapshot = worker?.snapshot();
       const target = body.target === 'channel' ? snapshot?.channels.find(item => item.social_account_id === body.id)?.web_url
         : body.target === 'machine' ? snapshot?.machine_url : snapshot?.hub_origin ?? agent?.snapshot().hub_origin;
-      if (target) return shell.openExternal(target);
+      if (target) return openHubPage(target);
     },
     'open-url': body => {
       const known = [...notifier.history().map(item => item.url), ...(agent?.snapshot().alerts ?? []).map(alert => alert.web_url)];
-      if (typeof body.url === 'string' && known.includes(body.url)) return shell.openExternal(body.url);
+      if (typeof body.url === 'string' && known.includes(body.url)) return openHubPage(body.url);
     },
     'open-logs': () => shell.openPath(log.dir),
     'legacy-enable': body => { settings.save({ legacy_lines: body.enabled === true }); if (body.enabled !== true) { legacy?.close(); legacy = undefined; } },
