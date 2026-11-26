@@ -79,6 +79,24 @@ test('O6: under the dev server /agent/relay.mjs reaches the API, not the web pag
   expect(connect.headers()['content-type']).toMatch(/text\/html/);
 });
 
+test('O7: the first-run forms say where the setup token is; the hub:init link is the one path and offers no other form', async ({ page, dev }) => {
+  await page.goto(`${dev.origin}/login`);
+  await expect(page.getByRole('heading', { name: '註冊', exact: true })).toBeVisible();
+  await expect(page.getByRole('note')).toContainText('pnpm hub:init 時印出的設定網址');
+  const token = page.getByLabel('部署初始設定權杖', { exact: true });
+  await expect(token).toBeVisible();
+  const hint = page.locator(`#${await token.getAttribute('aria-describedby')}`);
+  await expect(hint).toContainText('hub.env 裡 SETUP_TOKEN=');
+  await expect(hint).toContainText('pnpm hub:init');
+
+  // The link pnpm hub:init prints: the token comes from the fragment, so no token field, no hint and no 「返回註冊」.
+  await page.goto(`${dev.origin}/setup#setup-token=${dev.setupToken}`);
+  await expect(page.getByRole('heading', { name: '首次設定', exact: true })).toBeVisible();
+  await expect(page.getByLabel('部署初始設定權杖', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('note')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '返回註冊', exact: true })).toHaveCount(0);
+});
+
 test('U6: Settings and the error page hide the legacy modules until 顯示其他模組 is on', async ({ page, dev }) => {
   const ws = await ownerWorkspace(page, dev);
   await page.goto(`${ws.app}/settings`);

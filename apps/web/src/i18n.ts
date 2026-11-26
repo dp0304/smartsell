@@ -126,6 +126,11 @@ const copy: Record<string, Label> = {
   'auth.identifier': ['使用者名稱或電子郵件', 'Username or email'],
   'auth.passwordHint': ['密碼至少需要 {{minimum}} 個字元。', 'Use at least {{minimum}} characters.'],
   'auth.deploymentToken': ['部署初始設定權杖', 'Deployment setup token'],
+  // O7: where the setup token is, and the one first-run path (the link pnpm hub:init prints carries the token).
+  'auth.tokenHint': ['權杖是中樞那台電腦 hub.env 裡 SETUP_TOKEN= 後面那一串（macOS 在 ~/Library/Application Support/SmartSell Hub/hub.env）。也可以在中樞重新執行 pnpm hub:init，開啟它印出的設定網址，權杖會自動帶入。',
+    'It is the value after SETUP_TOKEN= in hub.env on the hub computer (on macOS: ~/Library/Application Support/SmartSell Hub/hub.env). Or run pnpm hub:init again on the hub and open the setup link it prints; the token is filled in for you.'],
+  'auth.firstRunHint': ['第一次使用？最簡單的是開啟中樞執行 pnpm hub:init 時印出的設定網址（/setup#setup-token=…），權杖已經帶在網址裡。',
+    'First time here? The easiest way is the setup link pnpm hub:init printed on the hub (/setup#setup-token=…); it already carries the token.'],
   'auth.checkingSetup': ['正在確認首次設定狀態…', 'Checking setup status…'],
   'auth.setupStatusError': ['無法確認首次設定狀態。已有帳號仍可登入，首次使用請重試。', 'Could not check setup status. Existing users can sign in. For first-time setup, retry the check.'],
   'auth.setupCompleted': ['另一個工作階段已完成首次設定。請登入。', 'Setup has already been completed in another session. Sign in to continue.'],
