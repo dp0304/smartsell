@@ -153,7 +153,7 @@ test('agent connections issue, list, survive logout, touch last use and revoke',
 
   const [listed] = (await request(`${root}/agent-connections`, { headers: { cookie } })).data;
   assert.deepEqual(listed, { id: created.id, label: 'MacBook Claude', client: 'claude_code', created_at: listed.created_at,
-    expires_at: created.expires_at, last_used_at: null, revoked: false });
+    expires_at: created.expires_at, last_used_at: null, setup_via: 'token', revoked: false });
   assert.ok(!JSON.stringify(listed).includes(created.token));
 
   const initialized = await rpc(created.token, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
@@ -239,6 +239,13 @@ async function testEnrollment(t: TestContext, backingStore?: Store) {
   assert.ok((await fresh()).mcp_client_verified_at);
   assert.ok((await list()).some(row => row.id === old.id && !row.revoked && !row.last_used_at));
   assert.ok((await rpc(old.token, 'tools/list')).tools.length > 0);
+
+  // O4: how each connection was made. The SmartSell App's /agent-connect sends no setup_via ('app'); the advanced prompt
+  // enrollment sends 'prompt', and the wizard offers its check and 修復 prompts only for those.
+  assert.equal((await fresh()).setup_via, 'app');
+  const prompt = (await request(`${path}/enroll`, { method: 'POST', status: 201, headers: owner, body: { client: 'claude_code', setup_via: 'prompt' } })).data;
+  await redeem(prompt.code, 201);
+  assert.equal((await list()).find(row => row.id === prompt.id)!.setup_via, 'prompt');
 
   const expiring = await issue();
   t.mock.timers.enable({ apis: ['Date'], now: Date.parse(expiring.expires_at) + 1 });

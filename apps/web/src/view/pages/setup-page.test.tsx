@@ -134,6 +134,19 @@ test('the Codex step offers the App button and the Node relay; the old prompt is
   assert.match(verified, /已有 Agent 透過 MCP 呼叫過 SmartSell/);
 });
 
+test('O4: the old prompt setup under Advanced ignores connections made by the relay token or the App', async () => {
+  const relay = { ...connection, id: 'mcp-relay', label: 'North · Codex', mcp_url: 'https://hub.example.ts.net/mcp', setup_via: 'token' };
+  const app = { ...connection, id: 'mcp-app', label: 'dp-mbp · Codex', mcp_url: 'https://hub.example.ts.net/mcp', setup_via: 'app' };
+  for (const made of [relay, app]) {
+    const out = await render('agent', { ...hubReads, '/agent-connections': [made] });
+    const advanced = out.slice(out.indexOf('進階：舊的接入方式'));
+    assert.doesNotMatch(advanced, /修復 Codex 連線|核對提示詞|完整退出並重開原客戶端|mcp-relay|mcp-app/, made.setup_via);
+  }
+  // A connection the prompt enrollment made (or one from before setup_via) still gets its check and repair prompts.
+  const prompt = await render('agent', { ...hubReads, '/agent-connections': [{ ...relay, id: 'mcp-prompt', setup_via: 'prompt' }] });
+  assert.match(prompt.slice(prompt.indexOf('進階：舊的接入方式')), /修復 Codex 連線或補上社媒路由「North · Codex」/);
+});
+
 test('setup navigation storage still records start and dismissal per user and workspace', async () => {
   const { dismissSetup, setupDismissed, setupStarted, saveSetupNavigation } = await import('./setup-data');
   try {
