@@ -16,7 +16,11 @@ export const SYNC = 'worker_sync';
 
 // ---------- Host wiring (bootstrap / publish-host) ----------
 
-export interface TestTiming { offlineStalenessSec?: number; readbackScheduleSec?: number[]; unreportedGraceSec?: number; prepareLeadSec?: number }
+export interface TestTiming {
+  offlineStalenessSec?: number; readbackScheduleSec?: number[]; unreportedGraceSec?: number; prepareLeadSec?: number;
+  /** Loopback fixture origins per platform (§8.14): the only non-platform result links the hub accepts, and only in test mode. */
+  platformOrigins?: Partial<Record<'x' | 'tiktok', string>>;
+}
 export interface WorkerHostOptions {
   /** config.testTiming: only set by the test environment (§2.3). */
   testTiming?: TestTiming;

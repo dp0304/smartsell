@@ -9,6 +9,7 @@ import { bindingOf } from './dispatch.js';
 import { hostCaches } from './host-cache.js';
 import {
   JOB, addEvent, bumpSyncGeneration, conflict, fullBlocker, isTerminal, iso, jobEvents, jobs, locate, now, setJob, str, syncGeneration, time, workerTiming,
+  workerHost,
 } from './model.js';
 import { recordClaimPresence, recordHeartbeatPresence } from './presence.js';
 import { cancelSuccessorsAfterLateFact, releaseSuccessors, waitingOn } from './successors.js';
@@ -24,6 +25,78 @@ const idText = (value: unknown, name: string) => {
   return value;
 };
 const shaList = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && /^[a-f0-9]{64}$/.test(item)).slice(0, 20) : [];
+/** A Worker-supplied string kept on a row, cut to `max` characters (the event detail is clipped separately, model.ts). */
+const clip = (value: unknown, max: number) => typeof value === 'string' && value ? value.slice(0, max) : undefined;
+
+// ---------- Report hygiene: what one paired machine may write (security audit S7) ----------
+
+/** Device reports kept per job. A Worker following §5.4.3 sends a few dozen per fence (blockers are sent once per code and stage). */
+export const MAX_REPORTS_PER_JOB = 500;
+const TRACE_MAX_JSON = 16 * 1024;
+/** §5.4.3 result.url: the post's link on its platform. X and TikTok are what the Worker's drivers produce (canonical links). */
+const RESULT_HOSTS: Record<string, readonly string[]> = { x: ['x.com', 'twitter.com'], tiktok: ['www.tiktok.com', 'tiktok.com'] };
+
+function providerOf(ctx: Context, job: Row): string {
+  return str((job.payload as Data | undefined)?.provider) ?? str(accountOf(ctx, job)?.provider) ?? '';
+}
+
+/**
+ * A result link the owner may open from the post: https on the job's own platform, no credentials or port. In test mode
+ * (config.testTiming) the loopback fixture origin of that platform is accepted too (§8.14). Anything else is dropped, not
+ * thrown: the report is still a fact (§5.4.3) — only its link is not trusted.
+ */
+export function resultUrl(ctx: Context, job: Row, value: unknown): { url: string | null; rejected: boolean } {
+  if (value === undefined || value === null || value === '') return { url: null, rejected: false };
+  if (typeof value !== 'string' || value.length > 2048) return { url: null, rejected: true };
+  let url: URL;
+  try { url = new URL(value); } catch { return { url: null, rejected: true }; }
+  const provider = providerOf(ctx, job);
+  const fixture = workerHost().testTiming?.platformOrigins?.[provider as 'x' | 'tiktok'];
+  if (fixture && url.origin === fixture) return { url: url.href, rejected: false };
+  const ok = url.protocol === 'https:' && !url.username && !url.password && !url.port && (RESULT_HOSTS[provider] ?? []).includes(url.hostname);
+  return ok ? { url: url.href, rejected: false } : { url: null, rejected: true };
+}
+
+/** X and TikTok post IDs are digits; other providers keep a short opaque ID. */
+function postId(ctx: Context, job: Row, value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  return (providerOf(ctx, job) in RESULT_HOSTS ? /^\d{1,32}$/ : /^[A-Za-z0-9_-]{1,128}$/).test(value) ? value : null;
+}
+
+function isoOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+/** dry_run_done.trace: at most 60 steps and 16 KiB in all (it lives on the job row). */
+function boundedTrace(value: unknown): Data[] {
+  if (!Array.isArray(value)) return [];
+  const out: Data[] = [];
+  let size = 2;
+  for (const item of value.slice(0, 60)) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const length = JSON.stringify(item).length + 1;
+    if (size + length > TRACE_MAX_JSON) break;
+    size += length;
+    out.push(item as Data);
+  }
+  return out;
+}
+
+/** The result fields a fact may write, each checked and bounded. */
+function resultFields(ctx: Context, job: Row, data: Data) {
+  const link = resultUrl(ctx, job, data.url);
+  const externalPostId = postId(ctx, job, data.external_post_id) ?? externalIdFromUrl(link.url);
+  return { url: link.url, url_rejected: link.rejected, external_post_id: externalPostId, published_at: isoOrNull(data.published_at) };
+}
+
+/**
+ * The machine must have held the fence it reports under: claim records each fence's machine in fence_holders. A fence with
+ * no recorded holder (dispatch, 換機器 and retire bumps, or jobs from before fence_holders) belongs to the job's machine.
+ */
+function heldFence(job: Row, deviceId: string, fence: number): boolean {
+  const holder = (job.fence_holders as Record<string, unknown> | undefined)?.[String(fence)];
+  return holder !== undefined ? holder === deviceId : job.device_id === deviceId;
+}
 const revokedStatus = (reason: unknown) => reason === 'superseded' ? 'superseded' as const : 'cancelled' as const;
 
 // ---------- Hold and go checks (§5.4.4 items 3–8) ----------
@@ -211,7 +284,8 @@ export function claimJobs(ctx: Context, device: Row, body: Data) {
     const mode = currentMode(ctx, job);
     const lease = iso(time(job.not_after) + workerTiming().leaseAfterMs);
     const next = setJob(ctx, job, {
-      fencing_token: fencing, lease_expires_at: lease, claimed_at: job.claimed_at ?? ctx.now, mode,
+      fencing_token: fencing, fence_holders: { ...(job.fence_holders as Record<string, string> | undefined ?? {}), [String(fencing)]: device.id },
+      lease_expires_at: lease, claimed_at: job.claimed_at ?? ctx.now, mode,
       ...(job.status === 'queued' && { status: 'claimed' }), synced_view: { hold: false, mode, at: ctx.now },
     });
     addEvent(ctx, next, 'claimed', { fencing_token: fencing, recovery: job.status !== 'queued' }, { actor: 'device', fencing_token: fencing });
@@ -287,9 +361,9 @@ const CHECK_RETRIED_ON_MACHINE: readonly BlockerCode[] = ['chrome_unavailable', 
 
 function deviceBlocker(value: unknown, fallbackPhase: Blocker['phase']): DeviceBlocker & { code: BlockerCode } {
   const input = (value && typeof value === 'object' ? value : {}) as Data;
-  const code = (typeof input.code === 'string' ? input.code : 'platform_error') as BlockerCode;
+  const code = (typeof input.code === 'string' && /^[a-z0-9_]{1,64}$/.test(input.code) ? input.code : 'platform_error') as BlockerCode;
   const phase = input.phase === 'prepare' || input.phase === 'before_submit' || input.phase === 'after_submit' ? input.phase : fallbackPhase;
-  return { code, phase, message: str(input.message)?.slice(0, 500) ?? '', at: str(input.at) ?? new Date().toISOString(),
+  return { code, phase, message: str(input.message)?.slice(0, 500) ?? '', at: isoOrNull(input.at) ?? new Date().toISOString(),
     ...(typeof input.step === 'string' && { step: input.step.slice(0, 120) }), ...(typeof input.url === 'string' && { url: input.url.slice(0, 2048) }),
     evidence_sha256: shaList(input.evidence_sha256) };
 }
@@ -368,14 +442,14 @@ function applyReport(ctx: Context, job: Row, event: JobReportEvent, data: Data, 
   switch (event) {
     case 'prepared': {
       const stage = data.stage === 'final' ? 'final' : 'preflight';
-      updateSession(ctx, job, 'verified', { identity: str(data.identity) ?? null, handle: str(data.handle) ?? null });
+      updateSession(ctx, job, 'verified', { identity: clip(data.identity, 128) ?? null, handle: clip(data.handle, 128) ?? null });
       noteHandle(ctx, job, data.handle);
       if (!LIVE_PRE_RUN.includes(status)) return { applied: false };
       const auto = job.blocker && (job.blocker as Blocker).resumable_by !== 'none';
       setJob(ctx, job, {
         status: stage === 'final' ? 'ready' : status === 'ready' ? 'ready' : 'claimed',
         ...(stage === 'final' ? { prepared_at: ctx.now } : { preflight_at: ctx.now }), ...(auto ? { blocker: null } : {}),
-        ...(data.driver && typeof data.driver === 'object' ? { driver: { provider: String((data.driver as Data).provider ?? ''), version: String((data.driver as Data).version ?? '') } } : {}),
+        ...(data.driver && typeof data.driver === 'object' ? { driver: { provider: String((data.driver as Data).provider ?? '').slice(0, 80), version: String((data.driver as Data).version ?? '').slice(0, 80) } } : {}),
       });
       return { stage };
     }
@@ -414,22 +488,22 @@ function applyReport(ctx: Context, job: Row, event: JobReportEvent, data: Data, 
       if (['result_pending', 'succeeded', 'outcome_unknown'].includes(status)) return { applied: false };
       setJob(ctx, job, { status: 'result_pending', submitted_at: workerTimeOr(ctx, workerTime), submitting_at: job.submitting_at ?? workerTimeOr(ctx, workerTime),
         started_at: job.started_at ?? workerTimeOr(ctx, workerTime) });
-      return { toast_url: str(data.toast_url) ?? null };
+      return { toast_url: clip(data.toast_url, 2048) ?? null };
     case 'readback_pending':
       return { attempt: data.attempt ?? null, next_at: data.next_at ?? null };
     case 'result': {
       if (status === 'succeeded') return { applied: false };
-      const url = str(data.url) ?? null;
+      const { url, url_rejected, external_post_id, published_at } = resultFields(ctx, job, data);
       const hashes = shaList(data.evidence_sha256);
       const evidence = evidenceFor(ctx, job, hashes);
       const result = {
-        url, external_post_id: str(data.external_post_id) ?? externalIdFromUrl(url), published_at: str(data.published_at) ?? null,
+        url, external_post_id, published_at,
         evidence_sha256: hashes, evidence_ids: evidence.ids, ...(evidence.missing.length && { evidence_missing: evidence.missing }),
         late_by_sec: lateBy(job, job.started_at),
       };
       setJob(ctx, job, { status: 'succeeded', result, submitted_by: data.submitted_by === 'owner' ? 'owner' : 'auto', finished_at: ctx.now,
         submitted_at: job.submitted_at ?? ctx.now, submitting_at: job.submitting_at ?? job.submitted_at ?? ctx.now, blocker: null });
-      return { url, external_post_id: result.external_post_id, evidence_missing: evidence.missing };
+      return { url, external_post_id: result.external_post_id, evidence_missing: evidence.missing, ...(url_rejected && { url_rejected: true }) };
     }
     case 'blocked': {
       const input = deviceBlocker(data.blocker, 'before_submit');
@@ -446,15 +520,15 @@ function applyReport(ctx: Context, job: Row, event: JobReportEvent, data: Data, 
       return { code: blocker.code, phase: blocker.phase };
     }
     case 'failed': {
-      const code = typeof data.code === 'string' ? data.code : 'platform_error';
+      const code = typeof data.code === 'string' && /^[a-z0-9_]{1,64}$/.test(data.code) ? data.code : 'platform_error';
       if (job.submitting_at) {
         // A failure after a recorded submitting cannot prove that nothing was posted.
-        setJob(ctx, job, { status: 'outcome_unknown', blocker: fullBlocker(ctx, job, { code: 'platform_error', phase: 'after_submit', message: str(data.message) ?? '', at: ctx.now }) });
+        setJob(ctx, job, { status: 'outcome_unknown', blocker: fullBlocker(ctx, job, { code: 'platform_error', phase: 'after_submit', message: clip(data.message, 500) ?? '', at: ctx.now }) });
         return { code, conservative: 'outcome_unknown' };
       }
       setJob(ctx, job, { status: 'failed', finished_at: ctx.now, failure: { code, message: str(data.message)?.slice(0, 500) ?? null },
         ...(code === 'media_hash_mismatch' || code === 'upload_rejected' || code === 'caption_rejected'
-          ? { blocker: fullBlocker(ctx, job, { code: code as BlockerCode, phase: 'before_submit', message: str(data.message) ?? '', at: ctx.now, evidence_sha256: shaList(data.evidence_sha256) }) } : {}) });
+          ? { blocker: fullBlocker(ctx, job, { code: code as BlockerCode, phase: 'before_submit', message: clip(data.message, 500) ?? '', at: ctx.now, evidence_sha256: shaList(data.evidence_sha256) }) } : {}) });
       return { code };
     }
     case 'missed': {
@@ -465,14 +539,14 @@ function applyReport(ctx: Context, job: Row, event: JobReportEvent, data: Data, 
     }
     case 'dry_run_done': {
       if (job.dry_run !== true || status === 'succeeded') return { applied: false };
-      const trace = Array.isArray(data.trace) ? (data.trace as Data[]).slice(0, 60) : [];
+      const trace = boundedTrace(data.trace);
       setJob(ctx, job, { status: 'succeeded', finished_at: ctx.now, driver_trace: trace,
         result: { url: null, external_post_id: null, published_at: null, evidence_sha256: shaList(data.evidence_sha256), late_by_sec: 0, dry_run: true } });
       return { steps: trace.length };
     }
     case 'outcome_unknown':
       if (status !== 'outcome_unknown') setJob(ctx, job, { status: 'outcome_unknown', submitting_at: job.submitting_at ?? (started ? ctx.now : null) });
-      return { reason: str(data.reason) ?? null };
+      return { reason: clip(data.reason, 200) ?? null };
     case 'released':
       if (job.status === 'releasing' || job.revoke || LIVE_PRE_RUN.includes(status) || status === 'running') {
         if (job.submitting_at) return { applied: false };
@@ -482,14 +556,14 @@ function applyReport(ctx: Context, job: Row, event: JobReportEvent, data: Data, 
       return { applied: false };
     case 'login_state': {
       if (job.kind !== 'check_login') return { applied: false };
-      const state = typeof data.state === 'string' ? data.state : 'login_required';
+      const state = typeof data.state === 'string' && data.state.length <= 40 ? data.state : 'login_required';
       const account = accountOf(ctx, job);
-      const identity = str(data.identity) ?? null;
+      const identity = clip(data.identity, 128) ?? null;
       const mismatch = state === 'verified' && !!identity && !!account && identity.toLowerCase() !== String(account.external_account_id ?? '').toLowerCase();
       const final = mismatch ? 'identity_mismatch' : state;
       const shot = ctx.list('file_object').find(row => row.purpose === 'evidence' && row.worker_job_id === job.id && shaList(data.evidence_sha256).includes(String(row.sha256)));
       updateSession(ctx, job, final === 'verified' ? 'verified' : ['login_required', 'identity_mismatch', 'challenge'].includes(final) ? final : 'login_required',
-        { identity, handle: str(data.handle) ?? null, evidence: shot?.id ?? null });
+        { identity, handle: clip(data.handle, 128) ?? null, evidence: shot?.id ?? null });
       if (!mismatch) noteHandle(ctx, job, data.handle);
       const evidence = shaList(data.evidence_sha256);
       const result = { url: null, external_post_id: null, published_at: null, evidence_sha256: evidence, late_by_sec: 0, login_state: final };
@@ -508,7 +582,11 @@ function applyReport(ctx: Context, job: Row, event: JobReportEvent, data: Data, 
   return { applied: false };
 }
 
-/** §5.4.3: idempotent report ingestion. Facts are always accepted from a machine in device_history; leases need the fence. */
+/**
+ * §5.4.3: idempotent report ingestion. Facts are accepted from a machine in device_history under any fence it held (also a
+ * lost one, also on an ended job); leases need the current fence. S7: a fence above the current one was never issued, and
+ * a fence held by another machine (or never claimed by this one) is not this machine's to report under: JOB_FENCE_LOST.
+ */
 export function reportJob(ctx: Context, device: Row, body: Data) {
   const jobId = idText(body.job_id, 'job_id');
   const fence = int(body.fencing_token, 0, Number.MAX_SAFE_INTEGER, 'fencing_token');
@@ -524,7 +602,11 @@ export function reportJob(ctx: Context, device: Row, body: Data) {
   if (!job) throw new Problem(404, 'JOB_NOT_FOUND', 'Unknown job');
   const history = Array.isArray(job.device_history) ? job.device_history as string[] : [];
   if (!history.includes(device.id)) throw conflict('JOB_FENCE_LOST', 'This machine never held the job');
+  if (fence > Number(job.fencing_token ?? 0)) throw conflict('JOB_FENCE_LOST', 'This fence was never issued');
+  if (!heldFence(job, device.id, fence)) throw conflict('JOB_FENCE_LOST', 'This machine did not hold that fence');
   if (ctx.list('worker_job_event').some(row => row.job_id === job.id && row.event_id === eventId)) return { status: 'duplicate' };
+  const reports = Number(job.report_count ?? 0);
+  if (reports >= MAX_REPORTS_PER_JOB) throw new Problem(429, 'JOB_REPORT_LIMIT', `This job already has ${MAX_REPORTS_PER_JOB} reports`);
   const fact = isFactReport({ event, data: data as never });
   const leaseValid = fence === Number(job.fencing_token) && !isTerminal(job) && job.device_id === device.id;
   if (!fact && !leaseValid) throw conflict('JOB_FENCE_LOST', 'The lease for this job has moved on');
@@ -533,7 +615,7 @@ export function reportJob(ctx: Context, device: Row, body: Data) {
   if (seq > last + 1) throw conflict('SEQ_GAP', `Expected seq ${last + 1}`, { expected: last + 1 });
   if (seq <= last) throw conflict('SEQ_CONFLICT', `seq ${seq} was already used with another event_id`);
   bySeq[String(fence)] = seq;
-  const marked = ctx.update(JOB, job.id, { seq_by_fence: bySeq });
+  const marked = ctx.update(JOB, job.id, { seq_by_fence: bySeq, report_count: reports + 1 });
   const override = !leaseValid;
   const meta = { actor: 'device' as const, worker_time: workerTime, event_id: eventId, fencing_token: fence, seq, fence_override: override };
   // From here on a fact never throws: every conflict is recorded and answered with 200 (§5.4.3).
@@ -546,7 +628,7 @@ export function reportJob(ctx: Context, device: Row, body: Data) {
     if (fact && possiblySentFact && released) {
       detail = lateFact(ctx, marked, event, data, workerTime);
     } else if (fact && isTerminal(marked)) {
-      detail = { applied: false, terminal: marked.status, ...(marked.status === 'succeeded' && event === 'result' && differentPost(marked, data)) };
+      detail = { applied: false, terminal: marked.status, ...(marked.status === 'succeeded' && event === 'result' && differentPost(ctx, marked, data)) };
     } else {
       const revokedBefore = !!marked.revoke;
       detail = applyReport(ctx, marked, event, data, workerTime);
@@ -571,9 +653,9 @@ export function reportJob(ctx: Context, device: Row, body: Data) {
 }
 
 /** A result fact on a succeeded job that names another post than the recorded one (kept on the event for the owner to see). */
-function differentPost(job: Row, data: Data): Data {
+function differentPost(ctx: Context, job: Row, data: Data): Data {
   const recorded = str((job.result as Data | null)?.external_post_id);
-  const reported = str(data.external_post_id) ?? externalIdFromUrl(str(data.url));
+  const reported = postId(ctx, job, data.external_post_id) ?? externalIdFromUrl(resultUrl(ctx, job, data.url).url);
   return recorded && reported && recorded !== reported ? { different_post: true, recorded_external_post_id: recorded } : {};
 }
 
@@ -585,7 +667,8 @@ const summarize = (data: Data): Data => {
 /** A fact that says the job may have posted after the hub released it: the facts win, the successor is cancelled (§5.4.3). */
 function lateFact(ctx: Context, job: Row, event: JobReportEvent, data: Data, workerTime: string): Data {
   const status = event === 'result' ? 'succeeded' : 'outcome_unknown';
-  const url = str(data.url) ?? null;
+  const fields = event === 'result' ? resultFields(ctx, job, data) : null;
+  const url = fields?.url ?? null;
   const patch: Data = {
     status, submitting_at: job.submitting_at ?? workerTimeOr(ctx, workerTime), started_at: job.started_at ?? workerTimeOr(ctx, workerTime), fence_override: true,
     finished_at: status === 'succeeded' ? ctx.now : job.finished_at ?? null,
@@ -593,7 +676,7 @@ function lateFact(ctx: Context, job: Row, event: JobReportEvent, data: Data, wor
   if (status === 'succeeded') {
     const hashes = shaList(data.evidence_sha256);
     const evidence = evidenceFor(ctx, job, hashes);
-    patch.result = { url, external_post_id: str(data.external_post_id) ?? externalIdFromUrl(url), published_at: str(data.published_at) ?? null,
+    patch.result = { url, external_post_id: fields?.external_post_id ?? null, published_at: fields?.published_at ?? null,
       evidence_sha256: hashes, evidence_ids: evidence.ids, late_by_sec: lateBy(job, job.started_at ?? workerTime), fence_override: true };
     patch.submitted_by = data.submitted_by === 'owner' ? 'owner' : 'auto';
   } else if (event === 'blocked') {
@@ -608,5 +691,5 @@ function lateFact(ctx: Context, job: Row, event: JobReportEvent, data: Data, wor
   ctx.emit('worker.job.late_fact', { job_id: job.id, publish_target_id: job.publish_target_id ?? null, successor_cancelled: true });
   try { alertLateFact(ctx, { job_id: job.id, publish_target_id: str(job.publish_target_id) ?? null }); } catch { /* subscriber retries */ }
   bumpSyncGeneration(ctx, [String(job.device_id)], 'late_fact');
-  return { late_fact: true, previous_status: job.status, status };
+  return { late_fact: true, previous_status: job.status, status, ...(fields?.url_rejected && { url_rejected: true }) };
 }

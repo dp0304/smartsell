@@ -32,7 +32,27 @@ export function defaultHubDir(platform: NodeJS.Platform = process.platform, env:
   return join(home, '.local', 'share', 'smartsell-hub');
 }
 
-export type TestTiming = { offlineStalenessSec?: number; readbackScheduleSec?: number[]; unreportedGraceSec?: number; prepareLeadSec?: number };
+export type TestTiming = { offlineStalenessSec?: number; readbackScheduleSec?: number[]; unreportedGraceSec?: number; prepareLeadSec?: number;
+  /** The Worker's SMARTSELL_TEST_PLATFORM_ORIGINS (loopback fixture pages, §8.14): result links the hub accepts in test mode. */
+  platformOrigins?: Partial<Record<'x' | 'tiktok', string>> };
+
+/** Same rule as the Worker's testSwitches(): fixture origins must be loopback, so test mode never names a real platform. */
+function platformOrigins(value: string | undefined): TestTiming['platformOrigins'] {
+  if (value === undefined || value === '') return undefined;
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch { throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must be a JSON object'); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must be a JSON object');
+  const origins: NonNullable<TestTiming['platformOrigins']> = {};
+  for (const provider of ['x', 'tiktok'] as const) {
+    const raw = (parsed as Record<string, unknown>)[provider];
+    if (raw === undefined) continue;
+    let url: URL;
+    try { url = new URL(String(raw)); } catch { throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must list URLs'); }
+    if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must point at loopback');
+    origins[provider] = url.origin;
+  }
+  return Object.keys(origins).length ? origins : undefined;
+}
 
 const positiveSeconds = (name: string, value: string | undefined) => {
   if (value === undefined || value === '') return undefined;
@@ -51,6 +71,7 @@ function testTiming(env: NodeJS.ProcessEnv): TestTiming | undefined {
       : readback.split(',').map(item => positiveSeconds('SMARTSELL_TEST_READBACK_SCHEDULE_SEC', item.trim()) as number),
     unreportedGraceSec: positiveSeconds('SMARTSELL_TEST_UNREPORTED_GRACE_SEC', env.SMARTSELL_TEST_UNREPORTED_GRACE_SEC),
     prepareLeadSec: positiveSeconds('SMARTSELL_TEST_PREPARE_LEAD_SEC', env.SMARTSELL_TEST_PREPARE_LEAD_SEC),
+    platformOrigins: platformOrigins(env.SMARTSELL_TEST_PLATFORM_ORIGINS),
   };
   if (timing.readbackScheduleSec?.some(value => value === undefined)) throw new Error('SMARTSELL_TEST_READBACK_SCHEDULE_SEC must list whole seconds');
   for (const key of Object.keys(timing) as (keyof TestTiming)[]) if (timing[key] === undefined) delete timing[key];
