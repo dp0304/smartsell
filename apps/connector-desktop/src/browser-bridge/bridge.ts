@@ -79,6 +79,12 @@ export class BridgeBrowser {
 
   constructor(private readonly socket: Socket, readonly hello: BrowserHello, now: number) { this.connectedAt = now; }
 
+  /**
+   * §3.5 measurement, read on every attach and never changed: what pages see in navigator.webdriver while SmartSell's
+   * debugger is attached (expected false in the owner's Chrome). null until the first attach.
+   */
+  webdriver: boolean | null = null;
+
   get installId() { return this.hello.install_id; }
   get connected() { return this.#connected && !this.socket.destroyed; }
 

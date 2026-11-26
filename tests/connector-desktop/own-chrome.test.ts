@@ -85,6 +85,9 @@ describe('own Chrome through the SmartSell extension', { skip: ownChromeUnavaila
     page = await handle.openPage();
     assert.equal(bindings.get('ch-aaaaaaaaaaaa'), browser.installId);
     assert.equal(await page.goto(`${origin}/`), `${origin}/`);
+    // Read on attach (§3.5). Playwright starts this stand-in with --enable-automation, so here it is true; the owner's
+    // own Chrome, started without automation switches, reports false.
+    assert.equal(typeof browser.webdriver, 'boolean');
   });
 
   test('reads: role and CSS queries, text, attributes, iframes, accessibility hash', async () => {

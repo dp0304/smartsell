@@ -454,7 +454,7 @@ export class WorkerShell {
       extension_dir: this.#d.extension?.installDir ?? null, extension_id: EXTENSION_IDS[0],
       host_registered: this.#hostRegistered, host_error: this.#hostError,
       connected: (runtime?.bridge?.browsers() ?? []).map(browser => ({
-        install_id: browser.installId, version: browser.hello.version, chrome: browser.hello.chrome, file_access: browser.hello.file_access,
+        install_id: browser.installId, version: browser.hello.version, chrome: browser.hello.chrome, file_access: browser.hello.file_access, webdriver: browser.webdriver,
         connected_at: new Date(browser.connectedAt).toISOString(),
       })),
       bindings,

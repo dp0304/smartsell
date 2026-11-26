@@ -1,5 +1,7 @@
 # SmartSell 量測原型（技術方案 §3.5）
 
+> 2026-11-26：正式的 SmartSell 擴充功能（`../extension/`）已經會在每次操作時讀取 `navigator.webdriver`，結果顯示在 Worker App 的「用哪個 Chrome 發文」卡片；在你的 Chrome 裝好正式擴充功能、對 X 與 TikTok 各跑一次試跑，就等於完成這份量測。下面的原型只在想單獨量測時才需要。
+
 在**你自己平常用的 Google Chrome** 裡量三件事，決定 Worker 改走擴充功能時夠不夠用（[core-automation-proposal.md](../../../docs/restructure/core-automation-proposal.md) §3.5）：
 
 1. `navigator.webdriver`：附加 `chrome.debugger` 之前、期間、之後的值。

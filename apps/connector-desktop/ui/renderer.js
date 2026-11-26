@@ -200,6 +200,8 @@ function browserCard(worker) {
     status,
     b.host_error ? el('p', { class: 'notice', text: b.host_error }) : null,
     noFiles.length ? el('p', { class: 'notice', text: '擴充功能還沒開啟「允許存取檔案網址」，上傳影片會失敗。請在 chrome://extensions 的 SmartSell Worker「詳細資料」開啟它。' }) : null,
+    connected.some(item => item.webdriver === true) ? el('p', { class: 'notice', text: '網頁看得到這個 Chrome 是自動化瀏覽器（navigator.webdriver 為 true）。請確認不是用除錯參數啟動的 Chrome，並回報給我們。' })
+      : connected.some(item => item.webdriver === false) ? el('p', { class: 'muted', text: '檢查過：SmartSell 操作時，網頁看到的 navigator.webdriver 是 false（和你自己操作時一樣）。' }) : null,
     connected.length ? el('details', {}, el('summary', { text: '安裝步驟' }), steps) : steps,
     pick,
     el('p', { class: 'muted', text: 'Worker 操作時，Chrome 頂端會顯示「SmartSell Worker 已開始對這個瀏覽器進行偵錯」；按「取消」會中斷那一則，不會自動重發。' }),

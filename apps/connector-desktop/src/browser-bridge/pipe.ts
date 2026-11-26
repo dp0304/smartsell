@@ -62,6 +62,9 @@ export class ExtensionCdpPipe implements CdpPipe {
         // The SmartSell window is usually not the focused one; without this, focus/blur-driven editors (X's composer)
         // behave as in a background window. Same as when the owner works in that window.
         await this.browser.request('cdp', { tabId, method: 'Emulation.setFocusEmulationEnabled', params: { enabled: true } }, timeout).catch(() => {});
+        // Read-only diagnostics for the owner (§3.5): the page's own view of navigator.webdriver, in its main world.
+        await this.browser.request<{ result?: { value?: unknown } }>('cdp', { tabId, method: 'Runtime.evaluate', params: { expression: 'navigator.webdriver', returnByValue: true } }, timeout)
+          .then(reply => { if (typeof reply.result?.value === 'boolean') this.browser.webdriver = reply.result.value; }, () => {});
         return { sessionId: sessionOf(tabId) } as T;
       }
       case 'Target.getTargets': {
