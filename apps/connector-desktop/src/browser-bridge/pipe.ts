@@ -15,9 +15,22 @@ function tabOf(id: unknown): number {
 export class ExtensionCdpPipe implements CdpPipe {
   /** Tabs whose debugger the owner cancelled from Chrome's bar: that job stops and is not retried on its own. */
   readonly #cancelled = new Set<number>();
+  /** Tabs this pipe attached; once they are all closed the pipe stops listening (one pipe per page, long uptimes). */
+  readonly #tabs = new Set<number>();
+  #stopListening?: () => void;
 
   constructor(private readonly browser: BridgeBrowser) {
-    browser.onEvent(event => { if (event.type === 'detached' && event.reason === 'canceled_by_user') this.#cancelled.add(event.tabId); });
+    this.#stopListening = browser.onEvent(event => {
+      if (!this.#tabs.has(event.tabId)) return;
+      if (event.type === 'detached' && event.reason === 'canceled_by_user') this.#cancelled.add(event.tabId);
+      if (event.type === 'closed') this.#forget(event.tabId);
+    });
+  }
+
+  #forget(tabId: number) {
+    this.#tabs.delete(tabId);
+    this.#cancelled.delete(tabId);
+    if (this.#tabs.size === 0) { this.#stopListening?.(); this.#stopListening = undefined; }
   }
 
   get closed() { return !this.browser.connected; }
@@ -45,6 +58,7 @@ export class ExtensionCdpPipe implements CdpPipe {
       case 'Target.attachToTarget': {
         const tabId = tabOf(params.targetId);
         await this.browser.request('attach', { tabId }, Math.max(timeout, 10_000));
+        this.#tabs.add(tabId);
         // The SmartSell window is usually not the focused one; without this, focus/blur-driven editors (X's composer)
         // behave as in a background window. Same as when the owner works in that window.
         await this.browser.request('cdp', { tabId, method: 'Emulation.setFocusEmulationEnabled', params: { enabled: true } }, timeout).catch(() => {});
@@ -54,9 +68,11 @@ export class ExtensionCdpPipe implements CdpPipe {
         const { tabs } = await this.browser.request<{ tabs: { tabId: number; url: string }[] }>('tabs', {}, timeout);
         return { targetInfos: tabs.map(tab => ({ targetId: sessionOf(tab.tabId), type: 'page', url: tab.url, attached: false })) } as T;
       }
-      case 'Target.closeTarget':
-        await this.browser.request('close', { tabId: tabOf(params.targetId) }, timeout);
+      case 'Target.closeTarget': {
+        const tabId = tabOf(params.targetId);
+        try { await this.browser.request('close', { tabId }, timeout); } finally { this.#forget(tabId); }
         return { success: true } as T;
+      }
       case 'Target.activateTarget':
         await this.browser.request('activate', { tabId: tabOf(params.targetId) }, timeout);
         return {} as T;
