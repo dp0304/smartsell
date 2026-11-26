@@ -216,7 +216,7 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     webDistDirectory: hub ? resolve(env.SMARTSELL_WEB_DIST ?? resolve(root, 'apps/web/dist')) : undefined,
     // Hub: trust only the loopback hop (`tailscale serve`), so request.ip is the tailnet client serve put last in
     // X-Forwarded-For; a tailnet peer cannot spoof it. A process on the hub machine connecting to 127.0.0.1 directly can
-    // claim any address, so per-address limits are a courtesy there; auth.ts also limits failures per sign-in name (SEC-2).
+    // claim any address, so per-address limits are a courtesy there; auth.ts also slows sign-ins down per sign-in name (SEC-2, S3).
     trustProxy: (hub ? '127.0.0.1' : false) as string | false,
     // Hub: 15 minutes, so media_upload's one-PUT direct upload (E47) of a large video can finish; headers still time out at
     // Node's 60 s default, and the hub is reachable only on the tailnet.

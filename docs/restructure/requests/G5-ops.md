@@ -148,6 +148,11 @@ what the new assertions reject.
   and the owner still signs in from the tailnet address). The existing `hub.test.ts` trustProxy test passes unchanged.
 - Known trade-off (documented): someone who can reach the login endpoint can make the owner's *new* sign-ins answer 429
   for up to 15 minutes by failing 20 times; existing sessions are not affected.
+- **Superseded by the security review S3:** the hard limit is now per (sign-in name, client address): 20 failures in 15
+  minutes refuse only that address for that name. Past 20 failures for a name from all addresses together, every attempt
+  for it waits 1 s, doubling per failure up to 10 s, before any password work, and at most 4 such attempts per name run at
+  once (more answer 429). The right password from another address therefore still signs in, a few seconds later. Tests:
+  `auth.test.ts` `S3: …`.
 
 ### SEC-3 → E46 — Funnel not detected (fixed; wizard copy is G4's)
 - `tailscale.ts` `funnelExposure()`: any `AllowFunnel` host:port (top level or Foreground) whose web handler proxies to the

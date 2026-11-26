@@ -73,15 +73,38 @@ async function newPasswordHash(password: string, minimum = DEFAULT_PASSWORD_MIN)
   return passwordSlot(() => argonHash(password, argonOptions));
 }
 
-export type AuthOptions = SetupPolicy & { secureCookie: boolean; origins: ReadonlySet<string> };
+export type AuthOptions = SetupPolicy & {
+  secureCookie: boolean; origins: ReadonlySet<string>;
+  /** Test seam for the sign-in slowdown (S3); defaults to a real timer. */
+  loginDelay?: (ms: number) => Promise<void>;
+};
 
 const rateLimited = () => new DomainError('rate_limited', 'Try again later', 429);
 
 /** Attempts per client address per minute (login, setup, invitations; `mfa:` keys for the second factor). */
 export const CLIENT_ATTEMPTS_PER_MINUTE = 10;
-/** SEC-2: failed sign-ins per sign-in name per 15 minutes, whatever address or X-Forwarded-For the requests claim. */
+/**
+ * S3 (was SEC-2): failed sign-ins per sign-in name and client address per 15 minutes. Past it that address gets 429 for that
+ * name; other addresses do not, so failing 20 times no longer locks the owner out everywhere.
+ */
 export const ACCOUNT_FAILURES_PER_WINDOW = 20;
 export const ACCOUNT_FAILURE_WINDOW_MS = 15 * 60_000;
+/**
+ * S3: once a sign-in name has this many failures in the window from all addresses together (rotating X-Forwarded-For, many
+ * clients), every further attempt for it waits before any password work: 1 s, doubling per failure, at most 10 s. Waiting
+ * comes before the check, so the answer time tells nothing about the password, and the right password still signs in.
+ */
+export const ACCOUNT_SLOWDOWN_AFTER = 20;
+export const ACCOUNT_SLOWDOWN_BASE_MS = 1_000;
+export const ACCOUNT_SLOWDOWN_MAX_MS = 10_000;
+/** S3: slowed attempts one sign-in name may have open at once; more answer 429. Bounds guesses at about 4 per 10 s per name. */
+export const ACCOUNT_SLOWED_CONCURRENCY = 4;
+
+/** Wait before checking a password for a name with `failures` failed sign-ins in the window (S3). */
+export function signInDelayMs(failures: number) {
+  if (failures < ACCOUNT_SLOWDOWN_AFTER) return 0;
+  return Math.min(ACCOUNT_SLOWDOWN_MAX_MS, ACCOUNT_SLOWDOWN_BASE_MS * 2 ** Math.min(16, failures - ACCOUNT_SLOWDOWN_AFTER));
+}
 
 /**
  * SEC-2: a fixed-window counter that never locks everyone out when it is full. Expired entries go first, then the oldest
@@ -121,6 +144,11 @@ export function createThrottle(options: { limit: number; windowMs: number; capac
       const value = entries.get(key);
       return !!value && value.until > clock() && value.count >= options.limit;
     },
+    /** Attempts counted for `key` in its current window (0 when none). */
+    count(key: string) {
+      const value = entries.get(key);
+      return value && value.until > clock() ? value.count : 0;
+    },
     clear(key: string) { entries.delete(key); },
     get size() { return entries.size; },
   };
@@ -130,12 +158,19 @@ export function auth(store: Store, options: AuthOptions, identity?: ReturnType<t
   csrfToken?: (hash: string) => string | undefined) {
   const cookieName = options.secureCookie ? '__Host-smartsell_session' : 'smartsell_session';
   // Keyed by request.ip. On the hub that is the X-Forwarded-For client of `tailscale serve` (trustProxy 127.0.0.1, config.ts),
-  // which a process on the hub machine itself can set freely; the per-account limit below is what no header can bypass.
+  // which a process on the hub machine itself can set freely; the per-name slowdown below is what no header can bypass.
+  // Behind the SaaS proxy request.ip is the real client only when TRUST_PROXY names that proxy (config.ts, S2).
   const clients = createThrottle({ limit: CLIENT_ATTEMPTS_PER_MINUTE, windowMs: 60_000 });
-  // Existing accounts and made-up names are counted apart: the same 429 for both (no enumeration), and flooding the map
-  // with made-up names can never age out the owner's counter.
-  const accounts = createThrottle({ limit: ACCOUNT_FAILURES_PER_WINDOW, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
-  const unknownAccounts = createThrottle({ limit: ACCOUNT_FAILURES_PER_WINDOW, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  // Existing accounts and made-up names are counted apart: the same answers for both (no enumeration), and flooding the
+  // maps with made-up names can never age out the owner's counters.
+  // S3: the hard limit is per (sign-in name, client address); the per-name count only slows attempts down.
+  const pairs = createThrottle({ limit: ACCOUNT_FAILURES_PER_WINDOW, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  const unknownPairs = createThrottle({ limit: ACCOUNT_FAILURES_PER_WINDOW, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  const accounts = createThrottle({ limit: ACCOUNT_SLOWDOWN_AFTER, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  const unknownAccounts = createThrottle({ limit: ACCOUNT_SLOWDOWN_AFTER, windowMs: ACCOUNT_FAILURE_WINDOW_MS });
+  /** Slowed attempts in progress per sign-in name. */
+  const slowed = new Map<string, number>();
+  const wait = options.loginDelay ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
   const throttle = (ip: string) => clients.hit(ip);
 
   function tokenHash(request: FastifyRequest) {
@@ -173,16 +208,38 @@ export function auth(store: Store, options: AuthOptions, identity?: ReturnType<t
     async login(request: FastifyRequest, reply: FastifyReply) {
       throttle(request.ip);
       const { identifier, password } = credentials(requestObject(request.body), true);
-      // SEC-2: an account that failed too often in the window answers 429 before any password work, from every address.
       const account = identifier.username !== undefined ? `username:${identifier.username}` : `email:${identifier.email}`;
-      if (accounts.exhausted(account) || unknownAccounts.exhausted(account)) throw rateLimited();
-      const user = await store.credentials(identifier);
-      const matches = await passwordMatches(user?.passwordHash, password);
-      if (!user || !matches) {
-        (user ? accounts : unknownAccounts).record(account);
-        throw new DomainError('invalid_credentials', 'Invalid sign-in credentials', 401);
+      const pair = `${account}\n${request.ip}`;
+      // S3: this address failed too often for this name: 429 before any password work. Other addresses are not affected.
+      if (pairs.exhausted(pair) || unknownPairs.exhausted(pair)) throw rateLimited();
+      // S3: a name failing from many addresses is slowed down for everyone, never refused outright (up to a few at once).
+      const delay = signInDelayMs(Math.max(accounts.count(account), unknownAccounts.count(account)));
+      const verify = async () => {
+        const found = await store.credentials(identifier);
+        const matches = await passwordMatches(found?.passwordHash, password);
+        if (!found || !matches) {
+          (found ? pairs : unknownPairs).record(pair);
+          (found ? accounts : unknownAccounts).record(account);
+          throw new DomainError('invalid_credentials', 'Invalid sign-in credentials', 401);
+        }
+        return found;
+      };
+      let user: Awaited<ReturnType<typeof verify>>;
+      if (!delay) user = await verify();
+      else {
+        const open = slowed.get(account) ?? 0;
+        if (open >= ACCOUNT_SLOWED_CONCURRENCY) throw rateLimited();
+        slowed.set(account, open + 1);
+        try {
+          await wait(delay);
+          user = await verify();
+        } finally {
+          const left = (slowed.get(account) ?? 1) - 1;
+          if (left > 0) slowed.set(account, left); else slowed.delete(account);
+        }
       }
-      accounts.clear(account);
+      // The per-name count is left to expire: someone else may still be guessing; the owner's own address starts over.
+      pairs.clear(pair);
       const token = opaque();
       const hash = digest(token).toString('hex');
       if (identity) {

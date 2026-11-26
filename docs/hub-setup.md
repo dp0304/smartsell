@@ -327,7 +327,7 @@ node --import tsx apps/server/hub.ts --supervise      # Windows 服務的監督�
 
   Origin 與 `Sec-Fetch-Site` 的檢查照常適用，只略過 Content-Type 檢查。目前沒有路由使用 `RAW_BODY_ROUTE`；新增時請列在這裡。
 - **404 與 SPA：**`buildApp` 只設一個 not-found handler；中樞把 SPA fallback 以 `notFound` 委派傳入。`/api/*`、`/mcp`、`/agent/*` 一律回 JSON 404。
-- **`trustProxy`：**中樞只信任 `127.0.0.1`（`tailscale serve`），`request.ip` 取 serve 放在 `X-Forwarded-For` 最後的 tailnet 來源位址，tailnet 上的機器無法冒充；`requestTimeout` 為 120 秒。中樞機器上的程式直接連 `127.0.0.1:3401` 時可以自填 `X-Forwarded-For`，所以登入另有「每個登入名稱 15 分鐘內最多失敗 20 次」的限制（`auth.ts`，與位址無關，存在與不存在的名稱同樣處理）；每位址每分鐘 10 次的限制表滿時淘汰最舊的項目，不會把所有人擋在外面。超過名稱限制時回 429，已登入的 session 不受影響，15 分鐘後自動解除。
+- **`trustProxy`：**中樞只信任 `127.0.0.1`（`tailscale serve`），`request.ip` 取 serve 放在 `X-Forwarded-For` 最後的 tailnet 來源位址，tailnet 上的機器無法冒充；`requestTimeout` 為 120 秒。中樞機器上的程式直接連 `127.0.0.1:3401` 時可以自填 `X-Forwarded-For`，所以登入另有兩層限制（`auth.ts`，存在與不存在的名稱同樣處理）：同一個登入名稱從同一個位址 15 分鐘內最多失敗 20 次，超過時只有這個位址對這個名稱回 429，15 分鐘後解除；同一個名稱從所有位址合計失敗超過 20 次後，之後每次登入都先等 1 秒、每多失敗一次加倍、最多 10 秒，同時最多 4 個在等（安全審核 S3）。所以別人猜錯密碼不會把主人鎖在外面，主人從自己的位址輸入正確密碼只是慢幾秒。每位址每分鐘 10 次的限制表滿時淘汰最舊的項目，不會把所有人擋在外面；已登入的 session 不受影響。
 - **Worker 安裝包的裝置簽章下載：**`apps/server/src/worker-downloads.ts` 匯出 `provideWorkerDownloadDeviceAuth(app, authenticate)`；裝置流程（S3）以根 app 呼叫它，`authenticate(request, 'worker_download.read:<platform>')` 驗證簽章（body 為空）。尚未提供時，帶裝置標頭的請求回 503 `DEVICE_AUTH_UNAVAILABLE`。最新版本資訊由 `workerReleases(config.workerDownloadDirectory)` 讀 `latest-<platform>.json`，心跳的 `latest_worker` 可用它組出。
 - **選擇器資料檔：**`config.driverConfigDirectory`（`<中樞資料夾>/driver-config`）由 `pnpm hub:update` 放置 `selectors.json`。
 - **媒體目錄：**`config.mediaDirectory`（預設 `<資料檔所在資料夾>/media`，`hub.env` 可用 `MEDIA_DIRECTORY` 覆寫）。媒體路徑（`createMediaHost`）直接讀它；中樞不再把它寫回 `process.env`。
