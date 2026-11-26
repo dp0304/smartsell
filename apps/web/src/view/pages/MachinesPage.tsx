@@ -6,7 +6,7 @@ import { fill } from '../copy';
 import type { JobSummary, MachineDetail, MachineSummary } from '../data/hub-types';
 import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
-import { blockerText, hub, jobKindText, warningFix, warningTitle } from '../hub-copy';
+import { blockerText, hub, jobKindText, warningFixFor, warningTitle } from '../hub-copy';
 import { Badge, ChannelName, Empty, JobStatusBadge, LoginBadge, OnlineBadge, WriteError, ZoneNote, browserZone, isoLocal, localLabel, todayIn, tr, useHubWrite } from '../hub-parts';
 
 const osName = (os: string) => os === 'win32' ? 'Windows' : 'macOS';
@@ -179,7 +179,7 @@ export function MachinePage() {
       </section>
       <Section title={l(hub.machines.settings)}>
         {machine.warnings.length ? <ul className="hub-warnings">{machine.warnings.map(warning => <li key={warning.code}>
-          <strong>{tr(l, warningTitle, warning.code)}</strong> {warning.message}<br /><small className="muted">{tr(l, warningFix, warning.code)}</small></li>)}</ul>
+          <strong>{tr(l, warningTitle, warning.code)}</strong> {warning.message}<br /><small className="muted">{l(warningFixFor(warning.code, machine.posture?.os ?? machine.os) ?? [warning.code, warning.code])}</small></li>)}</ul>
           : <p className="muted">{l(hub.machines.noWarnings)}</p>}
       </Section>
       <Section title={l(hub.machines.channels)}>

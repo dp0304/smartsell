@@ -174,6 +174,23 @@ test('machine detail: warnings with how to fix, channels, queue linked to posts,
   assert.match(list, /配對新機器/);
 });
 
+test('U9: a Windows machine gets Windows instructions for its warnings, never macOS Energy or FileVault', async () => {
+  const windows: MachineDetail = { ...machine, machine_id: 'm-9', name: 'Win-A', os: 'win32',
+    posture: { os: 'win32', os_version: '10.0.22631', sleep_idle_min: 15, on_battery: true, auto_login: 'off', filevault: 'n/a', power_plan_sleep_min: 15 },
+    warnings: [{ code: 'sleep_enabled', message: 'Win-A 閒置 15 分鐘會睡眠。' }, { code: 'no_auto_login', message: 'Win-A 重開機後要有人登入，Worker 才會啟動。' },
+      { code: 'clock_skew', message: 'Win-A 的時鐘差了 45 秒。' }] };
+  const out = visible(await render('/machines/m-9', { '/views/machines/m-9': windows }));
+  assert.match(out, /設定 → 系統 → 電源/);
+  assert.match(out, /Sysinternals Autologon/);
+  assert.match(out, /設定 → 時間與語言 → 日期和時間/);
+  assert.doesNotMatch(out, /能源|FileVault|系統設定/);
+  const en = visible(await render('/machines/m-9', { '/views/machines/m-9': windows }, 'en'));
+  assert.match(en, /Settings → System → Power/);
+  assert.doesNotMatch(en, /Energy|FileVault/);
+  const mac = visible(await render('/machines/m-1', { '/views/machines/m-1': machine }));
+  assert.match(mac, /系統設定 → 能源/);
+});
+
 test('channel detail: readiness checklist, notice, risk acknowledgement that types the handle, settings and dry run', async () => {
   const out = await render('/channels/c-1', { '/views/channels/c-1': channel, '/views/machines': [machine], '/views/media/recent': [] });
   assert.match(out, /就緒清單/);

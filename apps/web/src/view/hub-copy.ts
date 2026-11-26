@@ -57,14 +57,27 @@ export const warningTitle: Table = {
   sleep_enabled: ['會睡眠', 'Sleeps when idle'], no_auto_login: ['重開機後無法自動登入', 'No automatic login'], app_outdated: ['Worker 版本過舊', 'Worker outdated'],
   clock_skew: ['時鐘偏差', 'Clock skew'], driver_outdated: ['頁面可能改版', 'Driver outdated'], sync_behind: ['還沒收到變更', 'Has not received changes'],
 };
+/** How to fix each §3.2 warning on a Mac; warningFixFor picks the Windows words for a Windows machine (U9). */
 export const warningFix: Table = {
-  sleep_enabled: ['在那台機器的「系統設定 → 能源」把閒置睡眠設為「永不」，並保持接上電源。', 'On that machine set idle sleep to Never and keep it on power.'],
+  sleep_enabled: ['在那台機器的「系統設定 → 能源」把閒置睡眠設為「永不」，並保持接上電源。', 'On that Mac open System Settings → Energy, set idle sleep to Never and keep it on power.'],
   no_auto_login: ['開啟自動登入，或接受斷電重開後要有人到場登入（FileVault 開啟時無法自動登入）。', 'Turn on automatic login, or accept that someone signs in after a restart (not possible with FileVault on).'],
   app_outdated: ['在那台機器的 SmartSell Worker 按「更新」。', 'Click Update in SmartSell Worker on that machine.'],
-  clock_skew: ['在那台機器開啟「自動設定日期與時間」。', 'Turn on automatic date and time on that machine.'],
+  clock_skew: ['在那台機器的「系統設定 → 一般 → 日期與時間」開啟「自動設定時間與日期」。', 'On that Mac open System Settings → General → Date & Time and turn on Set time and date automatically.'],
   driver_outdated: ['在中樞執行 pnpm hub:update 更新選擇器，再到帳號頁試跑一次。', 'Run pnpm hub:update on the hub, then do a dry run on the channel page.'],
   sync_behind: ['機器上線後會自動收到；如果一直沒收到，請確認它連得到中樞。', 'It arrives when the machine is online; check that it can reach the hub.'],
 };
+const warningFixWindows: Table = {
+  sleep_enabled: ['在那台電腦的「設定 → 系統 → 電源」把「睡眠」設為「永不」（接上電源時），並保持接上電源。',
+    'On that PC open Settings → System → Power and set sleep to Never when plugged in, and keep it plugged in.'],
+  no_auto_login: ['設定 Windows 開機自動登入（例如用 Microsoft 的 Sysinternals Autologon），或接受斷電重開後要有人到場登入。',
+    'Set Windows to sign in automatically at startup (for example with Microsoft Sysinternals Autologon), or accept that someone signs in after a restart.'],
+  clock_skew: ['在那台電腦的「設定 → 時間與語言 → 日期和時間」開啟「自動設定時間」。', 'On that PC open Settings → Time & language → Date & time and turn on Set time automatically.'],
+};
+/** U9: the fix for a warning in the words of the machine's own OS (posture.os, else MachineSummary.os). */
+export function warningFixFor(code: string, os: string | null | undefined): readonly [string, string] | undefined {
+  return (os === 'win32' ? warningFixWindows[code] : undefined) ?? warningFix[code];
+}
+
 export const alertKindText: Table = {
   worker_blocker: ['需要你處理', 'Needs you'], missed: ['沒有發出', 'Missed'], unknown: ['結果不明', 'Result unknown'], late_fact_after_release: ['撤回後仍發出', 'Posted after release'],
   approval_due: ['等你核准', 'Approval due'], click_post_soon: ['要你按發布', 'Click Post soon'], login_check_failed: ['登入檢查失敗', 'Login check failed'],
