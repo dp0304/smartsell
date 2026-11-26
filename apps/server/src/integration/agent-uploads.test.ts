@@ -160,6 +160,8 @@ test('a whole-file SHA-256 mismatch fails the asset and tells the owner; abort m
   const hashAlert = (await hub.alerts()).at(-1)!;
   assert.deepEqual([hashAlert.kind, hashAlert.severity, hashAlert.dedupe_key], ['upload_failed', 'urgent', `upload_failed:${created.media_id}`]);
   assert.match(String(hashAlert.title), /clip\.mp4/);
+  // The staging folder is removed right after the failing transaction (not inside it): allow a slow runner a moment.
+  for (let tries = 0; tries < 50 && existsSync(stagingDirectory(hub.mediaDirectory, created.upload_id)); tries++) await new Promise(done => setTimeout(done, 100));
   assert.equal(existsSync(stagingDirectory(hub.mediaDirectory, created.upload_id)), false);
 
   const second = await create(hub, other);
