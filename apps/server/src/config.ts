@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isIP } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join, resolve, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +32,27 @@ export function defaultHubDir(platform: NodeJS.Platform = process.platform, env:
   return join(home, '.local', 'share', 'smartsell-hub');
 }
 
-export type TestTiming = { offlineStalenessSec?: number; readbackScheduleSec?: number[]; unreportedGraceSec?: number; prepareLeadSec?: number };
+export type TestTiming = { offlineStalenessSec?: number; readbackScheduleSec?: number[]; unreportedGraceSec?: number; prepareLeadSec?: number;
+  /** The Worker's SMARTSELL_TEST_PLATFORM_ORIGINS (loopback fixture pages, §8.14): result links the hub accepts in test mode. */
+  platformOrigins?: Partial<Record<'x' | 'tiktok', string>> };
+
+/** Same rule as the Worker's testSwitches(): fixture origins must be loopback, so test mode never names a real platform. */
+function platformOrigins(value: string | undefined): TestTiming['platformOrigins'] {
+  if (value === undefined || value === '') return undefined;
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch { throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must be a JSON object'); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must be a JSON object');
+  const origins: NonNullable<TestTiming['platformOrigins']> = {};
+  for (const provider of ['x', 'tiktok'] as const) {
+    const raw = (parsed as Record<string, unknown>)[provider];
+    if (raw === undefined) continue;
+    let url: URL;
+    try { url = new URL(String(raw)); } catch { throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must list URLs'); }
+    if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw new Error('SMARTSELL_TEST_PLATFORM_ORIGINS must point at loopback');
+    origins[provider] = url.origin;
+  }
+  return Object.keys(origins).length ? origins : undefined;
+}
 
 const positiveSeconds = (name: string, value: string | undefined) => {
   if (value === undefined || value === '') return undefined;
@@ -50,6 +71,7 @@ function testTiming(env: NodeJS.ProcessEnv): TestTiming | undefined {
       : readback.split(',').map(item => positiveSeconds('SMARTSELL_TEST_READBACK_SCHEDULE_SEC', item.trim()) as number),
     unreportedGraceSec: positiveSeconds('SMARTSELL_TEST_UNREPORTED_GRACE_SEC', env.SMARTSELL_TEST_UNREPORTED_GRACE_SEC),
     prepareLeadSec: positiveSeconds('SMARTSELL_TEST_PREPARE_LEAD_SEC', env.SMARTSELL_TEST_PREPARE_LEAD_SEC),
+    platformOrigins: platformOrigins(env.SMARTSELL_TEST_PLATFORM_ORIGINS),
   };
   if (timing.readbackScheduleSec?.some(value => value === undefined)) throw new Error('SMARTSELL_TEST_READBACK_SCHEDULE_SEC must list whole seconds');
   for (const key of Object.keys(timing) as (keyof TestTiming)[]) if (timing[key] === undefined) delete timing[key];
@@ -79,6 +101,53 @@ function maxUploadBytes(env: NodeJS.ProcessEnv, hub: boolean) {
   return value;
 }
 
+/** Optional byte-count setting (S4): a whole number of bytes between `min` and `max`, or the default when unset. */
+function byteSetting(env: NodeJS.ProcessEnv, name: string, fallback: number, min: number, max: number) {
+  const raw = env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(`${name} must be a whole number of bytes between ${min} and ${max}`);
+  return value;
+}
+
+/** Fastify trustProxy: off, a hop count, or addresses and CIDR ranges (TRUST_PROXY, S2); the hub's '127.0.0.1'. */
+export type TrustProxy = false | number | string | string[];
+const PROXY_NAMES = new Set(['loopback', 'linklocal', 'uniquelocal']);
+
+/**
+ * S2: TRUST_PROXY names the reverse proxies allowed to set X-Forwarded-For, so request.ip (sign-in and per-address limits,
+ * audit) is the browser and not the proxy. Unset means off: behind a proxy every client would then share the proxy's
+ * address. Either a hop count (1–5: how many proxies stand in front of the API, e.g. 1 for the Compose web container,
+ * which passes one clean address) or a comma-separated list of addresses, CIDR ranges and the names loopback, linklocal,
+ * uniquelocal. Trusting every address (true, *, a /0 range) is refused: anyone could then claim any address.
+ */
+export function trustProxySetting(raw: string | undefined): TrustProxy {
+  const value = raw?.trim();
+  if (!value || value === 'false' || value === '0') return false;
+  if (/^\d+$/.test(value)) {
+    const hops = Number(value);
+    if (hops > 5) throw new Error('TRUST_PROXY hop count must be between 1 and 5');
+    return hops;
+  }
+  const entries = value.split(',').map(item => item.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (PROXY_NAMES.has(entry)) continue;
+    const [address, prefix, extra] = entry.split('/');
+    const family = isIP(address);
+    const bits = prefix === undefined ? undefined : /^\d{1,3}$/.test(prefix) ? Number(prefix) : NaN;
+    if (!family || extra !== undefined || (bits !== undefined && (!(bits >= 1) || bits > (family === 4 ? 32 : 128)))) {
+      throw new Error(`TRUST_PROXY must be a hop count or a comma-separated list of proxy addresses or CIDR ranges (not "${entry}"); trusting every address is not allowed`);
+    }
+  }
+  if (!entries.length) return false;
+  return entries;
+}
+
+/** Fastify's option for a TrustProxy value: a hop count becomes "trust the nearest n hops" (its typings take no number). */
+export function fastifyTrustProxy(value: TrustProxy) {
+  return typeof value === 'number' ? (_address: string, hop: number) => hop < value : value;
+}
+
 /** Hub-mode validation (§2.3). Messages are owner-facing; they are printed and written to status.json. */
 function validateHub(env: NodeJS.ProcessEnv, publicUrl: URL, host: string, selected: string, secret: string, setupToken: string | undefined) {
   const testHttp = env.NODE_ENV === 'test' && env.SMARTSELL_HUB_TEST_HTTP === '1';
@@ -98,6 +167,9 @@ function validateHub(env: NodeJS.ProcessEnv, publicUrl: URL, host: string, selec
     throw new HubConfigError('HUB_HOST_NOT_LOOPBACK', `中樞設定錯誤：HOST 必須是 127.0.0.1（目前是 ${host}）。對外連線一律經由 tailscale serve，請移除 HOST 設定。`);
   }
   if (selected !== 'all') throw new HubConfigError('HUB_ROLE_NOT_ALL', '中樞設定錯誤：中樞只能以 ROLE=all 執行，請移除 ROLE 設定。');
+  if (env.TRUST_PROXY) {
+    throw new HubConfigError('HUB_TRUST_PROXY_SET', '中樞設定錯誤：中樞只信任本機的 tailscale serve（127.0.0.1），不能設定 TRUST_PROXY，請移除它。');
+  }
   if (env.DATABASE_URL) throw new HubConfigError('HUB_DATABASE_URL_SET', '中樞設定錯誤：中樞使用本機 SQLite，不能設定 DATABASE_URL，請移除它。');
   if (env.SMARTSELL_STORE && env.SMARTSELL_STORE !== 'local') {
     throw new HubConfigError('HUB_STORE_NOT_LOCAL', '中樞設定錯誤：中樞只能使用本機 SQLite（SMARTSELL_STORE=local），請移除 SMARTSELL_STORE 設定。');
@@ -181,6 +253,7 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     publicUrl.protocol === 'http:' && loopbackHost(publicUrl.hostname);
   const localSetupOrigins = privateLoopback && env.SMARTSELL_LOCAL_SETUP === '1' ? new Set([publicUrl.origin]) : undefined;
   const hubDirectory = hub ? resolve(env.SMARTSELL_HUB_DIR || defaultHubDir()) : undefined;
+  const uploadLimit = maxUploadBytes(env, hub);
   const statePath = resolve(env.SMARTSELL_DATA_FILE ?? (hubDirectory ? join(hubDirectory, 'smartsell.sqlite') : resolve(root, '.local/smartsell.sqlite')));
   return {
     mode, hub,
@@ -196,12 +269,19 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     kernelStatePath: resolve(env.SMARTSELL_DATA_FILE ?? (hubDirectory ? join(hubDirectory, 'smartsell.json') : resolve(root, '.local/smartsell.json'))),
     /** Media follows the data file in every mode, independent of the working directory (§6.7). */
     mediaDirectory: resolve(env.MEDIA_DIRECTORY ?? join(dirname(statePath), 'media')),
-    maxUploadBytes: maxUploadBytes(env, hub),
+    maxUploadBytes: uploadLimit,
+    /**
+     * Agent uploads (§6.4, S4): the declared bytes of one workspace's unfinished uploads may not exceed this, and the hub
+     * stops taking new uploads and parts while the media disk has less than `uploadMinFreeBytes` left after them.
+     */
+    uploadStagingQuotaBytes: byteSetting(env, 'SMARTSELL_UPLOAD_STAGING_QUOTA_BYTES', 4 * uploadLimit, uploadLimit, 1024 * GiB),
+    uploadMinFreeBytes: byteSetting(env, 'SMARTSELL_UPLOAD_MIN_FREE_BYTES', GiB, 0, 1024 * GiB),
     webDistDirectory: hub ? resolve(env.SMARTSELL_WEB_DIST ?? resolve(root, 'apps/web/dist')) : undefined,
     // Hub: trust only the loopback hop (`tailscale serve`), so request.ip is the tailnet client serve put last in
     // X-Forwarded-For; a tailnet peer cannot spoof it. A process on the hub machine connecting to 127.0.0.1 directly can
-    // claim any address, so per-address limits are a courtesy there; auth.ts also limits failures per sign-in name (SEC-2).
-    trustProxy: (hub ? '127.0.0.1' : false) as string | false,
+    // claim any address, so per-address limits are a courtesy there; auth.ts also slows sign-ins down per sign-in name (SEC-2, S3).
+    // Elsewhere: only what TRUST_PROXY names (S2; off by default, see infra/README.md).
+    trustProxy: (hub ? '127.0.0.1' : trustProxySetting(env.TRUST_PROXY)) as TrustProxy,
     // Hub: 15 minutes, so media_upload's one-PUT direct upload (E47) of a large video can finish; headers still time out at
     // Node's 60 s default, and the hub is reachable only on the tailnet.
     requestTimeoutMs: hub ? 900_000 : 30_000,
@@ -209,6 +289,8 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     secureCookie: publicUrl.protocol === 'https:',
     roles: new Set(enabled as readonly ProcessRole[]),
     allowLoopbackWebhook: !production && env.SMARTSELL_WEBHOOK_LOOPBACK === '1',
+    /** S6: phone push (ntfy, Bark) may reach private addresses: always on the home hub, elsewhere only when set explicitly. */
+    pushPrivateNetwork: hub || env.SMARTSELL_PUSH_PRIVATE_NETWORK === '1',
     // traffic-host.ts reads NODE_ENV itself; a hub always validates traffic origins with production rules.
     traffic: trafficHostConfig(hub ? { ...env, NODE_ENV: 'production' } : env, [publicUrl.origin, ...(portalOrigin ? [portalOrigin] : [])]),
   };

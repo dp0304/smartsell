@@ -147,7 +147,8 @@ export class Supervisor {
       if (response.latest_worker && versionNewer(response.latest_worker.version, this.#o.clientVersion) && this.#announcedUpdate !== response.latest_worker.version) {
         this.#announcedUpdate = response.latest_worker.version;
         this.#o.events.emit('update_available', { version: response.latest_worker.version, url: response.latest_worker.url, sha256: response.latest_worker.sha256,
-          ...(response.latest_worker.platform && { platform: response.latest_worker.platform }) });
+          ...(response.latest_worker.platform && { platform: response.latest_worker.platform }),
+          ...(response.latest_worker.signature && { signature: response.latest_worker.signature }) });
       }
       if (++this.#ticks % 20 === 0) this.#housekeeping();
       this.#o.runner.tick();

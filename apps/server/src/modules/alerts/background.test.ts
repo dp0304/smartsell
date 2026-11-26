@@ -25,7 +25,8 @@ test('hub background: a captcha status event becomes an owner alert through the 
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise<void>(resolve => server.close(() => resolve())));
   resetAlertHooks();
-  configureAlerts({ secretKey: randomBytes(32), publicOrigin: 'https://hub.tail1234.ts.net' });
+  // A hub: its own ntfy may listen on a private address (S6).
+  configureAlerts({ secretKey: randomBytes(32), publicOrigin: 'https://hub.tail1234.ts.net', privateEgress: true });
   t.after(resetAlertHooks);
 
   const db = new MemoryStore();

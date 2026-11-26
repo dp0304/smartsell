@@ -437,9 +437,24 @@ function decisionNote(decision) {
   return result;
 }
 
-function signedShare() {
+/**
+ * S15: read a link token from the URL fragment once, keep it for this tab only (so a reload still works), and take it out of
+ * the address bar, the history and screenshots, as the setup page does.
+ */
+function linkToken(kind) {
+  const key = `smartsell:${kind}-token`;
   let token;
   try { token = decodeURIComponent(location.hash.slice(1)); } catch { /* malformed link */ }
+  if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+  if (token) {
+    try { sessionStorage.setItem(key, token); } catch { /* storage unavailable: a reload needs the link again */ }
+    return token;
+  }
+  try { return sessionStorage.getItem(key) || undefined; } catch { return undefined; }
+}
+
+function signedShare() {
+  const token = linkToken('share');
   function unavailable() {
     show(heading('無法開啟分享', '此連結可能已失效。請向原分享者取得新連結。'));
   }
@@ -509,8 +524,7 @@ function signedShare() {
 }
 
 function creatorSubmission() {
-  let token;
-  try { token = decodeURIComponent(location.hash.slice(1)); } catch { /* malformed link */ }
+  const token = linkToken('creator');
   if (!token) {
     show(heading('無法開啟交付', '請向邀請您的團隊取得有效連結。'));
     return;

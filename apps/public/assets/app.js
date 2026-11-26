@@ -130,9 +130,24 @@ async function landing(key) {
   show(data.title, typeof data.description === 'string' ? data.description : '', form);
 }
 
-function unsubscribe() {
+/**
+ * S15: read a link token from the URL fragment once, keep it for this tab only (so a reload still works), and take it out of
+ * the address bar, the history and screenshots, as the setup page does.
+ */
+function linkToken(kind) {
+  const key = `smartsell:${kind}-token`;
   let token;
   try { token = decodeURIComponent(location.hash.slice(1)); } catch { /* malformed link */ }
+  if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+  if (token) {
+    try { sessionStorage.setItem(key, token); } catch { /* storage unavailable: a reload needs the link again */ }
+    return token;
+  }
+  try { return sessionStorage.getItem(key) || undefined; } catch { return undefined; }
+}
+
+function unsubscribe() {
+  const token = linkToken('unsubscribe');
   if (!token) {
     show('無法使用此連結', '請開啟原始郵件中的取消訂閱連結。');
     return;

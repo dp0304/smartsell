@@ -151,8 +151,9 @@ test('hub:doctor prints one actionable line per problem and exits 1 on errors', 
   writeFileSync(join(hubDir, 'hub.env'), `APP_SECRET=${hex()}\nPUBLIC_ORIGIN=${ORIGIN}\nSMARTSELL_WEB_DIST=${dist}\n`, { mode: 0o600 });
   writeFileSync(join(hubDir, 'status.json'), JSON.stringify({ state: 'config_error', message: 'PUBLIC_ORIGIN 必須是 https', at: '2026-11-24T01:00:00Z' }));
   mkdirSync(join(hubDir, 'worker-downloads'));
-  writeFileSync(join(hubDir, 'worker-downloads', 'latest-mac-arm64.json'), JSON.stringify({ version: '0.2.0', platform: 'mac-arm64',
-    file: 'SmartSell-Worker-0.2.0-arm64.dmg', sha256: 'b'.repeat(64), bytes: 10, built_at: '2026-11-24T00:00:00Z' }));
+  const armManifest = { version: '0.2.0', platform: 'mac-arm64', file: 'SmartSell-Worker-0.2.0-arm64.dmg', sha256: 'b'.repeat(64), bytes: 10,
+    built_at: '2026-11-24T00:00:00Z' };
+  writeFileSync(join(hubDir, 'worker-downloads', 'latest-mac-arm64.json'), JSON.stringify({ ...armManifest, signature: `${'A'.repeat(85)}w==` }));
   writeFileSync(join(hubDir, 'worker-downloads', 'latest-win-x64.json'), '{"version":"x"}');
   const cli = join(hubDir, 'fake-tailscale');
   writeFileSync(cli, '');   // only its existence matters: every call goes through the scripted exec
@@ -165,10 +166,11 @@ test('hub:doctor prints one actionable line per problem and exits 1 on errors', 
     ['pmset -g', { stdout: 'System-wide power settings:\nCurrently in use:\n standby              1\n sleep                10 (sleep prevented by x)\n disksleep            10\n' }],
     ['launchctl print', { code: 113 }],
   ]);
-  const lines: string[] = [];
-  const code = await doctorMain(['--hub-dir', hubDir], { exec, platform: 'darwin', env: { SMARTSELL_TAILSCALE_CLI: cli }, home: join(hubDir, 'home'),
+  let lines: string[] = [];
+  const doctor = () => doctorMain(['--hub-dir', hubDir], { exec, platform: 'darwin', env: { SMARTSELL_TAILSCALE_CLI: cli }, home: join(hubDir, 'home'),
     uid: 501, fetch: (async () => { throw new Error('offline'); }) as unknown as typeof fetch, now: () => new Date('2026-11-24T00:00:00Z'),
     freeBytes: () => 4 * 1024 ** 3, log: line => lines.push(line) });
+  const code = await doctor();
   assert.equal(code, 1);
   const text = lines.join('\n');
   for (const expected of [
@@ -181,13 +183,18 @@ test('hub:doctor prints one actionable line per problem and exits 1 on errors', 
     /\[警告\] 模式一（agent）要等使用者登入後才會啟動/,
     /\[警告\] 中樞會在閒置 10 分鐘後睡眠。.*sudo pmset -c sleep 0 disksleep 0/,
     /\[警告\] 中樞磁碟只剩 4\.0 GB/,
-    /\[OK\] Worker 安裝包 mac-arm64：0\.2\.0/,
+    /\[OK\] Worker 安裝包 mac-arm64：0\.2\.0（SmartSell-Worker-0\.2\.0-arm64\.dmg，已簽章）/,
     /\[警告\] 沒有 mac-x64 的 Worker 安裝包/,
     /\[錯誤\] latest-win-x64\.json 不正確/,
     /\[OK\] HTTPS 憑證已啟用/,
     /\[警告\] 沒有安裝 launchd 服務/,
   ]) assert.match(text, expected);
   for (const line of lines) assert.match(line, /^\[(?:OK|警告|錯誤)\] |^有 \d+ 個錯誤|^沒有錯誤|^全部正常/);
+  // S1: a manifest without a release signature is a warning — Workers with a built-in release key refuse it.
+  writeFileSync(join(hubDir, 'worker-downloads', 'latest-mac-arm64.json'), JSON.stringify(armManifest));
+  lines = [];
+  await doctor();
+  assert.match(lines.join('\n'), /\[警告\] Worker 安裝包 mac-arm64：0\.2\.0 沒有發行簽章.*pnpm worker:release/);
 });
 
 test('hub:doctor on Windows reads powercfg and the task trigger', async t => {
@@ -524,6 +531,18 @@ test('latest-<platform>.json is validated before it is advertised', async t => {
     { ...valid, version: 'latest' }, { ...valid, bytes: 0 }, 'not json']) {
     write(broken);
     assert.equal((await inspectWorkerRelease(dir, 'mac-x64')).status, 'invalid', JSON.stringify(broken));
+  }
+  // S1: the release signature is optional (manifests from before S1), shape-checked, and passed through verbatim.
+  const signature = `${'A'.repeat(85)}w==`;
+  write({ ...valid, signature });
+  const signed = await inspectWorkerRelease(dir, 'mac-x64');
+  assert.equal(signed.status === 'ok' && signed.release.signature, signature);
+  write(valid);
+  const unsigned = await inspectWorkerRelease(dir, 'mac-x64');
+  assert.equal(unsigned.status === 'ok' && 'signature' in unsigned.release, false);
+  for (const bad of ['', 'not base64!', 'A'.repeat(88), 42, null]) {
+    write({ ...valid, signature: bad });
+    assert.equal((await inspectWorkerRelease(dir, 'mac-x64')).status, 'invalid', JSON.stringify(bad));
   }
   assert.ok(compareWorkerVersions('0.10.0', '0.9.9') > 0);
   assert.ok(compareWorkerVersions('0.2.0-beta.1', '0.2.0') < 0);

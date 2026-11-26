@@ -17,6 +17,7 @@ import type { registerOperationRoutes } from './operation-server.js';
 import { registerCommandMcp, type OperationHost } from './integration/command-mcp.js';
 import { commandTraffic, type TrafficHostConfig } from './integration/traffic-host.js';
 import { registerWorkerDownloads } from './worker-downloads.js';
+import { fastifyTrustProxy, type TrustProxy } from './config.js';
 import { commandIdentity } from './integration/command-identity.js';
 
 const notFound = () => new DomainError('not_found', 'Resource not found', 404);
@@ -70,8 +71,8 @@ type Options = AuthOptions & {
   commandIdentityKey?: Uint8Array;
   origin?: string;
   workerDownloadDirectory?: string;
-  /** Fastify trustProxy; the hub trusts only the local `tailscale serve` (§2.2). */
-  trustProxy?: string | false;
+  /** Fastify trustProxy; the hub trusts only the local `tailscale serve` (§2.2), other hosts what TRUST_PROXY names (S2). */
+  trustProxy?: TrustProxy;
   requestTimeoutMs?: number;
   notFound?: NotFoundDelegate;
 };
@@ -99,7 +100,7 @@ function closeUnusedSocketsOnShutdown(app: FastifyInstance) {
 export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, workerDownloadDirectory,
   trustProxy = false, requestTimeoutMs = 30_000, notFound: delegateNotFound, logger = false, ...options }: Options) {
   const app = Fastify({ logger, logController: new Fastify.LogController({ disableRequestLogging: true }), bodyLimit: 1024 * 1024, requestTimeout: requestTimeoutMs, requestIdHeader: false,
-    trustProxy, genReqId: () => randomUUID() });
+    trustProxy: fastifyTrustProxy(trustProxy), genReqId: () => randomUUID() });
   const identity = commandIdentityKey && commandIdentity(store, commandIdentityKey);
   const csrfSecret = operationApi?.config.secret ?? secret;
   const csrf = csrfSecret ? createOperationCsrf(csrfSecret) : undefined;

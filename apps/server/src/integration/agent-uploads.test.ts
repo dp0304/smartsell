@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import test from 'node:test';
@@ -9,7 +10,7 @@ import type { Row } from '@smartsell/contracts';
 import { fakeMp4, sha256, startHub, type Hub } from '../../../../packages/agent-relay/test/fixtures/hub.ts';
 import { localStorage, probeMedia, type Probe, type Storage } from '../../../../packages/media-store/src/index.ts';
 import { openMediaRange, prepareAssembledObject, recordAssembledObject } from '../extensions/media-files.ts';
-import { AGENT_UPLOAD_CHUNK_BYTES, expireAgentUploads, mediaUploadProgress, stagingDirectory } from './agent-uploads.ts';
+import { AGENT_UPLOAD_CHUNK_BYTES, diskFreeBytes, expireAgentUploads, mediaUploadProgress, stagingDirectory } from './agent-uploads.ts';
 
 const MiB = AGENT_UPLOAD_CHUNK_BYTES;
 const ffmpeg = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0 && spawnSync('ffprobe', ['-version'], { stdio: 'ignore' }).status === 0;
@@ -403,7 +404,7 @@ test('direct form: one-use PUT link for the whole file, checked against the decl
   assert.equal(link.method, 'PUT');
   assert.ok(link.url.startsWith(`${hub.origin}/api/v1/agent/uploads/direct/`), link.url);
   assert.ok(!link.url.includes(hub.token), 'the agent token never appears in the link');
-  assert.equal(link.command, `curl --fail --silent --show-error -T "<path>" -H "Content-Type: application/octet-stream" "${link.url}"`);
+  assert.equal(link.command, `curl --fail --silent --show-error -T '<path>' -H 'Content-Type: application/octet-stream' '${link.url}'`);
 
   // Asking again replaces the link: the first one stops working.
   const again = await hub.uploads.direct(hub.principal, described, hub.origin);
@@ -435,6 +436,23 @@ test('direct form: one-use PUT link for the whole file, checked against the decl
   assert.deepEqual([done.status, done.media_id, done.upload], ['ready', first.media_id, null]);
 });
 
+test('S9: the direct upload command single-quotes the path, so $(…) and backticks in a file name never run', { skip: process.platform === 'win32' && 'POSIX shell' }, async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(MiB);
+  const { upload } = await hub.uploads.direct(hub.principal, { filename: 'clip.mp4', bytes: bytes.length, sha256: sha256(bytes) }, hub.origin);
+  const work = join(hub.root, 'shell');
+  await mkdir(work);
+  const path = `${work}/a $(touch dollar) \`touch tick\` it's "quoted".mp4`;
+  // What the media_upload description tells the agent: replace <path> inside the quotes, writing ' as '\''.
+  const command = upload!.command.replace('<path>', path.replaceAll("'", `'\\''`));
+  // A stand-in curl prints the arguments it would get.
+  const run = spawnSync('sh', ['-c', `curl() { printf '%s\\n' "$@"; }; ${command}`], { cwd: work, encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(run.stdout.trimEnd().split('\n'),
+    ['--fail', '--silent', '--show-error', '-T', path, '-H', 'Content-Type: application/octet-stream', upload!.url]);
+  assert.deepEqual(await readdir(work), [], 'nothing in the file name was executed');
+});
+
 test('direct form validates the description like the relay API and refuses unknown MIME types', async t => {
   const hub = await startHub(t, { prepare: { probe: noProbe } });
   await assert.rejects(hub.uploads.direct(hub.principal, { filename: 'notes.txt', bytes: 10, sha256: 'a'.repeat(64) }, hub.origin), { code: 'UPLOAD_TYPE_UNSUPPORTED' });
@@ -442,4 +460,146 @@ test('direct form validates the description like the relay API and refuses unkno
   await assert.rejects(hub.uploads.direct(hub.principal, { filename: 'a/b.mp4', bytes: 10, sha256: 'a'.repeat(64) }, hub.origin), { code: 'INVALID_ARGUMENTS' });
   const unknown = await fetch(`${hub.origin}/api/v1/agent/uploads/direct/${'x'.repeat(43)}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(4) });
   assert.equal(unknown.status, 410);
+});
+
+// ---------- Security review S4: staging disk is bounded ----------
+async function stagedBytes(hub: Hub, id: string) {
+  const directory = stagingDirectory(hub.mediaDirectory, id);
+  if (!existsSync(directory)) return 0;
+  let total = 0;
+  for (const name of await readdir(directory)) total += (await stat(join(directory, name))).size;
+  return total;
+}
+
+test('S4: overlapping parts never stage twice: a resend replaces itself, a covered part adds nothing, a covering part replaces, a partial overlap is refused', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(4 * MiB);
+  const created = await create(hub, bytes);
+  const staged = () => readdir(stagingDirectory(hub.mediaDirectory, created.upload_id)).then(names => names.sort());
+  assert.equal((await putPart(hub, created.upload_id, bytes, 0, 2)).status, 200);
+  // Inside the accepted part: answered from what is there, nothing stored.
+  const inside = await putPart(hub, created.upload_id, bytes, 0, 1);
+  assert.deepEqual([inside.status, inside.body.received], [200, [0, 1]]);
+  assert.deepEqual(await staged(), ['0-2.part']);
+  // Straddling it: refused, so chunk 1 is not kept twice.
+  const straddle = await putPart(hub, created.upload_id, bytes, 1, 2);
+  assert.deepEqual([straddle.status, straddle.body.error.code, straddle.body.error.details.received], [409, 'UPLOAD_PART_OVERLAP', [0, 1]]);
+  // Covering it: replaces it.
+  const covering = await putPart(hub, created.upload_id, bytes, 0, 3);
+  assert.deepEqual([covering.status, covering.body.received], [200, [0, 1, 2]]);
+  assert.deepEqual(await staged(), ['0-3.part']);
+  // The very same part again is idempotent.
+  assert.deepEqual((await putPart(hub, created.upload_id, bytes, 0, 3)).body.received, [0, 1, 2]);
+  assert.equal((await putPart(hub, created.upload_id, bytes, 3, 1)).status, 200);
+  assert.deepEqual(await staged(), ['0-3.part', '3-1.part']);
+  assert.equal(await stagedBytes(hub, created.upload_id), bytes.length);
+  const session = (await hub.rows('media_upload_session')).find(row => row.id === created.upload_id)!;
+  assert.deepEqual(session.parts, [{ n: 0, k: 3 }, { n: 3, k: 1 }]);
+  assert.equal((await hub.api('POST', `/api/v1/agent/uploads/${created.upload_id}/complete`, {})).status, 202);
+  assert.equal((await waitFor(hub, created.upload_id)).status, 'ready');
+});
+
+test('S4: a sliding series of overlapping parts (the audit case) stages no more than the declared size', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(3 * MiB);
+  const created = await create(hub, bytes);
+  // Same n, growing k: each one replaces the one before.
+  for (const k of [1, 2, 3, 1, 2]) assert.equal((await putPart(hub, created.upload_id, bytes, 0, k)).status, 200);
+  assert.equal(await stagedBytes(hub, created.upload_id), bytes.length);
+  const fresh = await create(hub, fakeMp4(3 * MiB, 7));
+  const other = fakeMp4(3 * MiB, 7);
+  assert.equal((await putPart(hub, fresh.upload_id, other, 0, 2)).status, 200);
+  // A part sliding over the accepted one is refused every time; the parts inside it add nothing.
+  for (let round = 0; round < 5; round++) {
+    assert.equal((await putPart(hub, fresh.upload_id, other, 1, 2)).body.error.code, 'UPLOAD_PART_OVERLAP');
+    assert.equal((await putPart(hub, fresh.upload_id, other, 0, 1)).status, 200);
+    assert.equal((await putPart(hub, fresh.upload_id, other, 1, 1)).status, 200);
+  }
+  assert.equal(await stagedBytes(hub, fresh.upload_id), 2 * MiB);
+});
+
+test('S4: a part over chunks another request is still writing waits for it, then is placed against what that one recorded', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(4 * MiB);
+  const created = await create(hub, bytes);
+  const part = bytes.subarray(0, 2 * MiB);
+  // Hold the first request open half-way through its body.
+  const first = httpRequest(`${hub.origin}/api/v1/agent/uploads/${created.upload_id}/parts/0`, { method: 'PUT', headers: {
+    authorization: `Bearer ${hub.token}`, 'content-type': 'application/octet-stream', 'content-length': String(part.length), 'x-part-sha256': sha256(part) } });
+  const answered = new Promise<number>((resolve, reject) => {
+    first.on('response', response => { response.resume(); resolve(response.statusCode ?? 0); });
+    first.on('error', reject);
+  });
+  first.write(part.subarray(0, MiB));
+  for (let attempt = 0; attempt < 200 && !existsSync(stagingDirectory(hub.mediaDirectory, created.upload_id)); attempt++) await sleep(10);
+  let settled = 0;
+  const inside = putPart(hub, created.upload_id, bytes, 0, 1).finally(() => settled++);
+  const same = putPart(hub, created.upload_id, bytes, 0, 2).finally(() => settled++);
+  // A part over other chunks proceeds meanwhile.
+  assert.equal((await putPart(hub, created.upload_id, bytes, 2, 2)).status, 200);
+  await sleep(100);
+  assert.equal(settled, 0, 'the overlapping parts wait');
+  const temps = (await readdir(stagingDirectory(hub.mediaDirectory, created.upload_id))).filter(name => name.endsWith('.tmp'));
+  assert.equal(temps.length, 1, 'only the first copy of chunks 0..1 is being written');
+  first.end(part.subarray(MiB));
+  assert.equal(await answered, 200);
+  assert.deepEqual([(await inside).status, (await inside).body.received], [200, [0, 1, 2, 3]]);
+  assert.deepEqual([(await same).status, (await same).body.received], [200, [0, 1, 2, 3]]);
+  assert.equal(await stagedBytes(hub, created.upload_id), bytes.length);
+});
+
+test('S4: a workspace quota on unfinished uploads; aborting one frees room', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe }, uploadStagingQuotaBytes: 5 * MiB });
+  const a = fakeMp4(3 * MiB, 1);
+  const b = fakeMp4(3 * MiB, 2);
+  const first = await create(hub, a);
+  const refused = await hub.api('POST', '/api/v1/agent/uploads', { filename: 'b.mp4', bytes: b.length, sha256: sha256(b), mime: 'video/mp4' });
+  assert.deepEqual([refused.status, refused.body.error.code], [413, 'UPLOAD_QUOTA_EXCEEDED']);
+  assert.deepEqual([refused.body.error.details.quota_bytes, refused.body.error.details.in_use_bytes], [5 * MiB, 3 * MiB]);
+  assert.match(refused.body.error.details.owner_message, /暫存空間/);
+  await assert.rejects(hub.uploads.direct(hub.principal, { filename: 'b.mp4', bytes: b.length, sha256: sha256(b) }, hub.origin), { code: 'UPLOAD_QUOTA_EXCEEDED' });
+  // Resuming the upload that holds the quota still works.
+  assert.equal((await create(hub, a)).upload_id, first.upload_id);
+  assert.equal((await hub.api('POST', `/api/v1/agent/uploads/${first.upload_id}/abort`, { reason: 'cancelled' })).status, 200);
+  assert.equal((await create(hub, b)).status, 'receiving');
+});
+
+test('S4: low free disk refuses new uploads, parts and direct PUTs with 507 but still resumes an existing upload', async t => {
+  let free: number | undefined = 10 * 1024 * MiB;
+  const hub = await startHub(t, { prepare: { probe: noProbe }, uploadMinFreeBytes: 100 * MiB, diskFree: async () => free });
+  const bytes = fakeMp4(3 * MiB);
+  const created = await create(hub, bytes);
+  const clip = fakeMp4(2 * MiB, 5);
+  const direct = await hub.uploads.direct(hub.principal, { filename: 'clip.mp4', bytes: clip.length, sha256: sha256(clip) }, hub.origin);
+  free = 100 * MiB + 2 * MiB;
+  // A new 2 MiB upload needs room for its parts and the assembled copy above the reserve.
+  const other = fakeMp4(2 * MiB, 9);
+  const refused = await hub.api('POST', '/api/v1/agent/uploads', { filename: 'o.mp4', bytes: other.length, sha256: sha256(other), mime: 'video/mp4' });
+  assert.deepEqual([refused.status, refused.body.error.code, refused.body.error.details.free_bytes], [507, 'UPLOAD_STORAGE_LOW', free]);
+  assert.match(refused.body.error.details.owner_message, /磁碟空間不足/);
+  assert.equal((await create(hub, bytes)).upload_id, created.upload_id, 'the existing session resumes');
+  assert.equal((await putPart(hub, created.upload_id, bytes, 0, 2)).status, 200, 'a 2 MiB part still fits');
+  free = 100 * MiB;
+  const low = await putPart(hub, created.upload_id, bytes, 2, 1);
+  assert.deepEqual([low.status, low.body.error.code], [507, 'UPLOAD_STORAGE_LOW']);
+  const put = await putDirect(direct.upload!.url, new Uint8Array(clip));
+  assert.deepEqual([put.status, put.body.error.code], [507, 'UPLOAD_STORAGE_LOW']);
+  free = 10 * 1024 * MiB;
+  assert.equal((await putDirect(direct.upload!.url, new Uint8Array(clip))).status, 202, 'the link survives a low-disk refusal');
+  assert.equal((await putPart(hub, created.upload_id, bytes, 2, 1)).status, 200);
+});
+
+test('S4: the direct PUT supersedes parts sent earlier; the free-disk reading walks up to an existing directory', async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(3 * MiB);
+  const created = await create(hub, bytes);
+  assert.equal((await putPart(hub, created.upload_id, bytes, 0, 1)).status, 200);
+  const direct = await hub.uploads.direct(hub.principal, { filename: 'video.mp4', bytes: bytes.length, sha256: sha256(bytes) }, hub.origin);
+  assert.equal(direct.upload_id, created.upload_id);
+  const staged = stagingDirectory(hub.mediaDirectory, created.upload_id);
+  const accepted = await putDirect(direct.upload!.url, new Uint8Array(bytes));
+  assert.equal(accepted.status, 202);
+  if (existsSync(staged)) assert.ok(!(await readdir(staged)).includes('0-1.part'));
+  assert.equal((await waitFor(hub, created.upload_id)).status, 'ready');
+  assert.equal(typeof await diskFreeBytes(join(hub.mediaDirectory, 'no', 'such', 'dir')), 'number');
 });

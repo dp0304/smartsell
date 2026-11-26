@@ -37,6 +37,9 @@ Provide these values to their respective commands through the deployment environ
 | `MEDIA_DIRECTORY` | API process | Private, writable directory on persistent storage, such as `/var/lib/smartsell/media` |
 | `SETUP_TOKEN` | API process during first setup | Independent secret generated with `openssl rand -hex 32` |
 | `HOST`, `PORT` | API process | Default `127.0.0.1` and `3401` |
+| `TRUST_PROXY` | API process behind a reverse proxy | Off when unset. A hop count (`1` to `5`) or comma-separated proxy addresses and CIDR ranges allowed to set `X-Forwarded-For`; see [Client addresses behind the proxy](#client-addresses-behind-the-proxy) |
+| `SMARTSELL_PUSH_PRIVATE_NETWORK` | API process | Unset: phone push (ntfy, Bark) goes only to public addresses, resolved once and pinned, so a channel URL cannot reach the internal network. Set `1` only for a private deployment whose own ntfy runs on a private address; the home hub always allows it |
+| `SMARTSELL_UPLOAD_STAGING_QUOTA_BYTES`, `SMARTSELL_UPLOAD_MIN_FREE_BYTES` | API process | Agent uploads: per-workspace cap on unfinished uploads (default 4 × `SMARTSELL_MAX_UPLOAD_BYTES`) and the free disk kept on the media volume (default 1 GiB) |
 
 Run the migration job before starting or upgrading the API. The migration ledgers make repeat runs safe against the same migration files.
 
@@ -75,6 +78,16 @@ Set `PORTAL_ORIGIN` to a dedicated default portal origin. The base Compose deplo
 Set `PORTAL_CUSTOM_ORIGINS` to comma-separated, distinct HTTPS origins without paths or trailing slashes, for example `https://north.example.com,https://south.example.com`. Recreate `server` after changing the list, and bind each listed origin to its workspace through `PUT /api/v1/workspaces/:id/branding` on the Operations workbench. The list can be omitted for a single portal. Set an independent 32-byte hex `PORTAL_ASSERTION_KEY` if using signed portal sign-in assertions. Public operation requires DNS and a trusted TLS certificate covering each configured hostname.
 
 The Web service serves the portal SPA and forwards `/api/v1/portal/` on port 8081 with the original Host and Origin. The Operations API checks the configured origin and its workspace binding. On Commands, the legacy `/api/portal/share` and `/api/portal/creator-submit` POST routes accept the default portal Host and Origin, rewrite the Origin upstream, and drop cookies and authorization headers. When a workbench browser sends an Origin on a session POST, it must match `PUBLIC_ORIGIN`.
+
+### Client addresses behind the proxy
+
+Sign-in and per-address limits key on the client address. Behind a reverse proxy the API sees only the proxy, so every user would share one limit, unless `TRUST_PROXY` says which hops may report the client in `X-Forwarded-For`. It is off by default, and the hub ignores it (it trusts only `tailscale serve` on 127.0.0.1).
+
+- **Compose:** the web service takes the browser address from the `X-Forwarded-For` your TLS proxy adds (nginx `real_ip`, trusting loopback and private ranges, which is where the TLS proxy connects from while the Compose ports stay on loopback), and passes exactly that one address to the API. Export `TRUST_PROXY=1` before `docker compose up`. Make sure your TLS proxy sets or appends `X-Forwarded-For` and sends `X-Forwarded-Proto: https`.
+- **API on the host behind your own proxy:** set `TRUST_PROXY` to the proxy's address, for example `TRUST_PROXY=127.0.0.1`, or to the number of proxies in front of the API. Trusting every address (`true`, `*`, a `/0` range) is refused, since anyone could then claim any address.
+- Processes that can reach the API port directly can claim any address while `TRUST_PROXY` is set, so keep that port on loopback.
+
+The web service also sends the hub's security headers on every response: `Content-Security-Policy` (the hub's Web CSP), `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=31536000`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
 
 With Node v24.21.0, OpenSSL and Docker Compose v2, run `bash tests/acceptance/te06-compose.sh` to exercise the Compose route through a loopback TLS terminator and PostgreSQL. It builds dedicated images, uses generated secrets and ephemeral ports, and checks cleanup on exit.
 

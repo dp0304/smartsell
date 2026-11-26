@@ -986,7 +986,7 @@ if (assessed.route === 'worker') dispatchWorkerJob(ctx, target, task);   // 同�
  "revoked_jobs":[{"job_id":"…","reason":"cancelled"}],
  "channels":[{"social_account_id":"…","provider":"x","handle":"makemylure","expected_identity":"makemylure",
    "profile_key":"ch-1a2b3c4d5e6f","effective_mode":"auto","paused":false,"settings_generation":7,"login_check_requested":false}],
- "latest_worker":{"version":"0.2.1","platform":"mac-arm64","url":"/api/v1/worker-downloads/mac-arm64","sha256":"…"},
+ "latest_worker":{"version":"0.2.1","platform":"mac-arm64","url":"/api/v1/worker-downloads/mac-arm64","sha256":"…","signature":"…"},
  "driver_config":{"version":"2026.11.3","sha256":"…"}}
 ```
 
@@ -1069,6 +1069,10 @@ if (assessed.route === 'worker') dispatchWorkerJob(ctx, target, task);   // 同�
   - fencing 不符或 job 已終結：寫入事件並標 `fence_override:true`。若事實顯示可能已送出（`submitting`、`submitted`、`result`、`outcome_unknown`、`after_submit`），而 job 是 `cancelled`、`superseded`、`missed`、`failed` 或 `releasing`，就把 job 轉為 `succeeded`（`result`）或 `outcome_unknown`（其他），寫入 `late_fact_after_release`，取消還沒開跑的後繼 job（§5.2），並以 urgent 通知主人。
   - **處理函式對事實永不丟錯：**任何衝突（例如 §3.7 的 `POST_ALREADY_LINKED`）都記成 `fact_conflict` 事件，job 轉為 `outcome_unknown`、blocker `result_conflict`，回應 200。否則 Worker 會無限重送。
 - **租約回報（其他事件）：**`prepared`、`prepare_blocked`、`phase='before_submit'` 的 `blocked`、`failed`、`missed`、`released`、`readback_pending`、`login_state`。必須 fencing 相符且 job 未終結，否則回 409 `JOB_FENCE_LOST`。Worker 收到後只丟掉這個 job 在 outbox 中的租約回報，事實回報照常送出（§8.2）。
+- **兩種回報共同的限制（安全審核 S7）：**
+  - 回報的 fencing 不可高於 job 目前的 fencing；回報的機器必須真的持有過該 fencing（claim 時記在 `fence_holders`；派送、換機器與退役時加一的 fencing 沒有持有者，只屬於 job 目前的機器）。不符都回 409 `JOB_FENCE_LOST`。上面「事實照收」指的是同一台機器在舊 fencing 下的事實與已終結 job 的事實，不包括只因排在佇列時被換走而留在 `device_history` 的機器。
+  - 每個 job 最多 500 筆裝置回報，超過回 429 `JOB_REPORT_LIMIT`；寫進 job 的字串有長度上限（dry-run `trace` 合計 16 KiB）。
+  - `result.url` 只接受該平台的 https 網址（X：`x.com`、`twitter.com`；TikTok：`www.tiktok.com`、`tiktok.com`），不含帳密與連接埠；測試模式另外接受 `SMARTSELL_TEST_PLATFORM_ORIGINS` 的 loopback 夾具網址。不合格的網址不寫入貼文（事件標 `url_rejected`），事實本身照常處理。
 
 各事件的 `data` 內容與中樞的處理：
 
@@ -1504,6 +1508,10 @@ Python relay 凍結：新連線不再提供，既有連線可繼續使用；第 
    5. 刪除 staging 目錄。
    - 理由：儲存層把所有交易排成一列（§0 原則 8）。若在交易內複製 1 GB 或執行 60 秒的 ffprobe，所有 Worker 的心跳與 `jobs.go` 都會被卡住，Worker 會以為中樞停機而離線開跑（§5.7）。
 4. **清理：**`expires_at` 已過且狀態不是 `ready` 的 session，由排程每小時清理一次：刪除 staging 目錄，對應的 asset 標為 `failed`，通知主人 `upload_failed`。
+5. **暫存空間上限（安全審核 S4）：**
+   - 已記錄的分段互不重疊，所以一個 session 暫存的位元組不超過宣告的大小：同一個 `(n,k)` 重送會取代自己（續傳照樣冪等）；落在已收分段之內的分段直接回 `received`、不寫檔；涵蓋已收分段的分段取代它們（例如交接時兩個 relay 的分段大小不同）；只有部分重疊的分段回 409 `UPLOAD_PART_OVERLAP`（relay 會重讀狀態、只補缺的 chunk）。同一程序內，蓋到同一批 chunk 的寫入會排隊等前一個寫完。
+   - 每個工作區未完成上傳的宣告大小總和不超過 `SMARTSELL_UPLOAD_STAGING_QUOTA_BYTES`（預設 4 × 單檔上限），超過時建立新上傳回 413 `UPLOAD_QUOTA_EXCEEDED`。
+   - 以 `fs.statfs` 讀媒體目錄所在磁碟的剩餘空間：保留 `SMARTSELL_UPLOAD_MIN_FREE_BYTES`（預設 1 GiB）。新上傳需要兩倍宣告大小（分段加合併檔），每個分段與直傳需要自身大小；不夠時回 507 `UPLOAD_STORAGE_LOW`（直傳網址保留，可稍後重送）。已存在的 session 照樣可以續傳。
 
 ### 6.5 檔案落地與 ffprobe
 
@@ -2466,9 +2474,18 @@ node --import tsx apps/connector-desktop/src/headless/runner.ts --data-dir /tmp/
   - macOS 主機：產生 arm64 與 x64 的 dmg 與 zip；
   - Windows 主機：產生 x64 的 NSIS 安裝程式；
   - `forceCodeSigning: false`、沒有更新 feed、`RELEASE.packaged = true`，並記錄 `unsigned: true`。
-- **`pnpm worker:release [--out <dir>]`**（根目錄 script，S9 的 `scripts/worker-release.mjs`）：在目前的作業系統上建置，輸出安裝包與 `latest-<platform>.json {version, platform, file, sha256, bytes, built_at}`。在中樞上執行時預設輸出到 `<hubDir>/worker-downloads`；在別的機器上執行時輸出到 `dist/worker-release/`，並印出「把這些檔案複製到中樞的 `<hubDir>/worker-downloads/`（例如用 Tailscale 的 `tailscale file cp`）」。
+- **`pnpm worker:release [--out <dir>]`**（根目錄 script，S9 的 `scripts/worker-release.mjs`）：在目前的作業系統上建置，輸出安裝包與 `latest-<platform>.json {version, platform, file, sha256, bytes, built_at, signature}`（`signature` 見下方「發行簽章」）。在中樞上執行時預設輸出到 `<hubDir>/worker-downloads`；在別的機器上執行時輸出到 `dist/worker-release/`，並印出「把這些檔案複製到中樞的 `<hubDir>/worker-downloads/`（例如用 Tailscale 的 `tailscale file cp`）」。
 - **Windows 安裝包要在 Windows 機器上建置一次：**那台機器需要 git、Node 24 與 pnpm（`install-hub.ps1` 的前置檢查可以共用）。M1 的驗收要求在實體 Windows 機器上完成一次建置、安裝、配對與重開機自動上線（§11.3）。之後可改用 Windows 虛擬機或 CI（第 7 階段）。
 - 中樞以既有的 `apps/server/src/worker-downloads.ts`（S1）提供下載；S1 讓它除了主人的 session 之外，也接受裝置簽章的請求，讓 Worker 能自己下載更新。
+
+**發行簽章（安全審核 S1）：**Worker 不能只相信中樞給的版本、網址與 SHA-256，否則拿到中樞的人就能讓每台 Worker 執行任意程式。
+
+- `pnpm worker:release` 對每個平台的安裝包，以 Ed25519 簽 `{platform, sha256, version}` 的標準 JSON（RFC 8785：鍵排序、無空白、UTF-8；`apps/connector-desktop/src/release-signature.ts`，腳本與 App 共用），把 base64 簽章寫進 `latest-<platform>.json` 的 `signature`。
+- 私鑰：`SMARTSELL_RELEASE_SIGNING_KEY` 指向的 PEM（PKCS#8）；沒設定時用 `~/.smartsell/worker-release-key.pem`，第一次執行自動建立（權限 0600，印出路徑）。私鑰不可放在原始碼資料夾內，其他使用者讀得到時拒絕使用。每台建置機都要用同一把（Windows 建置機複製這個檔案並設定 `SMARTSELL_RELEASE_SIGNING_KEY`）；遺失或換了金鑰，已安裝的 Worker 會拒絕之後的更新，只能手動重新安裝。
+- 公鑰在建置時內建進 App：`worker:release` 以 `SMARTSELL_RELEASE_PUBLIC_KEY` 呼叫 `build.mjs --packaged`，成為 `RELEASE.releasePublicKey`（base64 SPKI DER）。
+- 中樞只檢查 `signature` 的格式，原樣放進心跳的 `latest_worker.signature`（沒有簽章時為 null），不驗證、也不持有私鑰。`hub:doctor` 對沒有簽章的安裝包發出警告。
+- Worker 內建公鑰時，簽章缺少或驗證失敗（版本、平台、SHA-256 任一被改、別的金鑰簽的）就拒絕這個更新：不下載、不發「可更新」通知，在更新卡片顯示 zh-Hant 原因並寫入日誌；之後收到同版或更新版本的有效簽章時恢復。下載的檔案再以已簽的 SHA-256 核對。沒有內建公鑰的開發版維持原本的行為，但更新卡片寫明「無法驗證發行簽章」。
+- 下載並核對後，macOS 加上 `com.apple.quarantine`、Windows 寫入 `Zone.Identifier`（ZoneId=3），讓 Gatekeeper／SmartScreen 照下載檔處理；失敗只寫日誌，不擋更新。
 
 **「有新版本」提示（不是靜默更新）：**
 

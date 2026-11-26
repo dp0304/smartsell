@@ -60,7 +60,9 @@ export function hostCaches() {
     latestWorker(device: Row, arch?: 'arm64' | 'x64'): HeartbeatV2Response['latest_worker'] {
       const platform = workerPlatformFor(device, arch);
       const release = releases.find(item => item.platform === platform);
-      return release ? { version: release.version, platform: release.platform, url: workerDownloadUrl(release.platform), sha256: release.sha256 } : null;
+      // S1: the release signature is passed through untouched; the Worker verifies it with its built-in public key.
+      return release ? { version: release.version, platform: release.platform, url: workerDownloadUrl(release.platform), sha256: release.sha256,
+        signature: release.signature ?? null } : null;
     },
     driverConfig(): HeartbeatV2Response['driver_config'] {
       return driver ? { version: driver.version, sha256: driver.sha256 } : null;

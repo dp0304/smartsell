@@ -18,8 +18,14 @@ const mimeTypes: Record<string, string> = {
   '.exe': 'application/octet-stream',
 };
 
-/** `latest-<platform>.json` written by `pnpm worker:release` (§8.18). */
-export interface WorkerRelease { version: string; platform: WorkerPlatform; file: string; sha256: string; bytes: number; built_at: string }
+/**
+ * `latest-<platform>.json` written by `pnpm worker:release` (§8.18). `signature` (security review S1) is the base64 Ed25519
+ * release signature over {platform, sha256, version}; the hub only checks its shape and passes it through to the Worker,
+ * which verifies it with the public key built into the App. Manifests from before S1 have none.
+ */
+export interface WorkerRelease {
+  version: string; platform: WorkerPlatform; file: string; sha256: string; bytes: number; built_at: string; signature?: string;
+}
 export type WorkerReleaseInspection =
   | { status: 'ok'; release: WorkerRelease }
   | { status: 'missing' }
@@ -32,6 +38,8 @@ export const workerDownloadUrl = (platform: WorkerPlatform) => `${route}/${platf
 
 const versionPattern = /^(\d{1,5})\.(\d{1,5})\.(\d{1,6})(?:-([0-9A-Za-z.-]{1,64}))?$/;
 const packageFile = /^[A-Za-z0-9][A-Za-z0-9._ -]{0,199}$/;
+/** An Ed25519 signature (64 bytes) in standard base64. */
+const releaseSignature = /^[A-Za-z0-9+/]{86}==$/;
 
 /** Orders `major.minor.patch[-pre]`; a pre-release sorts before its release. */
 export function compareWorkerVersions(a: string, b: string) {
@@ -69,7 +77,7 @@ export async function inspectWorkerRelease(directory: string | undefined, platfo
   let value: Record<string, unknown>;
   try { value = JSON.parse(text); } catch { return { status: 'invalid', reason: 'not JSON' }; }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { status: 'invalid', reason: 'not a JSON object' };
-  const { version, file, sha256, bytes, built_at: builtAt } = value;
+  const { version, file, sha256, bytes, built_at: builtAt, signature } = value;
   if (value.platform !== platform) return { status: 'invalid', reason: `platform is not ${platform}` };
   if (typeof version !== 'string' || !versionPattern.test(version)) return { status: 'invalid', reason: 'version is not major.minor.patch' };
   if (typeof file !== 'string' || !packageFile.test(file) || file.includes('..') || !mimeTypes[extname(file).toLowerCase()]) {
@@ -78,7 +86,10 @@ export async function inspectWorkerRelease(directory: string | undefined, platfo
   if (typeof sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sha256)) return { status: 'invalid', reason: 'sha256 must be 64 lowercase hex digits' };
   if (typeof bytes !== 'number' || !Number.isSafeInteger(bytes) || bytes < 1) return { status: 'invalid', reason: 'bytes must be a positive integer' };
   if (typeof builtAt !== 'string' || Number.isNaN(Date.parse(builtAt))) return { status: 'invalid', reason: 'built_at must be an ISO time' };
-  return { status: 'ok', release: { version, platform, file, sha256, bytes, built_at: builtAt } };
+  if (signature !== undefined && (typeof signature !== 'string' || !releaseSignature.test(signature))) {
+    return { status: 'invalid', reason: 'signature must be a base64 Ed25519 signature' };
+  }
+  return { status: 'ok', release: { version, platform, file, sha256, bytes, built_at: builtAt, ...(signature !== undefined && { signature }) } };
 }
 
 export async function workerReleases(directory: string | undefined) {
@@ -173,6 +184,7 @@ export function registerWorkerDownloads(app: FastifyInstance, directory: string 
       .header('content-disposition', `attachment; filename="${pkg.filename}"`)
       .header('content-length', pkg.size);
     if (pkg.release) reply.header('x-smartsell-sha256', pkg.release.sha256).header('x-smartsell-version', pkg.release.version);
+    if (pkg.release?.signature) reply.header('x-smartsell-release-signature', pkg.release.signature);
     return reply.send(pkg.file.createReadStream());
   });
 }

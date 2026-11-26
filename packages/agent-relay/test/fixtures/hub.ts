@@ -30,6 +30,10 @@ export interface HubOptions {
   /** Delay every part PUT by this many ms before the handler runs (a slow link). */
   partDelayMs?: number;
   relayBundlePath?: string;
+  /** S4 limits: workspace staging quota, free-disk reserve and a stub for the free-disk reading. */
+  uploadStagingQuotaBytes?: number;
+  uploadMinFreeBytes?: number;
+  diskFree?: (path: string) => Promise<number | undefined>;
 }
 
 export const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
@@ -80,8 +84,9 @@ export async function startHub(t: TestContext, options: HubOptions = {}) {
   });
   const uploads = registerAgentUploads(app, {
     credentials: { async authenticate(request) { return request.headers.authorization === `Bearer ${token}` ? principal : undefined; } },
-    media: { storage }, config: { mediaDirectory, maxUploadBytes: options.maxUploadBytes ?? config.maxUploadBytes },
-    prepare: options.prepare, relayBundlePath: options.relayBundlePath,
+    media: { storage }, config: { mediaDirectory, maxUploadBytes: options.maxUploadBytes ?? config.maxUploadBytes,
+      uploadStagingQuotaBytes: options.uploadStagingQuotaBytes, uploadMinFreeBytes: options.uploadMinFreeBytes },
+    prepare: options.prepare, relayBundlePath: options.relayBundlePath, diskFree: options.diskFree,
     log: { error: (object, message) => { if (process.env.S5_DEBUG) console.error(message, object); } },
   });
   const origin = await app.listen({ host: '127.0.0.1', port: 0 });

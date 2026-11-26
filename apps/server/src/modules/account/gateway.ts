@@ -2,7 +2,7 @@ import type { Context } from '@smartsell/contracts';
 import type { ProviderKey, RawRequest } from '../../../../../packages/adapters/src/adapter-types.ts';
 import type { Row } from '@smartsell/contracts';
 import { deviceBodyLimits, handleDeviceRequest, type ConnectorServices, type DeviceAction } from './connector-service.ts';
-import { authenticateDevice, pairDevice, type SignedDeviceRequest } from './device-control.ts';
+import { authenticateDevice, pairDevice, precheckDevice, type SignedDeviceRequest } from './device-control.ts';
 import { refreshHostCaches } from '../worker/host-cache.ts';
 import { fail, object, text } from './input.ts';
 import { acceptWebhook, completeOAuth, digest, type AccountServices } from './oauth.ts';
@@ -16,12 +16,22 @@ export interface AccountGatewayDependencies {
   oauthWorkspace(provider: ProviderKey, stateHash: string): Promise<string | undefined>;
   pairingWorkspace(codeHash: string, workspaceHint?: string): Promise<string | undefined>;
   deviceWorkspace(deviceId: string, workspaceHint?: string): Promise<string | undefined>;
+  /**
+   * S5: read one device row without the workspace write lock (a single-row read). Undefined when this host has no such read;
+   * then the signature is checked only inside the transaction, as before.
+   */
+  deviceKey?(workspaceId: string, deviceId: string): Promise<{ device: Row | undefined } | undefined>;
   /** Select from trusted app routing configuration. Never trust an unverified event's workspace. */
   webhookWorkspace(provider: ProviderKey, endpointId: string): Promise<{ workspaceId: string; appId?: string } | undefined>;
 }
 
 /** Route/controller boundary. Host mounts these with raw-body handling, rate limits and no-store responses. */
 export function createAccountGateway(deps: AccountGatewayDependencies) {
+  /** S5: refuse a request whose signature does not verify before deps.transaction locks and loads the workspace. */
+  async function precheck(workspace: string, action: string, rawBody: Uint8Array, signed: SignedDeviceRequest, bodyLimit: number) {
+    const lookup = await deps.deviceKey?.(workspace, text(signed.device_id));
+    if (lookup) precheckDevice(workspace, lookup.device, action, rawBody, signed, bodyLimit);
+  }
   return {
     async oauthCallback(provider: ProviderKey, query: Readonly<Record<string, string>>) {
       const workspace = await deps.oauthWorkspace(provider, digest(text(query.state)));
@@ -59,6 +69,7 @@ export function createAccountGateway(deps: AccountGatewayDependencies) {
       }
       const workspace = await deps.deviceWorkspace(text(signed.device_id), workspaceHint);
       if (!workspace) fail('DEVICE_NOT_FOUND', 401);
+      await precheck(workspace, action, rawBody, signed, action === 'catalog.upload' ? workerCatalogUploadBodyLimit : deviceBodyLimits[action] ?? 128_000);
       const outcome = await deps.transaction(workspace, async ctx => {
         try {
           return { data: await handleDeviceRequest(ctx, action, rawBody, signed, deps.connector, requestId) };
@@ -78,6 +89,7 @@ export function createAccountGateway(deps: AccountGatewayDependencies) {
       run: (ctx: Context, device: Row) => T | Promise<T>): Promise<T> {
       const workspace = await deps.deviceWorkspace(text(signed.device_id), workspaceHint);
       if (!workspace) fail('DEVICE_NOT_FOUND', 401);
+      await precheck(workspace, action, rawBody, signed, bodyLimit);
       return deps.transaction(workspace, async ctx => run(ctx, authenticateDevice(ctx, action, rawBody, signed, bodyLimit)));
     },
     /** A follow-up write for an already authenticated signed request (evidence record after the bytes are stored). */

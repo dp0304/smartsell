@@ -40,7 +40,9 @@ async function optionalOperationApi(config: ReturnType<typeof configuration>) {
     bundledClip: await readBundledClip(),
   });
   // Owner alerts (S10 ledger 1–2): push tokens are sealed with a key derived from APP_SECRET; links use PUBLIC_ORIGIN.
-  configureAlerts({ secretKey: createHash('sha256').update(`smartsell:alert-channel:v1:${config.secret}`).digest(), publicOrigin: config.origin });
+  configureAlerts({ secretKey: createHash('sha256').update(`smartsell:alert-channel:v1:${config.secret}`).digest(), publicOrigin: config.origin,
+    // S6: the home hub may push to its own ntfy on 127.0.0.1 or the tailnet; SaaS pushes only to public addresses.
+    privateEgress: config.pushPrivateNetwork });
   // §9.6, C7: one link builder (S7's views) for MCP results (S4), owner alerts (S10) and the dashboard; S10's machine_setup
   // alerts use the §3.2 warnings. Loaded after discoverOperations(), so the account/planning modules are already linked.
   const [{ installWebLinks }, { effectiveMode }] = await Promise.all([

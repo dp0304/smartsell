@@ -251,10 +251,12 @@ test('revocations are persisted, updates announced once, and a rejected selector
     const claimed = heldJob(s.hub, s.store);
     s.hub.job(claimed.job_id).revoke = 'cancelled';
     s.hub.job(claimed.job_id).status = 'releasing';
-    s.hub.latestWorker = { version: '0.2.1', platform: 'mac-arm64', url: '/api/v1/worker-downloads/mac-arm64', sha256: 'f'.repeat(64) };
+    const signature = `${'C'.repeat(85)}g==`;
+    s.hub.latestWorker = { version: '0.2.1', platform: 'mac-arm64', url: '/api/v1/worker-downloads/mac-arm64', sha256: 'f'.repeat(64), signature };
     const updates: string[] = [];
     const platforms: (string | undefined)[] = [];
-    s.events.on('update_available', event => { updates.push(event.version); platforms.push(event.platform); });
+    const signatures: (string | undefined)[] = [];
+    s.events.on('update_available', event => { updates.push(event.version); platforms.push(event.platform); signatures.push(event.signature); });
     const broken = Buffer.from(JSON.stringify({ ...defaultSelectors(), version: '2026.12.1', x: { steps: {}, patterns: {} } }));
     s.hub.driverConfig = { bytes: broken, version: '2026.12.1', sha256: createHash('sha256').update(broken).digest('hex') };
     await s.supervisor.tick();
@@ -262,6 +264,7 @@ test('revocations are persisted, updates announced once, and a rejected selector
     assert.equal(s.store.get(claimed.job_id)?.revoked, true);
     assert.deepEqual(updates, ['0.2.1']);
     assert.deepEqual(platforms, ['mac-arm64'], 'update_available carries latest_worker.platform (C11 review suggestion 3)');
+    assert.deepEqual(signatures, [signature], 'S1: update_available carries the release signature unchanged');
     assert.equal(s.hub.log.filter(entry => entry.action === 'driver_config.read').length, 1, 'a rejected version is not downloaded again');
     const drivers = (s.hub.log.filter(entry => entry.action === 'heartbeat').at(-1)!.body as { drivers: { health: string }[] }).drivers;
     assert.ok(drivers.every(driver => driver.health === 'unknown'));

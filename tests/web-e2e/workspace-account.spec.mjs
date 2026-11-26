@@ -148,6 +148,17 @@ async function measure(page, route, measurements) {
   }
 }
 
+test('S15: the member invitation link token leaves the address bar once read and survives a reload in the same tab', async ({ page, dev }) => {
+  const token = 'A'.repeat(43);
+  await page.goto(`${dev.origin}/invite#${token}`);
+  await expect(page.getByRole('heading', { level: 2 })).toBeVisible();
+  await expect.poll(() => page.url()).toBe(`${dev.origin}/invite`);
+  await expect(page.locator('input[name="token"]')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('input[name="email"]')).toBeVisible();
+  await expect(page.locator('input[name="token"]')).toHaveCount(0);
+});
+
 for (const locale of ['zh-Hant', 'en']) {
   test(`WS01 1280px document and navigation widths on primary pages (${locale})`, async ({ page, dev, browser }, info) => {
     test.setTimeout(150_000);

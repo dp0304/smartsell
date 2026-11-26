@@ -7,6 +7,9 @@ import { ALERT_KIND, CHANNEL_KIND, PREFERENCE_KIND, TEST_KIND, alertHooks, find,
   workspaceTimezone } from './model.js';
 import type { PushDelivery } from './raise.js';
 import { scanAlertReminders } from './reminders.js';
+import { EgressDenied, publicFetch } from '../../integration/public-egress.js';
+import { publicAddress } from '../traffic/probe.js';
+import { isIP } from 'node:net';
 
 export type PushKind = AlertChannelConfig['kind'];
 export const PUSH_KINDS: readonly PushKind[] = ['ntfy', 'bark', 'telegram'];
@@ -65,6 +68,11 @@ function pushUrl(value: unknown, path: string): string {
   }
   const segments = url.pathname.split('/').filter(Boolean);
   if (!segments.length) return invalidArgs(`${path} must include the topic or device key in its path`, path);
+  // S6: outside the hub, refuse what is plainly inside the network now; sending checks the resolved address again.
+  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!alertHooks().privateEgress && (host === 'localhost' || host.endsWith('.localhost') || (isIP(host) && !publicAddress(host)))) {
+    return invalidArgs(`${path} must be a public address; this server does not send push to private networks`, path);
+  }
   return `${url.origin}/${segments.join('/')}${url.search}`;
 }
 function secretValue(value: unknown, path: string, pattern: RegExp, hint: string): string | null | undefined {
@@ -207,8 +215,12 @@ async function readJson(response: Response): Promise<Data | undefined> {
   try { return await response.json() as Data; } catch { return undefined; }
 }
 
-/** One HTTP request to the configured service. Errors never contain the URL or a token. */
-export async function sendPush(channel: ChannelSecrets, message: PushMessage, fetcher: typeof fetch = alertHooks().fetch ?? fetch,
+/**
+ * One HTTP request to the configured service. Errors never contain the URL or a token. Outside the hub the request goes
+ * through the customer egress guard (S6): the host is resolved once, must be public, and that address is pinned.
+ */
+export async function sendPush(channel: ChannelSecrets, message: PushMessage,
+  fetcher: typeof fetch = alertHooks().fetch ?? (alertHooks().privateEgress ? fetch : publicFetch),
   timeoutMs = alertHooks().pushTimeoutMs ?? DEFAULT_TIMEOUT_MS): Promise<SendResult> {
   const json = (url: string, body: Data, headers: Record<string, string> = {}) => fetcher(url, {
     method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(timeoutMs),
@@ -246,6 +258,7 @@ export async function sendPush(channel: ChannelSecrets, message: PushMessage, fe
     return { ok: false, error: `Telegram HTTP ${response.status}${description}` };
   } catch (error) {
     const name = error instanceof Error ? error.name : '';
+    if (error instanceof EgressDenied) return { ok: false, error: 'destination_not_public' };
     return { ok: false, error: name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'network_error' };
   }
 }

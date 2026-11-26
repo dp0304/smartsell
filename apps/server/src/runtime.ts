@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Records, Scope, Store } from '@smartsell/db';
-import type { Context } from '@smartsell/contracts';
+import type { Context, Row } from '@smartsell/contracts';
 import type { Workspace } from './identity.js';
 import type { Config } from './config.js';
 import { makeContext, type DomainEvent } from './context.js';
@@ -19,7 +19,15 @@ export interface BackgroundStore {
   workspaces(): Promise<Workspace[]>;
   subscribe?: Store['subscribe'];
   transact<T>(ws: Workspace, readOnly: boolean, run: (records: Records, scope: Scope, identity?: Records) => T | Promise<T>): Promise<T>;
+  /**
+   * S5: read single domain rows without the workspace write lock and without loading the Operation snapshot (device
+   * signature checks before a transaction). Optional; callers fall back to transact.
+   */
+  peek?<T>(ws: Workspace, run: (get: (kind: string, id: string) => Promise<Row | undefined>) => T | Promise<T>): Promise<T>;
 }
+
+/** The Records key of a domain row (context.ts). */
+export const rowKey = (kind: string, id: string) => `row/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`;
 
 export function kernelBackgroundStore(store: Store): BackgroundStore {
   return {
@@ -29,6 +37,11 @@ export function kernelBackgroundStore(store: Store): BackgroundStore {
     transact: (ws, readOnly, run) => store.transaction({ readOnly, identityWrite: !readOnly }, async tx => {
       const scope = { workspaceId: ws.id, tenantId: ws.tenantId, actorId: systemPrincipal };
       return run(await tx.workspace(scope), scope, tx.identity);
+    }),
+    // A read-only transaction: no write lock (S5).
+    peek: (ws, run) => store.transaction({ readOnly: true }, async tx => {
+      const records = await tx.workspace({ workspaceId: ws.id, tenantId: ws.tenantId, actorId: systemPrincipal });
+      return run(async (kind, id) => records.get<Row>(rowKey(kind, id)));
     }),
   };
 }

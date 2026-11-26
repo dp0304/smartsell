@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Autostart, loginItemSettings, usesMainAppService, type LoginItemSettingsInput } from '../../../apps/connector-desktop/src/app/autostart.ts';
 import { trayModel, trayPixels } from '../../../apps/connector-desktop/src/app/tray.ts';
-import { Notifier, safeWebUrl } from '../../../apps/connector-desktop/src/app/notify.ts';
+import { hubPageUrl, Notifier, safeWebUrl } from '../../../apps/connector-desktop/src/app/notify.ts';
 
 function fakeApp(state: { openAtLogin?: boolean; wasOpenedAtLogin?: boolean } = {}) {
   const set: LoginItemSettingsInput[] = [];
@@ -56,6 +56,20 @@ test('tray: red when the vault is locked or the machine revoked, badge for an up
   assert.ok(stopped.items.some(item => item.id === 'resume'));
   assert.match(stopped.items[1].label, /1 則要你處理/);
   assert.equal(trayModel({ ...base, role: 'agent', connection: 'agent_unauthorized' }).tone, 'error');
+});
+
+test('S11: hub links open only on the paired hub (or the Agent-mode hub) over https; other sites and schemes are refused', () => {
+  const hub = 'https://hub.tail1234.ts.net';
+  assert.equal(hubPageUrl(`${hub}/app/w/ws/posts/1`, [hub, null]), `${hub}/app/w/ws/posts/1`);
+  assert.equal(hubPageUrl(`${hub}/app`, [undefined, `${hub}/`]), `${hub}/app`, 'the Agent-mode hub counts too');
+  for (const url of ['https://evil.example/app', 'http://hub.tail1234.ts.net/app', `${hub}.evil.example/app`, 'file:///etc/passwd',
+    'smb://evil.example/share', 'javascript:alert(1)', 'x-apple.systempreferences:com.apple.preference', `https://user:pw@hub.tail1234.ts.net/app`, 42]) {
+    assert.equal(hubPageUrl(url, [hub]), null, String(url));
+  }
+  assert.equal(hubPageUrl(`${hub}/app`, []), null, 'nothing opens before pairing');
+  // A loopback development hub is http; only its own origin opens.
+  assert.equal(hubPageUrl('http://127.0.0.1:3401/app', ['http://127.0.0.1:3401']), 'http://127.0.0.1:3401/app');
+  assert.equal(hubPageUrl('http://127.0.0.1:9999/app', ['http://127.0.0.1:3401']), null);
 });
 
 test('notifier: one notification per key, history of 20, only https or loopback links are opened', () => {

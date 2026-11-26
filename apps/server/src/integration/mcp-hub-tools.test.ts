@@ -336,7 +336,8 @@ test('E47 direct form over plain MCP: {filename, bytes, sha256} returns a one-us
   assert.deepEqual(failure(await h.call('media_upload', { filename: 'video.mp4' })).issues.map((issue: Json) => issue.path), ['bytes', 'sha256']);
   const first = ok(await h.call('media_upload', described));
   assert.equal(first.status, 'receiving');
-  assert.ok(first.upload.command.includes('-T "<path>"') && first.upload.command.endsWith(`"${first.upload.url}"`), first.upload.command);
+  assert.ok(first.upload.command.includes("-T '<path>'") && first.upload.command.endsWith(`'${first.upload.url}'`), first.upload.command);
+  assert.ok(!first.upload.command.includes('"'), 'no double quotes: the shell would expand $(…) and backticks inside them');
   assert.ok(first.upload.url.startsWith(`${h.config.origin}/api/v1/agent/uploads/direct/`));
   assert.ok(!JSON.stringify(first).includes(h.connection.token), 'the agent token never reaches the model');
   // What the agent runs: one PUT of the whole file (the command's curl -T, done here with fetch).

@@ -30,6 +30,11 @@ export interface AlertHooks {
   machineWarnings?(ctx: Context, device: Row): MachineWarning[];
   /** Outbound HTTP for push delivery; tests pass a fetch bound to a local fake server. */
   fetch?: typeof fetch;
+  /**
+   * S6: push may reach private and loopback addresses (the home hub's own ntfy on 127.0.0.1 or the tailnet). Set for hub
+   * mode and by SMARTSELL_PUSH_PRIVATE_NETWORK=1; otherwise (SaaS) ntfy and Bark URLs must resolve to public addresses.
+   */
+  privateEgress?: boolean;
   telegramApiBase?: string;
   pushTimeoutMs?: number;
 }

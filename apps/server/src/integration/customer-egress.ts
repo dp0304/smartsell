@@ -1,8 +1,6 @@
-import { Resolver } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
-import { request as httpsRequest } from 'node:https';
 import { Problem, type Context, type Data } from '@smartsell/contracts';
-import { publicAddress } from '../modules/traffic/probe.js';
+import { EgressDenied, publicPost } from './public-egress.js';
 import { requestModel, availableModelPurposes, type AgentModelServices } from '../modules/agent/operations.js';
 import { assertEmergencyNotStopped, type OpsServices } from '../modules/ops/index.js';
 import { productionSemantics } from '../production.js';
@@ -27,13 +25,14 @@ function endpoint(value: string, allowLoopback = false) {
 }
 
 async function post(url: URL, headers: Record<string, string>, body: string) {
-  const loopback = url.protocol === 'http:';
-  const addresses = loopback ? [] : await new Resolver({ timeout: 1000, tries: 1 }).resolve4(`${url.hostname}.`);
-  if (!loopback && (!addresses.length || addresses.some(address => !publicAddress(address)))) throw new Error('Customer endpoint is unavailable');
-  const send = loopback ? httpRequest : httpsRequest;
+  if (url.protocol !== 'http:') {
+    // DNS pinning and the public-address check live in public-egress.ts, shared with phone push (S6).
+    try { return await publicPost(url, headers, body, { timeoutMs: 5000, maxBytes: 512 * 1024 }); }
+    catch (error) { throw error instanceof EgressDenied ? new Error('Customer endpoint is unavailable') : error; }
+  }
+  // http: only for the development loopback webhook that endpoint() let through.
   return new Promise<{ status: number; body: string }>((resolve, reject) => {
-    const req = send(url, { method: 'POST', headers, agent: false, signal: AbortSignal.timeout(5000),
-      ...(loopback ? {} : { family: 4, lookup: (_host, _options, callback) => callback(null, addresses[0], 4) }) }, res => {
+    const req = httpRequest(url, { method: 'POST', headers, agent: false, signal: AbortSignal.timeout(5000) }, res => {
       const chunks: Buffer[] = [];
       let size = 0;
       res.on('data', (chunk: Buffer) => {

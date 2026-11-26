@@ -47,7 +47,7 @@ node --import tsx --test tests/connector-desktop/*.test.ts tests/connector-deskt
 
 ## 打包
 
-在根目錄執行 `pnpm worker:release`（macOS 產生 mac-arm64 與 mac-x64；在 Windows 加 `--win` 產生 win-x64），輸出到 `dist/worker-release/`，放進中樞的 `worker-downloads/` 後即可從「開始設定」下載，步驟見 [中樞安裝與維護](../../docs/hub-setup.md) 第 4 節。第 1 階段的安裝包沒有 Apple Developer ID 與 Windows 程式碼簽章；正式簽章與自動更新的設定見 `scripts/package-config.mjs`。
+在根目錄執行 `pnpm worker:release`（macOS 產生 mac-arm64 與 mac-x64；在 Windows 加 `--win` 產生 win-x64），輸出到 `dist/worker-release/`，放進中樞的 `worker-downloads/` 後即可從「開始設定」下載，步驟見 [中樞安裝與維護](../../docs/hub-setup.md) 第 4 節。第 1 階段的安裝包沒有 Apple Developer ID 與 Windows 程式碼簽章；正式簽章與自動更新的設定見 `scripts/package-config.mjs`。更新另有 Ed25519 發行簽章：`worker:release` 以 `SMARTSELL_RELEASE_SIGNING_KEY`（預設 `~/.smartsell/worker-release-key.pem`）簽 `latest-<platform>.json`，並以 `SMARTSELL_RELEASE_PUBLIC_KEY` 把公鑰內建進 App（`RELEASE.releasePublicKey`）；內建公鑰的 App 拒絕簽章不符的更新（安全審核 S1，§8.18）。
 
 ## 選用：在專案安裝 Agent Skills
 

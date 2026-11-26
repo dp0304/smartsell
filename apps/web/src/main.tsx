@@ -74,6 +74,18 @@ function Authentication({ setupPath, registerToMain, workerConnection }: { setup
     </section></main></div>;
 }
 
+const INVITATION_TOKEN_KEY = 'smartsell:invite-token';
+
+/** The member invitation token from the link fragment, or the one this tab already read (S15). */
+function invitationToken(hash: string) {
+  const fromLink = /^[A-Za-z0-9_-]{43}$/.test(hash.slice(1)) ? hash.slice(1) : undefined;
+  try {
+    if (fromLink) window.sessionStorage.setItem(INVITATION_TOKEN_KEY, fromLink);
+    else return window.sessionStorage.getItem(INVITATION_TOKEN_KEY) ?? undefined;
+  } catch { /* storage unavailable: a reload needs the link again */ }
+  return fromLink;
+}
+
 function MemberInvitation() {
   const { t, label } = useCopy();
   const { hash } = useLocation();
@@ -82,7 +94,11 @@ function MemberInvitation() {
   const [error, setError] = useState<unknown>();
   const flight = useRef(false);
   const title = label(['接受成員邀請', 'Accept member invitation']);
-  const tokenFromLink = /^[A-Za-z0-9_-]{43}$/.test(hash.slice(1)) ? hash.slice(1) : undefined;
+  // S15: read the invitation token once, keep it for this tab (a reload still works) and take it out of the address bar.
+  const [tokenFromLink] = useState(() => invitationToken(hash));
+  useEffect(() => {
+    if (window.location.hash) window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,6 +114,7 @@ function MemberInvitation() {
       await request('/api/v1/member-invitations/accept', {
         method: 'POST', body: { email, name, password, token: tokenFromLink ?? token },
       });
+      try { window.sessionStorage.removeItem(INVITATION_TOKEN_KEY); } catch { /* storage unavailable */ }
       navigate('/login', { replace: true });
     } catch (failure) { setError(failure); }
     finally { flight.current = false; setPending(false); }

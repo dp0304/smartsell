@@ -98,6 +98,10 @@ test('LP04 EM01 | public form submits separate consent and signed unsubscribe wi
   await page.goto(`${origin}/unsubscribe#${token}`);
   const confirm = page.getByRole('button', { name: '確認取消訂閱' });
   await expect(confirm).toBeVisible();
+  // S15: the token leaves the address bar once read; a reload in this tab still works.
+  expect(page.url()).toBe(`${origin}/unsubscribe`);
+  await page.reload();
+  await expect(confirm).toBeVisible();
   expect(await state('email', 'marketing')).toBe('opted_in');
   const withdrawal = page.waitForResponse(res => res.url().endsWith('/api/public/unsubscribe') && res.request().method() === 'POST');
   await confirm.click();
@@ -147,6 +151,8 @@ test('TE03 TE04 | signed client share hides internal records and revocation take
   const readback = page.waitForResponse(res => res.url().endsWith('/api/portal/share') && res.request().method() === 'POST');
   await page.goto(`${origin}/share#${token}`);
   await expect(page.getByRole('heading', { name: 'October delivery' })).toBeVisible();
+  // S15: the token leaves the address bar once read (the reload below still uses it from this tab).
+  expect(page.url()).toBe(`${origin}/share`);
   await expect(page.getByText('Monthly report', { exact: true })).toBeVisible();
   const response = await readback;
   expect(response.headers()['cache-control']).toBe('no-store');
