@@ -514,9 +514,9 @@ test('the wizard completes with an Agent and two machines, and paired workers ru
   expect(await ws.rest('GET', '/stores')).toEqual([]);
   expect(await ws.rest('GET', '/products')).toEqual([]);
 
-  // Settings points to the channels page (§9.8: worker-management → channels); channels come from the Worker (§8.16).
+  // Channels are in the dashboard navigation (§9.1; Settings no longer repeats the link in phase 1, U6); they come from the Worker (§8.16).
   await page.goto(`${ws.app}/settings`);
-  await page.getByRole('link', { name: 'Posting channels and machines', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Dashboard navigation' }).getByRole('link', { name: 'Channels', exact: true }).click();
   await expect(page).toHaveURL(`${ws.app}/channels`);
   await expect(main.getByText(/^No channels yet\. Add them in SmartSell Worker on the machine that posts/)).toBeVisible();
   const channelId = await primary.addChannel('x', 'catalog_fixture');
