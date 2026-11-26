@@ -358,8 +358,9 @@ test('E9: latest_worker follows the heartbeat arch; macOS without arch gets arm6
   const { refreshHostCaches } = await import('./host-cache.js');
   const dir = mkdtempSync(join(tmpdir(), 'smartsell-e9-'));
   const sha = (n: string) => n.repeat(64);
-  const release = (platform: string, file: string, digit: string) => writeFileSync(join(dir, `latest-${platform}.json`),
-    JSON.stringify({ version: '0.2.0', platform, file, sha256: sha(digit), bytes: 10, built_at: '2027-01-01T00:00:00.000Z' }));
+  const signature = `${'B'.repeat(85)}Q==`;
+  const release = (platform: string, file: string, digit: string, signed = false) => writeFileSync(join(dir, `latest-${platform}.json`),
+    JSON.stringify({ version: '0.2.0', platform, file, sha256: sha(digit), bytes: 10, built_at: '2027-01-01T00:00:00.000Z', ...(signed && { signature }) }));
   try {
     configureWorkerHost({ workerDownloadDirectory: dir });
     const f = hubFixture();
@@ -369,14 +370,16 @@ test('E9: latest_worker follows the heartbeat arch; macOS without arch gets arm6
     const intel = f.heartbeat([], { arch: 'x64' }).latest_worker;
     assert.equal(intel?.platform, 'mac-x64');
     assert.equal(intel?.url, '/api/v1/worker-downloads/mac-x64');
+    assert.equal(intel?.signature, null, 'S1: a manifest without a release signature is offered with signature null');
     assert.equal(f.ctx.get('connector_device', f.device.id).arch, 'x64', 'the CPU is stored when it changes');
     assert.equal(f.heartbeat().latest_worker?.platform, 'mac-x64', 'a later heartbeat without arch uses the stored CPU');
     release('mac-arm64', 'SmartSell-Worker-0.2.0-mac-arm64.zip', 'a');
-    release('win-x64', 'SmartSell-Worker-0.2.0-win-x64.exe', 'c');
+    release('win-x64', 'SmartSell-Worker-0.2.0-win-x64.exe', 'c', true);
     await refreshHostCaches(true);
     assert.equal(f.heartbeat([], { arch: 'arm64' }).latest_worker?.platform, 'mac-arm64');
     f.ctx.update('connector_device', f.device.id, { platform: 'win32' });
     assert.equal(f.heartbeat([], { arch: 'x64' }).latest_worker?.platform, 'win-x64');
+    assert.equal(f.heartbeat([], { arch: 'x64' }).latest_worker?.signature, signature, 'S1: the release signature is passed through verbatim');
     assert.equal(f.heartbeat([], { arch: 'bogus' }).latest_worker?.platform, 'win-x64', 'an unknown arch value is ignored');
   } finally {
     configureWorkerHost({ workerDownloadDirectory: undefined });

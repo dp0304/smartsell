@@ -163,7 +163,11 @@ export interface HeartbeatV2Response {
   revoked_jobs: { job_id: string; reason: RevokeReason }[];
   channels: { social_account_id: string; provider: HubProvider; handle: string | null; expected_identity: string; profile_key: string;
     effective_mode: EffectiveMode; paused: boolean; settings_generation: number; login_check_requested: boolean }[];
-  latest_worker: { version: string; platform: 'mac-arm64' | 'mac-x64' | 'win-x64'; url: string; sha256: string } | null;
+  /**
+   * `signature` (security review S1): base64 Ed25519 signature over {platform, sha256, version} from latest-<platform>.json,
+   * passed through unchanged; null when the manifest has none. A Worker with an embedded release key refuses null.
+   */
+  latest_worker: { version: string; platform: 'mac-arm64' | 'mac-x64' | 'win-x64'; url: string; sha256: string; signature?: string | null } | null;
   driver_config: { version: string; sha256: string } | null;
 }
 export interface ClaimRequest { kinds: WorkerJobKind[]; horizon_minutes: number; max: number; held_job_ids: string[] }

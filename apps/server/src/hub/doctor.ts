@@ -174,7 +174,9 @@ export async function runDoctor(argv: readonly string[], deps: DoctorDeps = {}):
   const downloads = config?.workerDownloadDirectory;
   for (const platformName of WORKER_PLATFORMS) {
     const release = await inspectWorkerRelease(downloads, platformName);
-    if (release.status === 'ok') ok(`Worker 安裝包 ${platformName}：${release.release.version}（${release.release.file}）`);
+    if (release.status === 'ok' && !release.release.signature) {
+      warn(`Worker 安裝包 ${platformName}：${release.release.version} 沒有發行簽章（S1 之前建置的）。內建發行公鑰的 Worker 會拒絕這個更新；請重新執行 pnpm worker:release。`);
+    } else if (release.status === 'ok') ok(`Worker 安裝包 ${platformName}：${release.release.version}（${release.release.file}，已簽章）`);
     else if (release.status === 'missing') warn(`沒有 ${platformName} 的 Worker 安裝包。請執行 pnpm worker:release${platformName === 'win-x64' ? '（Windows 安裝包要在 Windows 機器上建置）' : ''}，並放到 ${downloads ?? '<hubDir>/worker-downloads'}。`);
     else error(`latest-${platformName}.json 不正確：${release.reason}。請重新執行 pnpm worker:release。`);
   }

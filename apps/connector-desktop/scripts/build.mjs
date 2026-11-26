@@ -2,6 +2,9 @@
 // (package.mjs --unsigned, pnpm worker:release): it defines RELEASE.packaged =
 // true, which makes chrome.ts#isPackagedBuild() refuse every SMARTSELL_TEST_*
 // switch and the headless file vault (S6 ledger item 10).
+// SMARTSELL_RELEASE_PUBLIC_KEY (set by pnpm worker:release) becomes
+// RELEASE.releasePublicKey: the App then refuses an update without a valid
+// Ed25519 release signature (security review S1).
 import { cp, mkdir, readFile, rm } from 'node:fs/promises';
 import catalog from '../skills/catalog.json' with { type: 'json' };
 import { fileURLToPath } from 'node:url';
@@ -32,4 +35,7 @@ await build({ ...options, format: 'esm', target: 'node20', legalComments: 'none'
   outfile: 'dist/agent-relay/smartsell-relay.mjs' });
 await mkdir(new URL('dist/', appDir), { recursive: true });
 await cp(new URL('ui/', appDir), new URL('dist/ui/', appDir), { recursive: true });
-console.log(`Built dist/ (RELEASE.packaged=${packaged})`);
+if (packaged && !release.releasePublicKey) {
+  console.warn('Warning: no SMARTSELL_RELEASE_PUBLIC_KEY; this build cannot verify update signatures (use pnpm worker:release for installers)');
+}
+console.log(`Built dist/ (RELEASE.packaged=${packaged}, release key ${release.releasePublicKey ? 'embedded' : 'none'})`);
