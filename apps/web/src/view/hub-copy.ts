@@ -279,6 +279,8 @@ export const hub = {
     forceHint: ['只有在 {machine} 確定已關機或斷網時才這樣做。中樞沒有收到它開始發布的紀錄；強制釋放後，{machine} 上線也不會再發這則。如果它其實還開著並且發出了，會造成重複貼文；系統仍會記錄並通知你。',
       'Only do this if {machine} is surely off or offline. The hub has no record that it started posting; after the release {machine} will not post it when it is back. If it is in fact running and posts, you get a duplicate; it is still recorded and you are told.'],
     forceType: ['輸入下面這句話確認：', 'Type this sentence to confirm:'], forceText: ['我確認 {machine} 已關機或已斷網，不會發出這則貼文。', '我確認 {machine} 已關機或已斷網，不會發出這則貼文。'],
+    // U8: a refused paste says which link is wanted, with an example for the channel's own handle.
+    urlRejected: ['中樞不接受這個網址{reason}。請貼上 @{handle} 在 {platform} 上這則貼文的網址，例如 {example}', 'That link was not accepted. Paste the link to this post by @{handle} on {platform}, e.g. {example}'],
     url: ['貼文網址', 'Post URL'], newTime: ['新的時間', 'New time'], reason: ['原因（選填）', 'Reason (optional)'], confirm: ['確認', 'Confirm'],
     done: ['已送出。', 'Sent.'], humanOnly: ['這些動作只能由你在網頁上做，Agent 不能代做。', 'Only you can do these on the web; the Agent cannot.'],
     // WV-3: an approval the hub answered 200 without recording it.

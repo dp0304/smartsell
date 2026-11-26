@@ -158,6 +158,9 @@ button[aria-pressed=true] { background-color: var(--soft); color: var(--ink); bo
 .notice { --status-bg: var(--status-warning-bg); --status-ink: var(--status-warning); margin: 8px 0; }
 .problem p { margin-top: 5px; }
 .problem button { margin-top: 8px; }
+.problem-details { margin-top: 8px; color: var(--muted); }
+.problem-details > summary { cursor: pointer; font-size: 12px; width: fit-content; }
+.problem-details small { display: block; margin-top: 3px; font-size: 12px; }
 .busy { display: flex; gap: 9px; align-items: center; padding: 12px; color: var(--muted); }
 .spinner { width: 15px; height: 15px; flex: none; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; }
 .spinner, .rotating { animation: rotate 1s linear infinite; }

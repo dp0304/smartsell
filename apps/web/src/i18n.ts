@@ -60,7 +60,7 @@ const copy: Record<string, Label> = {
   loading: ['載入中…', 'Loading…'], saving: ['送出中…', 'Submitting…'], retry: ['重試', 'Retry'],
   empty: ['目前沒有紀錄', 'No records yet'], emptyDetail: ['新增第一筆紀錄，或切換篩選條件。', 'Create the first record or change the filters.'],
   noAccess: ['此操作未開放', 'Operation unavailable'], noAccessDetail: ['目前的工作區目錄未提供這項操作。請確認權限或後端支援。', 'This operation is absent from the workspace catalog. Check access or server support.'],
-  error: ['無法完成請求', 'Request failed'], offline: ['無法讀取 API，請確認後端已啟動。', 'Could not reach the API. Check that the backend is running.'],
+  error: ['無法完成請求', 'Request failed'], offline: ['中樞沒有回應。請確認中樞那台電腦開著、SmartSell 正在執行，再按「重新載入」。', 'The hub is not responding. Check that the hub computer is on and SmartSell is running, then reload.'],
   invalidResponse: ['API 回應不符合資料契約。', 'The API response does not match the data contract.'],
   conflict: ['版本衝突。關閉表單、重新整理後再比對並送出。', 'Version conflict. Close the form, refresh, then review and resubmit.'],
   narrow: ['此工作台支援 1280px 以上桌面瀏覽器。請放大視窗或水平捲動。', 'Use a desktop browser at 1280px or wider. Enlarge the window or scroll horizontally.'],

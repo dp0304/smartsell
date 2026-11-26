@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, asRecord, request, workspacePath, type Method, type RecordData } from '@smartsell/sdk';
-import { ProblemNotice } from '../api';
+import { ProblemDetails, ProblemNotice, problemIssues, problemMessage } from '../api';
 import { useCopy } from '../i18n';
 import { fill } from './copy';
 import { viewPrefix } from './data/keys';
@@ -112,7 +112,13 @@ export const problemCode = (error: unknown) => error instanceof ApiError ? Strin
  * owner copy for the code (Appendix C); English: the owner copy for the code. The Agent-facing `message` is the last resort
  * (undefined here: the caller then shows the plain problem). `action` names the button, for codes whose meaning depends on it.
  */
-export function ownerProblemText(l: L, lang: 'zh' | 'en', error: unknown, action?: string): string | undefined {
+const cjk = /[\u3400-\u9fff]/;
+/** The post a refused action was about, for words that name its channel (U8: the link 貼上網址 wants). */
+export interface ProblemSubject { provider: string; handle: string | null }
+const exampleLink = (provider: string, handle: string) => provider === 'tiktok' ? `https://www.tiktok.com/@${handle}/video/7300000000000000000`
+  : `https://x.com/${handle}/status/1860000000000000000`;
+
+export function ownerProblemText(l: L, lang: 'zh' | 'en', error: unknown, action?: string, subject?: ProblemSubject): string | undefined {
   if (!(error instanceof ApiError)) return undefined;
   const details = asRecord(error.problem.details);
   const owner = details.owner_message;
@@ -120,17 +126,29 @@ export function ownerProblemText(l: L, lang: 'zh' | 'en', error: unknown, action
   const code = String(error.problem.code ?? '');
   // Approving or rejecting without a pending request (deadline passed, or decided elsewhere): 409 INVALID_STATE.
   if (code === 'INVALID_STATE' && (action === 'approve' || action === 'reject')) return l(hub.action.notApprovable);
+  if (code === 'INVALID_ARGUMENTS') {
+    const issues = problemIssues(error);
+    // 貼上網址 refused (wrong site, someone else's post, no post id): say which link is wanted (U8).
+    if (action === 'confirm_result' && subject?.handle && issues.some(issue => issue.path === 'url')) {
+      const reason = lang === 'zh' ? issues.filter(issue => issue.path === 'url' && cjk.test(issue.message)).map(issue => issue.message)[0] : undefined;
+      return fill(l(hub.action.urlRejected), { reason: reason ? `（${reason}）` : '', handle: subject.handle, platform: providerName(l, subject.provider),
+        example: exampleLink(subject.provider, subject.handle) });
+    }
+    // The hub's own validation sentences are zh-Hant owner copy; anything else names the fields.
+    if (lang === 'zh' && issues.length && issues.every(issue => cjk.test(issue.message))) return issues.map(issue => issue.message).join('；');
+    return problemMessage(error, l, key => key === 'error' ? l(['無法完成請求', 'Request failed']) : key);
+  }
   const text = ownerErrorText[code];
   return text ? fill(l(text), { expected: String(details.expected ?? '') }) : undefined;
 }
-export function WriteError({ error, action }: { error: unknown; action?: string }) {
+/** A refused write in owner words; status and code are only under 詳細資料 (U8). */
+export function WriteError({ error, action, subject }: { error: unknown; action?: string; subject?: ProblemSubject }) {
   const { l, lang } = useText();
   const { t } = useCopy();
   if (error === undefined || error === null) return null;
-  const text = ownerProblemText(l, lang, error, action);
+  const text = ownerProblemText(l, lang, error, action, subject);
   if (!text || !(error instanceof ApiError)) return <ProblemNotice error={error} />;
-  return <div className="problem" role="alert"><strong>{t('error')} · {error.status}</strong><p>{text}</p>
-    {error.problem.code ? <small>{String(error.problem.code)}</small> : null}</div>;
+  return <div className="problem" role="alert"><strong>{t('error')}</strong><p>{text}</p><ProblemDetails error={error} /></div>;
 }
 
 /** WV-3: what an approve or reject answered with 200 really did (the hub can answer 200 without recording a decision). */
@@ -248,7 +266,7 @@ export function PostActions({ detail, compact = false }: { detail: PostDetailVie
       </div>
     </form>}
     {done && <p className={`vs-notice ${done.tone}`} role={done.tone === 'good' ? 'status' : 'alert'}>{done.text}</p>}
-    <WriteError error={error?.failure} action={error?.action} />
+    <WriteError error={error?.failure} action={error?.action} subject={{ provider: post.channel.provider, handle: post.channel.handle }} />
   </div>;
 }
 

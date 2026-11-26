@@ -335,6 +335,36 @@ test('WV-11: refused actions read in zh-Hant owner copy (details.owner_message f
   assert.equal(defaultRescheduleTime({ scheduled_at: '2026-11-25T01:00:00Z', local_time: '2026-11-25 09:00' }, 'Asia/Taipei', now), '2026-11-25T09:00');
 });
 
+test('U8: errors read in plain words; status, code and the server text are only under 詳細資料', async () => {
+  const { ApiError } = await import('@smartsell/sdk');
+  const { ProblemNotice, problemMessage } = await import('../../api');
+  const { ownerProblemText } = await import('../hub-parts');
+  const zh = (label: readonly [string, string]) => label[0];
+  const en = (label: readonly [string, string]) => label[1];
+  const t = (key: string) => key;
+  assert.equal(problemMessage(new ApiError(500, { code: 'INTERNAL', detail: 'boom' }), zh, t),
+    '中樞處理這個要求時出了問題，請稍後再試。一直發生的話，請在中樞那台電腦執行 pnpm hub:doctor。');
+  assert.equal(problemMessage(new TypeError('Failed to fetch'), zh, t), '中樞沒有回應。請確認中樞那台電腦開著、SmartSell 正在執行，再按「重新載入」。');
+  assert.equal(problemMessage(new ApiError(502, {}), en, t), 'The hub is not responding. Check that the hub computer is on and SmartSell is running, then reload.');
+  assert.equal(problemMessage(new ApiError(422, { code: 'INVALID_ARGUMENTS', detail: 'bad', details: { issues: [{ path: 'when', message: 'when must be …' }, { path: 'body.url', message: 'x' }] } }), zh, t),
+    '有欄位不正確：時間、網址。請修改後再送出。');
+  assert.equal(problemMessage(new ApiError(409, { code: 'FRESH_IDENTITY_CHECK_REQUIRED', detail: 'Check the identity again first.' }), en, t), 'Check the identity again first.',
+    'a specific refusal keeps the server sentence');
+  const out = renderToStaticMarkup(<ProblemNotice error={new ApiError(500, { code: 'INTERNAL', detail: 'boom', request_id: 'req-1' })} retry={() => undefined} />);
+  const [shown, folded] = out.split('<details class="problem-details">');
+  assert.doesNotMatch(shown, /500|INTERNAL|boom/, 'nothing for developers above the fold');
+  assert.match(folded, /^<summary>詳細資料<\/summary><small>500 · INTERNAL<\/small><small>boom<\/small><small>request_id req-1<\/small><\/details>/);
+  // 貼上網址 refused: say which link is wanted, for this channel's handle.
+  const pasted = new ApiError(422, { code: 'INVALID_ARGUMENTS', detail: '這不是 X 的網址', details: { issues: [{ path: 'url', message: '這不是 X 的網址' }] } });
+  const subject = { provider: 'x', handle: 'fixture_x' };
+  assert.equal(ownerProblemText(zh, 'zh', pasted, 'confirm_result', subject),
+    '中樞不接受這個網址（這不是 X 的網址）。請貼上 @fixture_x 在 X 上這則貼文的網址，例如 https://x.com/fixture_x/status/1860000000000000000');
+  assert.equal(ownerProblemText(en, 'en', pasted, 'confirm_result', { provider: 'tiktok', handle: 'minglures' }),
+    'That link was not accepted. Paste the link to this post by @minglures on TikTok, e.g. https://www.tiktok.com/@minglures/video/7300000000000000000');
+  assert.equal(ownerProblemText(zh, 'zh', new ApiError(422, { code: 'INVALID_ARGUMENTS', details: { issues: [{ path: 'reason', message: 'Unknown field' }] } })),
+    '有欄位不正確：原因。請修改後再送出。');
+});
+
 test('E41 machine page offers 撤銷這台機器 with a typed name; WV-6 machine times are in the browser zone it names', async () => {
   const out = await render('/machines/m-1', { '/views/machines/m-1': machine });
   assert.match(out, /撤銷這台機器/);
