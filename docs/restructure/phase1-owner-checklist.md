@@ -175,7 +175,7 @@ schtasks /Query /TN "SmartSell Hub" /V /FO LIST
 
 1. 在網頁「開始設定 → 下載 SmartSell Worker」下載對應安裝包（Apple silicon 選 mac-arm64、Intel Mac 選 mac-x64、Windows 選 win-x64）。
 2. macOS：把 App 拖進「應用程式」，在 Finder 對 **SmartSell Worker** 按右鍵 →「打開」（未簽章，Gatekeeper 第一次會擋）。Windows：SmartScreen 出現時按「其他資訊」→「仍要執行」。
-3. 首次開啟選 **「這台是我的筆電（只連 Codex，不發文）」**，貼上中樞位址。
+3. 首次開啟選 **「這台是我的筆電（只連 AI 助手，不發文）」**，貼上中樞位址。
 4. 按 **「連接 Codex」**（用 Claude Code 就按「連接 Claude Code」）。瀏覽器會開中樞的授權頁，登入後同意。App 會在 `~/.codex/config.toml` 寫入標記過的 `[mcp_servers.smartsell]` 區塊，寫入前先備份成 `config.toml.smartsell-backup-<時間>`（E12），畫面上會顯示備份路徑。
 5. 重新啟動 Codex。
 
@@ -228,7 +228,7 @@ macOS 的建置機（通常就是中樞）同樣適用：`cd ~/smartsell/apps/co
    - Win-C：執行安裝程式，SmartScreen 顯示「Windows 已保護您的電腦」時按「其他資訊」→「仍要執行」（SmartScreen，M1）。
 2. 選 **「發文的機器（Worker）」**，勾選「這台機器是我的，或我有權管理它；同意把它配對到這個中樞。」
 3. 貼上中樞位址，替機器命名：**Mac-B**、**Win-C**（Codex 用這個名字找機器），按「配對」。
-4. 瀏覽器會開中樞的配對頁，登入後按「核准」。
+4. 瀏覽器會開中樞的配對頁，登入後按「授權並返回桌面程式」。
 5. 在 Worker App 的「進階」打開「登入電腦時自動啟動 SmartSell」。
 6. macOS 第一次（以及每次更新後）若跳出鑰匙圈提示，**在那台機器前按「永遠允許」**（M1：鑰匙圈）。按「拒絕」的話 Worker 無法簽章，網頁上只會看到它離線。
 
@@ -261,12 +261,24 @@ Mac-B：`sudo shutdown -r now`；Win-C：`Restart-Computer`。重開機並登入
 
 **在哪台機器：**Mac-B（X）、Win-C（TikTok），之後在網頁設定。
 
-1. Mac-B 的 Worker App：平台選 **X** → 按 **「新增帳號」**。會開一個新的 Chrome 視窗，**你自己登入**（驗證碼與二次驗證都由你完成）。
+### 4.0 用你自己的 Chrome（建議，兩台都做）
+
+1. Worker App「用哪個 Chrome 發文」→ 按 **「改用我自己的 Chrome（建議）」**。
+2. 在那台機器平常用的 Chrome 開 `chrome://extensions`，打開右上角「開發人員模式」→「載入未封裝項目」→ 選 App 顯示的資料夾（「文件／SmartSell Worker／chrome-extension」）。
+3. 在 SmartSell Worker 擴充功能按「詳細資料」，開啟「允許存取檔案網址」。
+
+**成功的樣子：**App 顯示「已連上你的 Chrome（Chrome 1xx）」，以及「檢查過：SmartSell 操作時，網頁看到的 navigator.webdriver 是 false」。若顯示 true，記錄在驗收紀錄並回報（代表這個 Chrome 是用除錯參數啟動的）。
+
+**失敗時：**一直顯示「還沒連上你的 Chrome」→ 確認擴充功能已啟用、Chrome 開著，再結束並重開 Worker（啟動時會重新向 Chrome 登記）；Windows 上仍不行，把 Worker「日誌」交給開發端（Windows 的原生訊息轉接還沒在實機驗證過）。維持「每個帳號一個獨立的 Chrome」也可以完成後面所有步驟。
+
+### 4.1 新增帳號與帳號頁設定
+
+1. Mac-B 的 Worker App：平台選 **X** → 按 **「新增帳號」**。用你自己的 Chrome 時會在「SmartSell」視窗開啟 X，已經登入就直接偵測到；獨立 Chrome 模式會開一個新的 Chrome 視窗。沒登入就**你自己登入**（驗證碼與二次驗證都由你完成）。
 2. App 偵測到帳號後問「偵測到 X @<你的帳號>，加入 SmartSell？」：看過上面的自動化告知後按 **「加入」**。
 3. Win-C 的 Worker App：平台選 **TikTok**，同樣登入並加入。
 4. 在各自 App 的帳號列按 **「檢查登入」**。
 5. 網頁「帳號」→ 點進每個帳號，設定：
-   - **核准**：選「Codex 說要發就直接發」（direct）。
+   - **核准**：選「Agent 說要發就直接發」（direct）。
    - **代按發布**：勾選「我了解並接受上述風險，允許 Worker 在這個帳號代按發布」，輸入帳號名稱確認，按「同意並允許代按發布」。（若顯示「還不知道這個帳號的名稱」，先按「檢查登入」。）
    - **TikTok 平台預設**：第一次真實發布前，隱私設為「只有我」。
    - **遲到上限**：保留預設 30 分鐘。
@@ -493,6 +505,36 @@ Windows 筆電：這個測試的模擬環境目前只在 macOS（與 Linux）上
 
 ---
 
+## 第 13 步：遙控瀏覽器（選做，E50）
+
+**在哪裡：**網頁「機器 → Mac-B」，以及筆電的 AI 助手。前提：Mac-B 已完成 4.0（你自己的 Chrome）。
+
+1. 機器頁「遙控」勾選「允許操作這台機器的 Chrome」，允許的網站填一個你自己的後台網域（例如 `seller.shopee.tw`），按「儲存」。
+2. 半分鐘內 Mac-B 的 Worker App 出現「遙控」卡片，列出這個網站。
+3. 對 AI 助手說：「到 Mac-B 的 <後台網址> 看一下 <某商品> 目前的庫存，先不要改。」
+4. 再說：「打開 https://example.com」（不在清單的網站）。
+5. （選做）請它改一個無關緊要的值，例如某個測試商品的庫存。
+
+**成功的樣子：**第 3 步回報看到的內容，Mac-B 的 Chrome 出現「SmartSell」視窗，你正在看的分頁沒有被動到；第 4 步被拒絕（`SITE_NOT_ALLOWED`）；第 5 步改完它會自己讀回確認；遇到登入或驗證碼它停下來請你處理。
+
+**失敗時：**`REMOTE_CONTROL_OFF` → 第 1 步沒有儲存；說這台機器沒有用你自己的 Chrome → 回到 4.0。
+
+## 第 14 步：Android 手機（選做）
+
+**在哪裡：**Mac-B（或任何一台 Worker）與一支 Android 手機。
+
+1. 在 Mac-B 安裝 adb：`brew install android-platform-tools`（Windows：`winget install Google.PlatformTools`）。
+2. 手機開啟「開發人員選項 → USB 偵錯」，用 USB 接上 Mac-B，手機跳出提示時按「允許」。在 Mac-B 的終端機執行 `adb devices`，應看到一行 `device`。
+3. 機器頁「遙控」勾選「允許操作插在這台機器的 Android 手機」，允許的 App 填 `com.xingin.xhs`（小紅書，或你要試的 App 套件名稱），按「儲存」。
+4. 對 AI 助手說：「在 Mac-B 的手機打開小紅書，把首頁畫面給我看，不要發任何東西。」
+5. 再說：「打開手機的設定 App」（不在清單）。
+
+**成功的樣子：**第 4 步回報首頁畫面；第 5 步被拒絕（`APP_NOT_ALLOWED`），手機回到主畫面；遇到付款或受保護的畫面時它停下來請你處理。目前只能輸入英數，需要中文時它會請你在手機上打。
+
+**失敗時：**「找不到 adb」→ 第 1 步，裝好後重試即可；`UNAUTHORIZED` → 在手機上按「允許 USB 偵錯」；`NO_DEVICE` → 換一條傳輸線或 USB 埠，再看 `adb devices`。
+
+---
+
 ## 出問題時要附的資料
 
 - 中樞：`pnpm hub:doctor` 的完整輸出、`<中樞資料夾>/status.json`、`<中樞資料夾>/logs/` 中當天的檔案。
@@ -512,6 +554,7 @@ Windows 筆電：這個測試的模擬環境目前只在 macOS（與 Linux）上
 | 3.2 | M1：Win-C 建置 NSIS 安裝包；釘選 Electron 45.4.1（E16） | | | |
 | 3.3 | M1：Gatekeeper「打開」、SmartScreen「仍要執行」、鑰匙圈「永遠允許」 | | | |
 | 3.4 | M1：Mac-B、Win-C 重開機後自動上線 | | | |
+| 4.0 | 你自己的 Chrome：擴充功能已連上，navigator.webdriver 為 false（Mac-B、Win-C） | | | |
 | 4 | X、TikTok 登入，檢查登入為已登入，direct 與風險確認 | | | |
 | 5 | 試跑通過；選擇器沒有走後備（或已校準並 `hub:update`） | | | |
 | 6 | 第一次真實發布：5 分鐘內網址回來、五頁一致、手機收到 | | | |
@@ -522,3 +565,5 @@ Windows 筆電：這個測試的模擬環境目前只在 macOS（與 Linux）上
 | 10 | 機器離線超過上限：沒有補發、收到「沒有發出」、可改期 | | | |
 | 11 | 登入過期：幾分鐘內收到指名機器與帳號的通知 | | | |
 | 12 | Worker 更新：可更新、更新後自動上線 | | | |
+| 13 | 遙控瀏覽器（選做）：只在允許的網站操作、範圍外被拒絕、改完自己讀回 | | | |
+| 14 | Android 手機（選做）：看得到畫面、範圍外的 App 被拒絕 | | | |

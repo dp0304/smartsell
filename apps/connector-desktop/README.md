@@ -1,8 +1,8 @@
 # SmartSell Worker（macOS／Windows）
 
-SmartSell Worker 是裝在每台要發文的電腦上的 App。它和中樞配對後，常駐在系統匣，到點替這台電腦綁定的帳號在 Chrome 裡發文（第 1 階段：X 與 TikTok），再把貼文網址讀回中樞。同一個 App 也可以裝在你的筆電，選「這台是我的筆電」，只負責連接 Codex／Claude Code 與顯示通知，不發文。
+SmartSell Worker 是裝在每台要發文的電腦上的 App。它和中樞配對後，常駐在系統匣，到點替這台電腦綁定的帳號在 Chrome 裡發文（第 1 階段：X 與 TikTok），再把貼文網址讀回中樞。同一個 App 也可以裝在你的筆電，選「這台是我的筆電」，只負責連接 Codex／Claude Code、顯示通知與接手背景上傳，不發文。
 
-整體流程與中樞安裝見根目錄的 [README](../../README.md) 與 [中樞安裝與維護](../../docs/hub-setup.md)；設計以 [`docs/restructure/phase1-design.md`](../../docs/restructure/phase1-design.md) 為準。
+一步一步的使用說明（含截圖）見 [操作手冊](../../docs/user-guide.md)；中樞安裝見 [中樞安裝與維護](../../docs/hub-setup.md)；設計以 [`docs/restructure/phase1-design.md`](../../docs/restructure/phase1-design.md) 為準。
 
 ## 在哪個 Chrome 發文
 
@@ -27,6 +27,10 @@ Worker 有兩種方式，在 App 的「用哪個 Chrome 發文」切換：
 - 同一個平台的第二個帳號，要放在另一個 Chrome 設定檔，並在那個設定檔也安裝一次擴充功能；有好幾個設定檔時，App 會請你為每個帳號選一個。
 - 擴充功能只和這台電腦的 Worker 通訊（透過 Chrome 的原生訊息，不開任何網路連接埠）。它只操作自己開的分頁，只允許驅動用到的 DevTools 指令，不能導向 `file:` 或 `chrome:` 網址，也不修改瀏覽器的任何識別資訊（不偽造指紋、不改 `navigator.webdriver`、不解驗證碼）。
 - 「擬人」指的是讓頁面像被人操作一樣正常反應（真實的點擊與逐字輸入、步驟之間有停頓、每帳號每日上限），不是保證平台偵測不到。X 與 TikTok 的條款都限制自動化，代按發布前每個帳號都要在網頁確認風險。
+
+## 遙控（選用）
+
+主人在網頁的機器頁開啟遙控、列出允許的網站或 App 後，AI 助手可以用 `browser_open`／`browser_act` 在這台電腦的「SmartSell」視窗操作那些網站（需要「你自己的 Chrome」），或用 `phone_act` 操作插在這台電腦的 Android 手機（需要 adb 與 USB 偵錯）。Worker 會照同一份清單擋下範圍外的網站與 App，遇到登入、驗證碼、付款或受保護的畫面就交還主人。adb 會在 PATH、`SMARTSELL_ADB`、Android SDK（`ANDROID_HOME`）、Homebrew 與 winget 的位置尋找；從 Finder 或開始功能表打開的 App 拿不到終端機的 PATH，所以不必另外設定。
 
 ## 開發與測試
 

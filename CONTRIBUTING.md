@@ -14,12 +14,19 @@ pnpm exec playwright install chromium
 pnpm dev                        # API 127.0.0.1:3401，Web 127.0.0.1:5173
 ```
 
+根目錄的 `pnpm-lock.yaml` 管理所有 workspace 依賴。本機的 Web 以相同來源代理 `/api` 與 `/mcp`；沒有設定 `DATABASE_URL` 時，API 把狀態存在 `.local/smartsell.sqlite`。
+
+**本機首次設定：**`pnpm dev` 或 `pnpm preview` 之後打開本機 Web 網址的「首次設定」。Web 與 API 都只監聽回環位址、請求的 Host 與 Origin 也是伺服器信任的本機位址時，可以用使用者名稱加至少 6 個字元的密碼註冊（設定了 `SETUP_TOKEN` 時還要輸入它）；註冊會建立第一位擁有者與預設工作區。對外部署的首次註冊與成員邀請要求至少 12 個字元。使用者名稱不分大小寫，支援 Unicode 字母與數字，首字元之後可用 `.`、`_`、`-`。其他方式（終端機建立、PostgreSQL、相容工作台）見 [舊版部署與工作台](docs/legacy.md)。
+
+**Worker App：**`pnpm --filter @smartsell/connector-desktop start`，測試與打包見 [apps/connector-desktop/README.md](apps/connector-desktop/README.md)。操作手冊的截圖用 `SMARTSELL_DOCS_SCREENSHOTS=1 pnpm exec playwright test tests/web-e2e/docs-screenshots.spec.mjs` 重新產生（畫面文字改了就更新）。
+
 ## 提交前
 
 | 指令 | 用途 |
 | --- | --- |
 | `pnpm typecheck` | 全部 TypeScript |
-| `pnpm test -- <路徑片段>` | 只跑相關的測試；不帶參數跑全部 |
+| `pnpm test -- <路徑片段>` | 只跑相關的測試；不帶參數跑全部（Node Test Runner、Vitest 與 Playwright 自動分流） |
+| `pnpm build` | 完整型別檢查後建置各 workspace，Web 產物在 `apps/web/dist` |
 | `node scripts/requirements.mjs --write` | 新增或改名測試檔後，重新產生需求追溯矩陣 |
 | `pnpm verify` | 和 CI 相同：需求檢查、建置、全部測試 |
 

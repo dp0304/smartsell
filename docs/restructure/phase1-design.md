@@ -298,7 +298,7 @@ testTiming: { offlineStalenessSec?: number; readbackScheduleSec?: number[]; unre
 4. **新增帳號：**依機器分組列出「在 Mac-B 開啟 SmartSell Worker → 新增帳號 → 選平台 → 在跳出的 Chrome 視窗登入 → 確認加入」（§8.16）。新帳號即時出現，旁邊顯示帳號就緒清單（§9.4）：已登入、已確認自動化告知、TikTok 預設選項、核准方式、代按發布的風險確認（或「我自己按發布」）、試跑通過。
 5. **通知：**
    - 「手機推播」：選 ntfy、Bark 或 Telegram 其中一種並填入設定，按「傳一則測試」（§5.9）。
-   - 「筆電通知」：在筆電安裝 SmartSell App，選「這台是我的筆電（只連 Codex，不發文）」；App 會常駐並顯示所有機器的通知。
+   - 「筆電通知」：在筆電安裝 SmartSell App，選「這台是我的筆電（只連 AI 助手，不發文）」；App 會常駐並顯示所有機器的通知。
    - 提醒：「筆電與手機也要加入同一個 tailnet，通知中的連結才打得開」。
 6. **連接 Codex／Claude：**顯示 §6.2 的兩種方式（筆電 App 內按鈕，或 Node relay 一行命令）。
 
@@ -1374,7 +1374,7 @@ Python relay 凍結：新連線不再提供，既有連線可繼續使用；第 
 
 ### 6.2 relay 的安裝與設定（S9 負責 App 端，S5 負責 relay 套件，S7 負責網頁）
 
-**筆電上的 SmartSell App（Agent 模式）：**主人在筆電安裝同一個 App，首次開啟時選「這台是我的筆電（只連 Codex，不發文）」。App 以登入項目常駐（托盤圖示，無視窗），負責三件事：連接 Codex／Claude Code、顯示所有機器的主人通知（§5.9）、接手背景上傳（§6.3）。這台筆電不配對成 Worker。
+**筆電上的 SmartSell App（Agent 模式）：**主人在筆電安裝同一個 App，首次開啟時選「這台是我的筆電（只連 AI 助手，不發文）」。App 以登入項目常駐（托盤圖示，無視窗），負責三件事：連接 Codex／Claude Code、顯示所有機器的主人通知（§5.9）、接手背景上傳（§6.3）。這台筆電不配對成 Worker。
 
 **在 App 中連接 Codex 或 Claude Code：**
 
@@ -2588,7 +2588,7 @@ node --import tsx apps/connector-desktop/src/headless/runner.ts --data-dir /tmp/
 - **發布方式：**
   - 執行方式單選：「Worker 代發」或「Worker 準備好、我自己按」。
   - 核准方式單選：
-    - 「Codex 說要發就直接發」
+    - 「Agent 說要發就直接發」
     - 「要我在網頁按核准」（說明：沒在期限內核准的貼文不會發出，系統會事先提醒）
 - **代按發布**（只有 `RISK_ACK_PROVIDERS` 顯示）：顯示條款文字、目前狀態（尚未同意、某時由某人同意，或「條款已更新，請重新確認」）、同意對話框（§4.5，要輸入 handle），以及撤回按鈕。
 - **暫停：**目前生效的暫停（工作區、品牌或這個帳號的 `pause_switch`）寫明是誰、何時、為什麼，並提供一個「恢復」連結到對應的地方；沒有暫停時提供「暫停這個帳號」。

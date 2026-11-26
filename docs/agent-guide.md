@@ -38,7 +38,7 @@
 
 ### 接入與驗證
 
-- **筆電的 SmartSell App：**首次開啟選「這台是我的筆電（只連 Codex，不發文）」，按「連接 Codex／Claude Code」。App 寫好 MCP 設定（伺服器名稱固定為 `smartsell`），並在 Codex 關閉後接手還沒傳完的上傳。
+- **筆電的 SmartSell App：**首次開啟選「這台是我的筆電（只連 AI 助手，不發文）」，按「連接 Codex／Claude Code」。App 寫好 MCP 設定（伺服器名稱固定為 `smartsell`），並在 Codex 關閉後接手還沒傳完的上傳。
 - **Node relay（沒有 App 時）：**在網頁 Agent 頁按「建立連線並下載權杖檔」，存成 `~/.smartsell/token`（權限 600），再下載 `https://<中樞>/agent/relay.mjs` 到 `~/.smartsell/relay.mjs`，以 `codex mcp add smartsell -- node ~/.smartsell/relay.mjs --hub https://<中樞> --token-file ~/.smartsell/token` 加入；Claude Code 用 `claude mcp add --scope user smartsell -- node ~/.smartsell/relay.mjs --hub https://<中樞> --token-file ~/.smartsell/token`。
 - **驗證：**完整重開客戶端後，任何一次成功的 SmartSell 工具呼叫都算驗證，例如 `smartsell_overview`。網頁「開始設定」的 Codex 步驟會顯示「已有 Agent 透過 MCP 呼叫過 SmartSell。」。
 - 不需要修改 `AGENTS.md`。若要把這份指南放進專案，只放這一節，而且只放在專案目錄。Worker 安裝包附的三份 Skills（`smartsell-video-publish`、`smartsell-data-collection`、`smartsell-product-listing`）也只用上面的工具（11 個發文工具，加上主人開啟時的 3 個遙控工具）。

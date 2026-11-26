@@ -2,6 +2,8 @@
 
 這一頁依序列出設定中樞（hub）的命令、預期輸出，以及每一種失敗的處理方式。寫法讓 Codex 或 Claude Code 可以照著替你操作；每一步都標明在哪一台機器上做。
 
+第一次使用、想先知道整個流程的話，先看 [操作手冊](user-guide.md)；這一頁是中樞的完整參考。
+
 中樞是一台常開的家用機器（macOS 或 Windows）。它只在本機 `127.0.0.1:3401` 提供服務，對外一律經由 `tailscale serve` 的 `https://<機器>.<tailnet>.ts.net`。資料、媒體與設定都在中樞資料夾：
 
 | 系統 | 中樞資料夾 |
@@ -193,6 +195,8 @@ pnpm worker:release --win                                    # 在 Windows 機�
 第 1 階段的安裝包沒有作業系統的程式碼簽章：macOS 第一次開啟時請在 Finder 對 App 按右鍵 →「打開」（Gatekeeper，較新的 macOS 要到「系統設定 → 隱私權與安全性」按「強制打開」）；Windows 出現 SmartScreen 時按「其他資訊」→「仍要執行」。macOS 每次更新後可能再跳出鑰匙圈授權提示，請留在那台機器前按「永遠允許」，否則 Worker 無法連線（會發出通知）。舊版 SmartSell Connector 的配對不會帶過來，要在新的 Worker 重新配對。
 
 Windows 安裝包只能在 Windows 機器上建置，步驟見第 4a 節。
+
+中樞從 `worker-downloads/` 提供 `SmartSell-Worker-mac-arm64.zip`、`SmartSell-Worker-mac-x64.zip`、`SmartSell-Worker-win-x64.exe` 與對應的 `latest-<platform>.json`；登入後呼叫 `GET /api/v1/worker-downloads` 可看到實際可下載的清單。要讓部署人員另外管理這個資料夾時，把 `SMARTSELL_WORKER_DOWNLOAD_DIR` 指向一個應用程式唯讀的目錄（Compose 部署在 `server` 服務的 override 設定它，並以 `:ro` 掛載）。
 
 Worker 每次心跳都回報自己的 CPU（`arch`），中樞依此在「有新版本」提示中給對應的安裝包：Apple silicon 的 Mac 拿 `mac-arm64`、Intel Mac 拿 `mac-x64`、Windows 拿 `win-x64`；舊版 Worker 沒有回報時，macOS 視為 arm64（E9）。所以兩種 Mac 都要有安裝包，Intel Mac 才收得到更新。
 
