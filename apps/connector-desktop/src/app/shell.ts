@@ -29,7 +29,7 @@ import { nodeRun, PostureMonitor } from './posture.ts';
 import { PowerGuard } from './power.ts';
 import { isRelayMode, relayDataDir, runRelayMode } from './relay-mode.ts';
 import { trayModel, trayPixels } from './tray.ts';
-import { UpdateManager } from './update.ts';
+import { markAsDownloaded, UpdateManager } from './update.ts';
 import { sanitizeMachineName, WorkerShell } from './worker-mode.ts';
 
 export const PRODUCT_NAME = 'SmartSell Worker';
@@ -41,7 +41,8 @@ export const UI_ASSETS = new Map([
   ['/legacy.html', 'text/html; charset=utf-8'], ['/legacy.js', 'text/javascript; charset=utf-8'], ['/legacy.css', 'text/css; charset=utf-8'],
 ]);
 
-export interface ReleaseConfig { api?: string; workbench?: string; packaged?: boolean }
+/** `releasePublicKey` (S1): base64 SPKI Ed25519 key from `pnpm worker:release`; updates must carry a release signature it verifies. */
+export interface ReleaseConfig { api?: string; workbench?: string; packaged?: boolean; releasePublicKey?: string }
 
 export interface ShellArgs { relay: boolean; background: boolean; smoke: boolean; smokeOut: string | null; userData: string | null }
 
@@ -264,7 +265,7 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
       const error = await shell.openPath(path);
       if (error) throw new Error(error);
       await dialog.showMessageBox({ type: 'info', buttons: ['好，結束 SmartSell Worker'], message: '請把視窗中的 SmartSell Worker 拖到「應用程式」，取代舊版。',
-        detail: '完成後重新開啟 SmartSell Worker。更新後請留在這台機器前，出現鑰匙圈提示時按「永遠允許」；否則 Worker 無法連線。若 macOS 說無法打開，請在「應用程式」對它按右鍵 →「打開」。' });
+        detail: '完成後重新開啟 SmartSell Worker。更新後請留在這台機器前，出現鑰匙圈提示時按「永遠允許」；否則 Worker 無法連線。若 macOS 說無法打開，請在「應用程式」對它按右鍵 →「打開」；較新的 macOS 要到「系統設定 → 隱私權與安全性」按「強制打開」。' });
     } else {
       shell.showItemInFolder(path);
       await dialog.showMessageBox({ type: 'info', buttons: ['好'], message: '已下載新版 SmartSell Worker。', detail: '請解壓縮後取代「應用程式」中的舊版，再重新開啟。' });
@@ -282,7 +283,8 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
       extension: { source: paths.extension, installDir: extensionInstallDir },
       updates: (pairing, runtime) => new UpdateManager({
         currentVersion: version, platform, hubOrigin: pairing.origin, dir: join(userData, 'updates'), notifier, onChange, log: log.write,
-        platformKey: workerPlatform(platform, process.arch),
+        platformKey: workerPlatform(platform, process.arch), releasePublicKey: options.release.releasePublicKey ?? null,
+        markDownloaded: (path, source) => markAsDownloaded(path, source, { platform, run: nodeRun }),
         jobs: () => runtime.runner.views(), now: () => runtime.clock.now(), openInstaller,
         download: (url, signal, offered) => {
           const segment = url.pathname.split('/').pop() ?? '';

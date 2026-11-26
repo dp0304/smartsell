@@ -14,6 +14,8 @@ export interface UpdateAvailableEvent {
   version: string; url: string; sha256: string;
   /** Additive (S9 C11 review suggestion 3): the package the hub offered, from heartbeat latest_worker.platform. */
   platform?: 'mac-arm64' | 'mac-x64' | 'win-x64';
+  /** Additive (security review S1): base64 Ed25519 release signature over {version, platform, sha256}, from latest_worker. */
+  signature?: string;
 }
 export type ConnectionState = 'starting' | 'online' | 'reconnecting' | 'device_revoked' | 'stopped';
 export interface ConnectionEvent {

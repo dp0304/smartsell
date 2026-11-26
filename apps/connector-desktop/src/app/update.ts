@@ -5,11 +5,19 @@
 // installer opened (macOS: the dmg to drag over the old App; Windows: NSIS).
 // Updating is refused while a job is running/submitting/result_pending and
 // needs an explicit confirmation when a job is due within 30 minutes.
-import { createHash } from 'node:crypto';
-import { createWriteStream, mkdirSync, renameSync, rmSync } from 'node:fs';
+//
+// Security review S1: the hub alone is not trusted. A build with an embedded
+// release public key (RELEASE.releasePublicKey, `pnpm worker:release`) only
+// accepts an offer whose Ed25519 signature over {version, platform, sha256}
+// verifies (release-signature.ts); the downloaded bytes must then match that
+// signed sha256. A dev build without a key keeps the old behaviour and says the
+// update is unverified.
+import { createHash, randomUUID } from 'node:crypto';
+import { createWriteStream, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { verifyReleaseSignature, type ReleaseSignatureCheck } from '../release-signature.ts';
 import type { LocalJobView, UpdateAvailableEvent } from '../runtime/events.ts';
 import { COPY, type Notifier } from './notify.ts';
 
@@ -60,7 +68,21 @@ export function updateGate(jobs: readonly LocalJobView[], now: number) {
 export type UpdatePhase = 'idle' | 'available' | 'downloading' | 'verified' | 'installing' | 'failed';
 export type UpdateResult =
   | { ok: true; path: string }
-  | { ok: false; code: 'NO_UPDATE' | 'JOB_RUNNING' | 'DUE_SOON' | 'BUSY' | 'DOWNLOAD_FAILED' | 'HASH_MISMATCH' | 'BAD_URL'; message: string };
+  | { ok: false; code: 'NO_UPDATE' | 'JOB_RUNNING' | 'DUE_SOON' | 'BUSY' | 'DOWNLOAD_FAILED' | 'HASH_MISMATCH' | 'BAD_URL' | 'BAD_SIGNATURE'; message: string };
+
+export const UNVERIFIED_NOTICE = '這是開發版 Worker（沒有內建發行公鑰），無法驗證這個更新的發行簽章，只會核對中樞公布的 SHA-256。';
+
+/** The owner-facing reason an update was refused for its release signature (zh-Hant, shown in the update card). */
+export function signatureRefusal(version: string, reason: Exclude<ReleaseSignatureCheck, { ok: true }>['reason']): string {
+  switch (reason) {
+    case 'missing':
+      return `中樞提供的 SmartSell Worker ${version} 沒有發行簽章，為了安全已拒絕更新。請在建置安裝包的機器重新執行 pnpm worker:release，再把產生的檔案放到中樞的 worker-downloads。`;
+    case 'bad_key':
+      return '這個 Worker 內建的發行公鑰無法使用，為了安全已停用更新。請從中樞的「下載 SmartSell Worker」手動重新安裝。';
+    default:
+      return `SmartSell Worker ${version} 的發行簽章驗證失敗，安裝包可能遭到竄改，已拒絕更新。若安裝包換了一台機器或換了金鑰建置，請改用原本的發行金鑰（SMARTSELL_RELEASE_SIGNING_KEY）重建，或從中樞手動重新安裝 Worker。`;
+  }
+}
 
 export interface UpdateDeps {
   currentVersion: string;
@@ -80,10 +102,42 @@ export interface UpdateDeps {
    * installing it would replace a working App with one this CPU cannot run.
    */
   platformKey?: string | null;
+  /**
+   * RELEASE.releasePublicKey (base64 SPKI DER) embedded by `pnpm worker:release`. When set, an offer without a valid
+   * Ed25519 release signature is refused (S1); when absent (dev build) offers are accepted but shown as unverified.
+   */
+  releasePublicKey?: string | null;
+  /** Marks the verified package as downloaded from the network (macOS quarantine, Windows Mark-of-the-Web). Best effort. */
+  markDownloaded?(path: string, source: URL): Promise<void>;
   notifier?: Pick<Notifier, 'notify'>;
   now?(): number;
   onChange?(): void;
   log?(message: string, detail?: object): void;
+}
+
+export interface MarkDownloadedDeps {
+  platform: NodeJS.Platform;
+  /** Runs the xattr tool (macOS); posture.ts `nodeRun`. */
+  run(file: string, args: string[]): Promise<{ code: number; stderr?: string }>;
+  writeFile?(path: string, data: string): void;
+  now?(): number;
+}
+
+/**
+ * Gives the downloaded package the same origin mark a browser download gets, so Gatekeeper (macOS
+ * `com.apple.quarantine`) and SmartScreen (Windows `Zone.Identifier`, zone 3 = Internet) assess it before it runs.
+ */
+export async function markAsDownloaded(path: string, source: URL, deps: MarkDownloadedDeps): Promise<void> {
+  if (deps.platform === 'darwin') {
+    const seconds = Math.floor((deps.now ?? Date.now)() / 1000).toString(16);
+    // flags 0x0081 = downloaded by an app (what Chrome writes); timestamp in hex seconds; agent; event id.
+    const result = await deps.run('/usr/bin/xattr', ['-w', 'com.apple.quarantine', `0081;${seconds};SmartSell Worker;${randomUUID().toUpperCase()}`, path]);
+    if (result.code !== 0) throw new Error(`xattr exited ${result.code}: ${result.stderr ?? ''}`.trim());
+  } else if (deps.platform === 'win32') {
+    const origin = `${source.protocol}//${source.host}/`;
+    (deps.writeFile ?? ((file, data) => writeFileSync(file, data)))(`${path}:Zone.Identifier`,
+      `[ZoneTransfer]\r\nZoneId=3\r\nReferrerUrl=${origin}\r\nHostUrl=${origin}\r\n`);
+  }
 }
 
 function extensionFor(type: string | null, platform: NodeJS.Platform) {
@@ -96,6 +150,8 @@ function extensionFor(type: string | null, platform: NodeJS.Platform) {
 export class UpdateManager {
   readonly #deps: UpdateDeps;
   #offer: UpdateAvailableEvent | null = null;
+  /** The last offer refused for its release signature; shown in the update card until a valid offer at least as new. */
+  #rejected: { version: string; message: string } | null = null;
   #phase: UpdatePhase = 'idle';
   #message: string | null = null;
   #progress = 0;
@@ -112,7 +168,17 @@ export class UpdateManager {
       this.#deps.log?.('update offer for another platform ignored', { offered, mine: this.#deps.platformKey, version: event.version });
       return false;
     }
+    const check = this.#verify(event);
+    if (check && !check.ok) {
+      if (this.#rejected?.version !== event.version) {
+        this.#deps.log?.('update offer refused: release signature', { reason: check.reason, version: event.version, platform: offered });
+      }
+      this.#rejected = { version: event.version, message: signatureRefusal(event.version, check.reason) };
+      this.#deps.onChange?.();
+      return false;
+    }
     if (this.#offer && compareVersions(event.version, this.#offer.version) < 0) return false;
+    if (this.#rejected && compareVersions(event.version, this.#rejected.version) >= 0) this.#rejected = null;
     const changed = this.#offer?.version !== event.version || this.#offer.sha256 !== event.sha256;
     this.#offer = { ...event };
     if (changed && this.#phase !== 'downloading' && this.#phase !== 'installing') { this.#phase = 'available'; this.#message = null; }
@@ -127,6 +193,10 @@ export class UpdateManager {
     return {
       available: this.#offer ? { version: this.#offer.version } : null, phase: this.#phase, message: this.#message, progress: this.#progress,
       blocked: gate.blocked, due_soon: gate.dueSoon.length,
+      /** S1: `verified` = release signature checked; `unverified` = dev build without an embedded release key. */
+      verification: this.#offer ? (this.#deps.releasePublicKey ? 'verified' as const : 'unverified' as const) : null,
+      verification_notice: this.#offer && !this.#deps.releasePublicKey ? UNVERIFIED_NOTICE : null,
+      rejected: this.#rejected ? { ...this.#rejected } : null,
       keychain_notice: this.#deps.platform === 'darwin' ? '更新後請留在這台機器前，出現鑰匙圈提示時按「永遠允許」；否則 Worker 無法連線。' : null,
     };
   }
@@ -148,6 +218,11 @@ export class UpdateManager {
       url = new URL(offer.url, this.#deps.hubOrigin);
       if (url.origin !== new URL(this.#deps.hubOrigin).origin) throw new Error('foreign origin');
     } catch { return this.#fail('BAD_URL', '中樞提供的更新網址不在這個中樞上，已拒絕下載。'); }
+    const check = this.#verify(offer);
+    if (check && !check.ok) {
+      this.#deps.log?.('update refused: release signature', { reason: check.reason, version: offer.version });
+      return this.#fail('BAD_SIGNATURE', signatureRefusal(offer.version, check.reason));
+    }
 
     this.#phase = 'downloading';
     this.#progress = 0;
@@ -182,6 +257,9 @@ export class UpdateManager {
       const path = join(this.#deps.dir, name);
       renameSync(part, path);
       part = undefined;
+      try { await this.#deps.markDownloaded?.(path, url); } catch (error) {
+        this.#deps.log?.('could not mark the update package as downloaded', { error: String(error) });
+      }
       this.#phase = 'installing';
       this.#progress = 1;
       this.#deps.onChange?.();
@@ -195,6 +273,14 @@ export class UpdateManager {
   }
 
   cancel() { this.#abort?.abort(); }
+
+  /** null for a dev build without an embedded release key (nothing to verify against). */
+  #verify(event: UpdateAvailableEvent): ReleaseSignatureCheck | null {
+    const key = this.#deps.releasePublicKey;
+    if (!key) return null;
+    const platform = offeredPackage(event) ?? this.#deps.platformKey ?? '';
+    return verifyReleaseSignature({ version: event.version, platform, sha256: event.sha256 }, event.signature, key);
+  }
 
   #fail(code: Exclude<UpdateResult, { ok: true }>['code'], message: string, failed = true): UpdateResult {
     if (failed) this.#phase = 'failed';
