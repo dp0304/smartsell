@@ -188,6 +188,8 @@ pnpm worker:release --win                                    # 在 Windows 機�
 
 **發行簽章金鑰：**`pnpm worker:release` 會以 Ed25519 私鑰替每個安裝包的 `latest-<platform>.json` 簽章，並把公鑰內建進 Worker；Worker 只安裝簽章驗證通過的更新（安全審核 S1）。私鑰預設在建置機的 `~/.smartsell/worker-release-key.pem`（第一次執行自動建立，權限 0600），或以 `SMARTSELL_RELEASE_SIGNING_KEY=<PEM 路徑>` 指定；不可放在原始碼資料夾內。**請備份這個檔案，並在每台建置機（包括 Windows）用同一把**：換了金鑰或遺失，已安裝的 Worker 會拒絕更新（更新卡片顯示「發行簽章驗證失敗」），只能手動重新安裝。`pnpm hub:doctor` 會對沒有簽章的安裝包發出警告。
 
+**用 GitHub Actions 建置（選用）：**`.github/workflows/release.yml` 在推送 `worker-v<版本>` 標籤時，於 macOS 與 Windows 執行器建置三個安裝包，連同 `latest-*.json` 放進一個**草稿** Release（按 Publish 之前不公開）。先把上面的私鑰內容存成倉庫的 secret `SMARTSELL_RELEASE_SIGNING_KEY_PEM`；沒有這個 secret 時標籤建置會直接失敗，以免每次建置內建不同的公鑰。標籤要和 `apps/connector-desktop/package.json` 的版本一致，例如 `git tag worker-v0.3.0 && git push github worker-v0.3.0`。下載 Release 的檔案放進中樞的 `worker-downloads/` 即可。
+
 第 1 階段的安裝包沒有作業系統的程式碼簽章：macOS 第一次開啟時請在 Finder 對 App 按右鍵 →「打開」（Gatekeeper，較新的 macOS 要到「系統設定 → 隱私權與安全性」按「強制打開」）；Windows 出現 SmartScreen 時按「其他資訊」→「仍要執行」。macOS 每次更新後可能再跳出鑰匙圈授權提示，請留在那台機器前按「永遠允許」，否則 Worker 無法連線（會發出通知）。舊版 SmartSell Connector 的配對不會帶過來，要在新的 Worker 重新配對。
 
 Windows 安裝包只能在 Windows 機器上建置，步驟見第 4a 節。

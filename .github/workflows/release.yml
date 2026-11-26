@@ -1,0 +1,107 @@
+name: Worker release
+
+# Builds the SmartSell Worker installers (§8.18) on a `worker-v<version>` tag and attaches them, with their
+# latest-<platform>.json manifests, to a DRAFT GitHub Release: nothing is public until the owner presses Publish.
+# The manifests are signed with the release key (repository secret SMARTSELL_RELEASE_SIGNING_KEY_PEM, an Ed25519
+# PKCS#8 PEM); Workers built with the matching public key refuse unsigned or tampered updates.
+#
+#   git tag worker-v0.3.0 && git push github worker-v0.3.0
+#
+# workflow_dispatch builds the same installers as workflow artifacts only (no release).
+
+on:
+  push:
+    tags: ['worker-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24.21.0'
+
+jobs:
+  build:
+    name: Installers (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: mac
+          - os: windows-2025
+            target: win
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node apps/connector-desktop/node_modules/electron/install.js
+      - name: The tag matches the Worker version
+        if: startsWith(github.ref, 'refs/tags/worker-v')
+        shell: bash
+        run: |
+          version="$(node -p "require('./apps/connector-desktop/package.json').version")"
+          if [ "${GITHUB_REF_NAME#worker-v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/connector-desktop/package.json version $version"
+            exit 1
+          fi
+      - name: Release signing key
+        shell: bash
+        env:
+          KEY_PEM: ${{ secrets.SMARTSELL_RELEASE_SIGNING_KEY_PEM }}
+        run: |
+          if [ -z "$KEY_PEM" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "::error::Set the repository secret SMARTSELL_RELEASE_SIGNING_KEY_PEM (the Ed25519 key pnpm worker:release created at ~/.smartsell/worker-release-key.pem). Without it every build would embed a different key and Workers could not verify updates."
+              exit 1
+            fi
+            echo "::warning::No release signing key: this build is for testing only."
+            exit 0
+          fi
+          printf '%s\n' "$KEY_PEM" > "$RUNNER_TEMP/release-key.pem"
+          echo "SMARTSELL_RELEASE_SIGNING_KEY=$RUNNER_TEMP/release-key.pem" >> "$GITHUB_ENV"
+      - name: Build (macOS arm64 + x64)
+        if: matrix.target == 'mac'
+        run: pnpm worker:release --out dist/worker-release
+      - name: Build (Windows x64)
+        if: matrix.target == 'win'
+        run: pnpm worker:release --win --out dist/worker-release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worker-${{ matrix.target }}
+          path: dist/worker-release/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Draft release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/worker-v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          ls -la out
+          cat > notes.md <<'NOTES'
+          SmartSell Worker ${{ github.ref_name }}（未簽章的安裝包；第一次打開時系統會提醒）。
+
+          安裝到中樞：把這些檔案（安裝包與 latest-*.json）放進中樞資料夾的 `worker-downloads/`，見 docs/hub-setup.md 第 4 節；之後各台 Worker 會在 App 裡提示更新。
+          NOTES
+          gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --draft --title "SmartSell Worker ${GITHUB_REF_NAME#worker-v}" --notes-file notes.md
