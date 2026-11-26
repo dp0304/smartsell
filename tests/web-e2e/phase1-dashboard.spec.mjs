@@ -530,7 +530,7 @@ onboarding('First-run wizard: workspace, a machine, its channel, notifications a
   // A connection that has not called a tool yet is not done.
   const agent = mcpClient(connection.mcp_url, connection.token);
   await agent.initialize();
-  expect((await agent.rpc('tools/list')).tools).toHaveLength(11);
+  expect((await agent.rpc('tools/list')).tools).toHaveLength(14);   // 11 posting tools + 3 remote-control tools (E50)
   await page.reload();
   panel = await expectWizardStep(page, 'agent');
   await expectStepStatus(page, 'agent', 'todo');

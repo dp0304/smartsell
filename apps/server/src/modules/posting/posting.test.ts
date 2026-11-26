@@ -117,7 +117,7 @@ function walk(schema: unknown, path: string, visit: (node: Data, path: string) =
 
 test('every hub tool schema is strict all the way down, under 4 KB, without $ref, $defs or \\p{', () => {
   assert.deepEqual(HUB_TOOL_NAMES, ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule',
-    'post_update', 'posts_list', 'post_get', 'task_get', 'publishing_pause']);
+    'post_update', 'posts_list', 'post_get', 'task_get', 'publishing_pause', 'browser_open', 'browser_act', 'phone_act']);
   for (const name of HUB_TOOL_NAMES) {
     const schema = toolInputSchema(name);
     const text = JSON.stringify(schema);

@@ -55,7 +55,7 @@ function memory(now = '2026-11-24T10:00:00.000Z') {
 
 test('every S2 hub operation is registered under its full hub_* name and the human-only ones refuse Agents', async () => {
   const names = ['hub_channels_update_settings', 'hub_channels_ack_automation_notice', 'hub_channels_ack_risk', 'hub_channels_clear_risk_ack',
-    'hub_channels_bind_machine', 'hub_machines_update', 'hub_machines_pause', 'hub_machines_resume'];
+    'hub_channels_bind_machine', 'hub_machines_update', 'hub_machines_pause', 'hub_machines_resume', 'hub_machines_remote_control'];
   assert.deepEqual([...channelOperations, ...machineOperations].map(op => op.name).sort(), [...names].sort());
   for (const name of names) assert.ok(accountOperations.some(op => op.name === name), `${name} is merged into account operations`);
   assert.ok(!accountOperations.some(op => op.name.startsWith('account_hub_')), 'never prefixed by op()');
@@ -85,6 +85,8 @@ test('every S2 hub operation is registered under its full hub_* name and the hum
     hub_channels_bind_machine: [{ id: account.id }, { device_id: device.id, owned_account_confirmed: true }],
     hub_machines_update: [{ id: device.id }, { display_name: 'Mac-B' }],
     hub_machines_resume: [{ id: device.id }, {}],
+    // E50: an Agent can never turn remote control on for itself.
+    hub_machines_remote_control: [{ id: device.id }, { browser: { enabled: true, sites: ['seller.example.com'] } }],
   };
   for (const [name, [params, body]] of Object.entries(inputs)) assert.equal(await code(call(name, params, body, 'credential-a', 1)), 'HUMAN_REQUIRED', name);
   assert.equal((await call('hub_machines_pause', { id: device.id }, { reason: 'Agent stop' }, 'credential-a')).paused, true);
