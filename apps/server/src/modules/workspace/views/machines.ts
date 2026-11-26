@@ -136,12 +136,23 @@ export function machineDetail(ctx: Context, id: string): MachineDetail {
   };
 }
 
-/** Machines that are offline while they hold posts due soon (Today 「離線機器」, §9.2 machine_offline). */
-export function offlineWithJobs(ctx: Context, horizonMs = 48 * 3_600_000) {
+/** The machine's publish jobs still waiting to run within the horizon, earliest first. */
+export function waitingJobs(ctx: Context, device: Row, horizonMs = 48 * 3_600_000) {
   const now = time(ctx.now);
-  return activeMachines(ctx).filter(device => !machineOnline(ctx, device)).map(device => {
-    const waiting = jobsOn(ctx, device.id).filter(job => job.kind === 'publish_post' && !job.dry_run && ['queued', 'claimed', 'ready', 'needs_owner'].includes(job.status)
-      && time(job.not_before) <= now + horizonMs).sort((a, b) => String(a.not_before).localeCompare(String(b.not_before)));
-    return { device, waiting };
-  }).filter(entry => entry.waiting.length > 0);
+  return jobsOn(ctx, device.id).filter(job => job.kind === 'publish_post' && !job.dry_run && ['queued', 'claimed', 'ready', 'needs_owner'].includes(job.status)
+    && time(job.not_before) <= now + horizonMs).sort((a, b) => String(a.not_before).localeCompare(String(b.not_before)));
+}
+
+/**
+ * Machines that are offline while they hold posts due soon (Today 「離線機器」, §9.2 machine_offline). A paused machine is not
+ * here: it has its own 「已暫停」 card, whether or not it still heartbeats (U3).
+ */
+export function offlineWithJobs(ctx: Context, horizonMs = 48 * 3_600_000) {
+  return activeMachines(ctx).filter(device => device.paused !== true && !machineOnline(ctx, device))
+    .map(device => ({ device, waiting: waitingJobs(ctx, device, horizonMs) })).filter(entry => entry.waiting.length > 0);
+}
+
+/** Paused machines (connector_device.paused), each with the posts it holds within the horizon (U3). */
+export function pausedMachines(ctx: Context, horizonMs = 48 * 3_600_000) {
+  return activeMachines(ctx).filter(device => device.paused === true).map(device => ({ device, waiting: waitingJobs(ctx, device, horizonMs) }));
 }

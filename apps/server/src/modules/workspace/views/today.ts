@@ -8,11 +8,11 @@ import { workspace } from '../brands.js';
 import { blockerShort, missedText } from './timeline.js';
 import { channelBlockers, channelSummaries, readinessOf } from './channels.js';
 import {
-  allJobs, channelDevice, channelLabelOf, hubChannels, invalidQuery, latestJob, localDay, localText, machineName, platformPostFor, str,
+  allJobs, channelDevice, channelLabelOf, hubChannels, invalidQuery, latestJob, localDay, localText, machineConnected, machineName, platformPostFor, str,
   strictQuery, validZone, workspaceZone,
 } from './hub-model.js';
 import { webUrl } from './links.js';
-import { machineSummaries, offlineWithJobs } from './machines.js';
+import { machineSummaries, offlineWithJobs, pausedMachines } from './machines.js';
 import { HOLDABLE_STATUSES, approvalOf, hubTargets, pauseCovers, pauseView, postSummaryOf, type HubPostSummary } from './posts.js';
 
 /** Today and overview read models (phase1-design §9.2, §7.2.1): buildToday, buildOverview and the attention cards. */
@@ -57,7 +57,7 @@ function mediaFilename(ctx: Context, target: Row): string | null {
 }
 
 /** One attention card per post that waits for the owner (§9.2 card kinds). */
-function postCard(ctx: Context, target: Row, post: PostSummary): AttentionItem | undefined {
+function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionItem | undefined {
   const job = latestJob(ctx, target);
   const base = { machine: machineRef(post), channel: channelRef(post), post: postRef(post), web_url: post.web_url };
   const open = { kind: 'open' as const, label: '開啟貼文' };
@@ -129,6 +129,8 @@ function postCard(ctx: Context, target: Row, post: PostSummary): AttentionItem |
     }
     case 'blocked': {
       const items = ctx.list('precheck_item').filter(item => item.run_id === target.last_precheck_run_id && item.severity === 'blocker' && item.result !== 'pass');
+      // Held only by its paused machine: the machine's 「已暫停」 card counts it and resumes it (U3).
+      if (items.length && items.every(item => item.check_key === 'machine_paused') && post.pause?.scope === 'machine') return undefined;
       return { id, kind: 'job_blocker', severity: 'normal', title: `${post.channel.label} ${when} 的貼文被預檢擋下`,
         detail: items.map(item => String(item.message ?? item.check_key)).filter(Boolean).slice(0, 3).join('；') || '請打開貼文查看要處理的項目。', due_at: post.scheduled_at, ...base,
         actions: [open] };
@@ -165,8 +167,8 @@ type CardDraft = Omit<AttentionItem, 'kind'> & { kind: HubAttentionKind; blocks_
 const SCOPE_LABEL: Record<string, string> = { workspace: '全部發布', brand: '品牌', campaign: '活動', social_account: '帳號' };
 /**
  * E35: one item per active publishing pause (pause_switch) that covers a hub channel or holds a post: who paused it, why, how
- * many posts it holds and where to resume. Urgent while a held post is due within 48 hours. A paused machine keeps its own
- * card (the channel's machine_paused blocker).
+ * many posts it holds and where to resume. Urgent while a held post is due within 48 hours. A paused machine has its own
+ * card (pausedMachineItems).
  */
 function pauseItems(ctx: Context, entries: PostEntry[], zone: string): CardDraft[] {
   const now = time(ctx.now);
@@ -198,10 +200,37 @@ function pauseItems(ctx: Context, entries: PostEntry[], zone: string): CardDraft
   return items;
 }
 
+/**
+ * U3: one item per paused machine (connector_device.paused): who paused it, why, how many posts it holds and a 「恢復機器」
+ * button. A paused machine is neither 「離線」 nor a channel that 「還不能排程」; this card replaces both.
+ */
+function pausedMachineItems(ctx: Context, entries: PostEntry[], zone: string): CardDraft[] {
+  const now = time(ctx.now);
+  return pausedMachines(ctx).map(({ device }) => {
+    const machine = ref(device.id, machineName(device), webUrl(ctx, 'machine', device.id));
+    const held = entries.filter(({ post }) => post.pause?.scope === 'machine' && post.machine?.id === device.id)
+      .sort((a, b) => String(a.post.scheduled_at ?? '').localeCompare(String(b.post.scheduled_at ?? '')));
+    const first = held.find(entry => entry.post.scheduled_at)?.post;
+    const soon = held.some(({ post }) => post.scheduled_at && time(post.scheduled_at) <= now + 48 * HOUR);
+    const reason = str(device.paused_reason);
+    const by = String(device.paused_by ?? '').startsWith('agent') ? 'Agent ' : device.paused_by ? '你' : '';
+    const at = localText(device.paused_at, zone)?.slice(5);
+    const firstText = first?.scheduled_at ? `最早一則是 ${localText(first.scheduled_at, zone)?.slice(5)}。` : '';
+    const offline = machineConnected(ctx, device) ? '' : `${machine.label} 目前也沒有連線，恢復後要等它上線才會發文。`;
+    return { id: `machine_paused:${device.id}`, kind: 'publishing_paused' as const, blocks_scheduling: false, severity: soon ? 'urgent' as const : 'normal' as const,
+      title: `${machine.label} 已暫停${reason ? `（${reason}）` : ''}${held.length ? `：${held.length} 則貼文恢復前不會發出` : ''}`,
+      detail: `${at ? `${by}在 ${at} 暫停。` : ''}${held.length ? firstText : '這台機器上的帳號在恢復前都不會發文。'}`
+        + `恢復後，暫停期間排好的貼文會照常送出；已超過遲到上限的會顯示「沒有發出」，可以改期。${offline}`,
+      due_at: first?.scheduled_at ?? null, machine, channel: null, post: null, web_url: machine.web_url,
+      actions: [{ kind: 'resume' as const, label: '恢復機器', method: 'POST' as const, path: `/hub/machines/${device.id}/resume`, body: {} },
+        { kind: 'open' as const, label: '開啟機器' }] };
+  });
+}
+
 /** §9.2 「要你處理」: posts, pauses, channels and machines, urgent first, then by deadline. Card times are in `zone`. */
 export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspaceZone(ctx)): HubAttentionItem[] {
   const entries = posts ?? hubTargets(ctx).map(target => ({ target, post: postSummaryOf(ctx, target, zone) }));
-  const items: CardDraft[] = [...pauseItems(ctx, entries, zone)];
+  const items: CardDraft[] = [...pauseItems(ctx, entries, zone), ...pausedMachineItems(ctx, entries, zone)];
   const loginCards = new Set<string>();
   for (const { target, post } of entries) {
     const card = postCard(ctx, target, post);
@@ -240,7 +269,8 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
     // S8-RM item 3, E30: what stops scheduling (the channel's blockers, can_schedule false) and setup reminders are separate
     // cards, so neither the owner nor the model reads a reminder such as 「還沒試跑」 as a threat to the next post.
     const readiness = readinessOf(ctx, account.id);
-    const blockers = channelBlockers(ctx, account);
+    // A paused machine has its own card (U3); the channel is not 「還沒設定完成」 because of it.
+    const blockers = channelBlockers(ctx, account).filter(blocker => blocker.code !== 'machine_paused');
     if (blockers.length) {
       items.push({ id: `channel:${account.id}`, kind: 'channel_setup', blocks_scheduling: true, severity: upcoming.get(account.id) ? 'urgent' : 'normal',
         title: `${label} 還沒設定完成，還不能排程（${blockers.length} 項）`, detail: blockers.map(blocker => blocker.message).join('；'), due_at: null,

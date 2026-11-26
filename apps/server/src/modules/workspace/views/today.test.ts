@@ -153,20 +153,53 @@ test('E30: a channel blocker and a setup reminder are separate cards; only the b
   w.set('channel_settings', settings.id, { approval_mode: 'direct', approval_mode_confirmed_at: w.ctx.now });
   w.set('browser_session', session.id, { status: 'verified' });
 
-  // A paused machine is a blocker (channels[].blockers, can_schedule false): its own card, urgent while posts are upcoming.
+  // A paused machine stays a channel blocker for the Agent (channels[].blockers, can_schedule false), but on Today it is the
+  // machine's own 「已暫停」 card, not a channel that 「還沒設定完成」 (U3).
   await w.schedule('2026-11-24T13:00:00.000Z');
   w.set('connector_device', w.device.id, { paused: true });
   const cards = xCards();
-  assert.deepEqual(cards.map(item => [item.id, item.blocks_scheduling, item.severity]),
-    [[`channel:${w.account.id}`, true, 'urgent'], [`channel:${w.account.id}:reminder`, false, 'normal']]);
-  assert.equal(cards[0].title, 'X @lurelab 還沒設定完成，還不能排程（1 項）');
-  assert.match(cards[0].detail, /Mac-B 已暫停/);
-  assert.doesNotMatch(cards[0].detail, /試跑/);
-  assert.equal(channelSummaries(w.ctx).find(row => row.channel_id === w.account.id)!.can_schedule, false);
+  assert.deepEqual(cards.map(item => [item.id, item.blocks_scheduling, item.severity]), [[`channel:${w.account.id}:reminder`, false, 'normal']]);
+  const paused = buildOverview(w.ctx).needs_owner.find(item => item.id === `machine_paused:${w.device.id}`)!;
+  assert.deepEqual([paused.kind, paused.severity, paused.title], ['publishing_paused', 'urgent', 'Mac-B 已暫停：1 則貼文恢復前不會發出']);
+  const summary = channelSummaries(w.ctx).find(row => row.channel_id === w.account.id)!;
+  assert.deepEqual([summary.can_schedule, summary.blockers.map(item => item.code)], [false, ['machine_paused']]);
 
   // A passed dry run removes the reminder; every other card says it does not stop scheduling.
   w.set('connector_device', w.device.id, { paused: false });
   w.ctx.create('worker_job', { kind: 'publish_post', dry_run: true, status: 'succeeded', social_account_id: w.account.id, device_id: w.device.id, finished_at: w.ctx.now });
   assert.deepEqual(xCards(), []);
   for (const item of buildToday(w.ctx).attention) assert.equal(item.blocks_scheduling, /^channel:[^:]+$/.test(item.id), item.id);
+});
+
+test('U3: a paused machine is one 「已暫停」 card with 恢復機器, never 「離線」, and its channels keep their login state', async () => {
+  const w = viewWorld();
+  const post = await w.schedule('2026-11-24T15:00:00.000Z');
+  w.set('connector_device', w.device.id, { paused: true, paused_reason: '換網路', paused_by: 'owner', paused_at: w.ctx.now });
+  const today = buildToday(w.ctx);
+  const about = today.attention.filter(item => ['machine_offline', 'publishing_paused'].includes(item.kind) || (item.kind === 'channel_setup' && item.blocks_scheduling));
+  assert.deepEqual(about.map(item => item.id), [`machine_paused:${w.device.id}`], 'no offline card and no 「還不能排程」 card for the paused machine');
+  const [card] = about;
+  assert.deepEqual([card.kind, card.severity, card.blocks_scheduling, card.machine?.label], ['publishing_paused', 'urgent', false, 'Mac-B']);
+  assert.equal(card.title, 'Mac-B 已暫停（換網路）：1 則貼文恢復前不會發出');
+  assert.match(card.detail, /^你在 11-24 12:00 暫停。最早一則是 11-24 15:00。恢復後/);
+  assert.doesNotMatch(card.detail, /Tailscale|離線|沒有連線/);
+  assert.deepEqual(card.actions, [{ kind: 'resume', label: '恢復機器', method: 'POST', path: `/hub/machines/${w.device.id}/resume`, body: {} },
+    { kind: 'open', label: '開啟機器' }]);
+  assert.equal(postDetail(w.ctx, post.id).post.status, 'scheduled');
+  // The machine is paused, not offline: its summary says paused, and the channel's login is what the machine last saw.
+  const machine = today.machines.find(row => row.machine_id === w.device.id)!;
+  assert.deepEqual([machine.online, machine.paused], [false, true]);
+  assert.equal(machine.channels.find(row => row.social_account_id === w.account.id)?.login, 'verified');
+  const channel = channelSummaries(w.ctx).find(row => row.channel_id === w.account.id)!;
+  assert.deepEqual([channel.login.state, channel.machine?.online, channel.machine?.paused], ['verified', false, true]);
+  // Paused and gone quiet: still the one paused card, which now also says it is not connected.
+  w.set('connector_device', w.device.id, { last_seen_at: '2026-11-24T11:00:00.000Z' });
+  const quiet = buildToday(w.ctx).attention.filter(item => ['machine_offline', 'publishing_paused'].includes(item.kind));
+  assert.deepEqual(quiet.map(item => item.id), [`machine_paused:${w.device.id}`]);
+  assert.match(quiet[0].detail, /Mac-B 目前也沒有連線/);
+  assert.equal(channelSummaries(w.ctx).find(row => row.channel_id === w.account.id)!.login.state, 'unknown');
+  // Resumed and online again: no pause card, and the channel summary drops `paused`.
+  w.set('connector_device', w.device.id, { paused: false, paused_reason: null, paused_by: null, paused_at: null, last_seen_at: w.ctx.now });
+  assert.equal(buildToday(w.ctx).attention.some(item => item.id.startsWith('machine_paused:')), false);
+  assert.equal(channelSummaries(w.ctx).find(row => row.channel_id === w.account.id)!.machine?.paused, undefined);
 });

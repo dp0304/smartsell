@@ -91,7 +91,7 @@ function HeaderTools({ channel }: { channel: ChannelDetail }) {
       <p>{l(hub.channels.bindHint)}</p>
       <label className="hub-field">{l(hub.common.machine)}<select required value={device} onChange={event => setDevice(event.target.value)}>
         <option value="" disabled>—</option>
-        {(machines.value ?? []).filter(item => item.machine_id !== channel.machine?.id).map(item => <option key={item.machine_id} value={item.machine_id}>{item.name}{item.online ? '' : ` (${l(hub.common.offline)})`}</option>)}
+        {(machines.value ?? []).filter(item => item.machine_id !== channel.machine?.id).map(item => <option key={item.machine_id} value={item.machine_id}>{item.name}{item.paused ? ` (${l(hub.common.paused)})` : item.online ? '' : ` (${l(hub.common.offline)})`}</option>)}
       </select></label>
       <label className="hub-check"><input type="checkbox" checked={owned} onChange={event => setOwned(event.target.checked)} />{l(hub.channels.ownedConfirm)}</label>
       <div className="vs-actions"><button className="vs-btn primary-soft" type="submit" disabled={!device || !owned || pending === 'bind'}>{l(hub.action.confirm)}</button></div>
@@ -201,7 +201,7 @@ function SettingsForm({ channel }: { channel: ChannelDetail }) {
       const body = Object.fromEntries(fields.map(key => [key, draft[key]]));
       const result = asRecord((await write('PATCH', `/hub/channels/${encodeURIComponent(channel.channel_id)}/settings`, body, { version: initial.version })).data);
       const requeued = Number(result.requeued_posts ?? 0);
-      const offline = channel.machine && !channel.machine.online ? ` ${fill(l(hub.channels.savedOffline), { machine: channel.machine.name })}` : '';
+      const offline = channel.machine && !channel.machine.online && !channel.machine.paused ? ` ${fill(l(hub.channels.savedOffline), { machine: channel.machine.name })}` : '';
       return `${fill(l(hub.channels.saved), { n: requeued })}${offline}`;
     });
   }
@@ -308,7 +308,7 @@ export function ChannelPage() {
     <Loaded read={read}>{channel => <div className="hub-detail">
       <section className="vs-card">
         <dl className="hub-facts">
-          <div><dt>{l(hub.common.machine)}</dt><dd>{channel.machine ? <><RouterLink to={`${base}/machines/${encodeURIComponent(channel.machine.id)}`}>{channel.machine.name}</RouterLink> <OnlineBadge online={channel.machine.online} /></> : l(hub.channels.noMachine)}</dd></div>
+          <div><dt>{l(hub.common.machine)}</dt><dd>{channel.machine ? <><RouterLink to={`${base}/machines/${encodeURIComponent(channel.machine.id)}`}>{channel.machine.name}</RouterLink> <OnlineBadge online={channel.machine.online} paused={channel.machine.paused} /></> : l(hub.channels.noMachine)}</dd></div>
           <div><dt>{l(hub.channels.login)}</dt><dd><LoginBadge state={channel.login.state} />{channel.login.checked_at && <small className="muted"> · {localLabel(isoLocal(channel.login.checked_at, channel.timezone), today, lang)}</small>}</dd></div>
           <div><dt>{l(hub.channels.today)}</dt><dd>{channel.scheduled_today + channel.published_today} / {channel.daily_cap}</dd></div>
           <div><dt>{l(hub.channels.next)}</dt><dd>{channel.next_post ? <RouterLink to={`${base}/posts/${encodeURIComponent(channel.next_post.post_id)}`}>{localLabel(isoLocal(channel.next_post.scheduled_at, channel.timezone) ?? channel.next_post.local_time, today, lang)}</RouterLink> : '—'}</dd></div>

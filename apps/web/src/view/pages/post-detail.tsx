@@ -68,7 +68,7 @@ export function PostDetailBody({ detail, compact = false }: { detail: PostDetail
     <dl className="hub-facts">
       <div><dt>{l(hub.post.route)}</dt><dd>
         <RouterLink to={`${base}/channels/${encodeURIComponent(post.channel.id)}`}><ChannelName provider={post.channel.provider} handle={post.channel.handle} label={post.channel.label} /></RouterLink>
-        {' · '}{post.machine ? <><RouterLink to={`${base}/machines/${encodeURIComponent(post.machine.id)}`}>{post.machine.name}</RouterLink> <OnlineBadge online={post.machine.online} /></> : l(hub.common.manual)}
+        {' · '}{post.machine ? <><RouterLink to={`${base}/machines/${encodeURIComponent(post.machine.id)}`}>{post.machine.name}</RouterLink> <OnlineBadge online={post.machine.online} paused={post.machine.paused} /></> : l(hub.common.manual)}
         {' · '}<ModeBadge mode={post.mode} />
       </dd></div>
       <div><dt>{l(hub.post.approval)}</dt><dd>{tr(l, approvalText, detail.approval.status)}

@@ -420,7 +420,8 @@ export interface PostSummary {
   post_id: string; status: PostStatus; scheduled_at: string | null; local_time: string | null; latest_local_time: string | null;
   content_item_id: string; created_at: string; created_by_agent: boolean;
   channel: { id: string; provider: HubProvider; handle: string | null; label: string; web_url: string };
-  machine: { id: string; name: string; online: boolean; web_url: string } | null;
+  // paused（附加，U3）：機器已暫停但仍在連線時 online 為 false、paused 為 true，畫面寫「已暫停」而不是「離線」
+  machine: { id: string; name: string; online: boolean; paused?: boolean; web_url: string } | null;
   route_kind: RouteKind; mode: EffectiveMode; caption_excerpt: string; media_thumb_url: string | null;
   url: string | null; blocker: { code: BlockerCode | string; message: string; resumable_by: Blocker['resumable_by'] } | null; task_id: string | null;
   approval: 'approved_by_channel_policy' | 'approved' | 'awaiting_owner' | 'not_submitted' | 'rejected';
@@ -450,7 +451,7 @@ export interface MachineDetail extends MachineSummary {
 export interface ChannelPause { scope: 'workspace' | 'brand' | 'social_account'; reason: string; by: string | null; at: string; resume_web_url: string }
 export interface ChannelSummary {
   channel_id: string; provider: HubProvider; handle: string | null; display_name: string;
-  machine: { id: string; name: string; online: boolean; web_url: string } | null;
+  machine: { id: string; name: string; online: boolean; paused?: boolean; web_url: string } | null;
   login: { state: LoginState; checked_at: string | null; evidence_url: string | null };
   execution_mode: ExecutionMode; effective_mode: EffectiveMode; approval_mode: ApprovalMode;
   risk_ack: RiskAck | null; risk_ack_required: boolean; risk_ack_current: boolean;

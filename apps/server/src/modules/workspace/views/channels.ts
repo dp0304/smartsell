@@ -80,7 +80,8 @@ export function channelSummaryOf(ctx: Context, account: Row): ChannelSummary {
   return {
     channel_id: account.id, provider: account.provider as HubProvider, handle: str(account.handle) ?? null,
     display_name: String(account.display_name ?? account.handle ?? account.external_account_id ?? ''),
-    machine: device ? { id: device.id, name: machineName(device), online: machineOnline(ctx, device), web_url: webUrl(ctx, 'machine', device.id) } : null,
+    machine: device ? { id: device.id, name: machineName(device), online: machineOnline(ctx, device), ...(device.paused === true && { paused: true }),
+      web_url: webUrl(ctx, 'machine', device.id) } : null,
     login: { state: login.state, checked_at: login.checked_at,
       evidence_url: str(session?.evidence_file_id) ? `/files/${encodeURIComponent(String(session!.evidence_file_id))}/download?inline=true` : null },
     execution_mode: settings.execution_mode, effective_mode: effectiveModeOf(ctx, account), approval_mode: settings.approval_mode,
