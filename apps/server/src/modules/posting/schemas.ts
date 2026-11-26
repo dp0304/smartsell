@@ -101,7 +101,7 @@ export const toolSchemas = {
     action: z.discriminatedUnion('kind', [
       z.object({ kind: z.literal('snapshot') }).strict(),
       z.object({ kind: z.literal('click'), ref: elementRef().optional(), x: z.number().min(0).max(20000).optional(), y: z.number().min(0).max(20000).optional() }).strict(),
-      z.object({ kind: z.literal('type'), text: z.string().max(5000), ref: elementRef().optional(), submit: z.boolean().optional() }).strict(),
+      z.object({ kind: z.literal('type'), text: z.string().max(5000), ref: elementRef().optional(), submit: z.boolean().optional(), append: z.boolean().optional() }).strict(),
       z.object({ kind: z.literal('press'), key: z.enum(['Enter', 'Escape', 'Backspace', 'Tab', 'ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'End', 'Home', 'PageDown', 'PageUp', 'Space']) }).strict(),
       z.object({ kind: z.literal('scroll'), dy: z.number().min(-5000).max(5000), dx: z.number().min(-5000).max(5000).optional() }).strict(),
       z.object({ kind: z.literal('back') }).strict(),

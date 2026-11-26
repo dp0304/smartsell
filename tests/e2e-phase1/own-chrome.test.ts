@@ -80,9 +80,7 @@ describe('E2E own Chrome: the loop through the SmartSell extension', { skip: sta
 
     const session = opened.data.session_id;
     const field = opened.data.elements.find(element => element.role === 'textbox')!;
-    await stack.mcp('browser_act', { session_id: session, action: { kind: 'click', ref: field.ref } });
-    for (let i = 0; i < 2; i++) await stack.mcp('browser_act', { session_id: session, action: { kind: 'press', key: i === 0 ? 'End' : 'Backspace' } });
-    const typed = await stack.mcp<{ elements: { ref: string; role: string; name: string; value?: string }[] }>('browser_act', { session_id: session, action: { kind: 'type', text: '42' } });
+    const typed = await stack.mcp<{ elements: { ref: string; role: string; name: string; value?: string }[] }>('browser_act', { session_id: session, action: { kind: 'type', ref: field.ref, text: '42' } });
     assert.equal(typed.data.elements.find(element => element.role === 'textbox')?.value, '42');
     const save = typed.data.elements.find(element => element.role === 'button' && element.name === 'Save')!;
     const saved = await stack.mcp<{ text: string }>('browser_act', { session_id: session, action: { kind: 'click', ref: save.ref } });

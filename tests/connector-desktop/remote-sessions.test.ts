@@ -101,12 +101,12 @@ describe('remote sessions in the owner\'s Chrome', { skip: ownChromeUnavailable(
 
   test('act: select the field, type the new stock, click Save; the next snapshot reads the write back', async () => {
     const stockBox = snap.elements.find(element => element.role === 'textbox')!;
-    snap = await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'click', ref: stockBox.ref } }) as RemoteSnapshot;
-    const field = snap.elements.find(element => element.role === 'textbox')!;
-    await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'press', key: 'End' } });
-    for (let i = 0; i < 3; i++) await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'press', key: 'Backspace' } });
-    snap = await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'type', text: '42' } }) as RemoteSnapshot;
-    assert.equal(snap.elements.find(element => element.role === 'textbox')?.value, '42', field.ref);
+    // Typing into a field by ref replaces its text (the real-model check once got "742" from appending).
+    snap = await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'type', ref: stockBox.ref, text: '42' } }) as RemoteSnapshot;
+    assert.equal(snap.elements.find(element => element.role === 'textbox')?.value, '42');
+    const appended = await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'type', ref: snap.elements.find(element => element.role === 'textbox')!.ref, text: '0', append: true } }) as RemoteSnapshot;
+    assert.equal(appended.elements.find(element => element.role === 'textbox')?.value, '420', 'append keeps the text');
+    snap = await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'type', ref: appended.elements.find(element => element.role === 'textbox')!.ref, text: '42' } }) as RemoteSnapshot;
     const save = snap.elements.find(element => element.role === 'button' && element.name === 'Save')!;
     snap = await sessions.handle({ op: 'act', session_id: snap.session_id, action: { kind: 'click', ref: save.ref } }) as RemoteSnapshot;
     assert.equal(stock, 42, 'the store received the new stock');

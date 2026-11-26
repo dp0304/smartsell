@@ -6,7 +6,9 @@
 //
 //   pnpm manual-client-check                      # relay form: the client launches the SmartSell relay over stdio
 //   pnpm manual-client-check -- --mode direct     # HTTP form: the client reaches the hub directly (media_upload direct form, E47)
-//   pnpm manual-client-check -- --prompt P2       # which sentence to score (P1 asks before posting without text; P2 posts)
+//   pnpm manual-client-check -- --prompt P2       # which sentence to score (P1 asks before posting without text; P2 posts;
+//                                                 # P3: remote control (E50), change a stock value in a fixture store backend
+//                                                 # in Mac-B's own Chrome and read it back)
 //   pnpm manual-client-check -- --client claude   # no GUI: run a headless agent CLI (claude, or any CLI with the same
 //                                                 # -p/--mcp-config/--strict-mcp-config/--allowedTools flags) instead of waiting for Enter
 //
@@ -27,7 +29,11 @@ const CALL_LIMIT = 6;
 const PROMPTS = {
   P1: { text: '把 video.mp4 明天 9:00 發到 Mac-B 的 X 和 Win-C 的 TikTok', caption: null },
   P2: { text: '把 video.mp4 明天早上 9:00 發到 Mac-B 的 X 和 Win-C 的 TikTok，文案：「新路亞實測 🎣」，加上 #fishing #lure。', caption: '新路亞實測 🎣 #fishing #lure' },
+  // E50: {store} is replaced with the fixture store's URL; the owner asked for exactly this change, so no extra question.
+  P3: { text: '到 Mac-B 的商店後台 {store} 把「Lure 7cm」的庫存改成 42，改完確認一下。', caption: null, stock: 42 },
 };
+/** P3 may take more steps than posting: open, focus, clear, type, save, plus a look. */
+const CALL_LIMITS = { P1: CALL_LIMIT, P2: CALL_LIMIT, P3: 12 };
 
 function options(argv) {
   const args = argv.filter(arg => arg !== '--');
@@ -38,11 +44,28 @@ function options(argv) {
     else if (args[index] === '--prompt') result.prompt = value().toUpperCase();
     else if (args[index] === '--work-dir') result.workDir = resolve(value());
     else if (args[index] === '--client') result.client = value();
-    else throw new Error(`Unknown option ${args[index]}. Use --mode relay|direct, --prompt P1|P2, --work-dir <folder>, --client <cli>.`);
+    else throw new Error(`Unknown option ${args[index]}. Use --mode relay|direct, --prompt P1|P2|P3, --work-dir <folder>, --client <cli>.`);
   }
   if (!['relay', 'direct'].includes(result.mode)) throw new Error('--mode must be relay or direct');
-  if (!PROMPTS[result.prompt]) throw new Error('--prompt must be P1 or P2');
+  if (!PROMPTS[result.prompt]) throw new Error('--prompt must be P1, P2 or P3');
   return result;
+}
+
+/** A fixture store backend for P3: one product, a stock field and Save (plain http on loopback, test mode only). */
+function fixtureStore() {
+  const state = { stock: 7, saves: 0 };
+  const server = createServer((req, res) => {
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => { state.stock = Number(new URLSearchParams(body).get('stock')); state.saves++; res.writeHead(303, { location: '/products/lure-7cm' }); res.end(); });
+      return;
+    }
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.end(`<!doctype html><title>Lure Lab 商店後台</title><h1>商品：Lure 7cm</h1><p>目前庫存：${state.stock}</p>
+      <form method="post" action="/products/lure-7cm"><label>庫存 <input name="stock" value="${state.stock}"></label> <button type="submit">儲存</button></form>`);
+  });
+  return new Promise(resolveServer => server.listen(0, '127.0.0.1', () => resolveServer({ server, state, origin: `http://127.0.0.1:${server.address().port}` })));
 }
 
 /** Forwards every request to the hub unchanged and records each JSON-RPC tools/call with whether its answer was an error. */
@@ -153,8 +176,18 @@ async function main() {
   const base = mkdtempSync(join(tmpdir(), 'ss-manual-client-'));
   mkdirSync(opts.workDir, { recursive: true, mode: 0o700 });
   console.log('Starting the fixture stack (hub, Mac-B with X, Win-C with TikTok)…');
-  const stack = await startStack({ name: 'manual-client', clip: false });
+  const remote = opts.prompt === 'P3';
+  const stack = await startStack({ name: 'manual-client', clip: false, ownChrome: remote });
   const proxy = await countingProxy(stack.origin);
+  const store = remote ? await fixtureStore() : null;
+  if (store) {
+    // The owner turns remote control on for Mac-B with this one site (person-only REST), as on the machine page.
+    await stack.rest('PUT', `/hub/machines/${stack.machines['Mac-B'].deviceId}/remote-control`, { browser: { enabled: true, sites: [new URL(store.origin).host] } });
+    prompt.text = prompt.text.replace('{store}', `${store.origin}/products/lure-7cm`);
+    const { until } = await import('../tests/e2e-phase1/stack.ts');
+    await until(async () => (await stack.mcp('machines_list', {})).data.machines
+      .find(machine => machine.machine_id === stack.machines['Mac-B'].deviceId)?.remote?.browser?.ready, 90_000, 'Mac-B ready for remote control', 2000);
+  }
   let exitCode = 1;
   try {
     const video = await e2eClip(opts.workDir);
@@ -184,10 +217,16 @@ async function main() {
     }
     const calls = proxy.calls;
     const failures = [];
-    if (calls.length > CALL_LIMIT) failures.push(`${calls.length} tool calls (limit ${CALL_LIMIT})`);
+    const limit = CALL_LIMITS[opts.prompt];
+    if (calls.length > limit) failures.push(`${calls.length} tool calls (limit ${limit})`);
     // RELAY_REQUIRED is the hub's designed answer when a direct-HTTP client first sends a path (it then sends the direct form).
     const errors = calls.filter(call => call.error && call.error.code !== 'RELAY_REQUIRED');
-    if (opts.prompt === 'P1') {
+    if (opts.prompt === 'P3') {
+      if (store.state.stock !== prompt.stock) failures.push(`P3: the store's stock is ${store.state.stock}, not ${prompt.stock}`);
+      if (store.state.saves !== 1) failures.push(`P3: Save was pressed ${store.state.saves} times (want exactly once)`);
+      if (!calls.some(call => call.tool === 'browser_open')) failures.push('P3: no browser_open');
+      if (posts.length) failures.push(`P3 should not schedule posts (${posts.length})`);
+    } else if (opts.prompt === 'P1') {
       if (posts.length) failures.push(`P1 should ask before posting without text, but ${posts.length} post(s) were scheduled`);
     } else {
       const tomorrow = zoneDate(Date.now() + 86_400_000, 'Asia/Shanghai');
@@ -212,6 +251,7 @@ async function main() {
     console.log('Also check the agent\'s last reply: for P2 it must name both posts with local time, machine, status and web_url.');
     exitCode = failures.length ? 1 : 0;
   } finally {
+    store?.server.close();
     proxy.server.close();
     await stack.close().catch(() => {});
     rmSync(base, { recursive: true, force: true });

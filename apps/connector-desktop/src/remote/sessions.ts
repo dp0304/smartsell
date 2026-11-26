@@ -14,7 +14,8 @@ import { NodeNotClickable, OffOriginError } from '../drivers/cdp-page.ts';
 
 export type RemoteAction =
   | { kind: 'click'; ref?: string; x?: number; y?: number }
-  | { kind: 'type'; ref?: string; text: string; submit?: boolean }
+  /** With a ref the field's text is replaced (like filling a form) unless `append` is true; without a ref it types at the cursor. */
+  | { kind: 'type'; ref?: string; text: string; submit?: boolean; append?: boolean }
   | { kind: 'press'; key: string }
   | { kind: 'scroll'; dy: number; dx?: number }
   | { kind: 'back' }
@@ -145,7 +146,10 @@ export class RemoteSessions {
         case 'type': {
           if (typeof action.text !== 'string' || action.text.length > 5000) throw new RemoteError('INVALID_ACTION', 'type needs text (at most 5000 characters).');
           const node = this.#node(session, action.ref);
-          if (node) await page.click(node);
+          if (node) {
+            await page.click(node);
+            if (!action.append) { await page.press('a', [process.platform === 'darwin' ? 'Meta' : 'Control']); await page.press('Backspace'); }
+          }
           await page.insertText(action.text);
           if (action.submit) await page.press('Enter');
           return;
