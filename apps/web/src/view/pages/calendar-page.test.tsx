@@ -129,4 +129,7 @@ test('U5: a phase 1 post stopped on a captcha or missed shows its status chip in
   const row = (id: string) => out.match(new RegExp(`<li class="cal-row[^"]*">(?:(?!</li>).)*X @lurelab · ${id}(?:(?!</li>).)*</li>`))?.[0] ?? '';
   assert.match(row('captcha'), /data-status="needs_owner"[^>]*>.*?要你處理</, 'the 要你處理 chip is not hidden behind a needs mark that a phase 1 post never shows');
   assert.match(row('late'), /data-status="missed"[^>]*>.*?沒有發出</);
+  // U4: both are posts that need the person, counted under 要你處理的貼文.
+  const month = await render('/app/w1/calendar?month=2099-03', view(list), march);
+  assert.match(month, /要你處理的貼文<\/h2><strong class="cal-tile-number">2<\/strong>/);
 });

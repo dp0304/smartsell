@@ -117,7 +117,7 @@ test('summary: next publication skips settled ones, needs-human counted by type'
   const summary = summarize(events, now, '2026-11-20', 'UTC');
   assert.equal(summary.next?.id, 'publish:next');
   assert.equal(summary.upcoming, 2);
-  assert.deepEqual(summary.needs, { approval: 1, late_decision: 0, outcome_unknown: 1, total: 2 });
+  assert.deepEqual(summary.needs, { approval: 1, needs_owner: 0, missed: 0, late_decision: 0, outcome_unknown: 1, total: 2 });
   assert.equal(summary.counts.publish, 5);
   assert.deepEqual([summary.scheduled, summary.published, summary.periods], [4, 1, 1]);
   assert.equal(summary.today, 4, 'Today counts the plan running through it');

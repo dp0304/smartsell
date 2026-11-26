@@ -12,8 +12,9 @@ export function offeredKinds(moreModules: boolean, counts: Record<string, number
   return calendarKinds.filter(kind => (postKinds as readonly string[]).includes(kind) || (counts[kind] ?? 0) > 0);
 }
 export type Mode = 'month' | 'week' | 'list';
-export type NeedsHuman = 'approval' | 'late_decision' | 'outcome_unknown';
-export const needsHumanKinds: readonly NeedsHuman[] = ['approval', 'late_decision', 'outcome_unknown'];
+// needs_owner and missed are phase 1 posts (calendar.ts): a machine stopped for the owner, or a post that did not go out (U4).
+export type NeedsHuman = 'approval' | 'needs_owner' | 'missed' | 'late_decision' | 'outcome_unknown';
+export const needsHumanKinds: readonly NeedsHuman[] = ['approval', 'needs_owner', 'missed', 'late_decision', 'outcome_unknown'];
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 export const isMonth = (value: unknown): value is string => typeof value === 'string' && MONTH.test(value);
@@ -211,7 +212,7 @@ export interface CalendarSummary {
 }
 export function summarize(events: readonly CalendarEvent[], now: Date, today: string, timeZone?: string): CalendarSummary {
   const counts: Record<string, number> = {};
-  const needs = { approval: 0, late_decision: 0, outcome_unknown: 0, total: 0 };
+  const needs = { approval: 0, needs_owner: 0, missed: 0, late_decision: 0, outcome_unknown: 0, total: 0 };
   let next: CalendarEvent | null = null, upcoming = 0, onToday = 0, scheduled = 0, published = 0, periods = 0;
   const at = now.getTime();
   for (const event of [...events].sort(compareEvents)) {
