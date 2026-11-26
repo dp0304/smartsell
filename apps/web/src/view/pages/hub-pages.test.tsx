@@ -159,6 +159,59 @@ test('U4: 要你處理 is one number on Today (count and badge), setup reminders
   assert.deepEqual(t.needsTitle, ['要你處理的貼文', 'Posts that need you']);
 });
 
+test('U1: in English, Today\'s cards, their buttons, machine warnings and notifications are written from code + params', async () => {
+  const cjk = /[㐀-鿿]/;
+  const ref = (id: string, label: string, path: string) => ({ id, label, web_url: url(path) });
+  const card = (over: Record<string, unknown>) => ({ severity: 'urgent', due_at: null, machine: null, channel: null, post: null, web_url: url('/'), actions: [], detail: '中文說明', ...over });
+  const attention = [
+    card({ id: 'post:p-2', kind: 'job_blocker', title: 'X @makemylure 11-24 21:00：出現驗證碼', code: 'job_blocker', post: ref('p-2', 'X @makemylure', '/posts/p-2'),
+      params: { channel: 'X @makemylure', when: '11-24 21:00', blocker: { code: 'captcha', machine: 'Mac-B', channel: 'X @makemylure', deadline: '21:30', resumable_by: 'auto' } },
+      actions: [{ kind: 'open', label: '開啟貼文' }] }),
+    card({ id: 'machine_paused:m-3', kind: 'publishing_paused', title: 'Mac-C 已暫停（換網路）：1 則貼文恢復前不會發出', code: 'machine_paused', machine: ref('m-3', 'Mac-C', '/machines/m-3'),
+      params: { machine: 'Mac-C', reason: 'new router', n: 1, by: 'person', at: '11-24 12:00', first: '11-25 11:00', offline: false },
+      actions: [{ kind: 'resume', label: '恢復機器', method: 'POST', path: '/hub/machines/m-3/resume', body: {} }, { kind: 'open', label: '開啟機器' }] }),
+    card({ id: 'post:p-3', kind: 'approval', title: 'TikTok @lurelab 11-25 09:00 的貼文等你核准', code: 'approval_waiting', post: ref('p-3', 'TikTok @lurelab', '/posts/p-3'),
+      params: { channel: 'TikTok @lurelab', when: '11-25 09:00', deadline: '11-25 09:30' },
+      actions: [{ kind: 'approve', label: '核准' }, { kind: 'reject', label: '駁回' }, { kind: 'open', label: '開啟貼文' }] }),
+    card({ id: 'setup:m-1', kind: 'machine_setup', severity: 'normal', title: 'Mac-B 的設定需要注意（1 項）', code: 'machine_setup', machine: ref('m-1', 'Mac-B', '/machines/m-1'),
+      params: { machine: 'Mac-B', warnings: [{ code: 'sleep_enabled', name: 'Mac-B', minutes: 10 }] }, actions: [{ kind: 'open', label: '開啟機器' }] }),
+    card({ id: 'offline:m-9', kind: 'machine_offline', title: 'Win-A 離線，1 則貼文等待中，最早 11-25 08:00', code: 'machine_offline', machine: ref('m-9', 'Win-A', '/machines/m-9'),
+      params: { machine: 'Win-A', n: 1, first: '11-25 08:00' }, actions: [{ kind: 'open', label: '開啟機器' }] }),
+  ];
+  const en = await render('', { '/views/today': { ...today, attention, recent_published: [] } }, 'en');
+  const section = visible(en.slice(en.indexOf('hub-attention'), en.indexOf('hub-groups')));
+  assert.doesNotMatch(section, cjk, 'no zh-Hant left in the English cards');
+  assert.match(section, /X @makemylure 11-24 21:00: Captcha/);
+  assert.match(section, /X @makemylure on Mac-B hit a CAPTCHA and stopped\..*Deadline 21:30\./);
+  assert.match(section, /Mac-C paused \(new router\): 1 post will not go out until resumed/);
+  assert.match(section, /Resume machine/);
+  assert.match(section, /Approve \/ Reject/);
+  assert.match(section, /Approve by 11-25 09:30; after that this post will not go out\./);
+  assert.match(section, /Mac-B sleeps after 10 min idle/);
+  assert.match(section, /Win-A is offline: 1 post waiting, the first at 11-25 08:00/);
+  // zh-Hant shows the hub's text unchanged.
+  const zh = await render('', { '/views/today': { ...today, attention, recent_published: [] } });
+  assert.match(zh, /Mac-C 已暫停（換網路）：1 則貼文恢復前不會發出/);
+  assert.match(zh, />恢復機器</);
+
+  const coded: OwnerAlert[] = [
+    { ...alerts[0], code: 'worker_blocker', params: { blocker_code: 'captcha', machine: 'Mac-B', channel: 'X @makemylure', deadline: '明天 09:30', dry_run: false } },
+    { ...alerts[0], id: 'al-2', kind: 'worker_blocker', title: 'X 拒絕了這支影片', body: '…', code: 'failed',
+      params: { blocker_code: 'upload_rejected', machine: 'Mac-B', channel: 'X @makemylure', platform_message: 'Video format not supported', dry_run: false } },
+    { ...alerts[0], id: 'al-3', kind: 'missed', title: '沒有發出', body: '…', code: 'missed', params: { machine: 'Win-A', channel: 'X @win_shop', deadline: '08:30', reason_code: 'machine_was_off' } },
+    { ...alerts[0], id: 'al-4', kind: 'published', severity: 'info', title: '已發出', body: '…', code: 'published', params: { machine: 'Mac-B', channel: 'X @makemylure', at: '18:00' } },
+  ];
+  const list = visible(await render('/notifications', { '/views/alerts': coded }, 'en'));
+  assert.doesNotMatch(list, cjk);
+  assert.match(list, /X @makemylure on Mac-B: captcha\./);
+  assert.match(list, /Deadline tomorrow 09:30\./);
+  assert.match(list, /X @makemylure rejected the video: &quot;Video format not supported&quot;\. This post did not go out\./);
+  assert.match(list, /Win-A did not start by 08:30 \(the machine was off\)/);
+  assert.match(list, /X @makemylure was posted by Mac-B at 18:00\./);
+  // An alert without a code (written before U1) keeps the hub's text.
+  assert.match(visible(await render('/notifications', { '/views/alerts': alerts }, 'en')), /Mac-B 的 X @makemylure 出現驗證碼/);
+});
+
 test('machine detail: warnings with how to fix, channels, queue linked to posts, remote screen, drivers and selectors', async () => {
   const out = await render('/machines/m-1', { '/views/machines/m-1': machine });
   assert.match(out, /Mac-B 閒置 10 分鐘會睡眠/);

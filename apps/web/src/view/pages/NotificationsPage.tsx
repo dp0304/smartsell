@@ -6,6 +6,7 @@ import type { AlertChannelsView, OwnerAlert } from '../data/hub-types';
 import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
 import { alertKindText, hub } from '../hub-copy';
+import { alertText, refLabel } from '../attention-text';
 import { Badge, Empty, WriteError, isoLocal, localLabel, todayIn, tr, useHubWrite } from '../hub-parts';
 
 const local = (url: string) => url.replace(/^https?:\/\/[^/]+/, '');
@@ -13,13 +14,14 @@ const tone = (alert: OwnerAlert) => alert.severity === 'urgent' ? 'critical' : a
 
 function AlertRow({ alert, onRead }: { alert: OwnerAlert; onRead?: (id: string) => void }) {
   const { l, lang } = useText();
+  const text = alertText(alert, lang);
   return <li className={`hub-alert ${alert.read_at ? 'read' : 'unread'}`}>
     <div className="hub-alert-head"><Badge tone={tone(alert)}>{tr(l, alertKindText, alert.kind)}</Badge>
       <time dateTime={alert.at} className="muted hub-small">{localLabel(isoLocal(alert.at), todayIn(), lang)}</time></div>
-    <RouterLink to={local(alert.web_url)} className="hub-alert-title">{alert.title}</RouterLink>
-    {alert.body && <p>{alert.body}</p>}
+    <RouterLink to={local(alert.web_url)} className="hub-alert-title">{text.title}</RouterLink>
+    {text.body && <p>{text.body}</p>}
     <p className="hub-links">
-      {alert.post && <RouterLink to={local(alert.post.web_url)}>{alert.post.label}</RouterLink>}
+      {alert.post && <RouterLink to={local(alert.post.web_url)}>{refLabel(alert.post.label, lang)}</RouterLink>}
       {alert.channel && <RouterLink to={local(alert.channel.web_url)}>{alert.channel.label}</RouterLink>}
       {alert.machine && <RouterLink to={local(alert.machine.web_url)}>{alert.machine.label}</RouterLink>}
       {!alert.read_at && onRead && <button type="button" className="vs-link-button" onClick={() => onRead(alert.id)}>{l(hub.alerts.markRead)}</button>}

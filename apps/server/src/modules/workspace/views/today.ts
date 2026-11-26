@@ -12,7 +12,7 @@ import {
   strictQuery, validZone, workspaceZone,
 } from './hub-model.js';
 import { webUrl } from './links.js';
-import { machineSummaries, offlineWithJobs, pausedMachines } from './machines.js';
+import { machineSummaries, offlineWithJobs, pausedMachines, type MachineWarningWithParams } from './machines.js';
 import { HOLDABLE_STATUSES, approvalOf, hubTargets, pauseCovers, pauseView, postSummaryOf, type HubPostSummary } from './posts.js';
 
 /** Today and overview read models (phase1-design §9.2, §7.2.1): buildToday, buildOverview and the attention cards. */
@@ -32,7 +32,15 @@ export type HubAttentionKind = AttentionItem['kind'] | 'publishing_paused';
  * can_schedule false); setup reminders, logins, approvals, pauses (E35: posts scheduled meanwhile are submitted on release)
  * and machine cards never stop scheduling.
  */
-export type HubAttentionItem = Omit<AttentionItem, 'kind'> & { kind: HubAttentionKind; blocks_scheduling: boolean };
+export type HubAttentionItem = Omit<AttentionItem, 'kind'> & { kind: HubAttentionKind; blocks_scheduling: boolean } & CardText;
+/**
+ * U1 (additive): which sentence the card's title and detail are, and the values in them, so the web can write the card in the
+ * owner's language. `title` and `detail` stay the zh-Hant text for the Agent (MCP) and older clients. The codes and params are
+ * listed in apps/web/src/view/attention-text.ts.
+ */
+export type CardParams = Record<string, string | number | boolean | null | string[] | Record<string, unknown> | Record<string, unknown>[]>;
+export interface CardText { code?: string; params?: CardParams }
+const text = (code: string, params: CardParams): Required<CardText> => ({ code, params });
 type PostEntry = { target: Row; post: HubPostSummary };
 export type OverviewViewWithFlags = Omit<OverviewView, 'needs_owner'> & { needs_owner: HubAttentionItem[] };
 
@@ -41,6 +49,13 @@ const postRef = (post: PostSummary): Ref => ref(post.post_id, `${post.channel.la
 const channelRef = (post: PostSummary): Ref => ref(post.channel.id, post.channel.label, post.channel.web_url);
 const machineRef = (post: PostSummary): Ref | null => post.machine ? ref(post.machine.id, post.machine.name, post.machine.web_url) : null;
 const hm = (local: string | null) => local?.slice(11) ?? '';
+/** The values the blocker sentence (Appendix C.2) was made of, for the web to write it in another language (U1). */
+function blockerParams(ctx: Context, job: Row | undefined, post: PostSummary, zone: string): Record<string, unknown> {
+  const blocker = object(job?.blocker);
+  return { code: post.blocker?.code ?? null, machine: str(blocker.machine_name) ?? post.machine?.name ?? null, channel: str(blocker.channel_label) ?? post.channel.label,
+    deadline: hm(localText(job?.not_after, zone)) || null, step: str(blocker.step) ?? null, platform_message: str(blocker.platform_message) ?? null,
+    resumable_by: post.blocker?.resumable_by ?? null };
+}
 /** E21 「重新登入」: first on every login card; the web renders it as its one 「重新登入」 button (a person's action only, E32). */
 const openLogin = (channelId: string): AttentionItem['actions'][number] =>
   ({ kind: 'open_login', label: '重新登入', method: 'POST', path: `/hub/channels/${channelId}/check`, body: { open_login_window: true } });
@@ -57,7 +72,7 @@ function mediaFilename(ctx: Context, target: Row): string | null {
 }
 
 /** One attention card per post that waits for the owner (§9.2 card kinds). */
-function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionItem | undefined {
+function postCard(ctx: Context, target: Row, post: HubPostSummary, zone: string): CardDraft | undefined {
   const job = latestJob(ctx, target);
   const base = { machine: machineRef(post), channel: channelRef(post), post: postRef(post), web_url: post.web_url };
   const open = { kind: 'open' as const, label: '開啟貼文' };
@@ -72,11 +87,13 @@ function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionIte
       // WV-2 (E34): 核准／駁回 only while the request is pending and before its due_at (the hub refuses the others). Past it, the
       // card says so and offers 改到…, which submits the post again.
       if (!(request?.status === 'pending' && time(request.due_at) > now)) {
-        return { id, kind: 'approval', severity: 'urgent', title: `${post.channel.label} ${when} 的貼文核准期限已過`,
+        return { id, kind: 'approval', severity: 'urgent', ...text('approval_expired', { channel: post.channel.label, when, deadline: deadline ?? null }),
+          title: `${post.channel.label} ${when} 的貼文核准期限已過`,
           detail: deadline ? `核准期限（${deadline}）已過，這則目前不會發出；改期即可重新送審。` : '這則目前沒有可以核准的請求，不會發出；改期即可重新送審。',
           due_at: post.approval_deadline, ...base, actions: [reschedule, open] };
       }
       return { id, kind: 'approval', severity: post.approval_deadline && time(post.approval_deadline) - now < HOUR ? 'urgent' : 'normal',
+        ...text('approval_waiting', { channel: post.channel.label, when, deadline: deadline ?? null }),
         title: `${post.channel.label} ${when} 的貼文等你核准`, detail: deadline ? `請在 ${deadline} 前核准，之後這則不會發出。` : '核准後才會發出。',
         due_at: post.approval_deadline, ...base,
         actions: [{ kind: 'approve', label: '核准' }, { kind: 'reject', label: '駁回' }, open] };
@@ -86,13 +103,18 @@ function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionIte
       const code = String(blocker?.code ?? '');
       if (code === 'owner_click_required' && post.owner_action) {
         const action = post.owner_action;
-        return { id, kind: 'click_post', severity: 'urgent', title: `${hm(action.from_local)}–${hm(action.until_local)} 要你在 ${action.machine.name} 按「發布」`,
+        return { id, kind: 'click_post', severity: 'urgent',
+          ...text('click_post', { from: hm(action.from_local), until: hm(action.until_local), machine: action.machine.name, channel: post.channel.label,
+            blocker: blocker ? blockerParams(ctx, job, post, zone) : null }),
+          title: `${hm(action.from_local)}–${hm(action.until_local)} 要你在 ${action.machine.name} 按「發布」`,
           detail: blocker?.message ?? `${post.channel.label} 已準備好，等你在 ${action.machine.name} 按「發布」。`, due_at: job?.not_after ?? null, ...base,
           actions: [...(action.machine.remote_url ? [{ kind: 'open_remote' as const, label: '開啟遠端畫面', path: action.machine.remote_url }] : []), open] };
       }
       if (code === 'login_expired' || code === 'identity_mismatch') {
         const machine = post.machine?.name ?? '那台機器';
-        return { id, kind: 'login', severity: 'urgent', title: `${post.channel.label} 要重新登入（${post.machine?.name ?? '機器'}）`,
+        return { id, kind: 'login', severity: 'urgent',
+          ...text('post_login', { channel: post.channel.label, machine: post.machine?.name ?? null, blocker: blockerParams(ctx, job, post, zone) }),
+          title: `${post.channel.label} 要重新登入（${post.machine?.name ?? '機器'}）`,
           detail: `${blocker?.message ?? ''} 按「重新登入」，${machine} 會開啟這個帳號的 SmartSell Chrome 登入視窗，請到 ${machine} 登入；登入後這裡會自動更新。`.trim(),
           due_at: job?.not_after ?? null, ...base,
           actions: [openLogin(post.channel.id), checkLogin(post.channel.id), open] };
@@ -100,6 +122,7 @@ function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionIte
       // WV-9: 恢復 only before the job's deadline, as on the post page (the hub answers RESUME_NOT_ALLOWED after it).
       const resumable = OWNER_RESUME_BLOCKERS.includes(code as never) && time(job?.not_after) > now;
       return { id, kind: code === 'driver_outdated' ? 'driver_outdated' : 'job_blocker', severity: 'urgent',
+        ...text('job_blocker', { channel: post.channel.label, when, blocker: blockerParams(ctx, job, post, zone) }),
         title: `${post.channel.label}${when ? ` ${when}` : ''}：${blockerShort(code) || '需要你處理'}`,
         detail: `${blocker?.message ?? ''}${blocker?.resumable_by === 'auto' && !blocker.message.includes('自動繼續') ? ' 處理好後會自動繼續。' : ''}`.trim(), due_at: job?.not_after ?? null, ...base,
         actions: [...(resumable && job ? [{ kind: 'resume' as const, label: '恢復', method: 'POST' as const, path: `/hub/jobs/${job.id}/resume`, body: {} }] : []), open] };
@@ -109,29 +132,35 @@ function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionIte
       const machine = post.machine?.name ?? '機器';
       if (post.missed_reason === 'released_unconfirmed') {
         // E36: a release of a job the hub saw start (written before E36). It may be live: check first, never one-click repost.
-        return { id, kind: 'missed', severity: 'urgent', title: `${post.channel.label} ${when} 的貼文可能已經發出`,
+        return { id, kind: 'missed', severity: 'urgent', ...text('missed_released_unconfirmed', { channel: post.channel.label, when, machine }),
+          title: `${post.channel.label} ${when} 的貼文可能已經發出`,
           detail: `你強制釋放了這則，但 ${machine} 當時可能已經發出。請先到平台確認，再決定要不要改期。`, due_at: null, ...base, actions: [open] };
       }
       const reason = post.missed_reason === 'not_approved' ? '沒有在期限內核准，所以沒有發出。'
         : post.missed_reason === 'machine_retired' ? `${machine} 已撤銷，帳號還沒換到別台機器，所以沒有發出。請先在帳號頁「換機器」，再改到別的時間。`
           : `${machine} 沒有發出（${missedText(post.missed_reason)}）。`;
-      return { id, kind: 'missed', severity: 'urgent', title: `${post.channel.label} ${when} 的貼文沒有發出`,
+      return { id, kind: 'missed', severity: 'urgent', ...text('missed', { channel: post.channel.label, when, machine, reason: post.missed_reason ?? null }),
+        title: `${post.channel.label} ${when} 的貼文沒有發出`,
         detail: post.missed_reason === 'machine_retired' ? reason : `${reason}要改到別的時間嗎？`, due_at: null, ...base, actions: [reschedule, open] };
     }
     case 'unknown': {
       const machine = post.machine?.name ?? '機器';
       // WV-5: 「上線後會自動補報」 only while the machine is offline; an online machine that did not report will not report by itself.
-      const detail = job?.status !== 'unreported' ? `${machine} 已按「發布」，但讀不到貼文網址。請貼上網址或確認沒有發出；系統不會自動重發。`
-        : post.machine && !post.machine.online ? `${machine} 未回報（目前離線），上線後會自動補報。`
+      const variant = job?.status !== 'unreported' ? 'clicked' : post.machine && !post.machine.online ? 'offline' : 'unreported';
+      const detail = variant === 'clicked' ? `${machine} 已按「發布」，但讀不到貼文網址。請貼上網址或確認沒有發出；系統不會自動重發。`
+        : variant === 'offline' ? `${machine} 未回報（目前離線），上線後會自動補報。`
           : `${machine} 沒有回報這則的結果。請到平台確認：有就貼上網址，沒有就按「確認沒發出」；系統不會自動重發。`;
-      return { id, kind: 'unknown', severity: 'urgent', title: `${post.channel.label} ${when} 的結果不明`, detail,
+      return { id, kind: 'unknown', severity: 'urgent', ...text('unknown', { channel: post.channel.label, when, machine, variant }),
+        title: `${post.channel.label} ${when} 的結果不明`, detail,
         due_at: null, ...base, actions: [{ kind: 'confirm_result', label: '貼上網址' }, { kind: 'mark_not_published', label: '確認沒發出' }, open] };
     }
     case 'blocked': {
       const items = ctx.list('precheck_item').filter(item => item.run_id === target.last_precheck_run_id && item.severity === 'blocker' && item.result !== 'pass');
       // Held only by its paused machine: the machine's 「已暫停」 card counts it and resumes it (U3).
       if (items.length && items.every(item => item.check_key === 'machine_paused') && post.pause?.scope === 'machine') return undefined;
-      return { id, kind: 'job_blocker', severity: 'normal', title: `${post.channel.label} ${when} 的貼文被預檢擋下`,
+      return { id, kind: 'job_blocker', severity: 'normal',
+        ...text('precheck_blocked', { channel: post.channel.label, when, checks: items.map(item => String(item.check_key ?? '')).filter(Boolean).slice(0, 3) }),
+        title: `${post.channel.label} ${when} 的貼文被預檢擋下`,
         detail: items.map(item => String(item.message ?? item.check_key)).filter(Boolean).slice(0, 3).join('；') || '請打開貼文查看要處理的項目。', due_at: post.scheduled_at, ...base,
         actions: [open] };
     }
@@ -144,8 +173,10 @@ function postCard(ctx: Context, target: Row, post: HubPostSummary): AttentionIte
  * changes nothing about scheduling or publishing; the others say how the next post goes out until the owner acts.
  */
 function setupReminder(ctx: Context, account: Row, label: string, machine: string,
-  open: { login: boolean; approval: boolean; risk: boolean; dryRun: boolean }): { title: string; detail: string; login: boolean } | undefined {
+  open: { login: boolean; approval: boolean; risk: boolean; dryRun: boolean }): { title: string; detail: string; login: boolean; codes: string[] } | undefined {
   const lines: string[] = [];
+  const codes = [...open.login ? ['login'] : [], ...open.approval ? [channelSettingsOrDefault(ctx, account.id).approval_mode === 'direct' ? 'approval_direct' : 'approval_none'] : [],
+    ...open.risk ? ['risk'] : [], ...open.dryRun ? ['dry_run'] : []];
   if (open.login) lines.push(`還沒確認登入：按「檢查登入」確認。發文時 ${machine} 會先檢查登入，沒有登入的話那則貼文會停下來等你登入`);
   if (open.approval) {
     lines.push(channelSettingsOrDefault(ctx, account.id).approval_mode === 'direct'
@@ -154,15 +185,15 @@ function setupReminder(ctx: Context, account: Row, label: string, machine: strin
   }
   if (open.risk) lines.push(`還沒確認代按發布的風險：在你確認之前，到發文時間要你在 ${machine} 自己按「發布」`);
   if (open.dryRun && lines.length === 0) {
-    return { title: `建議：${label} 試跑一次`, login: false,
+    return { title: `建議：${label} 試跑一次`, login: false, codes,
       detail: `試跑會在 ${machine} 走一遍發文流程，在按「發布」之前停下，確認這台機器能替這個帳號發文。不影響排程與發布。` };
   }
   if (open.dryRun) lines.push(`還沒試跑：建議試跑一次，確認 ${machine} 能替這個帳號發文（不影響排程與發布）`);
   if (!lines.length) return undefined;
-  return { title: `${label} 的設定提醒（${lines.length} 項，不影響排程）`, detail: `${lines.join('；')}。`, login: open.login };
+  return { title: `${label} 的設定提醒（${lines.length} 項，不影響排程）`, detail: `${lines.join('；')}。`, login: open.login, codes };
 }
 
-type CardDraft = Omit<AttentionItem, 'kind'> & { kind: HubAttentionKind; blocks_scheduling?: boolean };
+type CardDraft = Omit<AttentionItem, 'kind'> & { kind: HubAttentionKind; blocks_scheduling?: boolean } & CardText;
 
 const SCOPE_LABEL: Record<string, string> = { workspace: '全部發布', brand: '品牌', campaign: '活動', social_account: '帳號' };
 /**
@@ -190,6 +221,9 @@ function pauseItems(ctx: Context, entries: PostEntry[], zone: string): CardDraft
     const soon = held.some(({ post }) => post.scheduled_at && time(post.scheduled_at) <= now + 48 * HOUR);
     const firstText = first?.scheduled_at ? `最早一則是 ${localText(first.scheduled_at, zone)?.slice(5)}。` : '';
     items.push({ id: `pause:${row.id}`, kind: 'publishing_paused', blocks_scheduling: false, severity: soon ? 'urgent' : 'normal',
+      ...text('publishing_paused', { scope: String(row.scope_type), scope_name: row.scope_type === 'social_account' && covered[0] ? channelLabelOf(covered[0]) : brand ? str(brand.name) ?? String(row.scope_id) : null,
+        n: held.length, by: view.by ?? null, at: localText(view.at, zone)?.slice(5) ?? null, reason: view.reason || null,
+        first: first?.scheduled_at ? localText(first.scheduled_at, zone)?.slice(5) ?? null : null }),
       title: held.length ? `${scope}已暫停：${held.length} 則貼文恢復前不會發出` : `${scope}已暫停：恢復前不會發出貼文`,
       detail: `${by}在 ${localText(view.at, zone)?.slice(5) ?? ''} 暫停${view.reason ? `（${view.reason}）` : ''}。${firstText}`
         + '恢復後，暫停期間排好的貼文會重新送出；已超過遲到上限的會顯示「沒有發出」，可以改期。',
@@ -218,6 +252,8 @@ function pausedMachineItems(ctx: Context, entries: PostEntry[], zone: string): C
     const firstText = first?.scheduled_at ? `最早一則是 ${localText(first.scheduled_at, zone)?.slice(5)}。` : '';
     const offline = machineConnected(ctx, device) ? '' : `${machine.label} 目前也沒有連線，恢復後要等它上線才會發文。`;
     return { id: `machine_paused:${device.id}`, kind: 'publishing_paused' as const, blocks_scheduling: false, severity: soon ? 'urgent' as const : 'normal' as const,
+      ...text('machine_paused', { machine: machine.label, reason: reason ?? null, n: held.length, by: by === 'Agent ' ? 'agent' : by ? 'person' : null, at: at ?? null,
+        first: first?.scheduled_at ? localText(first.scheduled_at, zone)?.slice(5) ?? null : null, offline: !machineConnected(ctx, device) }),
       title: `${machine.label} 已暫停${reason ? `（${reason}）` : ''}${held.length ? `：${held.length} 則貼文恢復前不會發出` : ''}`,
       detail: `${at ? `${by}在 ${at} 暫停。` : ''}${held.length ? firstText : '這台機器上的帳號在恢復前都不會發文。'}`
         + `恢復後，暫停期間排好的貼文會照常送出；已超過遲到上限的會顯示「沒有發出」，可以改期。${offline}`,
@@ -233,7 +269,7 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
   const items: CardDraft[] = [...pauseItems(ctx, entries, zone), ...pausedMachineItems(ctx, entries, zone)];
   const loginCards = new Set<string>();
   for (const { target, post } of entries) {
-    const card = postCard(ctx, target, post);
+    const card = postCard(ctx, target, post, zone);
     if (!card) continue;
     // A post already stopped on a sign-in problem (captcha, 2FA, expired, wrong account) covers the channel's login state.
     if (card.kind === 'login' || LOGIN_BLOCKERS.includes(String(post.blocker?.code))) loginCards.add(post.channel.id);
@@ -262,6 +298,7 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
           : [`${label} 要重新登入${machine ? `（${machine.label}）` : ''}`, `${where} 上的 ${label} 登入已失效，排到這個帳號的貼文發不出去。按「重新登入」，${where} 會開啟這個帳號的 SmartSell Chrome 登入視窗，請到 ${where} 登入。`];
       loginCards.add(account.id);
       items.push({ id: `login:${account.id}`, kind: 'login', severity: upcoming.get(account.id) ? 'urgent' : 'normal', title,
+        ...text('channel_login', { channel: label, machine: machine?.label ?? null, status }),
         detail,
         due_at: null, machine, channel, post: null, web_url: channel.web_url,
         actions: [openLogin(account.id), checkLogin(account.id), { kind: 'open', label: '開啟帳號' }] });
@@ -273,6 +310,7 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
     const blockers = channelBlockers(ctx, account).filter(blocker => blocker.code !== 'machine_paused');
     if (blockers.length) {
       items.push({ id: `channel:${account.id}`, kind: 'channel_setup', blocks_scheduling: true, severity: upcoming.get(account.id) ? 'urgent' : 'normal',
+        ...text('channel_blockers', { channel: label, machine: machine?.label ?? null, blockers: blockers.map(blocker => blocker.code) }),
         title: `${label} 還沒設定完成，還不能排程（${blockers.length} 項）`, detail: blockers.map(blocker => blocker.message).join('；'), due_at: null,
         machine, channel, post: null, web_url: channel.web_url, actions: [{ kind: 'open', label: '開啟帳號設定' }] });
     }
@@ -282,6 +320,7 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
     });
     if (reminder) {
       items.push({ id: `channel:${account.id}:reminder`, kind: 'channel_setup', blocks_scheduling: false, severity: 'normal', title: reminder.title,
+        ...text('channel_reminder', { channel: label, machine: machine?.label ?? null, lines: reminder.codes }),
         detail: reminder.detail, due_at: null, machine, channel, post: null, web_url: channel.web_url,
         actions: [...(reminder.login ? [checkLogin(account.id)] : []), { kind: 'open', label: '開啟帳號設定' }] });
     }
@@ -289,7 +328,8 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
       .sort((a, b) => String(b.finished_at ?? b.updated_at).localeCompare(String(a.finished_at ?? a.updated_at)))[0] as Row | undefined;
     const fallback = Array.isArray(dry?.driver_trace) && (dry!.driver_trace as unknown[]).map(object).some(step => step.matched === 'fallback');
     if (fallback) {
-      items.push({ id: `dry_run:${account.id}`, kind: 'dry_run_fallback', severity: 'normal', title: `${label} 試跑時用了備用選擇器`,
+      items.push({ id: `dry_run:${account.id}`, kind: 'dry_run_fallback', severity: 'normal', ...text('dry_run_fallback', { channel: label }),
+        title: `${label} 試跑時用了備用選擇器`,
         detail: '平台頁面可能改版。請在中樞執行 pnpm hub:update 更新選擇器，再試跑一次。', due_at: null, machine, channel, post: null, web_url: channel.web_url,
         actions: [{ kind: 'open', label: '開啟帳號' }] });
     }
@@ -298,13 +338,16 @@ export function attentionItems(ctx: Context, posts?: PostEntry[], zone = workspa
     const first = waiting[0];
     const machine = ref(device.id, machineName(device), webUrl(ctx, 'machine', device.id));
     items.push({ id: `offline:${device.id}`, kind: 'machine_offline', severity: time(first.not_before) - now < 2 * HOUR ? 'urgent' : 'normal',
+      ...text('machine_offline', { machine: machine.label, n: waiting.length, first: localText(first.not_before, zone)?.slice(5) ?? null }),
       title: `${machine.label} 離線，${waiting.length} 則貼文等待中，最早 ${localText(first.not_before, zone)?.slice(5) ?? ''}`,
       detail: `請確認 ${machine.label} 已開機、已連上 Tailscale，SmartSell Worker 正在執行。`, due_at: String(first.not_before), machine, channel: null, post: null,
       web_url: machine.web_url, actions: [{ kind: 'open', label: '開啟機器' }] });
   }
   for (const machine of machineSummaries(ctx, { zone })) {
     if (!machine.warnings.length) continue;
-    items.push({ id: `setup:${machine.machine_id}`, kind: 'machine_setup', severity: 'normal', title: `${machine.name} 的設定需要注意（${machine.warnings.length} 項）`,
+    items.push({ id: `setup:${machine.machine_id}`, kind: 'machine_setup', severity: 'normal',
+      ...text('machine_setup', { machine: machine.name, os: machine.os, warnings: machine.warnings.map(warning => ({ code: warning.code, ...(warning as MachineWarningWithParams).params })) }),
+      title: `${machine.name} 的設定需要注意（${machine.warnings.length} 項）`,
       detail: machine.warnings.map(warning => warning.message).join(' '), due_at: null, machine: ref(machine.machine_id, machine.name, machine.web_url),
       channel: null, post: null, web_url: machine.web_url, actions: [{ kind: 'open', label: '開啟機器' }] });
   }

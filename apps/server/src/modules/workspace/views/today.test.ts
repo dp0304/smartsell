@@ -203,3 +203,27 @@ test('U3: a paused machine is one 「已暫停」 card with 恢復機器, never 
   assert.equal(buildToday(w.ctx).attention.some(item => item.id.startsWith('machine_paused:')), false);
   assert.equal(channelSummaries(w.ctx).find(row => row.channel_id === w.account.id)!.machine?.paused, undefined);
 });
+
+test('U1: every Today card names its sentence (code) and carries the values in it (params) next to the zh-Hant text', async () => {
+  const w = viewWorld();
+  const post = await w.schedule('2026-11-24T13:00:00.000Z');
+  const job = w.jobOf(post.id);
+  w.claim();
+  w.report(job.id, 'prepare_blocked', { stage: 'preflight', blocker: { code: 'captcha', phase: 'prepare', message: 'captcha', at: w.ctx.now } });
+  w.set('connector_device', w.other.id, { posture: { os: 'win32', os_version: '11', sleep_idle_min: 0, on_battery: false, auto_login: 'off', filevault: 'n/a', power_plan_sleep_min: 30 } });
+  const today = buildToday(w.ctx);
+  for (const item of today.attention) assert.ok(item.code && item.params, item.id);
+  const captcha = today.attention.find(item => item.id === `post:${post.id}`)!;
+  assert.equal(captcha.code, 'job_blocker');
+  assert.deepEqual(captcha.params!.blocker, { code: 'captcha', machine: 'Mac-B', channel: 'X @lurelab', deadline: captcha.params!.blocker && (captcha.params!.blocker as Record<string, unknown>).deadline,
+    step: null, platform_message: 'captcha', resumable_by: 'auto' });
+  assert.match(String((captcha.params!.blocker as Record<string, unknown>).deadline), /^\d\d:\d\d$/);
+  const setup = today.attention.find(item => item.kind === 'machine_setup')!;
+  assert.deepEqual(setup.params, { machine: 'Win-C', os: 'win32', warnings: [{ code: 'sleep_enabled', name: 'Win-C', minutes: 30 }, { code: 'no_auto_login', name: 'Win-C', filevault: false }] });
+  const reminder = today.attention.find(item => item.id.endsWith(':reminder'))!;
+  assert.equal(reminder.code, 'channel_reminder');
+  assert.ok(Array.isArray(reminder.params!.lines));
+  // The Agent's overview carries the same codes; the zh-Hant text is unchanged for it.
+  assert.equal(buildOverview(w.ctx).needs_owner.find(item => item.id === captcha.id)?.code, 'job_blocker');
+  assert.match(captcha.title, /出現驗證碼/);
+});

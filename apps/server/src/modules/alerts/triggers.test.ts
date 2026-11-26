@@ -548,3 +548,20 @@ test('U7: a platform rejection is worded once; the blocker keeps the platform te
   status(f, old, 'needs_owner', { blocker: { ...blocker('upload_rejected', f), message: sentence } });
   assert.equal(f.alerts().at(-1)!.body, 'X @fixture_x 拒絕了這支影片：「平台沒有提供說明」。這則沒有發出。');
 });
+
+test('U1: an owner alert says which sentence it is (code) and carries its values (params), next to the zh-Hant title and body', async () => {
+  const f = alertFixture('2026-11-25T01:00:00.000Z');
+  const { macB, x } = seedHub(f);
+  const row = job(f, { device: macB, account: x, target: post(f, x, T), notBefore: T, status: 'running', started_at: '2026-11-25T01:00:05.000Z',
+    fencing_token: 1, seq_by_fence: { '1': 3 } });
+  reporter(f, macB, row.id, 1, 4)('failed', { code: 'upload_rejected', message: 'Video format not supported' });
+  const { toOwnerAlert } = await import('./raise.js');
+  const alert = toOwnerAlert(f.alerts().at(-1)! as unknown as Row);
+  assert.equal(alert.code, 'failed');
+  assert.deepEqual(alert.params, { blocker_code: 'upload_rejected', machine: 'Mac-B', channel: 'X @fixture_x', deadline: alert.params!.deadline,
+    step: null, platform_message: 'Video format not supported', dry_run: false });
+  assert.match(alert.title, /平台拒絕了這支影片/);
+  const captcha = job(f, { device: macB, account: x, target: post(f, x, T), notBefore: T, status: 'claimed' });
+  status(f, captcha, 'needs_owner', { blocker: blocker('captcha', f) });
+  assert.deepEqual([f.alerts().at(-1)!.code, (f.alerts().at(-1)!.params as Record<string, unknown>).blocker_code], ['worker_blocker', 'captcha']);
+});

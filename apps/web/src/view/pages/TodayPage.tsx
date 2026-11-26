@@ -5,6 +5,7 @@ import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
 import { fill } from '../copy';
 import { RELOGIN, attentionKindText, hub } from '../hub-copy';
+import { actionLabel, attentionText } from '../attention-text';
 import { Badge, ChannelName, Empty, ModeBadge, OnlineBadge, PostStatusBadge, WriteError, ZoneNote, localLabel, providerName, tr, useHubWrite } from '../hub-parts';
 import { reloginMessage, requestRelogin } from './ChannelPage';
 import { PostDetail } from './post-detail';
@@ -39,6 +40,9 @@ function AttentionCard({ item, today, posts }: { item: TodayItem; today: string;
   // 「重新登入」 (§9.2 login card, E21): on every login card, and wherever the hub offers open_login. It opens the sign-in window on the
   // channel's machine; the owner signs in there.
   const reloginChannel = item.channel && (item.kind === 'login' || item.actions.some(action => action.kind === 'open_login')) ? item.channel : null;
+  // U1: the card in the page's language (the hub's zh-Hant text, or English from its code and params).
+  const text = attentionText(item, lang);
+  const label = (action: TodayItem['actions'][number]) => actionLabel(action, item, lang);
   async function call(path: string, body?: Record<string, unknown>) {
     setPending(true); setError(undefined); setNotice(undefined); setSent(null);
     try { await write('POST', path, body ?? {}); setSent(cardSignature(item)); } catch (failure) { setError(failure); } finally { setPending(false); }
@@ -51,9 +55,9 @@ function AttentionCard({ item, today, posts }: { item: TodayItem; today: string;
   return <article className={`hub-attn sev-${item.severity}`} aria-labelledby={`attn-${item.id}`}>
     <header>
       <Badge tone={item.severity === 'urgent' ? 'critical' : 'warning'}>{tr(l, attentionKindText, item.kind)}</Badge>
-      <h3 id={`attn-${item.id}`}>{item.post ? <RouterLink to={local(item.post.web_url)}>{item.title}</RouterLink> : item.title}</h3>
+      <h3 id={`attn-${item.id}`}>{item.post ? <RouterLink to={local(item.post.web_url)}>{text.title}</RouterLink> : text.title}</h3>
     </header>
-    {item.detail && <p>{item.detail}</p>}
+    {text.detail && <p>{text.detail}</p>}
     {post && (post.caption_excerpt || item.kind === 'approval') && <p className="hub-quote">{post.caption_excerpt || l(hub.common.noCaption)}</p>}
     <p className="hub-links">
       {item.machine && <RouterLink to={local(item.machine.web_url)}>{item.machine.label}</RouterLink>}
@@ -64,12 +68,12 @@ function AttentionCard({ item, today, posts }: { item: TodayItem; today: string;
     <div className="vs-actions">
       {reloginChannel && <button type="button" className="vs-btn primary-soft" disabled={pending} onClick={() => void relogin(reloginChannel)}>{l(RELOGIN.button)}</button>}
       {item.actions.filter(action => !POST_ACTIONS.has(action.kind) && action.kind !== 'open' && action.kind !== 'open_login').map(action => action.kind === 'open_remote'
-        ? <a key={action.kind} className="vs-btn" href={action.path}>{action.label}</a>
+        ? <a key={action.kind} className="vs-btn" href={action.path}>{label(action)}</a>
         : action.path && action.method ? <button key={action.kind} type="button" className="vs-btn primary-soft" disabled={pending}
-          onClick={() => void call(action.path!, action.body)}>{action.label}</button> : null)}
+          onClick={() => void call(action.path!, action.body)}>{label(action)}</button> : null)}
       {postActions.length > 0 && item.post && <button type="button" className="vs-btn primary-soft" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {postActions.map(action => action.label).join(' / ')}</button>}
-      {!item.post && item.actions.some(action => action.kind === 'open') && <RouterLink to={local(item.web_url)} className="vs-btn">{item.actions.find(action => action.kind === 'open')!.label}</RouterLink>}
+        {postActions.map(label).join(' / ')}</button>}
+      {!item.post && item.actions.some(action => action.kind === 'open') && <RouterLink to={local(item.web_url)} className="vs-btn">{label(item.actions.find(action => action.kind === 'open')!)}</RouterLink>}
     </div>
     {notice && <p className="vs-notice good" role="status">{notice}</p>}
     {done && <p className="vs-notice good" role="status">{l(hub.action.done)}</p>}

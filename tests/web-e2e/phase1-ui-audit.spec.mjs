@@ -97,6 +97,38 @@ test('O7: the first-run forms say where the setup token is; the hub:init link is
   await expect(page.getByRole('link', { name: '返回註冊', exact: true })).toHaveCount(0);
 });
 
+test('U1: in English, Today\'s cards and the notifications read in English on real phase-1 data', async ({ page, dev }) => {
+  const cjk = /[㐀-鿿]/;
+  const fixture = await postingFixture(page, dev, { withoutDailySummary: true });
+  const { ws, machine, channelId } = fixture;
+  // A post stopped on a CAPTCHA.
+  const { settings } = await ws.rest('GET', `/views/channels/${channelId}`);
+  await ws.rest('PATCH', `/hub/channels/${channelId}/settings`, { approval_mode: 'direct' }, { version: settings.version });
+  const { post } = await schedulePost(fixture, { at: '12:00', caption: 'Weekend sale' });
+  const job = (await machine.claim()).find(item => item.payload?.publish_target_id === post.post_id);
+  await machine.report(job, 'prepare_blocked', { stage: 'preflight', blocker: { code: 'captcha', phase: 'prepare', message: 'X asked for a CAPTCHA', at: new Date().toISOString(), step: 'login' } });
+  // A second machine, paused by its owner with an English reason.
+  const other = await pairMachine(dev, ws, 'Mac-C');
+  await other.heartbeat();
+  await ws.rest('POST', `/hub/machines/${other.id}/pause`, { reason: 'new router' });
+
+  await page.context().addInitScript(() => localStorage.setItem('smartsell-language', 'en'));
+  await page.goto(ws.app);
+  await expectToday(page, 'en');
+  const attention = page.getByRole('main').locator('section.hub-attention');
+  await expect(attention.getByRole('article', { name: /: Captcha$/ })).toBeVisible();
+  await expect(attention.getByRole('article', { name: 'Mac-C paused (new router)' })).toBeVisible();
+  await expect(attention.getByRole('button', { name: 'Resume machine', exact: true })).toBeVisible();
+  await attention.locator('details.hub-reminders > summary').click();
+  expect(await attention.innerText()).not.toMatch(cjk);
+
+  await page.goto(`${ws.app}/notifications`);
+  const list = page.getByRole('main').locator('.hub-alert-list');
+  await expect(list.locator('.hub-alert-title').filter({ hasText: 'X @fixture_x on Mac-B: captcha' })).toBeVisible();
+  await expect(list).toContainText('Solve it in the SmartSell Chrome window on Mac-B');
+  expect(await list.innerText()).not.toMatch(cjk);
+});
+
 test('U6: Settings and the error page hide the legacy modules until 顯示其他模組 is on', async ({ page, dev }) => {
   const ws = await ownerWorkspace(page, dev);
   await page.goto(`${ws.app}/settings`);

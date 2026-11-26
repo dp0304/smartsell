@@ -16,6 +16,8 @@ import { jobSummaryOf } from './posts.js';
 /** Machine read models (phase1-design §3.2, §9.3): machineSummaries, machineDetail and the §3.2 warnings. */
 
 export type WarningLang = 'zh' | 'en';
+/** U1 (additive): the values in a warning's sentence, so the web writes it in the owner's language. */
+export type MachineWarningWithParams = MachineWarning & { params?: Record<string, string | number | boolean | null> };
 const SYNC_GRACE_MS = 60_000;
 const QUEUE_STATUSES = ['queued', 'claimed', 'ready', 'running', 'submitting', 'result_pending', 'needs_owner', 'releasing', 'outcome_unknown', 'unreported'];
 
@@ -33,26 +35,34 @@ const postureOf = (ctx: Context, device: Row): DevicePosture | null =>
  * §3.2 machine warnings derived from the posture, version, clock, drivers and sync state. The web shows zh-Hant (`lang`
  * 'zh'); the Agent tools (S4) ask for 'en' and get the same codes from the same rules.
  */
-export function machineWarnings(ctx: Context, device: Row, lang: WarningLang = 'zh'): MachineWarning[] {
+export function machineWarnings(ctx: Context, device: Row, lang: WarningLang = 'zh'): MachineWarningWithParams[] {
   const name = machineName(device);
   const posture = postureOf(ctx, device);
-  const warnings: MachineWarning[] = [];
-  const add = (code: MachineWarning['code'], zh: string, en: string) => warnings.push({ code, message: lang === 'en' ? en : zh });
+  const warnings: MachineWarningWithParams[] = [];
+  const values: Partial<Record<MachineWarning['code'], Record<string, string | number | boolean | null>>> = {};
+  const add = (code: MachineWarning['code'], zh: string, en: string) => warnings.push({ code, message: lang === 'en' ? en : zh,
+    // The web view (zh) carries the values so it can write the warning in English too; the Agent's English text needs none.
+    ...(lang === 'zh' && { params: { name, ...values[code] } }) });
   const sleep = Math.max(Number(posture?.sleep_idle_min) || 0, Number(posture?.power_plan_sleep_min) || 0);
+  values.sleep_enabled = { minutes: sleep };
+  values.no_auto_login = { filevault: posture?.filevault === 'on' };
   if (sleep > 0) add('sleep_enabled', `${name} 閒置 ${sleep} 分鐘會睡眠。Worker 持有排程時會阻止閒置睡眠，但闔上螢幕或手動睡眠仍會錯過。`,
     `${name} sleeps after ${sleep} min idle.`);
   if (posture?.auto_login === 'off') add('no_auto_login', `${name} 重開機後要有人登入，Worker 才會啟動${posture.filevault === 'on' ? '（FileVault 已開啟）' : ''}。`,
     `${name} needs someone to log in after a restart.`);
   const version = str(presenceOf(ctx, device.id)?.client_version) ?? str(device.client_version);
   const latest = latestVersion(device);
+  values.app_outdated = { version: version ?? null, latest };
   if (version && latest && compareWorkerVersions(version, latest) < 0) add('app_outdated', `${name} 的 Worker 是 ${version}，有 ${latest} 可更新。`,
     `${name} runs Worker ${version}; ${latest} is available.`);
   const offset = clockOffset(ctx, device);
+  values.clock_skew = { seconds: offset === null ? null : Math.round(Math.abs(offset) / 1000) };
   if (offset !== null && Math.abs(offset) > 30_000) add('clock_skew', `${name} 的時鐘差了 ${Math.round(Math.abs(offset) / 1000)} 秒。`,
     `${name}'s clock is off by ${Math.round(Math.abs(offset) / 1000)} s.`);
   const outdated = machineDrivers(ctx, device).filter(driver => driver.health === 'outdated');
   if (outdated.length) {
     const names = outdated.map(driver => driver.provider === 'x' ? 'X' : driver.provider === 'tiktok' ? 'TikTok' : String(driver.provider)).join('、');
+    values.driver_outdated = { names: names.replaceAll('、', ', '), step: outdated[0].step ?? null };
     add('driver_outdated', `${names} 的頁面可能改版${outdated[0].step ? `（在「${outdated[0].step}」找不到元素）` : ''}。`, `The ${names} page may have changed.`);
   }
   const presence = presenceOf(ctx, device.id);
@@ -62,6 +72,7 @@ export function machineWarnings(ctx: Context, device: Row, lang: WarningLang = '
     const zone = workspaceZone(ctx);
     const changed = localText(sync.at, zone)?.slice(11) ?? '';
     const seen = localText(lastSeen(ctx, device), zone)?.slice(11) ?? '';
+    values.sync_behind = { changed, seen };
     add('sync_behind', `${name} 還沒收到你 ${changed} 的變更（最後連線 ${seen}）。`, `${name} has not received your ${changed} change yet (last seen ${seen}).`);
   }
   return warnings;

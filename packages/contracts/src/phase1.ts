@@ -218,6 +218,8 @@ export type OwnerAlertKind = 'worker_blocker' | 'missed' | 'unknown' | 'late_fac
 export interface OwnerAlert {
   id: string; kind: OwnerAlertKind; severity: 'urgent' | 'normal' | 'info'; title: string; body: string; at: string;
   machine: Ref | null; channel: Ref | null; post: Ref | null; web_url: string; read_at: string | null;
+  /** 附加（U1）：title／body 是哪一句話與其中的值，網頁依介面語言重寫；title／body 仍是繁中，給 Agent 與舊版用戶端。 */
+  code?: string; params?: Record<string, unknown>;
 }
 export type AlertChannelConfig =
   | { kind: 'ntfy'; url: string; token_set: boolean }

@@ -62,6 +62,7 @@ export function approvalAlert(ctx: Context, request: Row, target: Row, stage: St
   const when = stage === 'created' ? '' : `（${stage === '60' ? '還有 1 小時' : '還有 10 分鐘'}）`;
   return createOwnerAlert(ctx, {
     kind: 'approval_due', severity, dedupe_key: `${target.id}:${request.id}:${stage}`,
+    code: 'approval_due', params: { machine: machineLabel(ctx, machineId) ?? null, channel: channelLabel(ctx, accountId) ?? null, at, deadline, stage },
     title: `${lead(who)}${at} 的貼文等你核准${when}，期限 ${deadline}。`,
     body: `${lead(who)}在 ${at} 有一則貼文需要你核准。請在 ${deadline} 前核准，之後這則不會發出。`,
     machine_id: machineId, social_account_id: accountId, post_id: target.id,
@@ -103,6 +104,7 @@ function scanApprovalLapses(ctx: Context): number {
     const deadline = localLabel(new Date(Math.min(lapse, time(request.due_at) || lapse)).toISOString(), zone, ctx.now);
     if (createOwnerAlert(ctx, {
       kind: 'missed', severity: 'urgent', dedupe_key: `target:${target.id}:${request.id}`,
+      code: 'missed', params: { machine: machineLabel(ctx, machineId) ?? null, channel: channelLabel(ctx, accountId) ?? null, deadline, reason_code: 'not_approved' },
       title: `${lead(who)}的貼文沒有發出（沒有在期限內核准）。`,
       body: `${who}：${fill(STATUS_COPY.missed_not_approved, { deadline })}`,
       machine_id: machineId, social_account_id: accountId, post_id: target.id,
@@ -130,6 +132,7 @@ export function clickPostAlert(ctx: Context, job: Row, stage: 'lead' | 'due'): R
   const early = stage === 'lead';
   return createOwnerAlert(ctx, {
     kind: 'click_post_soon', severity: early ? 'normal' : 'urgent', dedupe_key: `${job.id}:${stage}`,
+    code: 'click_post_soon', params: { stage, machine, channel, from, until, remote: remote ?? null },
     title: early ? `${from} 要在 ${machine} 按「發布」：${channel}。` : `現在請在 ${machine} 按「發布」：${channel}（截止 ${until}）。`,
     body: [early
       ? `${machine} 的 ${channel} 在 ${from} 要發布，這個帳號沒有開啟代按發布。請在 ${from}–${until} 之間到 ${machine} 按「發布」。`
@@ -150,6 +153,7 @@ export function clickPostNotReadyAlert(ctx: Context, job: Row): Row | undefined 
   const until = localLabel(job.not_after, zone, ctx.now);
   return createOwnerAlert(ctx, {
     kind: 'click_post_soon', severity: 'normal', dedupe_key: `${job.id}:due_timer`,
+    code: 'click_post_not_ready', params: { machine, channel, from, until },
     title: `${machine} 還沒準備好 ${channel} 的草稿（截止 ${until}）。`,
     body: `${machine} 的 ${channel} 預定 ${from} 發布，但 ${machine} 還沒把草稿準備好，所以現在還不能按「發布」。準備好時會再通知你，截止 ${until}。`,
     machine_id: str(job.device_id), social_account_id: str(job.social_account_id), post_id: str(job.publish_target_id), job_id: job.id,
@@ -209,6 +213,7 @@ function scanMachineOffline(ctx: Context, options: ReminderScanOptions): number 
     const channels = [...new Set(jobs.map(job => channelLabel(ctx, job.social_account_id)).filter(Boolean))].join('、');
     if (createOwnerAlert(ctx, {
       kind: 'machine_offline_with_jobs', severity: 'urgent', dedupe_key: `${device.id}:${seen ?? 'never'}`,
+      code: 'machine_offline_with_jobs', params: { machine, n: jobs.length, first, since: seen ? since : null, channels: channels || null },
       title: `${machine} 離線，${jobs.length} 則貼文等待中，最早 ${first}。`,
       body: `${machine} 從 ${since} 起沒有連線，2 小時內有 ${jobs.length} 則貼文要由它發出（${channels || '帳號'}，最早 ${first}）。` +
         `請確認 ${machine} 已開機、沒有睡眠並連上網路；超過遲到上限仍離線的貼文不會補發。`,
@@ -275,6 +280,8 @@ function scanMachineSetup(ctx: Context): number {
       }
       const row = createOwnerAlert(ctx, {
         kind: 'machine_setup', severity: 'normal', dedupe_key: `${device.id}:${code}:${history.length + 1}`,
+        code: 'machine_setup', params: { machine: machineLabel(ctx, device.id) ?? null, os: (device.posture as { os?: string } | null)?.os ?? device.platform ?? null,
+          warning: { code, ...(warning as { params?: Record<string, unknown> }).params } },
         // E25: the title names the machine and the kind; the body carries the warning (no duplicate text in push).
         title: `${machineLabel(ctx, device.id) ?? '機器'} 的設定需要調整`, body: warning.message, machine_id: device.id,
       });
@@ -315,6 +322,14 @@ export function dailySummary(ctx: Context): Row | undefined {
   return createOwnerAlert(ctx, {
     kind: 'daily_summary', severity: 'info', dedupe_key: today,
     title: `明天有 ${posts.length} 則排程，${issues.length} 件待處理。`, body,
+    code: 'daily_summary', params: {
+      posts: posts.slice(0, 8).map(row => ({ at: localLabel(row.scheduled_at, zone, ctx.now).replace(/^明天 /, ''), channel: channelLabel(ctx, row.social_account_id) ?? null,
+        machine: machineLabel(ctx, boundDevice(ctx, row.social_account_id)) ?? null })), n_posts: posts.length,
+      issues: [...workerJobs(ctx).filter(job => job.dry_run !== true && STATUS_LABEL[job.status as WorkerJobStatus])
+        .map(job => ({ channel: channelLabel(ctx, job.social_account_id) ?? null, status: String(job.status) })),
+      ...pendingApprovals(ctx).map(({ target }) => ({ channel: channelLabel(ctx, target.social_account_id) ?? null, status: 'awaiting_approval' }))].slice(0, 5),
+      n_issues: issues.length,
+    },
   });
 }
 
