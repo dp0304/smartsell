@@ -5,8 +5,9 @@ import react from '@vitejs/plugin-react';
 const target = process.env.SMARTSELL_API_TARGET ?? 'http://127.0.0.1:3401';
 const loopbackAuthority = /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
 const apiTarget = URL.parse(target);
+// '/agent/' (with the slash): the relay bundle the setup page tells the laptop to download (O6), not the /agent-connect page.
 const proxy: Record<string, string | ProxyOptions> = Object.fromEntries([
-  '/api', '/mcp', '/oauth', '/.well-known/oauth-authorization-server', '/.well-known/oauth-protected-resource', '/r/',
+  '/api', '/mcp', '/oauth', '/.well-known/oauth-authorization-server', '/.well-known/oauth-protected-resource', '/r/', '/agent/',
 ].map(path => [path, target]));
 
 if (apiTarget?.protocol === 'http:' && loopbackAuthority.test(apiTarget.host)) {

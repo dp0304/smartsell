@@ -69,6 +69,16 @@ test('U8: a refused URL paste says which link is wanted; status and code stay fo
   await expect(down).not.toContainText('後端');
 });
 
+test('O6: under the dev server /agent/relay.mjs reaches the API, not the web page; /agent-connect stays the web page', async ({ page, dev }) => {
+  const relay = await page.request.get(`${dev.origin}/agent/relay.mjs`);
+  // The bundle, or 503 RELAY_BUNDLE_MISSING from the API when it has not been built; never the SPA's index.html.
+  expect(relay.headers()['content-type'] ?? '').not.toMatch(/text\/html/);
+  if (relay.status() === 200) expect(relay.headers()['content-type']).toMatch(/javascript/);
+  else expect(JSON.stringify(await relay.json())).toContain('RELAY_BUNDLE_MISSING');
+  const connect = await page.request.get(`${dev.origin}/agent-connect?client=codex`);
+  expect(connect.headers()['content-type']).toMatch(/text\/html/);
+});
+
 test('U6: Settings and the error page hide the legacy modules until 顯示其他模組 is on', async ({ page, dev }) => {
   const ws = await ownerWorkspace(page, dev);
   await page.goto(`${ws.app}/settings`);
