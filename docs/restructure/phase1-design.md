@@ -3769,4 +3769,5 @@ export interface MediaRecentItem { media_id: string; filename: string; kind: 'vi
 |---|---|---|
 | E47 | 影片可以用 API 直傳，MCP 寫清楚（取代 E4）。`media_upload` 有兩種形式：`{path}` 由 relay 在本機分段上傳（建議，可續傳）；`{filename, bytes, sha256, mime?}` 給直接連中樞、沒有 relay 的用戶端，中樞建立或接續同一個上傳，回傳單次有效、1 小時過期、綁定大小與 SHA-256 的 `PUT /api/v1/agent/uploads/direct/:token` 與一行 `curl -T` 指令；同一組參數再呼叫一次就是查狀態。網址只存在中樞記憶體（重啟即失效），不含 agent token。中樞 `requestTimeout` 改為 900 秒。伺服器說明第 2 條改寫。 | 主人 |
 | E48 | 規則不能只放在 server instructions（2026-11-26 實測）：WorkBuddy 不把 instructions 交給模型，它的模型在主人沒給文案時直接以空白文案排程。改為：`smartsell_overview` 的結果帶 `rules`（＝instructions 全文）；工具說明寫明要先問文案、排完回報每則的 `web_url`；MCP 的 `post_schedule` 沒有 `captions` 時必須帶 `no_caption: true`，否則回 `CAPTION_DECISION_REQUIRED`。 | S4 |
+| E49 | 在主人自己的 Chrome 發文（core-automation-proposal §3.2，第 3 步）。Worker 多一種瀏覽器方式 `own_chrome`：SmartSell 擴充功能（MV3，固定 ID）經原生訊息主機 `com.smartsell.worker`（macOS `nc -U`、Windows PowerShell 管線，只轉送位元組）連到 Worker 資料夾的 socket，`chrome.debugger` 只附加在擴充功能自己在「SmartSell」視窗開的分頁；驅動、選擇器、讀回與「不重發」不變。每個帳號記住用哪個 Chrome 設定檔，絕不自己換。預設仍是每帳號獨立 profile（§8.3），由主人在 Worker 切換；有貼文在準備或發布時拒絕切換。新增的 owner 訊息：擴充功能沒連上、多個設定檔要選、主人按了偵錯提示的「取消」。 | 主人 |
 
