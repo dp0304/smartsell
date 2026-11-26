@@ -3,12 +3,21 @@ import { ExternalLink, Monitor } from 'lucide-react';
 import { pauseOf, type MachineSummary, type PostSummary, type TodayData, type TodayGroup, type TodayItem } from '../data/hub-types';
 import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
+import { fill } from '../copy';
 import { RELOGIN, attentionKindText, hub } from '../hub-copy';
 import { Badge, ChannelName, Empty, ModeBadge, OnlineBadge, PostStatusBadge, WriteError, ZoneNote, localLabel, providerName, tr, useHubWrite } from '../hub-parts';
 import { reloginMessage, requestRelogin } from './ChannelPage';
 import { PostDetail } from './post-detail';
 
 const local = (path: string) => path.replace(/^https?:\/\/[^/]+/, '');
+/**
+ * U4: a setup reminder (E30: a channel_setup item that does not stop scheduling) is not something that needs the owner now.
+ * 要你處理 everywhere on Today (the count at the top and the section badge) is the other cards; the reminders fold into one.
+ */
+export const isSetupReminder = (item: Pick<TodayItem, 'kind' | 'blocks_scheduling'>) => item.kind === 'channel_setup' && item.blocks_scheduling !== true;
+export function splitAttention(items: TodayItem[]) {
+  return { needs: items.filter(item => !isSetupReminder(item)), reminders: items.filter(isSetupReminder) };
+}
 const POST_ACTIONS = new Set(['approve', 'reject', 'cancel', 'reschedule', 'retry', 'confirm_result', 'mark_not_published', 'force_release']);
 
 /** What the card currently says; a notice about an earlier press belongs to the card as it was then (WV-9). */
@@ -111,14 +120,21 @@ export function TodayPage() {
     <PageHeader title={l(hub.today.title)} subtitle={l(hub.today.subtitle)} asOf={read.asOf} timeZone={read.value?.timezone} />
     <Loaded read={read}>{today => {
       const posts = new Map([...today.upcoming.flatMap(group => group.posts), ...today.recent_published].map(post => [post.post_id, post]));
+      const { needs, reminders } = splitAttention(today.attention);
+      const counts = { ...today.counts, needs_owner: needs.length };
       return <div className="hub-today">
         <dl className="hub-counts" aria-label={l(hub.today.counts)}>
           {([['scheduled', hub.today.scheduled], ['published', hub.today.published], ['needs_owner', hub.today.needsOwner], ['missed', hub.today.missed], ['unknown', hub.today.unknown]] as const)
-            .map(([key, label]) => <div key={key} className={today.counts[key] && ['needs_owner', 'missed', 'unknown'].includes(key) ? 'alert' : undefined}><dt>{l(label)}</dt><dd>{today.counts[key]}</dd></div>)}
+            .map(([key, label]) => <div key={key} className={counts[key] && ['needs_owner', 'missed', 'unknown'].includes(key) ? 'alert' : undefined}
+              title={key === 'needs_owner' ? l(hub.today.needsOwnerHint) : undefined}><dt>{l(label)}</dt><dd>{counts[key]}</dd></div>)}
         </dl>
-        <Section title={<>{l(hub.today.attention)}{today.attention.length > 0 && <span className="vs-badge">{today.attention.length}</span>}</>} className="hub-attention">
-          {today.attention.length ? <div className="hub-attn-list">{today.attention.map(item => <AttentionCard key={item.id} item={item} today={today.date} posts={posts} />)}</div>
+        <Section title={<>{l(hub.today.attention)}{needs.length > 0 && <span className="vs-badge">{needs.length}</span>}</>} className="hub-attention">
+          {needs.length ? <div className="hub-attn-list">{needs.map(item => <AttentionCard key={item.id} item={item} today={today.date} posts={posts} />)}</div>
             : <Empty>{l(hub.today.nothing)}</Empty>}
+          {reminders.length > 0 && <details className="hub-reminders">
+            <summary>{fill(l(hub.today.reminders), { n: reminders.length })}</summary>
+            <div className="hub-attn-list">{reminders.map(item => <AttentionCard key={item.id} item={item} today={today.date} posts={posts} />)}</div>
+          </details>}
         </Section>
         {/* WV-6: every time on this page is in the zone the hub computed Today in (the workspace zone, or ?tz=). */}
         <Section title={l(hub.today.upcoming)}

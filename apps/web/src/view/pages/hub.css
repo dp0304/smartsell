@@ -36,6 +36,10 @@
 .hub-counts dd { margin: 2px 0 0; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hub-counts > .alert dd { color: var(--status-critical); }
 .hub-attn-list, .hub-groups { display: grid; gap: 12px; }
+.hub-reminders { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--vs-surface); }
+.hub-reminders > summary { cursor: pointer; padding: 10px 14px; color: var(--muted); font-weight: 600; }
+.hub-reminders[open] > summary { border-bottom: 1px solid var(--line); }
+.hub-reminders > .hub-attn-list { padding: 12px; }
 .hub-attn { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-inline-start: 4px solid var(--status-warning); border-radius: 12px; background: var(--vs-surface); min-width: 0; }
 .hub-attn.sev-urgent { border-inline-start-color: var(--status-critical); }
 .hub-attn header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

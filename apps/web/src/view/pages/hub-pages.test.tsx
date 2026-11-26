@@ -133,6 +133,32 @@ test('Today shows what needs the owner, the next 48 hours grouped by content, ma
   assert.match(en, /Tomorrow 09:00/);
 });
 
+test('U4: 要你處理 is one number on Today (count and badge), setup reminders fold into one entry below the cards', async () => {
+  const reminder = (id: string, title: string) => ({ id: `channel:${id}:reminder`, kind: 'channel_setup' as const, blocks_scheduling: false, severity: 'normal' as const,
+    title, detail: '還沒試跑：建議試跑一次（不影響排程與發布）。', due_at: null, machine: null, channel: { id, label: 'X @a', web_url: url(`/channels/${id}`) }, post: null,
+    actions: [{ kind: 'open' as const, label: '開啟帳號設定' }], web_url: url(`/channels/${id}`) });
+  const paused = { id: 'machine_paused:m-3', kind: 'publishing_paused' as const, blocks_scheduling: false, severity: 'urgent' as const,
+    title: 'Mac-C 已暫停（換網路）：1 則貼文恢復前不會發出', detail: '你在 11-24 12:00 暫停。', due_at: null, machine: { id: 'm-3', label: 'Mac-C', web_url: url('/machines/m-3') },
+    channel: null, post: null, web_url: url('/machines/m-3'),
+    actions: [{ kind: 'resume' as const, label: '恢復機器', method: 'POST' as const, path: '/hub/machines/m-3/resume', body: {} }, { kind: 'open' as const, label: '開啟機器' }] };
+  const data = { ...today, attention: [paused, ...today.attention, reminder('c-7', '建議：X @a 試跑一次'), reminder('c-8', 'X @b 的設定提醒（2 項，不影響排程）')] };
+  const out = await render('', { '/views/today': data });
+  // counts.needs_owner from the hub is 1 (posts stopped on the machine); the page counts the three cards it shows.
+  assert.match(out, /<dt>要你處理<\/dt><dd>3<\/dd>/);
+  assert.match(out, /<h2[^>]*>要你處理<span class="vs-badge">3<\/span><\/h2>/);
+  const [cards, folded] = out.split('<details class="hub-reminders">');
+  assert.equal(cards.match(/<article class="hub-attn/g)?.length, 3);
+  assert.ok(cards.indexOf('Mac-C 已暫停') < cards.indexOf('出現驗證碼'), 'the urgent pause card is on top');
+  assert.match(folded, /^<summary>設定提醒（2 項，不影響排程）<\/summary>/);
+  assert.equal(folded.match(/<article class="hub-attn/g)?.length, 2);
+  // U3: the paused machine's card offers 恢復機器 as a button, and opens the machine.
+  assert.match(cards, /<button type="button" class="vs-btn primary-soft">恢復機器<\/button>/);
+  assert.match(cards, /<a class="vs-btn" href="\/app\/w1\/machines\/m-3"[^>]*>開啟機器</);
+  // Calendar's number is narrower (this period's posts) and says so.
+  const { t } = await import('./calendar-text');
+  assert.deepEqual(t.needsTitle, ['要你處理的貼文', 'Posts that need you']);
+});
+
 test('machine detail: warnings with how to fix, channels, queue linked to posts, remote screen, drivers and selectors', async () => {
   const out = await render('/machines/m-1', { '/views/machines/m-1': machine });
   assert.match(out, /Mac-B 閒置 10 分鐘會睡眠/);

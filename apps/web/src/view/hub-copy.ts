@@ -172,6 +172,9 @@ export const hub = {
     timesIn: ['時間以 {zone} 顯示', 'Times in {zone}'],
     scheduled: ['已排程', 'Scheduled'], published: ['已發布', 'Published'], needsOwner: ['要你處理', 'Needs you'], missed: ['沒有發出', 'Missed'], unknown: ['結果不明', 'Unknown'],
     autoResume: ['處理好後會自動繼續', 'Continues by itself once fixed'], deadline: ['期限', 'Deadline'],
+    // U4: the setup reminders that never stop scheduling are folded into one entry under the cards that need the owner.
+    reminders: ['設定提醒（{n} 項，不影響排程）', 'Setup reminders ({n}, scheduling not affected)'],
+    needsOwnerHint: ['「要你處理」底下的卡片數，不含設定提醒', 'Cards under “Needs you”, not counting setup reminders'],
   },
   machines: {
     title: ['機器', 'Machines'], subtitle: ['每台會發文的機器：在線狀態、帳號、佇列與需要調整的設定。', 'Every machine that posts: online state, channels, queue and settings to fix.'],
