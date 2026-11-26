@@ -1069,6 +1069,10 @@ if (assessed.route === 'worker') dispatchWorkerJob(ctx, target, task);   // 同�
   - fencing 不符或 job 已終結：寫入事件並標 `fence_override:true`。若事實顯示可能已送出（`submitting`、`submitted`、`result`、`outcome_unknown`、`after_submit`），而 job 是 `cancelled`、`superseded`、`missed`、`failed` 或 `releasing`，就把 job 轉為 `succeeded`（`result`）或 `outcome_unknown`（其他），寫入 `late_fact_after_release`，取消還沒開跑的後繼 job（§5.2），並以 urgent 通知主人。
   - **處理函式對事實永不丟錯：**任何衝突（例如 §3.7 的 `POST_ALREADY_LINKED`）都記成 `fact_conflict` 事件，job 轉為 `outcome_unknown`、blocker `result_conflict`，回應 200。否則 Worker 會無限重送。
 - **租約回報（其他事件）：**`prepared`、`prepare_blocked`、`phase='before_submit'` 的 `blocked`、`failed`、`missed`、`released`、`readback_pending`、`login_state`。必須 fencing 相符且 job 未終結，否則回 409 `JOB_FENCE_LOST`。Worker 收到後只丟掉這個 job 在 outbox 中的租約回報，事實回報照常送出（§8.2）。
+- **兩種回報共同的限制（安全審核 S7）：**
+  - 回報的 fencing 不可高於 job 目前的 fencing；回報的機器必須真的持有過該 fencing（claim 時記在 `fence_holders`；派送、換機器與退役時加一的 fencing 沒有持有者，只屬於 job 目前的機器）。不符都回 409 `JOB_FENCE_LOST`。上面「事實照收」指的是同一台機器在舊 fencing 下的事實與已終結 job 的事實，不包括只因排在佇列時被換走而留在 `device_history` 的機器。
+  - 每個 job 最多 500 筆裝置回報，超過回 429 `JOB_REPORT_LIMIT`；寫進 job 的字串有長度上限（dry-run `trace` 合計 16 KiB）。
+  - `result.url` 只接受該平台的 https 網址（X：`x.com`、`twitter.com`；TikTok：`www.tiktok.com`、`tiktok.com`），不含帳密與連接埠；測試模式另外接受 `SMARTSELL_TEST_PLATFORM_ORIGINS` 的 loopback 夾具網址。不合格的網址不寫入貼文（事件標 `url_rejected`），事實本身照常處理。
 
 各事件的 `data` 內容與中樞的處理：
 
