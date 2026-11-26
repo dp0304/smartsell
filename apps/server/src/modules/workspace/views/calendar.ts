@@ -158,8 +158,9 @@ export function calendarEvents(ctx: Context, options: CalendarOptions): Calendar
           add('publish', 'publish_target', target.id, start, {
             all_day: manualDate, title: `${post.channel.label}${words ? ` · ${words}` : ''}`, status: post.status, platform: platformName(account?.provider),
             brand_id: text(target.brand_id), campaign_id: text(target.campaign_id), social_account_id: text(target.social_account_id), permalink: post.url,
-            needs_human: post.status === 'awaiting_approval' ? 'approval' : post.status === 'unknown' ? 'outcome_unknown' : post.status === 'needs_owner' ? 'needs_owner'
-              : post.status === 'missed' ? 'missed' : null,
+            // A post stopped before it can go out (blocked: settings, sign-in, preflight) needs the owner too, as on Today.
+            needs_human: post.status === 'awaiting_approval' ? 'approval' : post.status === 'unknown' ? 'outcome_unknown'
+              : post.status === 'needs_owner' || post.status === 'blocked' ? 'needs_owner' : post.status === 'missed' ? 'missed' : null,
             post_id: post.post_id, post_status: post.status, channel: { id: post.channel.id, provider: post.channel.provider, handle: post.channel.handle },
             machine: post.machine ? { id: post.machine.id, name: post.machine.name, online: post.machine.online } : null,
             route_kind: post.route_kind, mode: post.mode, url: post.url,

@@ -8,6 +8,9 @@
 // - a protected screen (FLAG_SECURE: payment, some sign-in pages) screenshots black: stop and hand it to the owner;
 // - every step answers with a fresh snapshot; element refs are valid until the next snapshot.
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { posix, win32 } from 'node:path';
 import { inflateSync } from 'node:zlib';
 
 export interface Adb {
@@ -15,11 +18,41 @@ export interface Adb {
   run(args: string[], options?: { serial?: string; timeoutMs?: number }): Promise<Buffer>;
 }
 
-export function systemAdb(executable = 'adb'): Adb {
+/** What to tell the owner when this machine has no adb; like the other engine messages it goes to the Agent, in English. */
+export const ADB_MISSING = 'adb (Android platform-tools) is not installed on this machine. Ask the owner to install it there '
+  + '(macOS: brew install android-platform-tools; Windows: winget install Google.PlatformTools; or set SMARTSELL_ADB to the adb path), '
+  + 'then try again. The Worker does not need a restart.';
+
+/**
+ * Where adb is on this machine. An App opened from Finder or the Start menu does not get the terminal's PATH, so besides
+ * PATH this looks where Homebrew, the Android SDK (Android Studio) and winget put it. SMARTSELL_ADB wins when it exists.
+ */
+export function findAdb(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform, exists: (path: string) => boolean = existsSync,
+  home = homedir()): string | null {
+  const { join, delimiter } = platform === 'win32' ? win32 : posix;
+  const exe = platform === 'win32' ? 'adb.exe' : 'adb';
+  const sdks = [env.ANDROID_HOME, env.ANDROID_SDK_ROOT].filter((dir): dir is string => !!dir).map(dir => join(dir, 'platform-tools', exe));
+  const usual = platform === 'darwin' ? ['/opt/homebrew/bin/adb', '/usr/local/bin/adb', join(home, 'Library', 'Android', 'sdk', 'platform-tools', 'adb')]
+    : platform === 'win32' ? [env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'Android', 'Sdk', 'platform-tools', exe),
+      env.LOCALAPPDATA && join(env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Links', exe)].filter((path): path is string => !!path)
+      : ['/usr/bin/adb', join(home, 'Android', 'Sdk', 'platform-tools', 'adb')];
+  const onPath = (env.PATH ?? env.Path ?? '').split(delimiter).filter(Boolean).map(dir => join(dir, exe));
+  const candidates = [...(env.SMARTSELL_ADB ? [env.SMARTSELL_ADB] : []), ...onPath, ...sdks, ...usual];
+  return candidates.find(path => exists(path)) ?? null;
+}
+
+/** adb on this machine, looked up again on every call so installing it later needs no Worker restart. */
+export function systemAdb(executable?: string): Adb {
   return {
     run: (args, options = {}) => new Promise((resolve, reject) => {
-      execFile(executable, [...(options.serial ? ['-s', options.serial] : []), ...args], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024, timeout: options.timeoutMs ?? 20_000, windowsHide: true },
-        (error, stdout, stderr) => error ? reject(new PhoneError('ADB_FAILED', (stderr.toString('utf8').trim() || error.message).slice(0, 300))) : resolve(stdout));
+      const adb = executable ?? findAdb();
+      if (!adb) { reject(new PhoneError('ADB_FAILED', ADB_MISSING)); return; }
+      execFile(adb, [...(options.serial ? ['-s', options.serial] : []), ...args], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024, timeout: options.timeoutMs ?? 20_000, windowsHide: true },
+        (error, stdout, stderr) => {
+          if (!error) { resolve(stdout); return; }
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') { reject(new PhoneError('ADB_FAILED', ADB_MISSING)); return; }
+          reject(new PhoneError('ADB_FAILED', (stderr.toString('utf8').trim() || error.message).slice(0, 300)));
+        });
     }),
   };
 }

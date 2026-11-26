@@ -79,7 +79,7 @@ function chooser() {
       el('button', { type: 'button', class: 'choice primary', onclick: () => call('choose-role', { role: 'worker' }) },
         el('strong', { text: '發文的機器（Worker）' }), el('span', { text: '這台機器用自己的 Chrome 替帳號發文，例如 Mac-B、Win-C。' })),
       el('button', { type: 'button', class: 'choice', onclick: () => call('choose-role', { role: 'agent' }) },
-        el('strong', { text: '這台是我的筆電（只連 Codex，不發文）' }), el('span', { text: '顯示所有機器的通知，並在 Codex 結束後繼續背景上傳。' }))));
+        el('strong', { text: '這台是我的筆電（只連 AI 助手，不發文）' }), el('span', { text: '顯示所有機器的通知，並在 AI 助手結束後繼續背景上傳。' }))));
 }
 
 // ---------- Worker mode ----------
@@ -105,7 +105,7 @@ function pairForm(worker) {
   return card('連接到中樞',
     el('ol', { class: 'steps' },
       el('li', { text: '這台機器要先安裝 Tailscale、登入同一個 tailnet，不要設定 exit node，並在 Tailscale 後台關閉這台機器的金鑰到期。' }),
-      el('li', { text: '貼上中樞位址並為機器命名，按「配對」。瀏覽器會開啟中樞的配對頁，登入後按「核准」。' })),
+      el('li', { text: '貼上中樞位址並為機器命名，按「配對」。瀏覽器會開啟中樞的配對頁，登入後按「授權並返回桌面程式」。' })),
     form, worker?.message ? el('p', { class: 'notice', text: worker.message }) : null);
 }
 
@@ -187,7 +187,7 @@ function browserCard(worker) {
     ? el('p', { class: 'ok', text: connected.length === 1 ? `已連上你的 Chrome（${connected[0].chrome ? `Chrome ${connected[0].chrome.split('.')[0]}` : 'Chrome'}）。` : `已連上 ${connected.length} 個 Chrome 設定檔。` })
     : el('p', { class: 'notice', text: '還沒連上你的 Chrome。請照下面的步驟安裝 SmartSell 擴充功能；Chrome 要開著。' });
   const steps = el('ol', { class: 'steps' },
-    el('li', {}, '在 Chrome 網址列輸入 ', el('code', { text: 'chrome://extensions' }), '，打開右上角的「開發人員模式」。'),
+    el('li', {}, '在 Chrome 網址列輸入 ', el('code', { class: 'inline', text: 'chrome://extensions' }), '，打開右上角的「開發人員模式」。'),
     el('li', {}, '按「載入未封裝項目」，選這個資料夾：', el('code', { text: b.extension_dir ?? '—' }), ' ', button('打開資料夾', () => call('open-extension-folder'), { class: 'link' })),
     el('li', { text: '在 SmartSell Worker 擴充功能按「詳細資料」，開啟「允許存取檔案網址」（上傳影片需要）。' }),
     el('li', { text: '同一個平台有第二個帳號時，把它放在另一個 Chrome 設定檔，並在那個設定檔也裝一次。' }));

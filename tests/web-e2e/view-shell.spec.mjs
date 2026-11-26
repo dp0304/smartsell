@@ -157,7 +157,7 @@ test('guided enrollment registers both stdio clients and preflight leaves verifi
     } } });
   });
   await page.setViewportSize({ width: 360, height: 800 });
-  // Phase 1: the wizard's last step (連接 Codex) leads with the §6.2 ways; the prompt enrollment moved under 「進階」 (§9.8).
+  // Phase 1: the wizard's last step (連接 AI 助手) leads with the §6.2 ways; the prompt enrollment moved under 「進階」 (§9.8).
   await page.goto(`${app}/get-started?step=agent`);
   const step = await expectWizardStep(page, 'agent');
   const legacy = page.getByRole('main').locator('details').filter({ has: page.getByText(/^(進階：舊的接入方式（提示詞）|Advanced: the previous setup \(prompt\))$/) });
@@ -352,7 +352,7 @@ test('an agent enters a launch over MCP and the owner sees it and approves it in
   await expect(page).toHaveURL(url => url.pathname === `/app/${ws}/get-started`);
   await expectWizardStep(page, 'workspace');
   await expectStepStatus(page, 'agent', 'todo');
-  await wizardNav(page).getByRole('button', { name: /^連接 Codex/ }).click();
+  await wizardNav(page).getByRole('button', { name: /^連接 AI 助手/ }).click();
   const agentStep = await expectWizardStep(page, 'agent');
   await agentStep.getByText('進階：舊的接入方式（提示詞）', { exact: true }).click();
   // O4: a token connection (POST /agent-connections) is not the prompt enrollment's, so Advanced offers no check prompt for it.

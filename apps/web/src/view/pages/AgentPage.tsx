@@ -183,7 +183,7 @@ export function AgentPage() {
   const more = useShowMoreModules();
   const developer = params.get('tab') === 'developer';
   return <>
-    <PageHeader title={l(copy.agent.title)} subtitle={l(['在筆電連接 Codex 或 Claude Code；Agent 透過 MCP 排程貼文，你在這裡看連線與它做了什麼。', 'Connect Codex or Claude Code on your laptop; the Agent schedules posts over MCP and you see its connections and activity here.'])}>
+    <PageHeader title={l(copy.agent.title)} subtitle={l(['在筆電連接 Codex、Claude Code 或 WorkBuddy；Agent 透過 MCP 排程貼文，你在這裡看連線與它做了什麼。', 'Connect Codex, Claude Code or WorkBuddy on your laptop; the Agent schedules posts over MCP and you see its connections and activity here.'])}>
       <div className="vs-filter-row hub-tabs" role="tablist" aria-label={l(copy.agent.title)}>
         <button type="button" role="tab" aria-selected={!developer} aria-pressed={!developer} onClick={() => setParams({}, { replace: true })}>{l(['連線', 'Connections'])}</button>
         <button type="button" role="tab" aria-selected={developer} aria-pressed={developer} onClick={() => setParams({ tab: 'developer' }, { replace: true })}>{l(['開發者', 'Developer'])}</button>

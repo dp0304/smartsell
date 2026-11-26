@@ -74,7 +74,7 @@ test('the wizard runs workspace → machines → channels → notifications → 
   const saved = await render('', { ...hubReads, '/views/machines': [] }, 'owner', 'en');
   assert.match(saved, /Step 2 of 5/);
   for (const alias of ['worker', 'social', 'store', 'import', 'machines']) assert.match(await render(alias, hubReads, 'owner', 'en'), /Step 2 of 5/, alias);
-  const order = ['工作區', '連接機器', '新增帳號', '通知', '連接 Codex'];
+  const order = ['工作區', '連接機器', '新增帳號', '通知', '連接 AI 助手'];
   const zh = await render('machines', hubReads);
   assert.deepEqual(order.map(name => zh.indexOf(`<strong>${name}</strong>`) >= 0), [true, true, true, true, true]);
   assert.ok(order.every((name, index) => index === 0 || zh.indexOf(`<strong>${name}</strong>`) > zh.indexOf(`<strong>${order[index - 1]}</strong>`)));

@@ -113,7 +113,7 @@ export function CalendarPage() {
           : <div className="cal-empty vs-notice" role="status"><p><strong>{l(copy.pages.calendarEmpty)}</strong></p>
             <p className="muted">{l(['在 Codex 說「明天 9:00 把 video.mp4 發到 X」，排好的貼文會出現在今日與這裡。', 'Tell Codex "post video.mp4 to X tomorrow at 9:00"; scheduled posts show up on Today and here.'])}</p>
             <div className="vs-actions"><RouterLink to={base} className="vs-btn">{l(['今日', 'Today'])}</RouterLink><RouterLink to={`${base}/channels`} className="vs-btn">{l(['帳號', 'Channels'])}</RouterLink>
-              <RouterLink to={`${base}/agent`} className="vs-btn">{l(['連接 Codex', 'Connect Codex'])}</RouterLink></div></div>}
+              <RouterLink to={`${base}/agent`} className="vs-btn">{l(['連接 AI 助手', 'Connect your AI assistant'])}</RouterLink></div></div>}
         <KindFilter kinds={offered} shown={state.kinds} counts={summary.counts} sources={sources} onToggle={kind => update(toggleKindParams(params, state.kinds, kind, available))} onAll={() => update(allKindsParams(params))} />
         {all.length > 0 && !shown.length && <p className="vs-notice cal-notice" role="status">{fill(l(t.filteredEmpty), { n: all.length })}
           <button type="button" className="vs-link-button" onClick={() => update(allKindsParams(params))}>{l(t.clearFilters)}</button></p>}

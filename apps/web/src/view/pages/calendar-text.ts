@@ -53,7 +53,7 @@ export const kindText: Record<string, Tuple> = {
 export const kindLabel = (kind: string, lang: Lang) => (kindText[kind] ?? [kind, kind])[lang === 'en' ? 1 : 0];
 
 export const needsText: Record<string, Tuple> = {
-  approval: ['待審批', 'Needs approval'], late_decision: ['待決定', 'Needs a decision'], outcome_unknown: ['結果待核實', 'Outcome to verify'],
+  approval: ['待你核准', 'Needs your approval'], late_decision: ['待決定', 'Needs a decision'], outcome_unknown: ['結果待核實', 'Outcome to verify'],
   needs_owner: ['要你處理', 'Needs you'], missed: ['沒有發出', 'Missed'],
 };
 /** Why an event waits for the person, in words that fit its kind. */

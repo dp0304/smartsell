@@ -11,13 +11,13 @@ const text = {
     title: '開始設定', nav: '設定步驟', later: '稍後再設定', next: '下一步', back: '上一步', finish: '完成，前往今日',
     todo: '待設定', done: '已完成', optional: '選填', unread: '無法讀取', today: '今日', dashboard: '看板導覽',
     progress: number => `第 ${number} 步，共 5 步`,
-    steps: { workspace: '工作區', machines: '連接機器', channels: '新增帳號', notifications: '通知', agent: '連接 Codex' },
+    steps: { workspace: '工作區', machines: '連接機器', channels: '新增帳號', notifications: '通知', agent: '連接 AI 助手' },
   },
   en: {
     title: 'Get started', nav: 'Setup steps', later: 'Finish later', next: 'Next', back: 'Back', finish: 'Done, go to Today',
     todo: 'To do', done: 'Done', optional: 'Optional', unread: 'Could not read', today: 'Today', dashboard: 'Dashboard navigation',
     progress: number => `Step ${number} of 5`,
-    steps: { workspace: 'Workspace', machines: 'Connect machines', channels: 'Add channels', notifications: 'Notifications', agent: 'Connect Codex' },
+    steps: { workspace: 'Workspace', machines: 'Connect machines', channels: 'Add channels', notifications: 'Notifications', agent: 'Connect your AI assistant' },
   },
 };
 

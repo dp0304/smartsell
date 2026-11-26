@@ -508,7 +508,7 @@ onboarding('First-run wizard: workspace, a machine, its channel, notifications a
   await expect(panel).toContainText('筆電與手機也要加入同一個 tailnet，通知中的連結才打得開。');
   await expectStepStatus(page, 'notifications', 'optional');
 
-  // Step 5, 連接 Codex (§2.9 step 6, §6.2): the relay way creates a connection and hands over a token file.
+  // Step 5, 連接 AI 助手 (§2.9 step 6, §6.2): the relay way creates a connection and hands over a token file.
   await page.getByRole('button', { name: '下一步', exact: true }).click();
   panel = await expectWizardStep(page, 'agent');
   await expect(panel.getByRole('heading', { level: 3, name: '方式一（建議）：筆電上的 SmartSell App', exact: true })).toBeVisible();

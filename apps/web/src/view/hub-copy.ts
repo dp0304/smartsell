@@ -47,7 +47,7 @@ export const loginText: Table = {
   login_required: ['要重新登入', 'Sign-in required'], identity_mismatch: ['登入的不是這個帳號', 'Wrong account'], challenge: ['要完成驗證', 'Verification required'],
 };
 export const modeText: Table = { auto: ['Worker 自動發', 'Worker posts'], assist: ['要你按發布', 'You click Post'], owner: ['手動發布', 'Manual'] };
-export const approvalModeText: Table = { direct: ['Codex 說要發就直接發', 'Post what Codex schedules'], needs_approval: ['要我在網頁按核准', 'I approve on the web'] };
+export const approvalModeText: Table = { direct: ['Agent 說要發就直接發', 'Post what the Agent schedules'], needs_approval: ['要我在網頁按核准', 'I approve on the web'] };
 export const approvalText: Table = {
   approved_by_channel_policy: ['已依帳號設定自動核准', 'Approved by the channel setting'], approved: ['已核准', 'Approved'],
   awaiting_owner: ['待你核准', 'Waiting for your approval'], not_submitted: ['尚未送審', 'Not submitted'], rejected: ['已駁回', 'Rejected'],
@@ -181,7 +181,7 @@ export const hub = {
     upcoming: ['接下來 48 小時', 'Next 48 hours'], noUpcoming: ['接下來 48 小時沒有排程。在 Codex 說「明天 9:00 發到 X」就會出現在這裡。', 'Nothing in the next 48 hours. Tell Codex "post this to X tomorrow at 9:00" and it shows up here.'],
     justScheduled: ['剛由 Codex 排程', 'Just scheduled by Codex'], machines: ['機器', 'Machines'], noMachines: ['還沒有配對任何機器。', 'No machines paired yet.'],
     pair: ['配對機器', 'Pair a machine'], recent: ['最近發出（24 小時內）', 'Published in the last 24 hours'], noRecent: ['24 小時內沒有發出的貼文。', 'Nothing published in the last 24 hours.'],
-    nextJob: ['下一則', 'Next'], channels: ['個帳號', 'channels'], warnings: ['項警告', 'warnings'], counts: ['今日', 'Today'],
+    nextJob: ['下一則', 'Next'], channels: ['個帳號', 'channels'], channel: ['個帳號', 'channel'], warnings: ['項警告', 'warnings'], warning: ['項警告', 'warning'], counts: ['今日', 'Today'],
     timesIn: ['時間以 {zone} 顯示', 'Times in {zone}'],
     scheduled: ['已排程', 'Scheduled'], published: ['已發布', 'Published'], needsOwner: ['要你處理', 'Needs you'], missed: ['沒有發出', 'Missed'], unknown: ['結果不明', 'Unknown'],
     autoResume: ['處理好後會自動繼續', 'Continues by itself once fixed'], deadline: ['期限', 'Deadline'],
@@ -319,7 +319,7 @@ export const hub = {
     publicTopic: ['ntfy 的公開主題任何人都能訂閱：請用難猜的主題名稱，或自架 ntfy 並設定權杖。', 'Anyone can subscribe to a public ntfy topic: use a hard-to-guess name, or self-host ntfy with a token.'],
     prefs: ['可以關閉的通知', 'Optional alerts'], published: ['每則發出時通知', 'Tell me each time a post goes out'], dailySummary: ['每天 21:00 的摘要', 'Daily summary at 21:00'],
     prefsHint: ['其他通知（要你處理、沒有發出、結果不明等）一律會送，不能關閉。', 'Other alerts (needs you, missed, unknown, …) are always sent.'],
-    laptop: ['筆電通知', 'Laptop notifications'], laptopHint: ['在筆電安裝 SmartSell App，選「這台是我的筆電（只連 Codex，不發文）」，App 會常駐並顯示所有機器的通知。', 'Install the SmartSell App on your laptop and choose "This is my laptop (Codex only, no posting)". It stays in the tray and shows every machine\'s alerts.'],
+    laptop: ['筆電通知', 'Laptop notifications'], laptopHint: ['在筆電安裝 SmartSell App，選「這台是我的筆電（只連 AI 助手，不發文）」，App 會常駐並顯示所有機器的通知。', 'Install the SmartSell App on your laptop and choose "This is my laptop (AI assistant only, no posting)". It stays in the tray and shows every machine\'s alerts.'],
     tailnet: ['筆電與手機也要加入同一個 tailnet，通知中的連結才打得開。', 'Your laptop and phone must join the same tailnet to open the links in alerts.'],
     saved: ['已儲存。', 'Saved.'],
   },

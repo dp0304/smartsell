@@ -28,8 +28,8 @@ export function wizardStep(value: string | null): WizardStep | undefined {
 }
 
 const text = {
-  intro: ['照順序設定一次：工作區時區、要發文的機器、帳號、通知，最後連接 Codex。每一步都可以之後再回來。', 'Set up once, in order: the workspace time zone, the machines that post, channels, notifications, then Codex. You can come back to any step.'],
-  workspace: ['工作區', 'Workspace'], machines: ['連接機器', 'Connect machines'], channels: ['新增帳號', 'Add channels'], notifications: ['通知', 'Notifications'], agent: ['連接 Codex', 'Connect Codex'],
+  intro: ['照順序設定一次：工作區時區、要發文的機器、帳號、通知，最後連接你的 AI 助手（Codex、Claude Code 或 WorkBuddy）。每一步都可以之後再回來。', 'Set up once, in order: the workspace time zone, the machines that post, channels, notifications, then your AI assistant (Codex, Claude Code or WorkBuddy). You can come back to any step.'],
+  workspace: ['工作區', 'Workspace'], machines: ['連接機器', 'Connect machines'], channels: ['新增帳號', 'Add channels'], notifications: ['通知', 'Notifications'], agent: ['連接 AI 助手', 'Connect your AI assistant'],
   name: ['工作區名稱', 'Workspace name'], zone: ['時區', 'Time zone'], zoneHint: ['排程的時間都以這個時區解讀（例如「明天 9:00」）；Worker 登記的帳號也用它。', 'Times such as "tomorrow 9:00" are read in this zone; channels added by a Worker use it too.'],
   currency: ['報表幣別', 'Reporting currency'], saveWorkspace: ['儲存並繼續', 'Save and continue'], savedWorkspace: ['已儲存工作區設定。', 'Workspace settings saved.'],
   stepsTitle: ['在要發文的機器上（例如 Mac-B）', 'On the machine that will post (e.g. Mac-B)'],

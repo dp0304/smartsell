@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { deflateSync, crc32 } from 'node:zlib';
 import { test } from 'node:test';
-import { AndroidPhone, darkFraction, inputTextArgument, looksProtected, parseDevices, parseUiDump, PhoneError, pngSize, type Adb } from '../../apps/connector-desktop/src/remote/android.ts';
+import { ADB_MISSING, AndroidPhone, darkFraction, findAdb, inputTextArgument, looksProtected, parseDevices, parseUiDump, PhoneError, pngSize, systemAdb, type Adb } from '../../apps/connector-desktop/src/remote/android.ts';
 
 /** An RGBA PNG like `screencap -p`; 'black' keeps a bright status bar (the top 4 %) as a secure window would. */
 function png(width: number, height: number, fill: 'noise' | 'black', filter = 1) {
@@ -123,4 +123,22 @@ test('an app the owner did not allow: launch is refused without touching the pho
 test('a protected screen and an unauthorized phone hand over to the owner', async () => {
   await assert.rejects(fakePhone({ screen: 'black' }).phone.snapshot(), (error: unknown) => error instanceof PhoneError && error.code === 'PROTECTED_SCREEN');
   await assert.rejects(fakePhone({ state: 'unauthorized' }).phone.snapshot(), (error: unknown) => error instanceof PhoneError && error.code === 'UNAUTHORIZED');
+});
+
+test('adb is found where an App opened from Finder or the Start menu cannot see it, and a missing adb says how to install it', async () => {
+  const has = (...paths: string[]) => (path: string) => paths.includes(path);
+  // Finder gives the App a short PATH: Homebrew's adb is still found.
+  assert.equal(findAdb({ PATH: '/usr/bin:/bin' }, 'darwin', has('/opt/homebrew/bin/adb'), '/Users/you'), '/opt/homebrew/bin/adb');
+  assert.equal(findAdb({ PATH: '/usr/bin:/bin' }, 'darwin', has('/Users/you/Library/Android/sdk/platform-tools/adb'), '/Users/you'),
+    '/Users/you/Library/Android/sdk/platform-tools/adb');
+  // PATH first, then SMARTSELL_ADB overrides everything that exists.
+  assert.equal(findAdb({ PATH: '/opt/tools:/usr/bin' }, 'linux', has('/opt/tools/adb', '/usr/bin/adb'), '/home/you'), '/opt/tools/adb');
+  assert.equal(findAdb({ PATH: '/opt/tools', SMARTSELL_ADB: '/x/adb' }, 'linux', has('/opt/tools/adb', '/x/adb'), '/home/you'), '/x/adb');
+  const local = 'C:\\Users\\you\\AppData\\Local';
+  assert.equal(findAdb({ Path: 'C:\\Windows', LOCALAPPDATA: local }, 'win32', has(`${local}\\Microsoft\\WinGet\\Links\\adb.exe`), 'C:\\Users\\you'),
+    `${local}\\Microsoft\\WinGet\\Links\\adb.exe`);
+  assert.equal(findAdb({ PATH: '/usr/bin' }, 'darwin', () => false, '/Users/you'), null);
+  // No adb anywhere: the phone engine answers with what to install, not "spawn adb ENOENT".
+  await assert.rejects(systemAdb('/nonexistent/smartsell-test/adb').run(['devices']),
+    (error: PhoneError) => error.code === 'ADB_FAILED' && error.message === ADB_MISSING);
 });

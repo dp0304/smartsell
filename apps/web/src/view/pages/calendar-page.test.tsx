@@ -56,7 +56,7 @@ test('month view answers first, draws the plan as bars across weeks and marks wh
   assert.equal(out.match(/class="cal-bar cal-k-plan/g)?.length, 2);
   assert.match(out, /cal-bar cal-k-plan after/);
   assert.match(out, /cal-bar cal-k-plan before/);
-  assert.match(out, /aria-label="發布排期 · 15:30 · 新品開箱 · Instagram · 待審批"/);
+  assert.match(out, /aria-label="發布排期 · 15:30 · 新品開箱 · Instagram · 待審批 · 待你核准"/);
   // Promotions are a hidden module in phase 1 (U6): no chip, locked or not, and no 「你的角色看不到」 note about them.
   assert.doesNotMatch(out, /cal-k-promotion/);
   assert.doesNotMatch(out, /你的角色看不到/);

@@ -16,6 +16,7 @@ import { HUB_TOOL_NAMES, TOOL_EXAMPLES, UUID_PATTERN, parseToolArgs, toolInputSc
 import { applyUnblock } from './unblock.js';
 import { updatePost } from './update.js';
 import { channelsList, overview } from './views.js';
+import { calendarEvents, viewPeriod } from '../workspace/views/calendar.js';
 
 type Loose = Row & Record<string, any>;
 const NOW = '2026-11-24T12:00:00.000Z';   // 20:00 in Asia/Shanghai
@@ -330,6 +331,10 @@ test('a blocked channel does not stop the others; its post is blocked with the p
   assert.deepEqual([tiktok.status, tiktok.approval], ['blocked', 'not_submitted']);
   assert.ok(tiktok.blockers.some(blocker => blocker.code === 'automation_notice'), JSON.stringify(tiktok.blockers));
   assert.match(tiktok.blockers[0]!.web_url, /\/channels\//);
+  // The calendar counts the blocked post as needing the owner, as Today does.
+  const events = calendarEvents(w.ctx, { period: viewPeriod(w.ctx, { from: NOW.slice(0, 10), to: '2026-11-26', tz: 'UTC' }, 2), kinds: ['publish'] });
+  assert.deepEqual(events.filter(event => event.post_id).map(event => [event.post_id, event.needs_human]).sort(),
+    [[x.post_id, null], [tiktok.post_id, 'needs_owner']].sort());
   // posting.unblock: the owner acknowledges the notice, the post is submitted again (needs_approval → pending request).
   w.ctx.update(CHANNEL_SETTINGS, w.tiktok.settings.id, { automation_notice_ack: { at: NOW, via: 'web', by: 'owner', version: AUTOMATION_NOTICE_VERSION } });
   const moved = await applyUnblock(w.ctx, { type: 'account.automation_notice.acked', payload: { social_account_id: w.tiktok.account.id } });

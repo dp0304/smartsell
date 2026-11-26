@@ -111,8 +111,8 @@ export function MachineMini({ machine, today }: { machine: MachineSummary; today
   return <RouterLink to={`${base}/machines/${encodeURIComponent(machine.machine_id)}`} className="hub-machine-mini">
     <span className="hub-machine-name"><Monitor size={16} aria-hidden="true" />{machine.name}</span>
     <OnlineBadge online={machine.online} paused={machine.paused} />
-    <small className="muted">{machine.channels.length} {l(hub.today.channels)}{machine.next_job && <> · {l(hub.today.nextJob)} {localLabel(machine.next_job.local_time, today, lang)}</>}</small>
-    {machine.warnings.length > 0 && <Badge tone="warning">{machine.warnings.length} {l(hub.today.warnings)}</Badge>}
+    <small className="muted">{machine.channels.length} {l(machine.channels.length === 1 ? hub.today.channel : hub.today.channels)}{machine.next_job && <> · {l(hub.today.nextJob)} {localLabel(machine.next_job.local_time, today, lang)}</>}</small>
+    {machine.warnings.length > 0 && <Badge tone="warning">{machine.warnings.length} {l(machine.warnings.length === 1 ? hub.today.warning : hub.today.warnings)}</Badge>}
   </RouterLink>;
 }
 
