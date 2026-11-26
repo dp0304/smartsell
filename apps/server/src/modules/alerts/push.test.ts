@@ -8,6 +8,8 @@ import { alertFixture, seedHub, type AlertFixture } from './fixtures.js';
 import { createOwnerAlert } from './raise.js';
 import { configureAlerts, resetAlertHooks } from './model.js';
 import { PUSH_BACKOFF_MS, PUSH_MAX_ATTEMPTS, createAlertsDrain, formatPush, maskPushUrl, sendPush } from './push.js';
+import { EgressDenied, publicAddressFor } from '../../integration/public-egress.js';
+import { configuration } from '../../config.js';
 
 interface Seen { method: string; url: string; headers: IncomingHttpHeaders; body: Record<string, unknown>; inTransaction: boolean }
 const seen: Seen[] = [];
@@ -36,7 +38,8 @@ beforeEach(() => {
   seen.length = 0;
   respond = () => ({ status: 200, body: { ok: true, code: 200 } });
   resetAlertHooks();
-  configureAlerts({ secretKey: randomBytes(32), telegramApiBase: `${base}/tg`, publicOrigin: 'https://hub.tail1234.ts.net' });
+  // The fake services listen on 127.0.0.1, as a hub's own ntfy may (S6: the hub allows private push addresses).
+  configureAlerts({ secretKey: randomBytes(32), telegramApiBase: `${base}/tg`, publicOrigin: 'https://hub.tail1234.ts.net', privateEgress: true });
 });
 
 const NTFY_TOKEN = 'tk_ntfyAccessToken123';
@@ -108,6 +111,7 @@ test('channel settings: human-only writes, strict validation, tokens sealed at r
   // Without a configured key or APP_SECRET, a token cannot be stored: an explicit error, never a silent plaintext write.
   f.ctx.role = 'owner';
   resetAlertHooks();
+  configureAlerts({ privateEgress: true });
   const secret = process.env.APP_SECRET;
   delete process.env.APP_SECRET;
   try {
@@ -267,4 +271,40 @@ test('sendPush reports timeouts and network errors without the URL', async () =>
   const message = { title: 't', message: 'm', url: 'https://hub/x', severity: 'normal' as const };
   assert.deepEqual(await sendPush({ kind: 'bark', url: `${base}/bark/k`, chat_id: null, token: null }, message, fetch, 50), { ok: false, error: 'timeout' });
   assert.deepEqual(await sendPush({ kind: 'bark', url: 'http://127.0.0.1:1/bark/k', chat_id: null, token: null }, message, fetch, 1000), { ok: false, error: 'network_error' });
+});
+
+test('S6: outside the hub, push to loopback, private or metadata addresses is refused before any request; the hub still reaches its own ntfy', async () => {
+  const message = { title: 't', message: 'm', url: 'https://hub/x', severity: 'normal' as const };
+  configureAlerts({ privateEgress: false });
+  for (const url of [`${base}/bark/k`, 'http://169.254.169.254/latest/meta-data', 'http://10.0.0.7/topic', 'http://[::1]:8080/topic', 'http://100.101.102.103/topic']) {
+    assert.deepEqual(await sendPush({ kind: 'bark', url, chat_id: null, token: null }, message), { ok: false, error: 'destination_not_public' }, url);
+    assert.deepEqual(await sendPush({ kind: 'ntfy', url, chat_id: null, token: null }, message), { ok: false, error: 'destination_not_public' }, url);
+  }
+  assert.equal(seen.length, 0, 'nothing reached the loopback service');
+  // The guard itself: literal addresses need no DNS; only public ones pass.
+  for (const host of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '[::1]', '0.0.0.0']) {
+    await assert.rejects(publicAddressFor(host), EgressDenied, host);
+  }
+  assert.equal(await publicAddressFor('93.184.216.34'), '93.184.216.34');
+  // Channel settings refuse a plainly private URL at once.
+  const f = alertFixture();
+  seedHub(f);
+  for (const url of [`${base}/smartsell-alerts`, 'http://localhost:2586/alerts', 'http://169.254.169.254/latest']) {
+    assert.throws(() => configure(f, [{ kind: 'ntfy', url }]), (error: unknown) => error instanceof Problem && error.code === 'INVALID_ARGUMENTS', url);
+  }
+  assert.equal(configure(f, [{ kind: 'ntfy', url: 'https://ntfy.sh/smartsell-alerts' }]).channels.length, 1);
+  // The home hub (and an explicit SMARTSELL_PUSH_PRIVATE_NETWORK=1) keeps loopback and tailnet ntfy working.
+  configureAlerts({ privateEgress: true });
+  assert.equal(configure(f, [{ kind: 'ntfy', url: `${base}/smartsell-alerts` }]).channels.length, 1);
+  assert.deepEqual(await sendPush({ kind: 'ntfy', url: `${base}/smartsell-alerts`, chat_id: null, token: null }, message), { ok: true });
+  assert.equal(seen.length, 1);
+});
+
+test('S6: private push addresses are allowed in hub mode or by an explicit setting only', () => {
+  const production = { NODE_ENV: 'production', DATABASE_URL: 'postgresql://fixture/db', PUBLIC_ORIGIN: 'https://app.example.test', APP_SECRET: randomBytes(32).toString('hex') };
+  assert.equal(configuration(production).pushPrivateNetwork, false);
+  assert.equal(configuration({ ...production, SMARTSELL_PUSH_PRIVATE_NETWORK: '1' }).pushPrivateNetwork, true);
+  assert.equal(configuration({}).pushPrivateNetwork, false, 'development too, unless set');
+  assert.equal(configuration({ SMARTSELL_MODE: 'hub', NODE_ENV: 'production', PUBLIC_ORIGIN: 'https://hub.tail1234.ts.net', APP_SECRET: randomBytes(32).toString('hex'),
+    SMARTSELL_HUB_DIR: '/tmp/smartsell-hub-config-fixture' }).pushPrivateNetwork, true);
 });

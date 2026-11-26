@@ -38,6 +38,7 @@ Provide these values to their respective commands through the deployment environ
 | `SETUP_TOKEN` | API process during first setup | Independent secret generated with `openssl rand -hex 32` |
 | `HOST`, `PORT` | API process | Default `127.0.0.1` and `3401` |
 | `TRUST_PROXY` | API process behind a reverse proxy | Off when unset. A hop count (`1` to `5`) or comma-separated proxy addresses and CIDR ranges allowed to set `X-Forwarded-For`; see [Client addresses behind the proxy](#client-addresses-behind-the-proxy) |
+| `SMARTSELL_PUSH_PRIVATE_NETWORK` | API process | Unset: phone push (ntfy, Bark) goes only to public addresses, resolved once and pinned, so a channel URL cannot reach the internal network. Set `1` only for a private deployment whose own ntfy runs on a private address; the home hub always allows it |
 | `SMARTSELL_UPLOAD_STAGING_QUOTA_BYTES`, `SMARTSELL_UPLOAD_MIN_FREE_BYTES` | API process | Agent uploads: per-workspace cap on unfinished uploads (default 4 × `SMARTSELL_MAX_UPLOAD_BYTES`) and the free disk kept on the media volume (default 1 GiB) |
 
 Run the migration job before starting or upgrading the API. The migration ledgers make repeat runs safe against the same migration files.

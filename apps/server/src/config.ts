@@ -268,6 +268,8 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     secureCookie: publicUrl.protocol === 'https:',
     roles: new Set(enabled as readonly ProcessRole[]),
     allowLoopbackWebhook: !production && env.SMARTSELL_WEBHOOK_LOOPBACK === '1',
+    /** S6: phone push (ntfy, Bark) may reach private addresses: always on the home hub, elsewhere only when set explicitly. */
+    pushPrivateNetwork: hub || env.SMARTSELL_PUSH_PRIVATE_NETWORK === '1',
     // traffic-host.ts reads NODE_ENV itself; a hub always validates traffic origins with production rules.
     traffic: trafficHostConfig(hub ? { ...env, NODE_ENV: 'production' } : env, [publicUrl.origin, ...(portalOrigin ? [portalOrigin] : [])]),
   };
