@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import type { Problem, Row } from '@smartsell/contracts';
 import { configuration } from '../../config.js';
 import { updateTarget } from '../planning/index.js';
-import { MAX_REPORTS_PER_JOB, reportJob } from './device-jobs.js';
+import { MAX_RECOVERY_CLAIMS_PER_JOB, MAX_REPORTS_PER_JOB, reportJob } from './device-jobs.js';
 import { createDryRunJob } from './dispatch.js';
 import { hubFixture } from './fixtures.js';
 import { forceReleaseText } from './index.js';
@@ -240,4 +240,20 @@ test('S7: reportJob checks fences before anything is stored (direct call, as the
     code('JOB_FENCE_LOST'));
   assert.equal(f.job(job.id).report_count, undefined);
   assert.equal(f.job(job.id).status, 'claimed');
+});
+
+test('S7: a machine claiming the same job in a loop stops getting it after MAX_RECOVERY_CLAIMS_PER_JOB; the fence map stays small', async () => {
+  const f = hubFixture();
+  const job = f.jobOf((await f.schedule(HOUR)).id);
+  f.claim();
+  const claimed = () => events(f, job.id).filter(row => row.event === 'claimed').length;
+  const first = claimed();
+  // Not listing the job as held is a restart: it is handed out again under a new fence, up to the limit.
+  for (let index = 0; index < MAX_RECOVERY_CLAIMS_PER_JOB + 20; index++) f.claim([]);
+  assert.equal(f.job(job.id).recovery_claims, MAX_RECOVERY_CLAIMS_PER_JOB);
+  assert.equal(claimed(), first + MAX_RECOVERY_CLAIMS_PER_JOB, 'no more claimed events past the limit');
+  const fence = Number(f.job(job.id).fencing_token);
+  assert.ok(Object.keys(f.job(job.id).fence_holders as object).length <= 32);
+  // The machine still reports under its current fence.
+  f.report(job.id, 'prepared', { stage: 'preflight' }, { fence, seq: 1 });
 });

@@ -32,6 +32,21 @@ const clip = (value: unknown, max: number) => typeof value === 'string' && value
 
 /** Device reports kept per job. A Worker following §5.4.3 sends a few dozen per fence (blockers are sent once per code and stage). */
 export const MAX_REPORTS_PER_JOB = 500;
+/**
+ * Claims of a job its machine did not list as held (a Worker restart re-takes it under a new fence) per job. A paired
+ * machine claiming in a loop would otherwise add a fence, a holder entry and a "claimed" event each time; past this the
+ * job is no longer handed out again by claim, and its lease runs out as usual.
+ */
+export const MAX_RECOVERY_CLAIMS_PER_JOB = 100;
+/** fence_holders keeps the most recent fences only; an older fence falls back to the job's current machine (heldFence). */
+const FENCE_HOLDERS_KEPT = 32;
+
+function withHolder(job: Row, fence: number, deviceId: string) {
+  const holders: Record<string, string> = { ...(job.fence_holders as Record<string, string> | undefined ?? {}), [String(fence)]: deviceId };
+  const fences = Object.keys(holders).map(Number).sort((a, b) => a - b);
+  for (const old of fences.slice(0, Math.max(0, fences.length - FENCE_HOLDERS_KEPT))) delete holders[String(old)];
+  return holders;
+}
 const TRACE_MAX_JSON = 16 * 1024;
 /** §5.4.3 result.url: the post's link on its platform. X and TikTok are what the Worker's drivers produce (canonical links). */
 const RESULT_HOSTS: Record<string, readonly string[]> = { x: ['x.com', 'twitter.com'], tiktok: ['www.tiktok.com', 'tiktok.com'] };
@@ -275,7 +290,7 @@ export function claimJobs(ctx: Context, device: Row, body: Data) {
       continue;
     }
     if (claimableNow(ctx, job, horizon * 60_000)) candidates.push(job);
-    else if (recoverable(job) && !held.has(job.id) && job.media_pending !== true) candidates.push(job);
+    else if (recoverable(job) && !held.has(job.id) && job.media_pending !== true && Number(job.recovery_claims ?? 0) < MAX_RECOVERY_CLAIMS_PER_JOB) candidates.push(job);
   }
   candidates.sort((a, b) => time(a.not_before) - time(b.not_before));
   const out: ClaimedJob[] = [];
@@ -284,7 +299,8 @@ export function claimJobs(ctx: Context, device: Row, body: Data) {
     const mode = currentMode(ctx, job);
     const lease = iso(time(job.not_after) + workerTiming().leaseAfterMs);
     const next = setJob(ctx, job, {
-      fencing_token: fencing, fence_holders: { ...(job.fence_holders as Record<string, string> | undefined ?? {}), [String(fencing)]: device.id },
+      fencing_token: fencing, fence_holders: withHolder(job, fencing, device.id),
+      ...(job.status !== 'queued' && { recovery_claims: Number(job.recovery_claims ?? 0) + 1 }),
       lease_expires_at: lease, claimed_at: job.claimed_at ?? ctx.now, mode,
       ...(job.status === 'queued' && { status: 'claimed' }), synced_view: { hold: false, mode, at: ctx.now },
     });
