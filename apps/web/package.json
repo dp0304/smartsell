@@ -13,7 +13,7 @@
     "@smartsell/sdk": "workspace:*",
     "@smartsell/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.0",
-    "i18next": "^25.0.0",
+    "i18next": "^26.7.2",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
