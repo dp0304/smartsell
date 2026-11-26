@@ -147,7 +147,9 @@ async function promptSandbox(home) {
 // its preflight and check prompt use smartsell_overview, which every hub_v1 connection lists (§7.1, §7.4; W-specs.md #4).
 test('guided enrollment registers both stdio clients and preflight leaves verification pending', async ({ page, dev }) => {
   const { app, rest } = await ownerSession(page, dev);
-  const old = await rest('POST', '/agent-connections', { label: 'Previously issued', client: 'claude_code' }, 201);
+  // A connection this prompt enrollment made earlier (O4: one made by the relay token file or the App is not offered here).
+  const { code } = await rest('POST', '/agent-connections/enroll', { label: 'Previously issued', client: 'claude_code', setup_via: 'prompt' }, 201);
+  const old = await rest('POST', '/agent-connections/redeem', { code }, 201);
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { value: { async writeText(text) {
       if (!globalThis.allowPromptCopy) throw new Error('Clipboard disabled in fixture');
@@ -353,7 +355,9 @@ test('an agent enters a launch over MCP and the owner sees it and approves it in
   await wizardNav(page).getByRole('button', { name: /^連接 Codex/ }).click();
   const agentStep = await expectWizardStep(page, 'agent');
   await agentStep.getByText('進階：舊的接入方式（提示詞）', { exact: true }).click();
-  await expect(agentStep.getByText('完整退出並重開原客戶端，再貼上核對提示詞。成功呼叫 MCP 工具後重新檢查狀態。', { exact: true })).toBeVisible();
+  // O4: a token connection (POST /agent-connections) is not the prompt enrollment's, so Advanced offers no check prompt for it.
+  await expect(agentStep.getByText('完整退出並重開原客戶端，再貼上核對提示詞。成功呼叫 MCP 工具後重新檢查狀態。', { exact: true })).toHaveCount(0);
+  await expect(agentStep.getByRole('button', { name: '產生接入提示詞', exact: true })).toBeVisible();
   await expect(agentStep.getByText('已有 Agent 透過 MCP 呼叫過 SmartSell。', { exact: true })).toHaveCount(0);
   expect(await finishLater(page)).toBe(app);
   const nav = page.getByRole('navigation', { name: '看板導覽' });
