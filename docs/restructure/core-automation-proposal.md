@@ -137,7 +137,7 @@
 | 情況 | 做法 |
 |---|---|
 | **A. 經由 relay（建議）**：Codex、Claude Code、WorkBuddy 以 stdio 啟動 `node ~/.smartsell/relay.mjs` | `media_upload{path}` 在本機讀檔，用中樞的上傳 API 分段上傳。每段校驗 SHA-256，可以續傳，中樞模式上限 2 GB。影片內容不經過模型 |
-| **B. 直接以 HTTP 連中樞（新增）**：客戶端沒有 relay，但 Agent 能在本機執行指令 | `media_upload{filename, bytes, sha256, mime}`，由 Agent 先用 `shasum -a 256` 算好雜湊。中樞回傳**單次有效的上傳網址**（綁定大小與 SHA-256，1 小時過期，只能用一次）和一行可以直接執行的指令 `curl --fail -T "<path>" "<url>"`；之後用 `media_upload{media_id}` 查狀態 |
+| **B. 直接以 HTTP 連中樞（新增）**：客戶端沒有 relay，但 Agent 能在本機執行指令 | `media_upload{filename, bytes, sha256, mime}`，由 Agent 先用 `shasum -a 256` 算好雜湊。中樞回傳**單次有效的上傳網址**（綁定大小與 SHA-256，1 小時過期，只能用一次）和一行可以直接執行的指令 `curl --fail -T '<path>' '<url>'`（單引號，檔名裡的 `$(…)` 不會被執行）；之後用 `media_upload{media_id}` 查狀態 |
 
 - 路 B 的網址本身就是授權，不會把 agent token 暴露給模型；中樞照樣校驗大小與 SHA-256，不符就拒收。
 - MCP 伺服器說明（server instructions）的第 2 條改寫成：先用 A，沒有 relay 時改用 B，兩種都不准把檔案讀進對話、不准 base64。

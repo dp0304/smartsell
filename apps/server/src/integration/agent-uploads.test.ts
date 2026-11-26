@@ -402,7 +402,7 @@ test('direct form: one-use PUT link for the whole file, checked against the decl
   assert.equal(link.method, 'PUT');
   assert.ok(link.url.startsWith(`${hub.origin}/api/v1/agent/uploads/direct/`), link.url);
   assert.ok(!link.url.includes(hub.token), 'the agent token never appears in the link');
-  assert.equal(link.command, `curl --fail --silent --show-error -T "<path>" -H "Content-Type: application/octet-stream" "${link.url}"`);
+  assert.equal(link.command, `curl --fail --silent --show-error -T '<path>' -H 'Content-Type: application/octet-stream' '${link.url}'`);
 
   // Asking again replaces the link: the first one stops working.
   const again = await hub.uploads.direct(hub.principal, described, hub.origin);
@@ -432,6 +432,23 @@ test('direct form: one-use PUT link for the whole file, checked against the decl
   // The same description now answers ready with no link (deduplicated against the stored asset).
   const done = await hub.uploads.direct(hub.principal, described, hub.origin);
   assert.deepEqual([done.status, done.media_id, done.upload], ['ready', first.media_id, null]);
+});
+
+test('S9: the direct upload command single-quotes the path, so $(…) and backticks in a file name never run', { skip: process.platform === 'win32' && 'POSIX shell' }, async t => {
+  const hub = await startHub(t, { prepare: { probe: noProbe } });
+  const bytes = fakeMp4(MiB);
+  const { upload } = await hub.uploads.direct(hub.principal, { filename: 'clip.mp4', bytes: bytes.length, sha256: sha256(bytes) }, hub.origin);
+  const work = join(hub.root, 'shell');
+  await mkdir(work);
+  const path = `${work}/a $(touch dollar) \`touch tick\` it's "quoted".mp4`;
+  // What the media_upload description tells the agent: replace <path> inside the quotes, writing ' as '\''.
+  const command = upload!.command.replace('<path>', path.replaceAll("'", `'\\''`));
+  // A stand-in curl prints the arguments it would get.
+  const run = spawnSync('sh', ['-c', `curl() { printf '%s\\n' "$@"; }; ${command}`], { cwd: work, encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(run.stdout.trimEnd().split('\n'),
+    ['--fail', '--silent', '--show-error', '-T', path, '-H', 'Content-Type: application/octet-stream', upload!.url]);
+  assert.deepEqual(await readdir(work), [], 'nothing in the file name was executed');
 });
 
 test('direct form validates the description like the relay API and refuses unknown MIME types', async t => {

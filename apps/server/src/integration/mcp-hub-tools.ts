@@ -24,7 +24,7 @@ const descriptions: Record<HubToolName, string> = {
   channels_list: 'List channels (social accounts) with channel_id, machine, login state, mode (auto/assist/owner), approval (direct/needs_approval), limits and the blockers that stop scheduling.',
   channel_check: "Check a channel's login on its machine. Creates or reuses one login check and waits up to wait_seconds. status: done, pending (read it later with task_get) or machine_offline (runs when the machine is back).",
   media_upload: 'Upload a video or image and get a media_id for post_schedule; the file never passes through you. Relay form {path}: the SmartSell relay on this computer streams it (resumable, SHA-256 checked). '
-    + 'Direct form {filename, bytes, sha256} when your client reaches the hub without the relay: run the returned upload.command (one curl PUT, <path> replaced by the absolute path) on this computer, then call media_upload again with the same values to read the status. '
+    + `Direct form {filename, bytes, sha256} when your client reaches the hub without the relay: run the returned upload.command (one curl PUT) on this computer with <path> replaced by the absolute path inside its single quotes, writing any ' in the path as '\\'' (PowerShell: ''), then call media_upload again with the same values to read the status. `
     + '"uploading" and "processing" can be scheduled.',
   post_schedule: "Schedule one post to one or more channels in ONE call. Times are local wall-clock in `timezone` (default: the workspace time zone). Each channel gets its own post_id. Never invent captions. "
     + 'If the owner gave no caption or hashtags, ask once whether to post without text; send no_caption: true only after the owner said so. '

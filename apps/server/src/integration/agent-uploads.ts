@@ -525,7 +525,9 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
     const url = `${origin.replace(/\/+$/, '')}${DIRECT_PATH}${token}`;
     return {
       method: 'PUT' as const, url, expires_at: new Date(expiresAt).toISOString(), headers: { 'content-type': 'application/octet-stream' },
-      command: `curl --fail --silent --show-error -T "<path>" -H "Content-Type: application/octet-stream" "${url}"`,
+      // Single quotes (S9): the shell expands nothing inside them, so a file name with $(…) or backticks cannot run. The agent
+      // writes a ' in the path as '\'' (PowerShell: ''), as the media_upload description says.
+      command: `curl --fail --silent --show-error -T '<path>' -H 'Content-Type: application/octet-stream' '${url}'`,
     };
   }
 
@@ -647,7 +649,7 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
         }
         const contentType = request.headers['content-type']?.split(';')[0].trim().toLowerCase();
         if (contentType !== 'application/octet-stream' || !(body instanceof Readable) || request.headers['content-encoding']) {
-          throw problem(415, 'UNSUPPORTED_MEDIA_TYPE', 'Send the file as unencoded application/octet-stream (curl -T "<path>" -H "Content-Type: application/octet-stream").');
+          throw problem(415, 'UNSUPPORTED_MEDIA_TYPE', "Send the file as unencoded application/octet-stream (curl -T '<path>' -H 'Content-Type: application/octet-stream').");
         }
         const length = request.headers['content-length'];
         if (typeof length !== 'string' || !/^\d{1,13}$/.test(length)) throw problem(411, 'LENGTH_REQUIRED', 'Content-Length is required (curl -T sends it).');
