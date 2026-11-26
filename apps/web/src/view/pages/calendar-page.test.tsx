@@ -122,7 +122,7 @@ test('week view lays the week out as columns with an agenda for narrow widths', 
 
 test('U5: a phase 1 post stopped on a captcha or missed shows its status chip in the list', async () => {
   const post = (id: string, status: string, needs: string, at: string) => ({
-    ...event(id, 'publish', at, { title: `X @lurelab · ${id}`, status, platform: 'x', needs_human: needs }), post_id: id, post_status: status,
+    ...event(id, 'publish', at, { title: `X @lurelab · ${id}`, status, platform: 'x', needs_human: needs as never }), post_id: id, post_status: status,
   }) as CalendarEvent;
   const list = [post('captcha', 'needs_owner', 'needs_owner', '2099-03-04T01:00:00.000Z'), post('late', 'missed', 'missed', '2099-03-05T01:00:00.000Z')];
   const out = await render('/app/w1/calendar?view=list&month=2099-03', view(list), { from: '2099-03-01', to: '2099-03-31' });
