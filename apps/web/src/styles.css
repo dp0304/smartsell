@@ -43,10 +43,12 @@ h2 { font-size: 17px; letter-spacing: -.018em; }
 h3 { font-size: 14px; }
 small, .muted { color: var(--muted); }
 code, pre { font-family: 'SFMono-Regular', Consolas, monospace; overflow-wrap: anywhere; }
+/* Only the legacy workbench shell (.app-shell) needs a desktop width; sign-in, first-run setup, the error page and the
+   dashboard all have to work on phones (U2). */
 .narrow-notice { display: none; }
 @media (width < 1280px) {
-  body { min-width: 1280px; }
-  .narrow-notice { display: flex; gap: 8px; align-items: center; max-width: 100vw; padding: 8px 18px; background: var(--status-warning-bg); color: var(--status-warning); border-bottom: 1px solid currentColor; }
+  body:has(.app-shell) { min-width: 1280px; }
+  body:has(.app-shell) .narrow-notice { display: flex; gap: 8px; align-items: center; max-width: 100vw; padding: 8px 18px; background: var(--status-warning-bg); color: var(--status-warning); border-bottom: 1px solid currentColor; }
 }
 .app-shell { display: grid; grid-template-columns: 222px minmax(0, 1fr); min-height: 100dvh; }
 .sidebar {
@@ -200,7 +202,17 @@ button[aria-pressed=true] { background-color: var(--soft); color: var(--ink); bo
 .auth-main .auth-card h2 { font-size: var(--font-size-title); line-height: 1.16; }
 .auth-card > p:not(.notice) { margin: 7px 0 19px; color: var(--muted); }
 .auth-card > a { display: inline-block; margin-top: 15px; font-weight: 650; }
-.entry-error { width: 500px; margin: 14vh auto; }
+.entry-error { width: min(500px, 100% - 32px); margin: 14vh auto; }
+.entry-error .toolbar { flex-wrap: wrap; }
+/* Phones and narrow windows: one column, the brand as a slim header above the form (U2). */
+@media (max-width: 720px) {
+  .auth-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .auth-side { min-height: 0; padding: 16px; gap: 8px; border-inline-end: 0; border-bottom: 1px solid var(--line); }
+  .auth-side h1 { display: none; }
+  .auth-main { place-items: start center; padding: 56px 16px 32px; }
+  .auth-main .language { top: 12px; right: 16px; }
+  .auth-main .auth-card { padding: 20px; }
+}
 .account-security-page { display: grid; grid-template-columns: minmax(0, 390px) minmax(0, 1fr); align-items: start; gap: 16px; }
 .account-security-page > .auth-card { width: 100%; }
 .account-security-page > .panel:only-child { grid-column: 1 / -1; }
