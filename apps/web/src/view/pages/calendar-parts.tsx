@@ -22,12 +22,18 @@ export function eventName(event: CalendarEvent, lang: Lang, timeZone?: string, r
     needs !== status?.label && needs].filter(Boolean).join(' · ');
 }
 
-/** The event's status chip; next to a needs-you marker that says the same thing it steps aside. */
+/** A phase 1 post (§3.4): its status chip is what says it needs the person; NeedsMark leaves it to the chip. */
+const isPhase1Post = (event: CalendarEvent) => event.kind === 'publish' && Boolean((event as CalendarEvent & { post_id?: string }).post_id);
+
+/**
+ * The event's status chip; next to a needs-you marker that says the same thing it steps aside. A phase 1 post has no such
+ * marker (NeedsMark returns null for it), so its chip always shows (U5: 要你處理 on a captcha stop, 沒有發出 on a missed post).
+ */
 export function StatusTag({ event, besideNeeds = false }: { event: CalendarEvent; besideNeeds?: boolean }) {
   const { lang } = useText();
   const status = eventStatus(event.kind, event.status, lang);
   if (!status) return null;
-  if (besideNeeds && event.needs_human && needsText[event.needs_human]?.[lang === 'en' ? 1 : 0] === status.label) return null;
+  if (besideNeeds && !isPhase1Post(event) && event.needs_human && needsText[event.needs_human]?.[lang === 'en' ? 1 : 0] === status.label) return null;
   const glyph = { good: 'check', warning: 'warning', serious: 'serious', critical: 'critical', neutral: 'neutral', info: 'info' }[status.tone];
   return <span className={`vs-chip tone-${status.tone}`} data-status={event.status ?? undefined}><Glyph name={glyph} size={12} />{status.label}</span>;
 }
@@ -44,7 +50,7 @@ export function NeedsMark({ event, base, compact = false }: { event: CalendarEve
   const { l } = useText();
   if (!event.needs_human) return null;
   // A phase 1 post's status chip already says it (待你核准, 要你處理); the mark would repeat it.
-  if (event.kind === 'publish' && (event as CalendarEvent & { post_id?: string }).post_id && !compact) return null;
+  if (isPhase1Post(event) && !compact) return null;
   const label = l(needsText[event.needs_human] ?? t.needsMarker);
   const body = <><Glyph name="warning" size={12} />{compact ? <span className="vs-sr">{label}</span> : label}</>;
   if (base) return <RouterLink to={decisionHref(base, event)} className="cal-needs" title={label}>{body}</RouterLink>;
@@ -97,14 +103,16 @@ export function AgendaRow({ item, timeZone, onOpen, base, today }: { item: Agend
 
 export interface KindSource { kind: string; availability: string }
 /** Toggle chips that double as the colour legend; kinds the role cannot read are shown locked, never as zero. */
-export function KindFilter({ shown, counts, sources, onToggle, onAll }: {
+export function KindFilter({ shown, counts, sources, onToggle, onAll, kinds = calendarKinds }: {
   shown: Set<string> | null; counts?: Record<string, number>; sources: readonly KindSource[]; onToggle: (kind: string) => void; onAll: () => void;
+  /** The kinds to offer (U6: phase 1 offers only posts unless 「顯示其他模組」 is on). */
+  kinds?: readonly string[];
 }) {
   const { l, lang } = useText();
   const locked = new Set(sources.filter(source => source.availability === 'no_permission').map(source => source.kind));
-  const filtered = shown !== null && calendarKinds.some(kind => !locked.has(kind) && !shown.has(kind));
+  const filtered = shown !== null && kinds.some(kind => !locked.has(kind) && !shown.has(kind));
   return <div className="cal-kinds" role="group" aria-label={l(t.kinds)}>
-    {calendarKinds.map(kind => {
+    {kinds.map(kind => {
       if (locked.has(kind)) return <span key={kind} className={`cal-kind locked cal-k-${kind}`} title={l(t.noPermission)}>
         <KindKey kind={kind} />{kindLabel(kind, lang)}<Lock size={12} aria-hidden="true" /><span className="cal-kind-count">{l(t.noPermission)}</span>
       </span>;

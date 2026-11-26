@@ -4,6 +4,13 @@ import { addDays, dayIn, diffDays, isDay, monthGrid, weekStart, type CalendarEve
 
 export const calendarKinds = ['publish', 'post', 'plan', 'milestone', 'production_due', 'deliverable_due', 'live', 'ad_flight', 'promotion'] as const;
 export type CalendarKind = typeof calendarKinds[number];
+/** Phase 1 (§9.1): posts only. The other kinds come from modules hidden until Settings → 介面 → 顯示其他模組. */
+export const postKinds = ['publish', 'post'] as const;
+/** The kinds the filter offers: all with the other modules shown; else posts plus any kind this period really has (U6). */
+export function offeredKinds(moreModules: boolean, counts: Record<string, number> = {}): readonly CalendarKind[] {
+  if (moreModules) return calendarKinds;
+  return calendarKinds.filter(kind => (postKinds as readonly string[]).includes(kind) || (counts[kind] ?? 0) > 0);
+}
 export type Mode = 'month' | 'week' | 'list';
 export type NeedsHuman = 'approval' | 'late_decision' | 'outcome_unknown';
 export const needsHumanKinds: readonly NeedsHuman[] = ['approval', 'late_decision', 'outcome_unknown'];

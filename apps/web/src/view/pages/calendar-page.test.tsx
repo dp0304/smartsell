@@ -57,9 +57,9 @@ test('month view answers first, draws the plan as bars across weeks and marks wh
   assert.match(out, /cal-bar cal-k-plan after/);
   assert.match(out, /cal-bar cal-k-plan before/);
   assert.match(out, /aria-label="發布排期 · 15:30 · 新品開箱 · Instagram · 待審批"/);
-  assert.match(out, /cal-kind locked cal-k-promotion/);
-  assert.match(out, /你的角色看不到：促銷/);
-  assert.doesNotMatch(out, /cal-k-promotion" aria-pressed/, 'A kind the role cannot read is not a toggle with a zero count');
+  // Promotions are a hidden module in phase 1 (U6): no chip, locked or not, and no 「你的角色看不到」 note about them.
+  assert.doesNotMatch(out, /cal-k-promotion/);
+  assert.doesNotMatch(out, /你的角色看不到/);
   assert.match(out, /<h2 class="cal-range" aria-live="polite">2099年3月<\/h2>/);
 });
 
@@ -73,11 +73,14 @@ test('list view shows periods as start and end markers with their span', async (
   assert.match(out, /href="\/app\/w1\/decisions\?kind=publish_approval"/);
 });
 
-test('kind chips filter the calendar and stay the legend', async () => {
+test('kind chips filter the calendar and stay the legend; phase 1 offers posts plus the kinds the period has (U6)', async () => {
   const out = await render('/app/w1/calendar?month=2099-03&kinds=plan', view(events), march);
   assert.match(out, /cal-kind cal-k-publish" aria-pressed="false"/);
   assert.match(out, /cal-kind cal-k-plan" aria-pressed="true"/);
-  assert.match(out, /cal-kind cal-k-live empty" aria-pressed="false">.*?直播<span class="cal-kind-count">0<\/span>/, 'Kinds the role can read count from zero');
+  assert.match(out, /cal-kind cal-k-post empty" aria-pressed="false">.*?已發布<span class="cal-kind-count">0<\/span>/, 'Published posts count from zero');
+  for (const kind of ['milestone', 'production_due', 'deliverable_due', 'live', 'ad_flight', 'promotion']) {
+    assert.doesNotMatch(out, new RegExp(`cal-k-${kind}`), `${kind} comes from a hidden module and has nothing in this period`);
+  }
   assert.doesNotMatch(out, /class="cal-chip /, 'Hidden kinds leave the grid');
   assert.match(out, /全部顯示/);
   const none = await render('/app/w1/calendar?month=2099-03&kinds=', view(events), march);
@@ -115,4 +118,15 @@ test('week view lays the week out as columns with an agenda for narrow widths', 
   assert.match(out, /cal-narrow-only/);
   assert.equal(out.match(/class="cal-agenda-day/g)?.length, 7, 'The narrow agenda lists every day of the week');
   assert.match(out, /3\/2 – 3\/8/);
+});
+
+test('U5: a phase 1 post stopped on a captcha or missed shows its status chip in the list', async () => {
+  const post = (id: string, status: string, needs: string, at: string) => ({
+    ...event(id, 'publish', at, { title: `X @lurelab · ${id}`, status, platform: 'x', needs_human: needs }), post_id: id, post_status: status,
+  }) as CalendarEvent;
+  const list = [post('captcha', 'needs_owner', 'needs_owner', '2099-03-04T01:00:00.000Z'), post('late', 'missed', 'missed', '2099-03-05T01:00:00.000Z')];
+  const out = await render('/app/w1/calendar?view=list&month=2099-03', view(list), { from: '2099-03-01', to: '2099-03-31' });
+  const row = (id: string) => out.match(new RegExp(`<li class="cal-row[^"]*">(?:(?!</li>).)*X @lurelab · ${id}(?:(?!</li>).)*</li>`))?.[0] ?? '';
+  assert.match(row('captcha'), /data-status="needs_owner"[^>]*>.*?要你處理</, 'the 要你處理 chip is not hidden behind a needs mark that a phase 1 post never shows');
+  assert.match(row('late'), /data-status="missed"[^>]*>.*?沒有發出</);
 });

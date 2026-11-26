@@ -8,8 +8,9 @@ import { useView, useViewContext, workspaceZone } from '../data/use-view';
 import type { CalendarView, PlanCard } from '../data/types';
 import { Loaded, PageHeader, RouterLink, useFilters, useText } from '../parts';
 import {
-  allKindsParams, calendarKinds, eventParams, modeParams, navigateParams, periodsIn, readCalendarParams, summarize, toggleKindParams, type Mode,
+  allKindsParams, eventParams, modeParams, navigateParams, offeredKinds, periodsIn, readCalendarParams, summarize, toggleKindParams, type Mode,
 } from './calendar-logic';
+import { useShowMoreModules } from '../../preferences';
 import { EventDrawer } from './calendar-drawer';
 import { Agenda, DayPanel, MonthGrid, PeriodList, WeekGrid } from './calendar-grid';
 import { KindFilter } from './calendar-parts';
@@ -35,6 +36,7 @@ export function CalendarPage() {
   const { brandId } = useFilters();
   const [params, setParams] = useSearchParams();
   const narrow = useNarrow();
+  const moreModules = useShowMoreModules();
   const state = readCalendarParams(params, todayIn(workspaceZone(ws)), narrow);
   // Period, view and plan changes are history steps; filters and the open drawer replace the entry.
   const update = (next: URLSearchParams) => setParams(next, { replace: true });
@@ -94,10 +96,12 @@ export function CalendarPage() {
     <Loaded read={read}>{view => {
       const all = Array.isArray(view.events) ? view.events : [];
       const sources = Array.isArray(view.sources) ? view.sources : [];
-      const locked = sources.filter(source => source.availability === 'no_permission').map(source => source.kind);
-      const available = calendarKinds.filter(kind => !locked.includes(kind));
-      const shown = state.kinds ? all.filter(event => state.kinds!.has(event.kind)) : all;
       const summary = summarize(all, new Date(), today, zone);
+      const offered = offeredKinds(moreModules, summary.counts);
+      // A kind the filter does not offer (a hidden module, U6) is not worth a 「你的角色看不到」 note either.
+      const locked = sources.filter(source => source.availability === 'no_permission' && offered.includes(source.kind as never)).map(source => source.kind);
+      const available = offered.filter(kind => !locked.includes(kind));
+      const shown = state.kinds ? all.filter(event => state.kinds!.has(event.kind)) : all;
       const current = state.event ? all.find(event => event.id === state.event) : undefined;
       const from = view.range?.from ?? state.from, to = view.range?.to ?? state.to;
       const past = to < today;
@@ -110,7 +114,7 @@ export function CalendarPage() {
             <p className="muted">{l(['在 Codex 說「明天 9:00 把 video.mp4 發到 X」，排好的貼文會出現在今日與這裡。', 'Tell Codex "post video.mp4 to X tomorrow at 9:00"; scheduled posts show up on Today and here.'])}</p>
             <div className="vs-actions"><RouterLink to={base} className="vs-btn">{l(['今日', 'Today'])}</RouterLink><RouterLink to={`${base}/channels`} className="vs-btn">{l(['帳號', 'Channels'])}</RouterLink>
               <RouterLink to={`${base}/agent`} className="vs-btn">{l(['連接 Codex', 'Connect Codex'])}</RouterLink></div></div>}
-        <KindFilter shown={state.kinds} counts={summary.counts} sources={sources} onToggle={kind => update(toggleKindParams(params, state.kinds, kind, available))} onAll={() => update(allKindsParams(params))} />
+        <KindFilter kinds={offered} shown={state.kinds} counts={summary.counts} sources={sources} onToggle={kind => update(toggleKindParams(params, state.kinds, kind, available))} onAll={() => update(allKindsParams(params))} />
         {all.length > 0 && !shown.length && <p className="vs-notice cal-notice" role="status">{fill(l(t.filteredEmpty), { n: all.length })}
           <button type="button" className="vs-link-button" onClick={() => update(allKindsParams(params))}>{l(t.clearFilters)}</button></p>}
         <div className="cal-view">
