@@ -151,3 +151,22 @@ test('U6: Settings and the error page hide the legacy modules until 顯示其他
   await expect(page.locator('.entry-error')).toBeVisible();
   await expect(page.getByRole('link', { name: '相容版工作台' })).toHaveCount(0);
 });
+
+test('E50: the owner turns remote control on from the machine page; the sites are kept and bad sites are refused', async ({ page, dev }) => {
+  const ws = await ownerWorkspace(page, dev);
+  const machine = await pairMachine(dev, ws, 'Mac-B');
+  await page.goto(`${ws.app}/machines/${machine.id}`);
+  const section = page.getByRole('form', { name: /遙控|Remote control/ });
+  await expect(section).toBeVisible();
+  await expect(section.getByText(/目前關閉|Off\./)).toBeVisible();
+  await section.getByLabel(/允許操作這台機器的 Chrome|Allow this machine's Chrome/).check();
+  await section.getByLabel(/允許的網站|Allowed sites/).fill('javascript:alert(1)');
+  await section.getByRole('button', { name: /儲存|Save/ }).click();
+  await expect(section.getByRole('alert').or(section.locator('.vs-notice.bad, .problem-notice, [role=alert]')).first()).toBeVisible();
+  await section.getByLabel(/允許的網站|Allowed sites/).fill('https://Seller.Shopee.tw/portal\nshop.myshopify.com');
+  await section.getByRole('button', { name: /儲存|Save/ }).click();
+  await expect(section.getByRole('status')).toBeVisible();
+  const detail = await ws.rest('GET', `/views/machines/${machine.id}`);
+  expect(detail.remote_control.browser).toEqual({ enabled: true, sites: ['seller.shopee.tw', 'shop.myshopify.com'] });
+  expect(detail.remote_control.phone.enabled).toBe(false);
+});

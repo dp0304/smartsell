@@ -451,6 +451,8 @@ export interface MachineDetail extends MachineSummary {
   clock_offset_ms: number | null; paired_at: string; posture: DevicePosture | null; driver_config_version: string | null;
   upcoming: JobSummary[]; history: JobSummary[];
   last_driver_trace: { provider: DriverProvider; job_id: string; steps: DriverTraceStep[] } | null;
+  /** E50: what the owner allowed for remote control on this machine (off by default). */
+  remote_control?: RemoteControlSettings;
 }
 export interface ChannelPause { scope: 'workspace' | 'brand' | 'social_account'; reason: string; by: string | null; at: string; resume_web_url: string }
 export interface ChannelSummary {

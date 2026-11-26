@@ -8,6 +8,7 @@ import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
 import { blockerText, hub, jobKindText, warningFixFor, warningTitle } from '../hub-copy';
 import { warningMessage } from '../attention-text';
+import { RemoteControlSection, remoteControlTitle } from './RemoteControl';
 import { Badge, ChannelName, Empty, JobStatusBadge, LoginBadge, OnlineBadge, WriteError, ZoneNote, browserZone, isoLocal, localLabel, todayIn, tr, useHubWrite } from '../hub-parts';
 
 const osName = (os: string) => os === 'win32' ? 'Windows' : 'macOS';
@@ -183,6 +184,7 @@ export function MachinePage() {
           <strong>{tr(l, warningTitle, warning.code)}</strong> {warningMessage(warning, lang)}<br /><small className="muted">{l(warningFixFor(warning.code, machine.posture?.os ?? machine.os) ?? [warning.code, warning.code])}</small></li>)}</ul>
           : <p className="muted">{l(hub.machines.noWarnings)}</p>}
       </Section>
+      <Section title={l(remoteControlTitle)}><RemoteControlSection machineId={machine.machine_id} value={machine.remote_control} /></Section>
       <Section title={l(hub.machines.channels)}>
         {machine.channels.length ? <ul className="hub-rows">{machine.channels.map(channel => <li key={channel.social_account_id} className="hub-row static two">
           <span className="hub-row-main"><RouterLink to={`${base}/channels/${encodeURIComponent(channel.social_account_id)}`}><ChannelName provider={channel.provider} handle={channel.handle} /></RouterLink></span>

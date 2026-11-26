@@ -11,6 +11,7 @@ import {
   str, workspaceZone,
 } from './hub-model.js';
 import { webUrl } from './links.js';
+import { remoteSettings } from '../../remote/settings.js';
 import { jobSummaryOf } from './posts.js';
 
 /** Machine read models (phase1-design §3.2, §9.3): machineSummaries, machineDetail and the §3.2 warnings. */
@@ -136,7 +137,7 @@ export function machineDetail(ctx: Context, id: string): MachineDetail {
   return {
     ...machineSummaryOf(ctx, device), clock_offset_ms: clockOffset(ctx, device),
     paired_at: String(device.paired_at ?? device.created_at), posture: postureOf(ctx, device), driver_config_version: driverConfig,
-    upcoming, history,
+    upcoming, history, remote_control: remoteSettings(device),
     last_driver_trace: traced && (provider === 'x' || provider === 'tiktok') ? {
       provider, job_id: traced.id,
       steps: ((traced as Row).driver_trace as unknown[]).map(object).map(step => ({
