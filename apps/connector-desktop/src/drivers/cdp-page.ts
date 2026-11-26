@@ -361,6 +361,77 @@ export class ChromeCdpPage implements CdpPage {
     } catch { return 'unavailable'; }
   }
 
+  // ---------- remote control (core-automation-proposal §2 item 2, step 4): look and act for the owner's Agent ----------
+
+  /** Document title of the main frame. */
+  title() { return this.#evaluate<string>('document.title').then(value => value ?? '').catch(() => ''); }
+
+  /** CSS viewport size. */
+  async viewport() {
+    const metrics = await this.#send<{ cssLayoutViewport: { clientWidth: number; clientHeight: number } }>('Page.getLayoutMetrics');
+    return { width: metrics.cssLayoutViewport.clientWidth, height: metrics.cssLayoutViewport.clientHeight };
+  }
+
+  /**
+   * Interactive elements from the accessibility tree, in document order, with their CSS box (rounded) when they have
+   * one. Up to `limit` elements; `inViewport` marks the ones whose centre is on screen.
+   */
+  async interactiveElements(limit = 200) {
+    const roles = new Set(['button', 'link', 'textbox', 'searchbox', 'combobox', 'checkbox', 'radio', 'switch', 'menuitem', 'menuitemcheckbox',
+      'menuitemradio', 'tab', 'option', 'listbox', 'slider', 'spinbutton', 'treeitem']);
+    let nodes: AXNode[];
+    try { ({ nodes } = await this.#send<{ nodes: AXNode[] }>('Accessibility.getFullAXTree', {}, 20_000)); } catch { return []; }
+    const { width, height } = await this.viewport().catch(() => ({ width: 0, height: 0 }));
+    const property = (node: AXNode, key: string) => node.properties?.find(item => item.name === key)?.value?.value;
+    const out: { backendNodeId: number; role: string; name: string; value?: string; disabled: boolean; checked?: unknown; box: [number, number, number, number] | null; inViewport: boolean }[] = [];
+    for (const node of nodes) {
+      if (out.length >= limit) break;
+      const role = String(node.role?.value ?? '');
+      if (node.ignored || !node.backendDOMNodeId || !roles.has(role)) continue;
+      let box: [number, number, number, number] | null = null;
+      try {
+        const quad = (await this.#send<{ model: { content: number[] } }>('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId })).model.content;
+        const xs = [quad[0], quad[2], quad[4], quad[6]], ys = [quad[1], quad[3], quad[5], quad[7]];
+        box = [Math.round(Math.min(...xs)), Math.round(Math.min(...ys)), Math.round(Math.max(...xs) - Math.min(...xs)), Math.round(Math.max(...ys) - Math.min(...ys))];
+      } catch { /* not rendered */ }
+      if (box && (box[2] === 0 || box[3] === 0)) continue;
+      const centre = box ? [box[0] + box[2] / 2, box[1] + box[3] / 2] : null;
+      const value = (node as AXNode & { value?: AXValue }).value?.value;
+      out.push({
+        backendNodeId: node.backendDOMNodeId, role, name: String(node.name?.value ?? '').trim().slice(0, 120),
+        ...(typeof value === 'string' && value && { value: value.slice(0, 120) }),
+        disabled: property(node, 'disabled') === true, ...(property(node, 'checked') !== undefined && { checked: property(node, 'checked') }),
+        box, inViewport: !!centre && centre[0] >= 0 && centre[1] >= 0 && centre[0] <= width && centre[1] <= height,
+      });
+    }
+    return out;
+  }
+
+  /** A trusted click at CSS coordinates (the Agent picked a point on the screenshot). */
+  async clickAt(x: number, y: number) {
+    await this.#send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none' });
+    await this.#send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
+    await this.#send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
+  }
+
+  /** Wheel scroll by (dx, dy) CSS pixels at a point (default: the viewport centre). */
+  async scrollBy(dx: number, dy: number, at?: { x: number; y: number }) {
+    const { width, height } = await this.viewport();
+    const point = at ?? { x: Math.round(width / 2), y: Math.round(height / 2) };
+    await this.#send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: point.x, y: point.y, deltaX: dx, deltaY: dy });
+  }
+
+  /** Browser history back (Page.navigateToHistoryEntry); the allowlist still applies to where it lands. */
+  async back() {
+    const { currentIndex, entries } = await this.#send<{ currentIndex: number; entries: { id: number; url: string }[] }>('Page.getNavigationHistory');
+    const previous = entries[currentIndex - 1];
+    if (!previous) return this.url();
+    if (!this.options.allowUrl(new URL(previous.url))) throw new OffOriginError(previous.url);
+    await this.#send('Page.navigateToHistoryEntry', { entryId: previous.id });
+    this.#world = undefined;
+    return this.url();
+  }
+
   async bringToFront() {
     await this.#send('Page.bringToFront').catch(() => {});
     await this.pipe.send('Target.activateTarget', { targetId: this.targetId }).catch(() => {});
