@@ -18,6 +18,14 @@
 
 ## 1. 一鍵安裝（在中樞上）
 
+還沒有原始碼時，先取得一份（需要 git）：
+
+```bash
+git clone https://github.com/dp0304/smartsell.git ~/smartsell     # GitHub（分支 main）
+git clone https://gitee.com/yueshutech/smartsell.git ~/smartsell  # 或 Gitee（分支 master，內容相同）
+cd ~/smartsell
+```
+
 ### macOS
 
 ```bash

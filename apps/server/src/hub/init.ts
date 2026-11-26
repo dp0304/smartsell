@@ -145,7 +145,7 @@ export async function hubInit(options: HubInitOptions = {}, deps: HubInitDeps = 
   }
 
   // 7b. Relay bundle served at GET /agent/relay.mjs (§6.1, S5 ledger item 6); without it the route answers 503.
-  log('[6/10] 建置 relay：pnpm --filter @smartsell/agent-relay build');
+  log('[6/10] 建置 relay：pnpm --filter @smartsell/agent-relay build（同一步的第二部分）');
   const relay = await exec(pnpmCommand(platform), ['--filter', '@smartsell/agent-relay', 'build'], { cwd: repoRoot, inherit: true, timeoutMs: 5 * 60_000 });
   if (relay.code !== 0) {
     log(`[警告] relay 建置失敗（結束碼 ${relay.code}）。中樞仍可使用，但 GET /agent/relay.mjs 會回 503 RELAY_BUNDLE_MISSING；修正後執行 pnpm --filter @smartsell/agent-relay build。`);

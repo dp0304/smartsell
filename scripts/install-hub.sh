@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SmartSell hub installer for macOS (§2.13).
 #
-#   curl -fsSL <raw url of this file> | bash          # or: bash scripts/install-hub.sh
+#   curl -fsSL https://raw.githubusercontent.com/dp0304/smartsell/main/scripts/install-hub.sh | bash
+#   # or, in a checkout: bash scripts/install-hub.sh
 #   bash scripts/install-hub.sh --dir ~/smartsell --repo https://github.com/dp0304/smartsell.git --branch main
 #
 # The script checks prerequisites and prints the exact command for anything missing; it never installs system
@@ -18,7 +19,7 @@ usage() {
   cat <<'USAGE'
 用法：bash scripts/install-hub.sh [--dir <原始碼資料夾>] [--repo <git 網址>] [--branch <分支>] [--mode agent|daemon] [--check-only]
   --dir        原始碼放在哪裡（預設 ~/smartsell；若在原始碼資料夾內執行，則使用目前的資料夾）
-  --repo       原始碼來源（預設 Gitee 主倉）
+  --repo       原始碼來源（預設 GitHub：https://github.com/dp0304/smartsell.git；中國大陸可用 Gitee：https://gitee.com/yueshutech/smartsell.git）
   --branch     分支（預設 main）
   --mode       服務模式：agent（預設，登入後執行）或 daemon（無人登入也能執行，需要 sudo）
   --check-only 只檢查前置軟體，不做任何變更

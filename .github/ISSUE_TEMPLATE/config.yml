@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 回報安全問題（私下）
+    url: https://github.com/dp0304/smartsell/security/advisories/new
+    about: 安全問題請不要公開開 issue。

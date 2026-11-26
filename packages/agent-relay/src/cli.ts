@@ -44,7 +44,7 @@ export function parseRelayArgs(argv: readonly string[]) {
 /** Read a small relay file without following links; `secret` files must be owner-only on POSIX (0600). */
 async function readRelayFile(path: string, limit: number, secret: boolean, platform: NodeJS.Platform) {
   const info = await lstat(path).catch(() => undefined);
-  if (!info?.isFile()) throw new RelayError(`The relay file ${path} is missing or not a regular file.`, `找不到 relay 的設定或憑證檔（${path}）。請在 SmartSell App 重新連接 Codex／Claude Code。`);
+  if (!info?.isFile()) throw new RelayError(`The relay file ${path} is missing or not a regular file.`, `找不到 relay 的設定或權杖檔（${path}）。用 SmartSell App 連接的，請在 App 重新按「連接 Codex／Claude Code」；自己安裝 relay 的，請在網頁 Agent 頁重新「建立連線並下載權杖檔」，存成 ~/.smartsell/token（權限 600）。`);
   if (secret && platform !== 'win32' && ((info.mode & 0o077) !== 0 || (typeof process.getuid === 'function' && info.uid !== process.getuid()))) {
     throw new RelayError(`${path} must belong to you and be readable only by you (chmod 600).`, `${path} 的權限必須只有自己可讀（chmod 600）。`);
   }
