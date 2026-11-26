@@ -80,6 +80,10 @@ const CHANNEL_BLOCKER_EN: Record<string, (p: Params) => string> = {
   machine_paused: p => `${s(p.machine, 'Its machine')} is paused; posts to this channel will not go out until you resume it.`,
   channel_defaults_missing: () => 'The TikTok defaults (privacy, comments, duet and stitch, commercial disclosure) are not set; set them once on the channel page.',
 };
+/** A channel blocker (channels[].blockers) in the page's language: the hub's zh-Hant sentence, or English by its code (U1). */
+export function channelBlockerText(blocker: { code: string; message: string }, machine: string | null | undefined, lang: Lang): string {
+  return lang === 'en' ? CHANNEL_BLOCKER_EN[blocker.code]?.({ machine }) ?? blocker.message : blocker.message;
+}
 const CHECK_EN: Record<string, string> = {
   automation_notice: 'the automation notice is not acknowledged', machine_binding: 'the channel has no usable machine', machine_paused: 'the machine is paused',
   channel_defaults: 'the TikTok defaults are not set', daily_cap: 'the channel is full for that day', publish_window: 'the time is outside the posting window',
@@ -110,7 +114,7 @@ const CARD_EN: Record<string, (p: Params) => Text> = {
   missed: p => ({ title: `${s(p.channel)}${at(p.when)}: this post did not go out`,
     detail: p.reason === 'not_approved' ? 'It was not approved before the deadline, so it did not go out. Reschedule it?'
       : p.reason === 'machine_retired' ? `${s(p.machine, 'The machine')} was retired and the channel has not moved to another machine, so it did not go out. Use "Change machine" on the channel page first, then reschedule.`
-        : `${s(p.machine, 'The machine')} did not post it (${missedReasonText[s(p.reason)]?.[1] ?? 'reason unknown'}). Reschedule it?` }),
+        : `${s(p.machine, 'The machine')} did not post it (${(missedReasonText[s(p.reason)]?.[1] ?? 'reason unknown').replace(/^./, c => c.toLowerCase())}). Reschedule it?` }),
   unknown: p => ({ title: `${s(p.channel)}${at(p.when)}: result unknown`,
     detail: p.variant === 'clicked' ? `${s(p.machine, 'The machine')} clicked Post but could not read the post's URL. Paste the URL or confirm it was not posted; SmartSell never posts it again by itself.`
       : p.variant === 'offline' ? `${s(p.machine, 'The machine')} has not reported (it is offline); it reports by itself once it is back.`

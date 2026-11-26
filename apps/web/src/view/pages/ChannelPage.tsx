@@ -7,6 +7,7 @@ import type { ChannelDetail, ChannelSettingsRecord, MachineSummary, MediaRecentI
 import { useView, useViewContext } from '../data/use-view';
 import { Loaded, PageHeader, RouterLink, Section, useText } from '../parts';
 import { RELOGIN, approvalModeText, hub, loginText } from '../hub-copy';
+import { channelBlockerText } from '../attention-text';
 import { Badge, ChannelName, Empty, LoginBadge, ModeBadge, OnlineBadge, PostStatusBadge, WriteError, isoLocal, localLabel, problemCode, providerName, todayIn, tr, useHubWrite } from '../hub-parts';
 import { pauseOf } from '../data/hub-types';
 import { JobRows } from './MachinesPage';
@@ -315,7 +316,7 @@ export function ChannelPage() {
         </dl>
         <HeaderTools channel={channel} />
       </section>
-      {channel.blockers.length > 0 && <div className="hub-callout critical" role="note"><ul>{channel.blockers.map(blocker => <li key={blocker.code}>{blocker.message}</li>)}</ul></div>}
+      {channel.blockers.length > 0 && <div className="hub-callout critical" role="note"><ul>{channel.blockers.map(blocker => <li key={blocker.code}>{channelBlockerText(blocker, channel.machine?.name, lang)}</li>)}</ul></div>}
       <div className="vs-columns">
         <Section title={l(hub.channels.checklist)}><Readiness channel={channel} /></Section>
         <NoticeSection channel={channel} />
