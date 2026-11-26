@@ -178,7 +178,9 @@ pnpm worker:release --out "<中樞資料夾>/worker-downloads"   # 在中樞（m
 pnpm worker:release --win                                    # 在 Windows 機器（例如 Win-C）上：win-x64
 ```
 
-第 1 階段的安裝包沒有簽章：macOS 第一次開啟時請在 Finder 對 App 按右鍵 →「打開」（Gatekeeper）；Windows 出現 SmartScreen 時按「其他資訊」→「仍要執行」。macOS 每次更新後可能再跳出鑰匙圈授權提示，請留在那台機器前按「永遠允許」，否則 Worker 無法連線（會發出通知）。舊版 SmartSell Connector 的配對不會帶過來，要在新的 Worker 重新配對。
+**發行簽章金鑰：**`pnpm worker:release` 會以 Ed25519 私鑰替每個安裝包的 `latest-<platform>.json` 簽章，並把公鑰內建進 Worker；Worker 只安裝簽章驗證通過的更新（安全審核 S1）。私鑰預設在建置機的 `~/.smartsell/worker-release-key.pem`（第一次執行自動建立，權限 0600），或以 `SMARTSELL_RELEASE_SIGNING_KEY=<PEM 路徑>` 指定；不可放在原始碼資料夾內。**請備份這個檔案，並在每台建置機（包括 Windows）用同一把**：換了金鑰或遺失，已安裝的 Worker 會拒絕更新（更新卡片顯示「發行簽章驗證失敗」），只能手動重新安裝。`pnpm hub:doctor` 會對沒有簽章的安裝包發出警告。
+
+第 1 階段的安裝包沒有作業系統的程式碼簽章：macOS 第一次開啟時請在 Finder 對 App 按右鍵 →「打開」（Gatekeeper，較新的 macOS 要到「系統設定 → 隱私權與安全性」按「強制打開」）；Windows 出現 SmartScreen 時按「其他資訊」→「仍要執行」。macOS 每次更新後可能再跳出鑰匙圈授權提示，請留在那台機器前按「永遠允許」，否則 Worker 無法連線（會發出通知）。舊版 SmartSell Connector 的配對不會帶過來，要在新的 Worker 重新配對。
 
 Windows 安裝包只能在 Windows 機器上建置，步驟見第 4a 節。
 
@@ -187,7 +189,7 @@ Worker 每次心跳都回報自己的 CPU（`arch`），中樞依此在「有新
 ### 4a. Windows 安裝包（在 Win-C 建置一次）
 
 1. 在 Win-C 以系統管理員開啟 PowerShell，安裝：`winget install --id Git.Git -e`、`winget install --id OpenJS.NodeJS -e --version 24.*`，重新開啟 PowerShell 後 `corepack enable`。
-2. `git clone <repo> smartsell`、`cd smartsell`、`pnpm install --frozen-lockfile`。
+2. `git clone <repo> smartsell`、`cd smartsell`、`pnpm install --frozen-lockfile`。把中樞那台建置機的 `~/.smartsell/worker-release-key.pem` 複製到 Win-C（例如 `%USERPROFILE%\.smartsell\worker-release-key.pem`），讓兩個平台用同一把發行金鑰；不複製時 Win-C 會自己建立一把，Windows 的 Worker 之後就只認那一把。
 3. `pnpm worker:release --win`：產生 `dist\worker-release\SmartSell-Worker-<version>-win-x64.exe` 與 `latest-win-x64.json`（未簽章 NSIS，每位使用者安裝，不需要系統管理員）。第一次會下載對應版本的 Electron（安裝包一律使用 package.json 釘選的 Electron 版本，E16；本機沒有時在建置機上執行一次 `node node_modules/electron/install.js`）。
 4. 把這兩個檔案複製到中樞的 `<中樞資料夾>\worker-downloads\`（例如 `tailscale file cp dist\worker-release\* <hub>:`，再在中樞把它們搬進該資料夾）。中樞的「開始設定 → 下載 SmartSell Worker」就會列出 win-x64；`pnpm hub:doctor` 也會列出它的版本。
 5. 在 Win-C 執行安裝程式：SmartScreen 顯示「Windows 已保護您的電腦」時按「其他資訊」→「仍要執行」。安裝完成後 SmartSell Worker 會自動開啟。
