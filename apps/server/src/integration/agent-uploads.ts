@@ -430,7 +430,9 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
     if (free !== undefined && free < minFreeBytes + length) throw storageLow(free);
   }
   /** Claim chunks n..n+k-1 of an upload for one write, after any overlapping write finishes; the returned function releases them. */
-  async function claim(id: string, part: PartRange) {
+  async function claim(principal: UploadPrincipal, upload: string, part: PartRange) {
+    // Keyed by the person as well: someone else's connection cannot hold chunks of an upload it does not own.
+    const id = `${principal.workspaceId}/${principal.actorId}/${upload}`;
     for (;;) {
       const parts = writing.get(id) ?? new Set();
       const busy = [...parts].find(item => overlaps(item, part));
@@ -604,7 +606,7 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
         const digest = request.headers['x-part-sha256'];
         if (typeof digest !== 'string' || !hex64.test(digest)) throw invalidArguments('x-part-sha256 must be 64 lowercase hex characters.', [{ path: 'x-part-sha256', code: 'invalid_string' }]);
         const directory = directoryFor(id);
-        const release = await claim(id, { n, k: Math.max(1, Math.ceil(Number(length) / AGENT_UPLOAD_CHUNK_BYTES)) });
+        const release = await claim(principal, id, { n, k: Math.max(1, Math.ceil(Number(length) / AGENT_UPLOAD_CHUNK_BYTES)) });
         try {
           // Read after the claim, so a part that waited for an overlapping one sees what that one recorded.
           const { plan, received } = await inWorkspace(principal, false, ctx => {
@@ -669,7 +671,7 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
         const directory = directoryFor(uploadId);
         const whole = partFile(plan);
         // Parts still arriving through the relay API finish first; the whole file then replaces them.
-        const release = await claim(uploadId, plan);
+        const release = await claim(principal, uploadId, plan);
         try {
           await inWorkspace(principal, false, ctx => receivingSession(ctx, uploadId));
           // One use: a second PUT with this link is refused even while the first is still streaming.
