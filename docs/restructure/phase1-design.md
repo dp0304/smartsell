@@ -1504,6 +1504,10 @@ Python relay 凍結：新連線不再提供，既有連線可繼續使用；第 
    5. 刪除 staging 目錄。
    - 理由：儲存層把所有交易排成一列（§0 原則 8）。若在交易內複製 1 GB 或執行 60 秒的 ffprobe，所有 Worker 的心跳與 `jobs.go` 都會被卡住，Worker 會以為中樞停機而離線開跑（§5.7）。
 4. **清理：**`expires_at` 已過且狀態不是 `ready` 的 session，由排程每小時清理一次：刪除 staging 目錄，對應的 asset 標為 `failed`，通知主人 `upload_failed`。
+5. **暫存空間上限（安全審核 S4）：**
+   - 已記錄的分段互不重疊，所以一個 session 暫存的位元組不超過宣告的大小：同一個 `(n,k)` 重送會取代自己（續傳照樣冪等）；落在已收分段之內的分段直接回 `received`、不寫檔；涵蓋已收分段的分段取代它們（例如交接時兩個 relay 的分段大小不同）；只有部分重疊的分段回 409 `UPLOAD_PART_OVERLAP`（relay 會重讀狀態、只補缺的 chunk）。同一程序內，蓋到同一批 chunk 的寫入會排隊等前一個寫完。
+   - 每個工作區未完成上傳的宣告大小總和不超過 `SMARTSELL_UPLOAD_STAGING_QUOTA_BYTES`（預設 4 × 單檔上限），超過時建立新上傳回 413 `UPLOAD_QUOTA_EXCEEDED`。
+   - 以 `fs.statfs` 讀媒體目錄所在磁碟的剩餘空間：保留 `SMARTSELL_UPLOAD_MIN_FREE_BYTES`（預設 1 GiB）。新上傳需要兩倍宣告大小（分段加合併檔），每個分段與直傳需要自身大小；不夠時回 507 `UPLOAD_STORAGE_LOW`（直傳網址保留，可稍後重送）。已存在的 session 照樣可以續傳。
 
 ### 6.5 檔案落地與 ffprobe
 

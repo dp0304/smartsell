@@ -1,8 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readdir, readFile, rename, rm, stat, statfs } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +24,9 @@ const SESSION_TTL_MS = 24 * 3_600_000;
 /** media_upload returns within at most 50 s; a session that becomes ready later finished in the background (§6.3 step 9). */
 const BACKGROUND_AFTER_MS = 50_000;
 const ACTIVE_SESSION_LIMIT = 32;
+/** Defaults when the caller's config has no S4 limits (config.ts sets both for the real hosts). */
+const DEFAULT_MIN_FREE_BYTES = 1024 ** 3;
+const DEFAULT_QUOTA_UPLOADS = 4;
 const SESSION = 'media_upload_session';
 /** A direct upload link (no relay, E47) is good for one PUT within an hour; the hub keeps it in memory only. */
 const DIRECT_LINK_TTL_MS = 3_600_000;
@@ -55,7 +58,9 @@ export interface UploadCredentialService { authenticate(req: FastifyRequest): Pr
 export interface AgentUploadDeps {
   credentials: UploadCredentialService;
   media: Pick<MediaFiles, 'storage'>;
-  config: Pick<Config, 'mediaDirectory' | 'maxUploadBytes'>;
+  config: Pick<Config, 'mediaDirectory' | 'maxUploadBytes'> & Partial<Pick<Config, 'uploadStagingQuotaBytes' | 'uploadMinFreeBytes'>>;
+  /** Free bytes on the disk holding `path`, or undefined when unknown (tests); defaults to fs.statfs. */
+  diskFree?: (path: string) => Promise<number | undefined>;
   /** Probe override for tests (slow or missing ffprobe). */
   prepare?: PrepareOptions;
   /** Path of the built relay bundle served at GET /agent/relay.mjs. */
@@ -71,6 +76,22 @@ const problem = (status: number, code: string, message: string, details?: Data) 
 const invalidArguments = (message: string, issues: Data[]) => problem(422, 'INVALID_ARGUMENTS', message, { issues });
 const notFound = () => problem(404, 'MEDIA_NOT_FOUND', 'Unknown upload_id. Call media_upload again with the file path.');
 const sorted = (values: Iterable<number>) => [...new Set(values)].sort((a, b) => a - b);
+const overlaps = (a: { n: number; k: number }, b: { n: number; k: number }) => a.n < b.n + b.k && b.n < a.n + a.k;
+const UNFINISHED: readonly UploadStatus[] = ['receiving', 'assembling', 'processing'];
+const storageLow = (free: number) => problem(507, 'UPLOAD_STORAGE_LOW', `The hub is low on disk space (${free} bytes free); it accepts no upload bytes until space is freed.`,
+  { free_bytes: free, owner_message: '中樞磁碟空間不足，已暫停接收上傳。請清出空間或刪除已發布的舊媒體後再試。' });
+
+/** Free bytes on the file system that holds `path` (its nearest existing ancestor); undefined when the platform cannot tell. */
+export async function diskFreeBytes(path: string): Promise<number | undefined> {
+  for (let directory = path; ; directory = dirname(directory)) {
+    try {
+      const info = await statfs(directory);
+      return Number(info.bavail) * Number(info.bsize);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || dirname(directory) === directory) return undefined;
+    }
+  }
+}
 
 export function stagingDirectory(mediaDirectory: string, uploadId: string) {
   if (!uuid.test(uploadId)) throw notFound();
@@ -218,7 +239,14 @@ function partPlan(session: MediaUploadSession, n: number, length: number) {
 }
 
 // ---------- Session writes (each one short; no IO) ----------
-function createOrResume(ctx: Context, principal: UploadPrincipal, input: ReturnType<typeof parseCreate>) {
+interface CreateLimits {
+  /** The declared bytes of this workspace's unfinished uploads may not exceed this (S4). */
+  quotaBytes: number;
+  /** Free disk measured just before the transaction, and the reserve to keep; a new session needs room for its parts and the assembled copy. */
+  freeBytes: number | undefined; minFreeBytes: number;
+}
+
+function createOrResume(ctx: Context, principal: UploadPrincipal, input: ReturnType<typeof parseCreate>, limits: CreateLimits) {
   const chunks = Math.ceil(input.bytes / AGENT_UPLOAD_CHUNK_BYTES);
   const base = { chunk_bytes: AGENT_UPLOAD_CHUNK_BYTES, chunks };
   // Dedupe only against owned, ready assets in this workspace, so a brand's licensed asset is never handed back (§3.8).
@@ -236,14 +264,25 @@ function createOrResume(ctx: Context, principal: UploadPrincipal, input: ReturnT
   const sessions = ctx.list(SESSION) as MediaUploadSession[];
   let existing = sessions.find(row => row.actor_id === ctx.actorId && row.sha256 === input.sha256 && row.bytes === input.bytes &&
     (row.status === 'receiving' || row.status === 'assembling' || row.status === 'processing'));
-  if (existing && existing.status === 'receiving' && expired(existing, now)) {
+  let expiredId: string | undefined;
+  if (existing && existing.status === 'receiving' && expired(existing, now) && !activeJobs.has(existing.id)) {
     markFailed(ctx, existing, { code: 'UPLOAD_EXPIRED', message: 'The upload did not finish within 24 hours' });
+    // Its staged parts are removed after the transaction (the caller does the IO).
+    expiredId = existing.id;
     existing = undefined;
   }
-  if (existing) return { created: false, view: sessionView(ctx, existing) };
-  if (sessions.filter(row => row.status === 'receiving' && !expired(row, now)).length >= ACTIVE_SESSION_LIMIT) {
+  if (existing) return { created: false, expiredId, view: sessionView(ctx, existing) };
+  const live = sessions.filter(row => UNFINISHED.includes(row.status) && !(row.status === 'receiving' && expired(row, now)));
+  if (live.filter(row => row.status === 'receiving').length >= ACTIVE_SESSION_LIMIT) {
     throw problem(429, 'UPLOAD_LIMIT', 'Too many uploads are in progress. Wait for one to finish.');
   }
+  // A session never stages more than its declared bytes, so the declared sizes bound this workspace's staging disk (S4).
+  const inUse = live.reduce((sum, row) => sum + row.bytes, 0);
+  if (inUse + input.bytes > limits.quotaBytes) {
+    throw problem(413, 'UPLOAD_QUOTA_EXCEEDED', `Unfinished uploads in this workspace already hold ${inUse} of ${limits.quotaBytes} bytes; this file needs ${input.bytes}. Finish or abort one first.`,
+      { quota_bytes: limits.quotaBytes, in_use_bytes: inUse, owner_message: '這個工作區進行中的上傳已用滿暫存空間。請等其他上傳完成，或取消不需要的上傳後再試。' });
+  }
+  if (limits.freeBytes !== undefined && limits.freeBytes < limits.minFreeBytes + 2 * input.bytes) throw storageLow(limits.freeBytes);
   const kind = input.mime.startsWith('video/') ? 'video' : 'image';
   const by = { created_by_type: 'agent', created_by_id: ctx.actorId };
   // media_id exists from the first moment, so post_schedule can use it while bytes are still arriving (§6.4 step 1).
@@ -258,7 +297,7 @@ function createOrResume(ctx: Context, principal: UploadPrincipal, input: ReturnT
     ready_at: null, failed_at: null, probe: null }) as MediaUploadSession;
   ctx.emit('asset.asset.created', { asset_id: asset.id, brand_id: null, origin: 'agent_upload' });
   ctx.emit('media.upload.started', { upload_id: session.id, media_id: asset.id, filename: input.filename, bytes: input.bytes, actor_id: ctx.actorId });
-  return { created: true, view: sessionView(ctx, session) };
+  return { created: true, expiredId, view: sessionView(ctx, session) };
 }
 
 function receivingSession(ctx: Context, id: string) {
@@ -271,12 +310,35 @@ function receivingSession(ctx: Context, id: string) {
   return session;
 }
 
-function recordPart(ctx: Context, id: string, part: { n: number; k: number }) {
+type PartRange = { n: number; k: number };
+const sameRange = (a: PartRange, b: PartRange) => a.n === b.n && a.k === b.k;
+const partFile = (part: PartRange) => `${part.n}-${part.k}.part`;
+
+/**
+ * Where a new part goes among the recorded ones, so recorded parts never overlap and a session stages at most its declared
+ * bytes (S4). The same (n, k) again replaces itself (a resend is idempotent); a part inside one already recorded adds
+ * nothing; a part that covers recorded parts replaces them (two relays with different part sizes, for example a hand-off).
+ * A part that only partly overlaps another is refused: keeping both would let one upload stage many times its size.
+ */
+function placePart(session: MediaUploadSession, part: PartRange) {
+  const others = session.parts.filter(item => !sameRange(item, part) && overlaps(item, part));
+  if (others.some(item => item.n <= part.n && item.n + item.k >= part.n + part.k)) return { redundant: true as const, superseded: [] as PartRange[] };
+  const partial = others.find(item => item.n < part.n || item.n + item.k > part.n + part.k);
+  if (partial) {
+    throw problem(409, 'UPLOAD_PART_OVERLAP', `Chunks ${part.n}..${part.n + part.k - 1} partly overlap chunks ${partial.n}..${partial.n + partial.k - 1}, which already arrived. Send only the missing chunks.`,
+      { received: session.received });
+  }
+  return { redundant: false as const, superseded: others };
+}
+
+function recordPart(ctx: Context, id: string, part: PartRange) {
   const session = receivingSession(ctx, id);
-  const parts = [...session.parts.filter(item => item.n !== part.n || item.k !== part.k), part];
+  const place = placePart(session, part);
+  if (place.redundant) return { received: session.received, redundant: true, superseded: [] as PartRange[] };
+  const parts = [...session.parts.filter(item => !sameRange(item, part) && !place.superseded.includes(item)), { n: part.n, k: part.k }];
   const received = sorted([...session.received, ...Array.from({ length: part.k }, (_, index) => part.n + index)]);
   ctx.update(SESSION, id, { parts, received });
-  return received;
+  return { received, redundant: false, superseded: place.superseded };
 }
 
 // ---------- File IO (always outside transactions) ----------
@@ -350,8 +412,38 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
   let queue: Promise<void> = Promise.resolve();
   let bundle: { mtimeMs: number; bytes: Buffer; etag: string } | undefined;
   /** sha256(link token) → the upload it may fill. In memory: a hub restart voids the links, and media_upload hands out new ones. */
-  const directLinks = new Map<string, { uploadId: string; principal: UploadPrincipal; expiresAt: number }>();
+  const directLinks = new Map<string, { uploadId: string; principal: UploadPrincipal; expiresAt: number; inUse?: boolean }>();
   const tokenKey = (token: string) => createHash('sha256').update(token).digest('hex');
+  const quotaBytes = config.uploadStagingQuotaBytes ?? DEFAULT_QUOTA_UPLOADS * config.maxUploadBytes;
+  const minFreeBytes = config.uploadMinFreeBytes ?? DEFAULT_MIN_FREE_BYTES;
+  const diskFree = deps.diskFree ?? diskFreeBytes;
+  /**
+   * Chunk ranges this process is writing to staging, per upload. A write over chunks another request is still writing waits
+   * for it, so two copies of the same chunks are never staged at once and the second one is then placed (or skipped) against
+   * what the first recorded (S4).
+   */
+  const writing = new Map<string, Set<PartRange & { done: Promise<void> }>>();
+
+  const createLimits = async (): Promise<CreateLimits> => ({ quotaBytes, minFreeBytes, freeBytes: await diskFree(config.mediaDirectory) });
+  async function ensureRoom(length: number) {
+    const free = await diskFree(config.mediaDirectory);
+    if (free !== undefined && free < minFreeBytes + length) throw storageLow(free);
+  }
+  /** Claim chunks n..n+k-1 of an upload for one write, after any overlapping write finishes; the returned function releases them. */
+  async function claim(id: string, part: PartRange) {
+    for (;;) {
+      const parts = writing.get(id) ?? new Set();
+      const busy = [...parts].find(item => overlaps(item, part));
+      if (busy) { await busy.done; continue; }
+      let release!: () => void;
+      const entry = { n: part.n, k: part.k, done: new Promise<void>(resolve => { release = resolve; }) };
+      parts.add(entry);
+      writing.set(id, parts);
+      return () => { parts.delete(entry); if (!parts.size && writing.get(id) === parts) writing.delete(id); release(); };
+    }
+  }
+  /** Staging of a session that createOrResume just expired; removed outside the transaction. */
+  const dropStaging = (id: string | undefined) => { if (id) void rm(directoryFor(id), { recursive: true, force: true }).catch(() => undefined); };
 
   async function principalFor(request: FastifyRequest) {
     let principal: UploadPrincipal | undefined;
@@ -443,7 +535,9 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
    */
   async function direct(principal: UploadPrincipal, body: Data, origin: string) {
     const input = parseCreate({ ...body, ...(body.mime === undefined && { mime: mimeFromFilename(body.filename) }) }, config.maxUploadBytes);
-    const result = await inWorkspace(principal, true, ctx => createOrResume(ctx, principal, input));
+    const limits = await createLimits();
+    const result = await inWorkspace(principal, true, ctx => createOrResume(ctx, principal, input, limits));
+    dropStaging(result.expiredId);
     const view = result.view;
     if (view.status === 'assembling' || view.status === 'processing') startFinish(principal, String(view.upload_id));
     return { ...view, upload: view.status === 'receiving' && view.upload_id ? issueLink(principal, view.upload_id, origin) : null };
@@ -483,7 +577,9 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
     router.post('/api/v1/agent/uploads', async (request, reply) => {
       const principal = await principalFor(request);
       const input = parseCreate(request.body, config.maxUploadBytes);
-      const result = await inWorkspace(principal, true, ctx => createOrResume(ctx, principal, input));
+      const limits = await createLimits();
+      const result = await inWorkspace(principal, true, ctx => createOrResume(ctx, principal, input, limits));
+      dropStaging(result.expiredId);
       if (result.view.status === 'assembling' || result.view.status === 'processing') startFinish(principal, String(result.view.upload_id));
       return reply.code(result.created ? 201 : 200).send(result.view);
     });
@@ -505,17 +601,32 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
         if (Number(length) > AGENT_UPLOAD_MAX_CHUNKS_PER_PART * AGENT_UPLOAD_CHUNK_BYTES) throw problem(413, 'UPLOAD_TOO_LARGE', 'A part carries at most 8 chunks of 1 MiB.');
         const digest = request.headers['x-part-sha256'];
         if (typeof digest !== 'string' || !hex64.test(digest)) throw invalidArguments('x-part-sha256 must be 64 lowercase hex characters.', [{ path: 'x-part-sha256', code: 'invalid_string' }]);
-        const plan = await inWorkspace(principal, false, ctx => partPlan(receivingSession(ctx, id), n, Number(length)));
-        consumed = true;
-        await writePart(directoryFor(id), plan, body, digest);
+        const directory = directoryFor(id);
+        const release = await claim(id, { n, k: Math.max(1, Math.ceil(Number(length) / AGENT_UPLOAD_CHUNK_BYTES)) });
         try {
-          const received = await inWorkspace(principal, true, ctx => recordPart(ctx, id, plan));
-          return { received };
-        } catch (error) {
-          // The session stopped receiving (aborted, expired) while this part was in flight: drop its staging files.
-          if (error instanceof Problem && (error.status === 409 || error.status === 410) && !jobs.has(id)) await rm(directoryFor(id), { recursive: true, force: true });
-          throw error;
-        }
+          // Read after the claim, so a part that waited for an overlapping one sees what that one recorded.
+          const { plan, received } = await inWorkspace(principal, false, ctx => {
+            const session = receivingSession(ctx, id);
+            const part = partPlan(session, n, Number(length));
+            return { plan: part, received: placePart(session, part).redundant ? session.received : undefined };
+          });
+          // Every chunk of this part already arrived in a larger part: nothing to store (the body is drained).
+          if (received) return { received };
+          await ensureRoom(plan.length);
+          consumed = true;
+          await writePart(directory, plan, body, digest);
+          try {
+            const result = await inWorkspace(principal, true, ctx => recordPart(ctx, id, plan));
+            for (const part of result.redundant ? [plan] : result.superseded) await rm(join(directory, partFile(part)), { force: true });
+            return { received: result.received };
+          } catch (error) {
+            // Another process recorded an overlapping part meanwhile: this part's file is not referenced, so drop it.
+            if (error instanceof Problem && error.code === 'UPLOAD_PART_OVERLAP') await rm(join(directory, partFile(plan)), { force: true });
+            // The session stopped receiving (aborted, expired) while this part was in flight: drop its staging files.
+            else if (error instanceof Problem && (error.status === 409 || error.status === 410) && !jobs.has(id)) await rm(directory, { recursive: true, force: true });
+            throw error;
+          }
+        } finally { release(); }
       } finally {
         // Drain an unread body so the client receives the error instead of a reset connection.
         if (!consumed && body instanceof Readable && !body.destroyed) body.resume();
@@ -526,6 +637,7 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
     router.put<{ Params: { token: string } }>(`${DIRECT_PATH}:token`, { bodyLimit: config.maxUploadBytes + 64 * 1024 }, async (request, reply) => {
       const body = request.body as Readable | undefined;
       let consumed = false;
+      let inUse: { inUse?: boolean } | undefined;
       try {
         const key = tokenKey(request.params.token);
         const link = directLinks.get(key);
@@ -539,6 +651,9 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
         }
         const length = request.headers['content-length'];
         if (typeof length !== 'string' || !/^\d{1,13}$/.test(length)) throw problem(411, 'LENGTH_REQUIRED', 'Content-Length is required (curl -T sends it).');
+        if (link.inUse) throw problem(409, 'UPLOAD_LINK_IN_USE', 'This upload link is already being used by another PUT. Wait for it, or call media_upload again.');
+        link.inUse = true;
+        inUse = link;
         const { uploadId, principal } = link;
         const plan = await inWorkspace(principal, false, ctx => {
           const session = receivingSession(ctx, uploadId);
@@ -547,24 +662,38 @@ export function registerAgentUploads(app: FastifyInstance, deps: AgentUploadDeps
           }
           return { n: 0, k: session.chunks, length: session.bytes, sha256: session.sha256, mediaId: session.media_id };
         });
-        // One use: a second PUT with this link is refused even while the first is still streaming.
-        directLinks.delete(key);
-        consumed = true;
-        try { await writePart(directoryFor(uploadId), plan, body, plan.sha256); }
-        catch (error) {
-          if (error instanceof Problem && error.code === 'UPLOAD_PART_HASH_MISMATCH') {
-            throw problem(422, 'UPLOAD_HASH_MISMATCH', 'The file does not match the sha256 given to media_upload. Recompute it (shasum -a 256 / certutil -hashfile … SHA256) and call media_upload again.');
+        // Low disk keeps the link, so the same PUT can be retried later.
+        await ensureRoom(plan.length);
+        const directory = directoryFor(uploadId);
+        const whole = partFile(plan);
+        // Parts still arriving through the relay API finish first; the whole file then replaces them.
+        const release = await claim(uploadId, plan);
+        try {
+          await inWorkspace(principal, false, ctx => receivingSession(ctx, uploadId));
+          // One use: a second PUT with this link is refused even while the first is still streaming.
+          directLinks.delete(key);
+          consumed = true;
+          try { await writePart(directory, plan, body, plan.sha256); }
+          catch (error) {
+            if (error instanceof Problem && error.code === 'UPLOAD_PART_HASH_MISMATCH') {
+              throw problem(422, 'UPLOAD_HASH_MISMATCH', 'The file does not match the sha256 given to media_upload. Recompute it (shasum -a 256 / certutil -hashfile … SHA256) and call media_upload again.');
+            }
+            throw error;
           }
-          throw error;
+          await inWorkspace(principal, true, ctx => {
+            const session = receivingSession(ctx, uploadId);
+            ctx.update(SESSION, uploadId, { parts: [{ n: 0, k: session.chunks }], received: Array.from({ length: session.chunks }, (_, index) => index), status: 'assembling' });
+            ctx.update('asset', session.media_id, { status: 'processing' });
+          });
+        } finally { release(); }
+        // The whole file supersedes any parts sent earlier through the relay API; free their disk now.
+        for (const name of await readdir(directory).catch(() => [] as string[])) {
+          if (name.endsWith('.part') && name !== whole) await rm(join(directory, name), { force: true });
         }
-        await inWorkspace(principal, true, ctx => {
-          const session = receivingSession(ctx, uploadId);
-          ctx.update(SESSION, uploadId, { parts: [{ n: 0, k: session.chunks }], received: Array.from({ length: session.chunks }, (_, index) => index), status: 'assembling' });
-          ctx.update('asset', session.media_id, { status: 'processing' });
-        });
         startFinish(principal, uploadId);
         return reply.code(202).send({ status: 'processing', media_id: plan.mediaId, upload_id: uploadId });
       } finally {
+        if (inUse && !consumed) inUse.inUse = false;
         if (!consumed && body instanceof Readable && !body.destroyed) body.resume();
       }
     });

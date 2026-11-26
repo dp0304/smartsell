@@ -79,6 +79,15 @@ function maxUploadBytes(env: NodeJS.ProcessEnv, hub: boolean) {
   return value;
 }
 
+/** Optional byte-count setting (S4): a whole number of bytes between `min` and `max`, or the default when unset. */
+function byteSetting(env: NodeJS.ProcessEnv, name: string, fallback: number, min: number, max: number) {
+  const raw = env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(`${name} must be a whole number of bytes between ${min} and ${max}`);
+  return value;
+}
+
 /** Hub-mode validation (§2.3). Messages are owner-facing; they are printed and written to status.json. */
 function validateHub(env: NodeJS.ProcessEnv, publicUrl: URL, host: string, selected: string, secret: string, setupToken: string | undefined) {
   const testHttp = env.NODE_ENV === 'test' && env.SMARTSELL_HUB_TEST_HTTP === '1';
@@ -181,6 +190,7 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     publicUrl.protocol === 'http:' && loopbackHost(publicUrl.hostname);
   const localSetupOrigins = privateLoopback && env.SMARTSELL_LOCAL_SETUP === '1' ? new Set([publicUrl.origin]) : undefined;
   const hubDirectory = hub ? resolve(env.SMARTSELL_HUB_DIR || defaultHubDir()) : undefined;
+  const uploadLimit = maxUploadBytes(env, hub);
   const statePath = resolve(env.SMARTSELL_DATA_FILE ?? (hubDirectory ? join(hubDirectory, 'smartsell.sqlite') : resolve(root, '.local/smartsell.sqlite')));
   return {
     mode, hub,
@@ -196,7 +206,13 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     kernelStatePath: resolve(env.SMARTSELL_DATA_FILE ?? (hubDirectory ? join(hubDirectory, 'smartsell.json') : resolve(root, '.local/smartsell.json'))),
     /** Media follows the data file in every mode, independent of the working directory (§6.7). */
     mediaDirectory: resolve(env.MEDIA_DIRECTORY ?? join(dirname(statePath), 'media')),
-    maxUploadBytes: maxUploadBytes(env, hub),
+    maxUploadBytes: uploadLimit,
+    /**
+     * Agent uploads (§6.4, S4): the declared bytes of one workspace's unfinished uploads may not exceed this, and the hub
+     * stops taking new uploads and parts while the media disk has less than `uploadMinFreeBytes` left after them.
+     */
+    uploadStagingQuotaBytes: byteSetting(env, 'SMARTSELL_UPLOAD_STAGING_QUOTA_BYTES', 4 * uploadLimit, uploadLimit, 1024 * GiB),
+    uploadMinFreeBytes: byteSetting(env, 'SMARTSELL_UPLOAD_MIN_FREE_BYTES', GiB, 0, 1024 * GiB),
     webDistDirectory: hub ? resolve(env.SMARTSELL_WEB_DIST ?? resolve(root, 'apps/web/dist')) : undefined,
     // Hub: trust only the loopback hop (`tailscale serve`), so request.ip is the tailnet client serve put last in
     // X-Forwarded-For; a tailnet peer cannot spoof it. A process on the hub machine connecting to 127.0.0.1 directly can
