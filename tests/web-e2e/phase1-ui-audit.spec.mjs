@@ -35,3 +35,26 @@ test('U2: sign-in, first-run setup and the signed-out error page fit a phone, wi
     await context.close();
   }
 });
+
+test('U6: Settings and the error page hide the legacy modules until 顯示其他模組 is on', async ({ page, dev }) => {
+  const ws = await ownerWorkspace(page, dev);
+  await page.goto(`${ws.app}/settings`);
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { level: 1, name: '設定', exact: true })).toBeVisible();
+  await expect(main.getByRole('heading', { level: 2, name: '暫停發布' })).toBeVisible();
+  for (const name of ['品牌與市場', '社群帳號']) await expect(main.getByRole('heading', { level: 2, name, exact: true })).toHaveCount(0);
+  await expect(main.getByRole('link', { name: '發文帳號與機器', exact: true })).toHaveCount(0);
+  await expect(main.getByRole('button', { name: '登記自有帳號' })).toHaveCount(0);
+  const summary = main.getByRole('region', { name: '設定概況' });
+  await expect(summary.getByRole('link')).toHaveText([/緊急暫停發布/, /Agent/]);
+  await main.getByRole('checkbox', { name: /^顯示其他模組/ }).check();
+  for (const name of ['品牌與市場', '社群帳號']) await expect(main.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
+  await expect(main.getByRole('link', { name: '發文帳號與機器', exact: true })).toBeVisible();
+  await main.getByRole('checkbox', { name: /^顯示其他模組/ }).uncheck();
+
+  // The hub does not serve /compat/workbench, so the signed-out error page does not link to it.
+  await page.route('**/api/v1/session', route => route.abort());
+  await page.goto(`${dev.origin}/somewhere`);
+  await expect(page.locator('.entry-error')).toBeVisible();
+  await expect(page.getByRole('link', { name: '相容版工作台' })).toHaveCount(0);
+});
