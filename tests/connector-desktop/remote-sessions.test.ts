@@ -3,7 +3,7 @@
 // write is read back on the next snapshot. Sites the owner did not allow are refused, also when a link leads there.
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
+import { createServer, type RequestListener, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
@@ -13,7 +13,7 @@ import type { ChromeCdpPage } from '../../apps/connector-desktop/src/drivers/cdp
 import { RemoteError, RemoteSessions, siteAllowed, type RemoteSnapshot } from '../../apps/connector-desktop/src/remote/sessions.ts';
 import { launchOwnerChrome, ownChromeUnavailable, type OwnerChrome } from './own-chrome-browser.ts';
 
-function listen(handler: Parameters<typeof createServer>[0]) {
+function listen(handler: RequestListener) {
   const server = createServer(handler).listen(0, '127.0.0.1');
   return new Promise<{ server: Server; origin: string }>(resolve => server.once('listening', () => {
     const address = server.address();

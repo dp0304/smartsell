@@ -98,7 +98,7 @@ function closeUnusedSocketsOnShutdown(app: FastifyInstance) {
 
 export function buildApp({ store, registry, extensions, secret, operationApi, traffic, roles, commandIdentityKey, origin, workerDownloadDirectory,
   trustProxy = false, requestTimeoutMs = 30_000, notFound: delegateNotFound, logger = false, ...options }: Options) {
-  const app = Fastify({ logger, disableRequestLogging: true, bodyLimit: 1024 * 1024, requestTimeout: requestTimeoutMs, requestIdHeader: false,
+  const app = Fastify({ logger, logController: new Fastify.LogController({ disableRequestLogging: true }), bodyLimit: 1024 * 1024, requestTimeout: requestTimeoutMs, requestIdHeader: false,
     trustProxy, genReqId: () => randomUUID() });
   const identity = commandIdentityKey && commandIdentity(store, commandIdentityKey);
   const csrfSecret = operationApi?.config.secret ?? secret;
