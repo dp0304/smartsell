@@ -273,6 +273,12 @@ async function runResident(electron: typeof Electron, options: BootstrapOptions,
       userData, platform, version, hostname: host, vault, notifier, power, posture, autostart, settings, bundledClip,
       openExternal: url => shell.openExternal(url), onChange, log: log.write,
       extension: { source: paths.extension, installDir: extensionInstallDir },
+      encodePhone: async png => {
+        const image = nativeImage.createFromBuffer(png);
+        const { width } = image.getSize();
+        const scaled = width > 720 ? image.resize({ width: 720, quality: 'good' }) : image;
+        return { mime: 'image/jpeg', bytes: scaled.toJPEG(65), width: scaled.getSize().width };
+      },
       updates: (pairing, runtime) => new UpdateManager({
         currentVersion: version, platform, hubOrigin: pairing.origin, dir: join(userData, 'updates'), notifier, onChange, log: log.write,
         platformKey: workerPlatform(platform, process.arch),

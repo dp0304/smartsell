@@ -4,7 +4,7 @@
 import {
   DeviceHttpError, DeviceNetworkError, DeviceProtocolClient, type ChannelSelection, type ChannelRegistration, type DeviceExchange,
 } from '../../../connector/src/device-client.ts';
-import type { ClaimRequest, ClaimResponse, GoRequest, GoResponse, HeartbeatV2Request, HeartbeatV2Response, JobReport } from './contracts.ts';
+import type { ClaimRequest, ClaimResponse, GoRequest, GoResponse, HeartbeatV2Request, HeartbeatV2Response, JobReport, RemoteNextRequest, RemoteNextResponse, RemoteResultRequest } from './contracts.ts';
 import { parseServerTime, type HubClock } from './clock.ts';
 
 export type HubErrorKind =
@@ -67,6 +67,9 @@ export interface HubApi {
   uploadEvidence(jobId: string, fence: number, bytes: Uint8Array, mime: 'image/jpeg' | 'image/png'): Promise<void>;
   driverConfig(): Promise<Buffer>;
   registerChannels(selections: ChannelSelection[]): Promise<ChannelRegistration[] | unknown>;
+  /** E50 remote control: long poll for the next command, then the answer. Optional on test fakes. */
+  remoteNext?(body: RemoteNextRequest): Promise<RemoteNextResponse>;
+  remoteResult?(body: RemoteResultRequest): Promise<{ accepted: boolean }>;
 }
 
 export class HubProtocol implements HubApi {
@@ -119,6 +122,12 @@ export class HubProtocol implements HubApi {
   }
   driverConfig() {
     return this.#exchange(() => this.client.driverConfig(this.timeouts.request));
+  }
+  remoteNext(body: RemoteNextRequest) {
+    return this.#exchange(() => this.client.remoteNext(body, body.wait_ms + 15_000), data => data?.server_time);
+  }
+  remoteResult(body: RemoteResultRequest) {
+    return this.#exchange(() => this.client.remoteResult(body, this.timeouts.request * 3));
   }
   async registerChannels(selections: ChannelSelection[]) {
     const data = await this.#exchange(() => this.client.registerChannels(selections, this.timeouts.request));

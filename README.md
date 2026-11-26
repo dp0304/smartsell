@@ -50,11 +50,11 @@ git clone https://gitee.com/yueshutech/smartsell.git   # 中國大陸可用 Gite
 7. **確認連上**：完整重開你的 AI 助手，請它呼叫一次 SmartSell 的工具（例如 `smartsell_overview`）。回到網頁，「開始設定」的 Agent 步驟會顯示「已有 Agent 透過 MCP 呼叫過 SmartSell。」。
 8. **直接交代工作**：例如「把 ~/Movies/video.mp4 明天 9:00 發到 Mac-B 的 X 和 Win-C 的 TikTok，文案：『新路亞實測』」。Agent 會回報每則貼文的當地時間、機器、狀態與網址；你沒給文案時，它會先問你要不要不帶文字直接發。核准、代按發布的風險、恢復暫停與確認結果都留給你在網頁上做。
 
-Agent 看得到的工具只有 11 個：`smartsell_overview`、`machines_list`、`channels_list`、`channel_check`、`media_upload`、`post_schedule`、`post_update`、`posts_list`、`post_get`、`task_get`、`publishing_pause`。媒體檔一律走 API、不經過模型：經 relay 時由本機的 relay 分段上傳（SHA-256 校驗、可續傳）；用戶端直接以 HTTP 連中樞時，`media_upload` 以檔名、大小與 SHA-256 換一個單次有效的上傳網址，由 Agent 在本機執行一行 `curl` 上傳。不需要修改 `AGENTS.md`；想把規則放進專案時，用 [Agent 工作指南](docs/agent-guide.md) 的第 1 階段一節。
+Agent 看得到 11 個發文工具：`smartsell_overview`、`machines_list`、`channels_list`、`channel_check`、`media_upload`、`post_schedule`、`post_update`、`posts_list`、`post_get`、`task_get`、`publishing_pause`；另有 3 個遙控工具 `browser_open`、`browser_act`、`phone_act`，只在你為某台機器開啟遙控、列出允許的網站或 App 後才能用，讓 Agent 在那台機器的你自己的 Chrome 或 Android 手機上一步一步操作（例如電商後台），改東西前要先問你。媒體檔一律走 API、不經過模型：經 relay 時由本機的 relay 分段上傳（SHA-256 校驗、可續傳）；用戶端直接以 HTTP 連中樞時，`media_upload` 以檔名、大小與 SHA-256 換一個單次有效的上傳網址，由 Agent 在本機執行一行 `curl` 上傳。不需要修改 `AGENTS.md`；想把規則放進專案時，用 [Agent 工作指南](docs/agent-guide.md) 的第 1 階段一節。
 
 ### 選用：在專案安裝 Agent Skills
 
-Worker 安裝包附有三份 Skills，只使用上面 11 個工具：`smartsell-video-publish`（上傳、排程、查回）、`smartsell-data-collection`（帳號狀態與 SmartSell 的貼文；第 1 階段不讀平台成效）、`smartsell-product-listing`（如實說明第 1 階段不管理商品與店鋪）。使用 Node.js 24，在 SmartSell 原始碼根目錄執行以下指令，裝到指定專案的 `.claude/skills/` 與 `.agents/skills/`；同名的既有 Skills 會保留。
+Worker 安裝包附有三份 Skills，只使用上面的發文工具：`smartsell-video-publish`（上傳、排程、查回）、`smartsell-data-collection`（帳號狀態與 SmartSell 的貼文；第 1 階段不讀平台成效）、`smartsell-product-listing`（如實說明第 1 階段不管理商品與店鋪）。使用 Node.js 24，在 SmartSell 原始碼根目錄執行以下指令，裝到指定專案的 `.claude/skills/` 與 `.agents/skills/`；同名的既有 Skills 會保留。
 
 ```sh
 pnpm --filter @smartsell/connector-desktop build

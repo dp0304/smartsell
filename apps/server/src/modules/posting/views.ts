@@ -1,4 +1,6 @@
-import { type ChannelSummary, type Context, type Row } from '@smartsell/contracts';
+import { REMOTE_CONTROL_OFF, type ChannelSummary, type Context, type Row } from '@smartsell/contracts';
+import { remoteBroker } from '../remote/broker.js';
+import { remoteSettings } from '../remote/settings.js';
 import { locate } from '../../../../../packages/domain/src/publishing/index.js';
 import { activeMachines, channelDevice, hubChannels, localText, workspaceZone } from '../workspace/views/hub-model.js';
 import { channelSummaries } from '../workspace/views/channels.js';
@@ -93,8 +95,22 @@ export function machinesList(ctx: Context, includeOffline: boolean) {
       channels: machine.channels.map(channel => ({ channel_id: channel.social_account_id, provider: mcpProvider(channel.provider), handle: atHandle(channel.handle), login: channel.login })),
       queue: machine.queue,
       next_job: machine.next_job ? { post_id: machine.next_job.post_id, local_time: machine.next_job.local_time, provider: mcpProvider(machine.next_job.provider) } : null,
+      remote: remoteView(ctx, machine.machine_id),
       web_url: machine.web_url,
     })),
+  };
+}
+
+/** E50: whether browser_open / phone_act can work on this machine right now, and on what. */
+function remoteView(ctx: Context, machineId: string) {
+  const device = ctx.list('connector_device').find(row => row.id === machineId);
+  const settings = device ? remoteSettings(device) : REMOTE_CONTROL_OFF;
+  const broker = remoteBroker();
+  const listening = broker.listening(ctx.workspaceId, machineId);
+  const capabilities = broker.capabilities(ctx.workspaceId, machineId);
+  return {
+    browser: settings.browser.enabled ? { allowed_sites: settings.browser.sites, ready: listening && capabilities?.browser === true } : null,
+    phone: settings.phone.enabled ? { allowed_apps: settings.phone.apps, phones: listening ? capabilities?.phones ?? [] : [] } : null,
   };
 }
 

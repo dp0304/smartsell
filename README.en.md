@@ -37,7 +37,7 @@ You need Node.js 24 and pnpm 10. The hub and the Worker installers are built fro
 6. **Connect your AI assistant** with the laptop mode of the Worker App, or the Node relay (`curl -fsSL https://<hub>/agent/relay.mjs -o ~/.smartsell/relay.mjs`, then `codex mcp add smartsell -- node ~/.smartsell/relay.mjs --hub https://<hub> --token-file ~/.smartsell/token`, or `claude mcp add --scope user smartsell -- …` with the same arguments; WorkBuddy takes the same command as a stdio MCP entry).
 7. **Ask** it to post. It reports each post's local time, machine, status and URL; approvals, risk confirmations, resuming and confirming results stay with you in the web app.
 
-The agent sees 11 tools (`smartsell_overview`, `machines_list`, `channels_list`, `channel_check`, `media_upload`, `post_schedule`, `post_update`, `posts_list`, `post_get`, `task_get`, `publishing_pause`). Media never passes through the model: the relay uploads it in checked, resumable chunks, or a direct client runs one `curl` against a single-use upload URL.
+The agent sees 11 posting tools (`smartsell_overview`, `machines_list`, `channels_list`, `channel_check`, `media_upload`, `post_schedule`, `post_update`, `posts_list`, `post_get`, `task_get`, `publishing_pause`) and 3 remote-control tools (`browser_open`, `browser_act`, `phone_act`) that work only after you turn remote control on for a machine and list the allowed sites or apps: the agent then operates that machine's own Chrome or Android phone step by step (a store backend, say), and asks you before changing anything. Media never passes through the model: the relay uploads it in checked, resumable chunks, or a direct client runs one `curl` against a single-use upload URL.
 
 ## Develop
 

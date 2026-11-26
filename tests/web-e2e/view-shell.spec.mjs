@@ -17,7 +17,7 @@ const day = 86_400_000;
 const agentLabel = 'E2E Claude';
 // Phase 1 lists only the 11 hub tools to a connection (§7.1); older tools stay callable by name (§7.4).
 const HUB_TOOLS = ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
-  'posts_list', 'post_get', 'task_get', 'publishing_pause'];
+  'posts_list', 'post_get', 'task_get', 'publishing_pause', 'browser_open', 'browser_act', 'phone_act'];
 const names = { brand: '晨光保養', store: '晨光官方商店', product: '夏日防曬乳', plan: '夏季防曬上市計劃', content: '防曬乳開箱貼文', account: '晨光粉絲專頁' };
 
 /** First-time setup through REST; the browser context keeps the owner session cookie. */

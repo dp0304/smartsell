@@ -37,6 +37,8 @@ const caption = (described = false) => z.object({
 const provider = () => z.enum(MCP_PROVIDERS);
 const postStatus = () => z.enum(POST_STATUSES);
 const date = () => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "must be 'YYYY-MM-DD'" });
+const elementRef = () => z.string().regex(/^e\d{1,4}$/, { error: 'must be a ref like e12 from the latest snapshot' });
+const phoneRef = () => z.string().regex(/^p\d{1,4}$/, { error: 'must be a ref like p7 from the latest phone snapshot' });
 
 export const toolSchemas = {
   smartsell_overview: z.object({}).strict(),
@@ -89,6 +91,38 @@ export const toolSchemas = {
     id: uuid("channel_id or machine_id; omit when scope is 'all'").optional(),
     reason: z.string().min(1).max(500),
   }).strict(),
+  // E50: remote control of a machine's Chrome (own-Chrome mode) and Android phone, on sites and apps the owner allowed.
+  browser_open: z.object({
+    machine_id: uuid('From machines_list or smartsell_overview; that machine must have browser remote control on.'),
+    url: z.string().url().max(2000).describe('An https page on a site the owner allowed for that machine.'),
+  }).strict(),
+  browser_act: z.object({
+    session_id: z.string().regex(UUID_PATTERN, { error: 'must be the session_id from browser_open' }),
+    action: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('snapshot') }).strict(),
+      z.object({ kind: z.literal('click'), ref: elementRef().optional(), x: z.number().min(0).max(20000).optional(), y: z.number().min(0).max(20000).optional() }).strict(),
+      z.object({ kind: z.literal('type'), text: z.string().max(5000), ref: elementRef().optional(), submit: z.boolean().optional() }).strict(),
+      z.object({ kind: z.literal('press'), key: z.enum(['Enter', 'Escape', 'Backspace', 'Tab', 'ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'End', 'Home', 'PageDown', 'PageUp', 'Space']) }).strict(),
+      z.object({ kind: z.literal('scroll'), dy: z.number().min(-5000).max(5000), dx: z.number().min(-5000).max(5000).optional() }).strict(),
+      z.object({ kind: z.literal('back') }).strict(),
+      z.object({ kind: z.literal('wait'), ms: z.number().int().min(0).max(10000) }).strict(),
+      z.object({ kind: z.literal('close') }).strict(),
+    ]),
+  }).strict(),
+  phone_act: z.object({
+    machine_id: uuid('The machine the phone is plugged into; it must have phone remote control on.'),
+    serial: z.string().regex(/^[\w.:-]{1,128}$/).describe('Only when that machine has several phones (from the snapshot).').optional(),
+    action: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('snapshot') }).strict(),
+      z.object({ kind: z.literal('tap'), ref: phoneRef().optional(), x: z.number().min(0).max(10000).optional(), y: z.number().min(0).max(10000).optional() }).strict(),
+      z.object({ kind: z.literal('long_press'), ref: phoneRef().optional(), x: z.number().min(0).max(10000).optional(), y: z.number().min(0).max(10000).optional(), ms: z.number().int().min(300).max(5000).optional() }).strict(),
+      z.object({ kind: z.literal('swipe'), from: z.tuple([z.number().min(0), z.number().min(0)]), to: z.tuple([z.number().min(0), z.number().min(0)]), ms: z.number().int().min(100).max(3000).optional() }).strict(),
+      z.object({ kind: z.literal('type'), text: z.string().max(2000), ref: phoneRef().optional() }).strict(),
+      z.object({ kind: z.literal('key'), key: z.enum(['back', 'home', 'enter', 'delete', 'app_switch', 'search']) }).strict(),
+      z.object({ kind: z.literal('launch'), package: z.string().regex(/^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/).describe('An app the owner allowed, e.g. com.xingin.xhs.') }).strict(),
+      z.object({ kind: z.literal('wait'), ms: z.number().int().min(0).max(10000) }).strict(),
+    ]),
+  }).strict(),
 };
 export type HubToolName = keyof typeof toolSchemas;
 export const HUB_TOOL_NAMES = Object.keys(toolSchemas) as HubToolName[];
@@ -125,6 +159,9 @@ export const TOOL_EXAMPLES: Record<HubToolName, Data> = {
   post_get: { post_id: 'a1d4f6b8-3c2e-4a59-8b7d-6e5f4c3b2a10' },
   task_get: { task_id: '3f6c1d2e-8a4b-4c7d-9e1f-2a3b4c5d6e7f' },
   publishing_pause: { scope: 'machine', id: '2c9a7e14-5b3d-4f6a-8e21-7d0c4b9a3f55', reason: 'Mac-B is being repaired' },
+  browser_open: { machine_id: '2c9a7e14-5b3d-4f6a-8e21-7d0c4b9a3f55', url: 'https://seller.shopee.tw/portal/product/list/all' },
+  browser_act: { session_id: '9d1e2f3a-4b5c-4d6e-8f70-1a2b3c4d5e6f', action: { kind: 'click', ref: 'e12' } },
+  phone_act: { machine_id: '2c9a7e14-5b3d-4f6a-8e21-7d0c4b9a3f55', action: { kind: 'snapshot' } },
 };
 
 /** §7.2: draft-07, every fragment inlined, without the $schema header. */

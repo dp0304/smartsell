@@ -124,6 +124,7 @@ const described: Record<string, [Verb, string, string]> = {
   hub_machines_pause: ['other', '暫停了機器', 'Paused a machine'],
   hub_machines_resume: ['other', '恢復了機器', 'Resumed a machine'],
   hub_machines_retire: ['other', '撤銷了機器', 'Retired a machine'],
+  hub_machines_remote_control: ['updated', '改了機器的遙控設定', 'Changed a machine\'s remote control'],
   hub_posts_confirm_result: ['approved', '確認了貼文已發出', 'Confirmed a post went out'],
   hub_posts_mark_not_published: ['other', '確認了貼文沒有發出', 'Confirmed a post did not go out'],
   hub_posts_retry: ['other', '重試了貼文', 'Retried a post'],

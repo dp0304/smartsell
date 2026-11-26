@@ -16,6 +16,10 @@ import { JobStore } from './job-store.ts';
 import { MediaCache } from './media-cache.ts';
 import { bridgeSocketPath, BrowserBridge } from '../browser-bridge/bridge.ts';
 import { BrowserBindings, ownChromeLauncher } from '../browser-bridge/launcher.ts';
+import type { ChromeCdpPage } from '../drivers/cdp-page.ts';
+import { RemoteAgent } from '../remote/agent.ts';
+import { systemAdb, type Adb } from '../remote/android.ts';
+import { RemoteSessions } from '../remote/sessions.ts';
 import { chromeLauncher, Profiles, type BrowserLauncher } from './profiles.ts';
 import { HubProtocol, type HubApi } from './protocol.ts';
 import { Supervisor } from './supervisor.ts';
@@ -103,6 +107,10 @@ export interface WorkerRuntimeOptions {
    * SmartSell extension; 'profiles' (default) runs one separate Chrome profile per channel, as in phase 1.
    */
   browserMode?: BrowserMode;
+  /** E50 phone remote control: scales and encodes phone screenshots (the App uses Electron's nativeImage). */
+  encodePhone?(png: Buffer): Promise<{ mime: string; bytes: Buffer; width?: number }>;
+  /** adb for phone remote control; default the `adb` on PATH. */
+  adb?: Adb;
   /** Test seams. */
   hub?: HubApi;
   launcher?: BrowserLauncher;
@@ -136,6 +144,25 @@ export function createWorkerRuntime(options: WorkerRuntimeOptions) {
       ? ownChromeLauncher({ bridge, bindings: BrowserBindings.in(options.dataDir), allowUrl, sleep: ms => clock.sleep(ms) })
       : chromeLauncher({ headless: options.headless, allowUrl, sleep: ms => clock.sleep(ms) })),
   });
+  // E50 remote control: the owner's Agent looks at and acts on this machine's own Chrome (own-Chrome mode) or phone.
+  let remoteSessions: RemoteSessions | undefined;
+  const remote: RemoteAgent = new RemoteAgent({
+    hub, adb: options.adb ?? systemAdb(), encodePhone: options.encodePhone, log: options.log, sleep: (ms, signal) => clock.sleep(ms, signal),
+    browserReady: () => (bridge?.browsers().length ?? 0) > 0,
+    browser: (settings): RemoteSessions | undefined => {
+      if (!bridge) return undefined;
+      remoteSessions ??= new RemoteSessions({
+        sites: (): readonly string[] => remote.settings?.browser.sites ?? settings.browser.sites,
+        // Fixture pages are plain http on loopback; only in test mode (§8.14).
+        allowLoopbackHttp: switches.platformOrigins !== null, sleep: ms => clock.sleep(ms),
+        openPage: async () => {
+          const launch = ownChromeLauncher({ bridge, bindings: BrowserBindings.in(options.dataDir), allowUrl: url => remoteSessions!.allowed(url), sleep: ms => clock.sleep(ms) });
+          return await launch(join(options.dataDir, 'chrome-profiles', 'remote-control')).openPage() as ChromeCdpPage;
+        },
+      });
+      return remoteSessions;
+    },
+  });
   let supervisor: Supervisor | undefined;
   const runner = new JobRunner({
     store, hub, media, profiles, drivers, selectors, time: clock, events,
@@ -155,14 +182,14 @@ export function createWorkerRuntime(options: WorkerRuntimeOptions) {
   });
   const sup = supervisor;
   return {
-    events, clock, store, hub, selectors, drivers, media, profiles, runner, supervisor: sup, platformUrl, switches, browserMode, bridge,
+    events, clock, store, hub, selectors, drivers, media, profiles, runner, supervisor: sup, platformUrl, switches, browserMode, bridge, remote,
     /** Own-Chrome mode: open the socket the extension's native host connects to (idempotent). */
     async listenBridge() { await bridge?.listen(); },
     start() {
       void bridge?.listen().catch(error => options.log?.('browser bridge failed to start', { error: String(error) }));
-      runner.start(); void sup.start();
+      runner.start(); void sup.start(); remote.start();
     },
-    async stop() { await sup.stop(); await runner.stop(); profiles.closeAll(); await bridge?.close(); },
+    async stop() { await remote.stop(); await remoteSessions?.closeAll(); await sup.stop(); await runner.stop(); profiles.closeAll(); await bridge?.close(); },
     emergencyStop() { runner.emergencyStop(); },
     resume() { runner.resumeAfterStop(); },
     snapshot() { return sup.snapshot(); },

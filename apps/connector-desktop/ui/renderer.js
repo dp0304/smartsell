@@ -208,6 +208,16 @@ function browserCard(worker) {
     el('div', { class: 'actions' }, button('改回每個帳號一個獨立 Chrome', () => call('browser-mode', { mode: 'profiles' }), { class: 'link' })));
 }
 
+function remoteCard(worker) {
+  const r = worker.remote;
+  if (!r || (!r.browser.enabled && !r.phone.enabled)) return null;
+  return card('遙控（Agent 一步一步操作）',
+    r.browser.enabled ? el('p', {}, '瀏覽器：Agent 可以在你的 Chrome（SmartSell 視窗）操作這些網站：', el('strong', { text: r.browser.sites.join('、') })) : null,
+    r.browser.enabled && worker.browser?.mode !== 'own_chrome' ? el('p', { class: 'notice', text: '瀏覽器遙控需要「用我自己的 Chrome」。' }) : null,
+    r.phone.enabled ? el('p', {}, '手機：Agent 可以在插在這台電腦的 Android 手機上操作這些 App：', el('strong', { text: r.phone.apps.join('、') })) : null,
+    el('p', { class: 'muted', text: '在網頁的機器頁開關與修改。改東西之前 Agent 會先問你；遇到登入、驗證碼或付款畫面會停下來請你處理。' }));
+}
+
 function accountsCard(worker) {
   const rows = worker.channels.map(channel => el('li', { class: 'item' },
     el('div', {}, el('strong', { text: `${PROVIDER[channel.provider] ?? channel.provider} ${channel.handle ? `@${channel.handle}` : ''}` }),
@@ -258,7 +268,7 @@ function workerView(worker) {
       el('p', { text: state.platform === 'darwin' ? '這台機器的鑰匙圈沒有允許 SmartSell 讀取配對金鑰，所以無法連線。請按「重試」，出現鑰匙圈提示時按「永遠允許」。' : 'Windows 認證儲存無法解開配對金鑰，所以無法連線。請按「重試」。' }),
       el('div', { class: 'actions' }, button('重試', () => call('retry-vault'), { class: 'primary' }))), advancedCard('worker')];
   }
-  return [connectionCard(worker), machineCard(worker), browserCard(worker), accountsCard(worker), jobsCard(worker), advancedCard('worker')].filter(Boolean);
+  return [connectionCard(worker), machineCard(worker), browserCard(worker), remoteCard(worker), accountsCard(worker), jobsCard(worker), advancedCard('worker')].filter(Boolean);
 }
 
 // ---------- Agent mode ----------

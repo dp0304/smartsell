@@ -19,10 +19,10 @@ import { Records } from '../../packages/db/src/index.ts';
 import { readHubRecords } from '../e2e-phase1/hub-records.ts';
 
 const HUB_HUMAN_ONLY = [...HUMAN_ONLY].filter(name => name.startsWith('hub_')).sort();
-/** §4.6 table, verbatim, plus E41's hub_machines_retire (「撤銷這台機器」): the hub operations that only a person may run. */
+/** §4.6 table, verbatim, plus E41's hub_machines_retire (「撤銷這台機器」) and E50's hub_machines_remote_control: the hub operations that only a person may run. */
 const DESIGN_HUMAN_ONLY = ['hub_alerts_test', 'hub_alerts_update_channels', 'hub_channels_ack_automation_notice', 'hub_channels_ack_risk',
   'hub_channels_bind_machine', 'hub_channels_clear_risk_ack', 'hub_channels_dry_run', 'hub_channels_update_settings', 'hub_jobs_force_release',
-  'hub_jobs_resume', 'hub_machines_resume', 'hub_machines_retire', 'hub_machines_update', 'hub_posts_confirm_result', 'hub_posts_mark_not_published',
+  'hub_jobs_resume', 'hub_machines_remote_control', 'hub_machines_resume', 'hub_machines_retire', 'hub_machines_update', 'hub_posts_confirm_result', 'hub_posts_mark_not_published',
   'hub_posts_retry'];
 /** §4.6 "Agent 可呼叫". */
 const AGENT_CALLABLE = ['hub_posts_schedule', 'hub_posts_update', 'hub_channels_check', 'hub_publishing_pause', 'hub_machines_pause'];

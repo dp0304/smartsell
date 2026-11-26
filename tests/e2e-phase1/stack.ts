@@ -160,7 +160,20 @@ export interface Stack {
 
 const ownerPassword = () => `e2e-${randomBytes(12).toString('hex')}`;
 
+/**
+ * Starts a stack. If setup fails half-way, everything already started (hub, fixtures, proxies, the owner's Chromes, the
+ * relay) is stopped before the error is rethrown: a failing `before` never leaves processes that keep the test running.
+ */
 export async function startStack(options: StackOptions): Promise<Stack> {
+  const cleanups: (() => unknown)[] = [];
+  try { return await startStackParts(options, cleanups); }
+  catch (error) {
+    for (const cleanup of cleanups.reverse()) { try { await cleanup(); } catch { /* best effort */ } }
+    throw error;
+  }
+}
+
+async function startStackParts(options: StackOptions, cleanups: (() => unknown)[]): Promise<Stack> {
   if (!chromePath) throw new Error(stackUnavailable);
   const startedAt = Date.now();
   const dir = mkdtempSync(join(tmpdir(), `ss-e2e-${options.name}-`));
@@ -228,7 +241,10 @@ export async function startStack(options: StackOptions): Promise<Stack> {
   }
 
   const fixtures = await startPlatformFixtures({ uploadMs: 800, xProcessingMs: 800, ...options.fixtures });
+  cleanups.push(() => fixtures.close());
   const ntfy = await startFakeNtfy();
+  cleanups.push(() => ntfy.close());
+  cleanups.push(() => killHub('SIGKILL'));
   await startHub();
 
   // ---------- owner ----------
@@ -293,6 +309,7 @@ export async function startStack(options: StackOptions): Promise<Stack> {
   const machines = {} as Record<MachineName, Machine>;
   for (const name of ['Mac-B', 'Win-C'] as const) {
     const proxy = await startTcpProxy({ host: '127.0.0.1', port: () => port });
+    cleanups.push(() => proxy.close());
     const dataDir = join(dir, name.toLowerCase());
     const code = await rest<Data>('POST', '/devices/pairing-codes', { owned_device_confirmed: true, allow_channel_registration: true });
     const lines = await runCli(['--data-dir', dataDir, '--name', name, 'pair', '--hub', proxy.origin, '--workspace', workspaceId, '--code', String(code.pairing_code),
@@ -300,7 +317,11 @@ export async function startStack(options: StackOptions): Promise<Stack> {
     const paired = lines.find(line => line.event === 'paired');
     assert.ok(paired, `${name} paired`);
     machines[name] = { name, dataDir, proxy, deviceId: String(paired.device_id), heartbeats: [], failures: [], process: null };
-    if (options.ownChrome) ownerChromes.push(await launchOwnerChrome(dataDir));
+    if (options.ownChrome) {
+      const chrome = await launchOwnerChrome(dataDir);
+      ownerChromes.push(chrome);
+      cleanups.push(() => chrome.close());
+    }
   }
   const channels = {} as Record<Provider, Channel>;
   for (const provider of ['x', 'tiktok'] as const) {
@@ -331,6 +352,7 @@ export async function startStack(options: StackOptions): Promise<Stack> {
   const tokenFile = join(agentDir, 'token');
   writeFileSync(tokenFile, agentToken, { mode: 0o600 });
   const alerts = subscribeAlerts(origin, agentToken, line => log(line));
+  cleanups.push(() => alerts.close());
   await until(() => alerts.connected, 20_000, 'alert stream connected');
 
   const relayBundle = join(repoRoot, 'packages/agent-relay/dist/smartsell-relay.mjs');
@@ -345,9 +367,10 @@ export async function startStack(options: StackOptions): Promise<Stack> {
     client = new Client({ name: 'smartsell-e2e', version: '1.0.0' });
     await client.connect(transport);
   }
+  cleanups.push(() => client?.close());
   await connectMcp();
   const tools = await client!.listTools();
-  assert.equal(tools.tools.length, 11, `tools/list shows the 11 hub tools: ${tools.tools.map(tool => tool.name).join(', ')}`);
+  assert.equal(tools.tools.length, 14, `tools/list shows the 11 hub tools and the 3 remote-control tools (E50): ${tools.tools.map(tool => tool.name).join(', ')}`);
 
   const mcpCalls: McpCall[] = [];
   async function mcp<T = Data>(tool: string, args: Data, opts: { timeoutMs?: number; onprogress?: (progress: { progress: number; total?: number }) => void } = {}): Promise<McpResult<T>> {
@@ -410,6 +433,7 @@ export async function startStack(options: StackOptions): Promise<Stack> {
     const since = Date.now();
     return until(() => machines[name].heartbeats.find(at => at > since), timeoutMs, `${name} heartbeat`, 200);
   }
+  cleanups.push(() => Promise.all((['Mac-B', 'Win-C'] as const).map(name => stopRunner(name).catch(() => {}))));
   await startRunner('Mac-B');
   await startRunner('Win-C');
 

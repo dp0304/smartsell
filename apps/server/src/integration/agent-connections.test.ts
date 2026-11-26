@@ -161,7 +161,7 @@ test('agent connections issue, list, survive logout, touch last use and revoke',
   assert.equal(initialized.instructions, hubInstructions);
   const names = (await rpc(created.token, 'tools/list')).tools.map((tool: Json) => tool.name);
   assert.deepEqual(names, ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
-    'posts_list', 'post_get', 'task_get', 'publishing_pause']);
+    'posts_list', 'post_get', 'task_get', 'publishing_pause', 'browser_open', 'browser_act', 'phone_act']);
   assert.ok(!names.includes('publishing_approve'));
   // The legacy tools are hidden from the list but still callable.
   assert.ok(Array.isArray(ok(await call(created.token, 'smartsell_operations_describe', { q: 'brand' })).data));

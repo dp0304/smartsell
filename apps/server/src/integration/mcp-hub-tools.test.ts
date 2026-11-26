@@ -23,7 +23,7 @@ type Json = Record<string, any>;
 const accept = 'application/json, text/event-stream';
 const ZONE = 'Asia/Shanghai';
 const HUB_TOOLS = ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
-  'posts_list', 'post_get', 'task_get', 'publishing_pause'];
+  'posts_list', 'post_get', 'task_get', 'publishing_pause', 'browser_open', 'browser_act', 'phone_act'];
 const tiktokDefaults = { privacy_level: 'SELF_ONLY', allow_comment: true, allow_duet: false, allow_stitch: false, commercial_disclosure: 'none', ai_generated: false };
 
 /** A small mp4 the relay's magic-number check accepts: ftyp + mdat filler (ffprobe may not parse it; §6.5 E3 keeps it ready). */

@@ -21,7 +21,7 @@ const storeName = 'Onboarding fixture store';
 const externalStoreId = 'onboarding-fixture-shop';
 const shopExportHeader = ['Handle', 'Title', 'Variant SKU', 'Variant Price', 'Variant Inventory Qty'];
 const HUB_TOOLS = ['smartsell_overview', 'machines_list', 'channels_list', 'channel_check', 'media_upload', 'post_schedule', 'post_update',
-  'posts_list', 'post_get', 'task_get', 'publishing_pause'];
+  'posts_list', 'post_get', 'task_get', 'publishing_pause', 'browser_open', 'browser_act', 'phone_act'];
 
 function shopExportRows(samples) {
   return [shopExportHeader, ...samples.map(({ handle, title, sku, priceMinor, quantity }) => [

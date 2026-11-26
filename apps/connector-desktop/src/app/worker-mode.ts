@@ -57,6 +57,8 @@ export interface WorkerShellDeps {
   extension?: { source: string; installDir: string };
   /** Registers the native messaging host for the owner's Chrome; tests replace it. */
   registerHost?(options: { dataDir: string; socketPath: string }): Promise<Registration>;
+  /** E50 phone remote control: scale and JPEG-encode a phone screenshot (the shell uses Electron's nativeImage). */
+  encodePhone?(png: Buffer): Promise<{ mime: string; bytes: Buffer; width?: number }>;
   onChange(): void;
   log(message: string, detail?: object): void;
   /** Test seams. */
@@ -186,6 +188,7 @@ export class WorkerShell {
       identity: { origin: pairing.origin, workspaceId: pairing.workspace, deviceId: pairing.device, privateKey: pairing.key, machineName: pairing.name },
       clientVersion: this.#d.version, bundledClip: this.#d.bundledClip, events: this.events,
       posture: () => this.#d.posture.current(), remoteAccess: () => this.#d.posture.remote(), log: this.#d.log, browserMode,
+      ...(this.#d.encodePhone && { encodePhone: this.#d.encodePhone }),
     });
     if (browserMode === 'own_chrome') {
       void this.#prepareOwnChrome();
@@ -493,6 +496,7 @@ export class WorkerShell {
       })),
       jobs, posture, remote_access: remote, posture_advice: postureAdvice(posture, remote),
       update: this.#updates?.snapshot() ?? null, enrollment: this.#enrollment, browser: this.#browserSnapshot(),
+      remote: runtime?.remote?.settings ?? null,
       autostart: this.#d.autostart.enabled(), automation_notice_version: AUTOMATION_NOTICE_VERSION,
     };
   }

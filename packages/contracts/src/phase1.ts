@@ -509,3 +509,32 @@ export interface OverviewView {
   today: TodayView['counts']; needs_owner: AttentionItem[]; alerts: { unread: number }; web_url: string;
 }
 export interface MediaRecentItem { media_id: string; filename: string; kind: 'video' | 'image'; bytes: number; status: 'ready' | 'processing' | 'uploading' | 'failed'; thumbnail_url: string | null; created_at: string }
+
+// ---------- Remote control (core-automation-proposal §2 item 2, steps 4–5; design E50) ----------
+/**
+ * What the owner allowed on one machine (human-only: hub_machines_remote_control). Off by default. The browser works in
+ * the owner's own Chrome (own-Chrome mode, E49) and only on `sites` (host or its subdomains, https); a phone only in
+ * `apps` (Android package names).
+ */
+export interface RemoteControlSettings {
+  browser: { enabled: boolean; sites: string[] };
+  phone: { enabled: boolean; apps: string[] };
+  updated_at: string | null;
+}
+export const REMOTE_CONTROL_OFF: RemoteControlSettings = { browser: { enabled: false, sites: [] }, phone: { enabled: false, apps: [] }, updated_at: null };
+/** What a Worker can do right now, sent with every remote poll. */
+export interface RemoteCapabilities { browser: boolean; phones: { serial: string; model: string | null; state: string }[] }
+export type RemoteTarget = 'browser' | 'phone';
+export interface RemoteCommandEnvelope {
+  command_id: string; target: RemoteTarget; serial?: string;
+  /** browser: sessions.ts RemoteCommand; phone: { op: 'snapshot' } | { op: 'act', action } (android.ts PhoneAction). */
+  command: Record<string, unknown>;
+  expires_at: string;
+}
+export interface RemoteNextRequest { wait_ms: number; capabilities: RemoteCapabilities }
+export interface RemoteNextResponse { command: RemoteCommandEnvelope | null; settings: RemoteControlSettings; server_time: string }
+export type RemoteResultRequest =
+  | { command_id: string; ok: true; result: Record<string, unknown> }
+  | { command_id: string; ok: false; error: { code: string; message: string } };
+/** Largest result body (a snapshot with its JPEG screenshot). */
+export const REMOTE_RESULT_MAX_BYTES = 6 * 1024 * 1024;

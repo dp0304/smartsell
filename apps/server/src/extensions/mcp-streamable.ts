@@ -358,7 +358,12 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
         const raw = taskRequested ? await options.readOperation!(principal, input.params.id!) : await dispatch(invocation);
         if (hub) {
           // Hub tools answer with their own JSON (§7.2 outputs), in structuredContent and as the text block.
-          const output = isRecord(raw) ? raw : undefined;
+          const received = isRecord(raw) ? raw : undefined;
+          // E50: a remote-control snapshot's screenshot travels as an MCP image block, outside the JSON and its 128 KB limit.
+          const attached = received && isRecord(received._image) && typeof received._image.base64 === 'string' && typeof received._image.mime === 'string'
+            && /^image\/(jpeg|png)$/.test(received._image.mime) && received._image.base64.length <= 6 * 1024 * 1024
+            ? { data: received._image.base64, mimeType: received._image.mime } : undefined;
+          const output = received && '_image' in received ? (({ _image: _dropped, ...rest }) => rest)(received) : received;
           if (filterOutput && output) await filterOutput(invocation, raw, output);
           const text = output && JSON.stringify(output);
           if (!output || !text) {
@@ -369,7 +374,7 @@ export function createMcpHandler(options: McpHandlerOptions): (request: Request)
             result = detailedError(id, { code, message: 'The result exceeds 128 KB. Narrow it with filters or a smaller limit.' });
           } else {
             outcome = 'success';
-            result = rpcResult(id, { content: [{ type: 'text', text }], structuredContent: output });
+            result = rpcResult(id, { content: [{ type: 'text', text }, ...(attached ? [{ type: 'image', ...attached }] : [])], structuredContent: output });
           }
           try { await audit?.({ ...metadata, stage: 'finish', outcome, elapsedMs: Math.round(performance.now() - started), ...(code ? { code } : {}) }); }
           catch { return toolError(id, 'AUDIT_UNAVAILABLE'); }

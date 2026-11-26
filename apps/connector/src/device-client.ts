@@ -3,7 +3,7 @@ import { exportDevicePublicKey, fields, opaqueId, parseConnectorClaim, timestamp
 import { PermitError, parseConsumePermitDecision, parseSubmitPermitDecision, type ConsumePermitRequest, type SubmitPermitClient, type SubmitPermitRequest } from './permit.ts';
 import type { Report } from './workflow.ts';
 import { parseSocialStatusClaim, parseSocialStatusResult, type SocialStatusClaim, type SocialStatusResult } from './social-status.ts';
-import type { ClaimRequest, ClaimResponse, GoRequest, GoResponse, HeartbeatV2Request, HeartbeatV2Response, JobReport } from '../../../packages/contracts/src/phase1.ts';
+import type { ClaimRequest, ClaimResponse, GoRequest, GoResponse, HeartbeatV2Request, HeartbeatV2Response, JobReport, RemoteNextRequest, RemoteNextResponse, RemoteResultRequest } from '../../../packages/contracts/src/phase1.ts';
 import { guardSocketTypeOfService } from './socket-guard.ts';
 
 // Every signed hub request goes through global fetch: keep a reset hub connection from crashing the Worker (socket-guard.ts).
@@ -316,7 +316,7 @@ export class SignedDeviceClient implements SubmitPermitClient {
 
 /** Signed actions of the Phase 1 job protocol. Media and evidence embed their scope in the action string. */
 export type DeviceProtocolAction = 'heartbeat' | 'jobs.claim' | 'jobs.report' | 'jobs.go' | 'driver_config.read' | 'channels.register'
-  | `media.read:${string}:${string}:${number}` | `evidence.upload:${string}:${number}`;
+  | `media.read:${string}:${string}:${number}` | `evidence.upload:${string}:${number}` | 'remote.next' | `remote.result:${string}`;
 
 /** A non-2xx hub response. `details` carries extra fields of the error envelope (for example `expected` of SEQ_GAP). */
 export class DeviceHttpError extends Error {
@@ -457,6 +457,14 @@ export class DeviceProtocolClient {
   }
   go(body: GoRequest, timeoutMs = 20_000) {
     return this.#json<GoResponse & { server_time?: string }>('POST', '/api/v1/device/jobs/go', 'jobs.go', body, timeoutMs);
+  }
+  /** E50 remote control: long poll for this machine's next command (the hub holds it up to wait_ms). */
+  remoteNext(body: RemoteNextRequest, timeoutMs = 40_000) {
+    return this.#json<RemoteNextResponse>('POST', '/api/v1/device/remote/next', 'remote.next', body, timeoutMs);
+  }
+  remoteResult(body: RemoteResultRequest, timeoutMs = 30_000) {
+    opaqueId(body.command_id, 'command_id');
+    return this.#json<{ accepted: boolean }>('POST', '/api/v1/device/remote/result', `remote.result:${body.command_id}`, body, timeoutMs);
   }
   registerChannels(selections: readonly ChannelSelection[], timeoutMs = 10_000) {
     return this.#json<{ registrations: ChannelRegistration[] }>('POST', '/api/v1/device/channels/register', 'channels.register',

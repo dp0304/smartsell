@@ -140,7 +140,7 @@ export const HUMAN_ONLY: ReadonlySet<string> = new Set([
   'data_source_resume', 'workspace_brand_restore', 'commerce_fact_retract',
   // Phase 1 hub (phase1-design §4.6). Registered under these exact names, never through account's `account_` prefix.
   'hub_channels_update_settings', 'hub_channels_ack_automation_notice', 'hub_channels_ack_risk', 'hub_channels_clear_risk_ack',
-  'hub_channels_bind_machine', 'hub_channels_dry_run', 'hub_machines_update', 'hub_machines_resume', 'hub_machines_retire',
+  'hub_channels_bind_machine', 'hub_channels_dry_run', 'hub_machines_update', 'hub_machines_resume', 'hub_machines_retire', 'hub_machines_remote_control',
   'hub_posts_confirm_result', 'hub_posts_mark_not_published', 'hub_posts_retry', 'hub_jobs_resume', 'hub_jobs_force_release',
   'hub_alerts_update_channels', 'hub_alerts_test',
 ]);

@@ -2,6 +2,7 @@ import { ADMIN, Problem, WRITE, type Context, type Data, type Operation, type Ro
 import { fromAgent, requireHuman } from '../../agent-actor.js';
 import { audit } from './input.js';
 import { resubmitMachineTargets, workerEngine } from './channel-settings.js';
+import { remoteOperations } from '../remote/settings.js';
 
 /**
  * Machine operations (phase1-design §3.2, §4.6, Appendix B.3) under their full hub_* names, outside account's op() prefix.
@@ -92,4 +93,6 @@ export const machineOperations: Operation[] = [
     method: 'POST', path: `${machinePath}/resume`, name: 'hub_machines_resume', roles: ADMIN, summary: 'Resume a paused machine (person only)',
     run(ctx, input) { requireHuman(ctx, 'hub_machines_resume'); return resumeMachine(ctx, input.params.id!, input.body); },
   },
+  // E50: remote control of this machine's Chrome and phone (person only).
+  ...remoteOperations,
 ];

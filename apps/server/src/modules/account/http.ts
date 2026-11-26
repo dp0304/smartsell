@@ -6,6 +6,7 @@ import type { DeviceAction } from './connector-service.ts';
 import { createAccountGateway, type AccountGatewayDependencies } from './gateway.ts';
 import { workerCatalogUploadBodyLimit } from '../commerce/worker-catalog.js';
 import { mountWorkerDeviceFiles, provideSignedWorkerDownloads, type WorkerDeviceFiles } from '../worker/device-http.ts';
+import { mountRemoteDeviceRoutes } from '../remote/device-http.js';
 
 const deviceRoutes = [
   ['/api/v1/device/heartbeat', 'heartbeat'],
@@ -85,6 +86,8 @@ export function mountAccountIngress(app: FastifyInstance, dependencies: AccountG
       }));
     }
     mountWorkerDeviceFiles(ingress, gateway, options.files ?? {});
+    // E50: remote control long poll and results (their own body limits: a result carries a screenshot).
+    mountRemoteDeviceRoutes(ingress, gateway);
     for (const [path, action] of deviceRoutes) {
       const limits = action === 'catalog.upload' ? { bodyLimit: workerCatalogUploadBodyLimit } : {};
       ingress.post<{ Params: Params }>(path, limits, async (request, reply) => {

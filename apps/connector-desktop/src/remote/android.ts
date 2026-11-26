@@ -148,7 +148,9 @@ export type PhoneAction =
 
 export interface PhoneSnapshot {
   serial: string; foreground: string | null; screen: { width: number; height: number };
-  elements: PhoneElement[]; screenshot: { mime: string; base64: string }; taken_at: string;
+  elements: PhoneElement[];
+  /** `scale`: image pixels per screen pixel; tap x,y are screen pixels (image x / scale). */
+  screenshot: { mime: string; base64: string; scale: number }; taken_at: string;
 }
 
 export interface AndroidPhoneOptions {
@@ -157,7 +159,7 @@ export interface AndroidPhoneOptions {
   /** Apps (package names) the owner allowed on this phone. */
   apps(): readonly string[];
   /** Turns the PNG into what the Agent gets (the App scales it and encodes JPEG with Electron's nativeImage). */
-  encode?(png: Buffer): Promise<{ mime: string; bytes: Buffer }>;
+  encode?(png: Buffer): Promise<{ mime: string; bytes: Buffer; width?: number }>;
   sleep(ms: number): Promise<void>;
   now?(): number;
 }
@@ -211,7 +213,7 @@ export class AndroidPhone {
       return { ref, ...element };
     });
     return { serial: this.options.serial, foreground: packageName, screen, elements: listed,
-      screenshot: { mime: shot.mime, base64: shot.bytes.toString('base64') }, taken_at: new Date(this.options.now?.() ?? Date.now()).toISOString() };
+      screenshot: { mime: shot.mime, base64: shot.bytes.toString('base64'), scale: 'width' in shot && shot.width ? shot.width / screen.width : 1 }, taken_at: new Date(this.options.now?.() ?? Date.now()).toISOString() };
   }
 
   #point(action: { ref?: string; x?: number; y?: number }): [number, number] {

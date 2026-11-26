@@ -29,7 +29,9 @@ export type RemoteCommand =
 export interface RemoteElement { ref: string; role: string; name: string; value?: string; disabled: boolean; checked?: unknown; box: [number, number, number, number] | null; in_viewport: boolean }
 export interface RemoteSnapshot {
   session_id: string; url: string; title: string; viewport: { width: number; height: number };
-  elements: RemoteElement[]; text: string; screenshot: { mime: 'image/jpeg'; base64: string }; taken_at: string;
+  elements: RemoteElement[]; text: string;
+  /** `scale`: image pixels per CSS pixel; click x,y are CSS pixels (image x / scale). */
+  screenshot: { mime: 'image/jpeg'; base64: string; scale: number }; taken_at: string;
 }
 
 export class RemoteError extends Error {
@@ -189,7 +191,7 @@ export class RemoteSessions {
     return {
       session_id: session.id, url, title, viewport, elements: listed,
       text: text.length > TEXT_LIMIT ? `${text.slice(0, TEXT_LIMIT)}…` : text,
-      screenshot: { mime: 'image/jpeg', base64: shot.toString('base64') }, taken_at: new Date(this.#now()).toISOString(),
+      screenshot: { mime: 'image/jpeg', base64: shot.toString('base64'), scale: Math.min(1, 1280 / Math.max(1, viewport.width)) }, taken_at: new Date(this.#now()).toISOString(),
     };
   }
 
