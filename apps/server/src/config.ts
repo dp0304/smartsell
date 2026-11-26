@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isIP } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join, resolve, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -88,6 +89,44 @@ function byteSetting(env: NodeJS.ProcessEnv, name: string, fallback: number, min
   return value;
 }
 
+/** Fastify trustProxy: off, a hop count, or addresses and CIDR ranges (TRUST_PROXY, S2); the hub's '127.0.0.1'. */
+export type TrustProxy = false | number | string | string[];
+const PROXY_NAMES = new Set(['loopback', 'linklocal', 'uniquelocal']);
+
+/**
+ * S2: TRUST_PROXY names the reverse proxies allowed to set X-Forwarded-For, so request.ip (sign-in and per-address limits,
+ * audit) is the browser and not the proxy. Unset means off: behind a proxy every client would then share the proxy's
+ * address. Either a hop count (1–5: how many proxies stand in front of the API, e.g. 1 for the Compose web container,
+ * which passes one clean address) or a comma-separated list of addresses, CIDR ranges and the names loopback, linklocal,
+ * uniquelocal. Trusting every address (true, *, a /0 range) is refused: anyone could then claim any address.
+ */
+export function trustProxySetting(raw: string | undefined): TrustProxy {
+  const value = raw?.trim();
+  if (!value || value === 'false' || value === '0') return false;
+  if (/^\d+$/.test(value)) {
+    const hops = Number(value);
+    if (hops > 5) throw new Error('TRUST_PROXY hop count must be between 1 and 5');
+    return hops;
+  }
+  const entries = value.split(',').map(item => item.trim()).filter(Boolean);
+  for (const entry of entries) {
+    if (PROXY_NAMES.has(entry)) continue;
+    const [address, prefix, extra] = entry.split('/');
+    const family = isIP(address);
+    const bits = prefix === undefined ? undefined : /^\d{1,3}$/.test(prefix) ? Number(prefix) : NaN;
+    if (!family || extra !== undefined || (bits !== undefined && (!(bits >= 1) || bits > (family === 4 ? 32 : 128)))) {
+      throw new Error(`TRUST_PROXY must be a hop count or a comma-separated list of proxy addresses or CIDR ranges (not "${entry}"); trusting every address is not allowed`);
+    }
+  }
+  if (!entries.length) return false;
+  return entries;
+}
+
+/** Fastify's option for a TrustProxy value: a hop count becomes "trust the nearest n hops" (its typings take no number). */
+export function fastifyTrustProxy(value: TrustProxy) {
+  return typeof value === 'number' ? (_address: string, hop: number) => hop < value : value;
+}
+
 /** Hub-mode validation (§2.3). Messages are owner-facing; they are printed and written to status.json. */
 function validateHub(env: NodeJS.ProcessEnv, publicUrl: URL, host: string, selected: string, secret: string, setupToken: string | undefined) {
   const testHttp = env.NODE_ENV === 'test' && env.SMARTSELL_HUB_TEST_HTTP === '1';
@@ -107,6 +146,9 @@ function validateHub(env: NodeJS.ProcessEnv, publicUrl: URL, host: string, selec
     throw new HubConfigError('HUB_HOST_NOT_LOOPBACK', `中樞設定錯誤：HOST 必須是 127.0.0.1（目前是 ${host}）。對外連線一律經由 tailscale serve，請移除 HOST 設定。`);
   }
   if (selected !== 'all') throw new HubConfigError('HUB_ROLE_NOT_ALL', '中樞設定錯誤：中樞只能以 ROLE=all 執行，請移除 ROLE 設定。');
+  if (env.TRUST_PROXY) {
+    throw new HubConfigError('HUB_TRUST_PROXY_SET', '中樞設定錯誤：中樞只信任本機的 tailscale serve（127.0.0.1），不能設定 TRUST_PROXY，請移除它。');
+  }
   if (env.DATABASE_URL) throw new HubConfigError('HUB_DATABASE_URL_SET', '中樞設定錯誤：中樞使用本機 SQLite，不能設定 DATABASE_URL，請移除它。');
   if (env.SMARTSELL_STORE && env.SMARTSELL_STORE !== 'local') {
     throw new HubConfigError('HUB_STORE_NOT_LOCAL', '中樞設定錯誤：中樞只能使用本機 SQLite（SMARTSELL_STORE=local），請移除 SMARTSELL_STORE 設定。');
@@ -217,7 +259,8 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
     // Hub: trust only the loopback hop (`tailscale serve`), so request.ip is the tailnet client serve put last in
     // X-Forwarded-For; a tailnet peer cannot spoof it. A process on the hub machine connecting to 127.0.0.1 directly can
     // claim any address, so per-address limits are a courtesy there; auth.ts also slows sign-ins down per sign-in name (SEC-2, S3).
-    trustProxy: (hub ? '127.0.0.1' : false) as string | false,
+    // Elsewhere: only what TRUST_PROXY names (S2; off by default, see infra/README.md).
+    trustProxy: (hub ? '127.0.0.1' : trustProxySetting(env.TRUST_PROXY)) as TrustProxy,
     // Hub: 15 minutes, so media_upload's one-PUT direct upload (E47) of a large video can finish; headers still time out at
     // Node's 60 s default, and the hub is reachable only on the tailnet.
     requestTimeoutMs: hub ? 900_000 : 30_000,

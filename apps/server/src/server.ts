@@ -4,7 +4,7 @@ import Fastify from 'fastify';
 import { Problem, READ } from '@smartsell/contracts';
 import type { Store } from '@smartsell/db';
 import type { FastifyRequest } from 'fastify';
-import type { Config } from './config.js';
+import { fastifyTrustProxy, type Config } from './config.js';
 import { auth, bodyObject, header, membership, missing, originGuard } from './identity.js';
 import { mcpRoutes, mcpToolCallRoutes } from './mcp.js';
 import { oauthRoutes, tokenRoutes } from './oauth.js';
@@ -66,6 +66,8 @@ export function createServer({ config, store, operations, subscribers = [], sche
   const app = Fastify({
     logger, logController: new Fastify.LogController({ disableRequestLogging: true }), genReqId: () => randomUUID(), requestIdHeader: false,
     bodyLimit: 1024 * 1024, requestTimeout: 30_000, routerOptions: { ignoreTrailingSlash: true },
+    // S2: request.ip is the browser only behind a proxy that TRUST_PROXY names (config.ts).
+    trustProxy: fastifyTrustProxy(config.trustProxy),
   });
   let enterprise: ReturnType<typeof enterpriseHost> | undefined;
   const sessions = auth(store, config, async (identity, user) => enterprise

@@ -65,6 +65,8 @@ services:
       SMARTSELL_TRAFFIC_HOSTS:
       SMARTSELL_TRAFFIC_PII_KEY:
       MEDIA_DIRECTORY: /var/lib/smartsell/media
+      # Set to 1 when the web service fronts the API (infra/README.md, "Client addresses behind the proxy").
+      TRUST_PROXY: ${TRUST_PROXY:-}
     volumes:
       - media-data:/var/lib/smartsell/media
     ports:

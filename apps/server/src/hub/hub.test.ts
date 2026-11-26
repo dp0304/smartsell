@@ -283,6 +283,55 @@ test('trustProxy 127.0.0.1: request.ip is the X-Forwarded-For client, so login t
   assert.equal((await login('100.64.0.2')).statusCode, 401, 'another tailnet peer is not throttled');
 });
 
+test('S2: TRUST_PROXY is off by default and takes a hop count or proxy addresses; trusting everyone and the hub refuse it', () => {
+  const production = { NODE_ENV: 'production', DATABASE_URL: 'postgresql://fixture/db', PUBLIC_ORIGIN: 'https://app.example.test', APP_SECRET: hex() };
+  assert.equal(configuration(production).trustProxy, false);
+  assert.equal(configuration({ ...production, TRUST_PROXY: '' }).trustProxy, false);
+  assert.equal(configuration({ ...production, TRUST_PROXY: '1' }).trustProxy, 1);
+  assert.deepEqual(configuration({ ...production, TRUST_PROXY: ' 10.0.0.0/8, 127.0.0.1 ,fd00::/8,loopback' }).trustProxy, ['10.0.0.0/8', '127.0.0.1', 'fd00::/8', 'loopback']);
+  for (const value of ['true', '*', '0.0.0.0/0', '::/0', '6', '10.0.0.0/33', 'proxy.internal', '10.0.0.1/8/1']) {
+    assert.throws(() => configuration({ ...production, TRUST_PROXY: value }), /TRUST_PROXY/, value);
+  }
+  hubCode(hubEnv({ TRUST_PROXY: '1' }), 'HUB_TRUST_PROXY_SET');
+  assert.equal(configuration(hubEnv()).trustProxy, '127.0.0.1');
+});
+
+test('S2: behind a trusted proxy each browser gets its own sign-in limit; an untrusted peer cannot claim an address', async t => {
+  const { app: saas } = app(t, { trustProxy: 1 });
+  saas.get('/__ip', async request => ({ ip: request.ip }));
+  const ip = async (remoteAddress: string, forwarded: string) => (await saas.inject({ url: '/__ip', remoteAddress, headers: { 'x-forwarded-for': forwarded } })).json().ip;
+  // Hop count 1: the nearest X-Forwarded-For entry (what infra/web-proxy.conf sends); anything a browser prepended is ignored.
+  assert.equal(await ip('172.18.0.5', '203.0.113.7'), '203.0.113.7');
+  assert.equal(await ip('172.18.0.5', '198.51.100.66, 203.0.113.7'), '203.0.113.7');
+  const login = (forwarded: string) => saas.inject({ method: 'POST', url: '/api/v1/session', remoteAddress: '172.18.0.5',
+    headers: { 'x-forwarded-for': forwarded, origin: ORIGIN }, payload: { username: 'nobody', password: 'wrong-password' } });
+  for (let attempt = 0; attempt < 10; attempt++) assert.equal((await login('203.0.113.1')).statusCode, 401);
+  assert.equal((await login('203.0.113.1')).statusCode, 429);
+  assert.equal((await login('203.0.113.2')).statusCode, 401, 'another browser behind the same proxy has its own limit');
+
+  const { app: listed } = app(t, { trustProxy: ['10.0.0.0/8'] });
+  listed.get('/__ip', async request => ({ ip: request.ip }));
+  const listedIp = async (remoteAddress: string, forwarded: string) => (await listed.inject({ url: '/__ip', remoteAddress, headers: { 'x-forwarded-for': forwarded } })).json().ip;
+  assert.equal(await listedIp('10.1.2.3', '203.0.113.9'), '203.0.113.9');
+  assert.equal(await listedIp('198.51.100.1', '203.0.113.9'), '198.51.100.1', 'only the listed proxies may set X-Forwarded-For');
+});
+
+test('S2/S8: the Compose web container forwards one clean client address and sends the hub security headers', () => {
+  const web = readFileSync(join(repoRoot, 'infra/web.conf'), 'utf8');
+  const proxy = readFileSync(join(repoRoot, 'infra/web-proxy.conf'), 'utf8');
+  const headers = new Map([...web.matchAll(/^add_header (\S+) (.+) always;$/gm)].map(([, name, value]) => [name.toLowerCase(), value.replace(/^"|"$/g, '')]));
+  assert.equal(headers.get('content-security-policy'), WEB_CSP, 'the same CSP as the hub (web-static.ts)');
+  assert.equal(headers.get('x-frame-options'), 'DENY');
+  assert.equal(headers.get('strict-transport-security'), 'max-age=31536000');
+  assert.equal(headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(headers.get('referrer-policy'), 'no-referrer');
+  assert.doesNotMatch(web.replace(/^(?:add_header .*|\s*#.*)$/gm, ''), /add_header/, 'no location replaces the server-level headers');
+  assert.match(proxy, /^proxy_set_header X-Forwarded-For \$remote_addr;$/m);
+  assert.match(proxy, /^proxy_set_header X-Forwarded-Proto \$smartsell_forwarded_proto;$/m);
+  assert.match(web, /^real_ip_header X-Forwarded-For;$/m);
+  assert.doesNotMatch(web, /set_real_ip_from 0\.0\.0\.0\/0/);
+});
+
 test('notFound delegation: /api, /mcp, /agent keep the JSON 404; SPA paths get index.html; one 404 handler', async t => {
   const { dist } = webFixture(t);
   const web = webStatic(dist);
